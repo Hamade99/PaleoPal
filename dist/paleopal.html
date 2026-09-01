@@ -2448,11 +2448,14 @@ function portrait(pet, size){
   return c;
 }
 
-function renderSheet(which){
-  const b = $('sheetBody'), sp = hatched() ? SPECIES[S.sp] : null;
-  let html = '';
+/* One entry per sheet, each handed the body element and the active species.
+   This was a single if/else chain that every new panel had to be threaded
+   into; a sheet is now self-contained, the way GAMES already works in
+   06-render.js. Each one builds its own HTML, mounts it, then binds. */
+const SHEETS = {
 
-  if (which === 'feed'){
+  feed(b, sp){
+    let html = '';
     html = `<h2>Feed</h2><p class="lede">${sp.common} is a ${sp.diet}. Favourites fill it up and build trust; the wrong food goes down slowly. Treats are for treats.</p>`;
     html += FOODS.map(f => {
       const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
@@ -2460,9 +2463,10 @@ function renderSheet(which){
     }).join('');
     b.innerHTML = html; mountArt(b);
     b.querySelectorAll('.row').forEach((r,i) => r.onclick = () => { feed(FOODS[i].id); });
-  }
+  },
 
-  else if (which === 'play'){
+  play(b, sp){
+    let html = '';
     const trickReady = bondPips() >= 3;
     html = `<h2>Games</h2><p class="lede">Joy drops about six points an hour and drags health down once it bottoms out. Each game costs a little energy.</p>`;
     html += Object.keys(GAMES).map(k => rowHTML('', GAMES[k].name, GAMES[k].blurb, GAMES[k].pay + 'c each')).join('');
@@ -2474,9 +2478,10 @@ function renderSheet(which){
     const rows = b.querySelectorAll('.row'), keys = Object.keys(GAMES);
     keys.forEach((k,i) => rows[i].onclick = () => startGame(k));
     rows[keys.length].onclick = doTrick;
-  }
+  },
 
-  else if (which === 'vitals'){
+  vitals(b, sp){
+    let html = '';
     const n = S.needs, hr = new Date().getHours();
     const untilBed = ((BED_HOUR - hr) + 24) % 24;
     const hoursLeft = (n.energy / (ENERGY_AWAKE * trait('tempo').energy)).toFixed(1);
@@ -2499,9 +2504,10 @@ function renderSheet(which){
       S.asleep || n.energy > 70 ? '—' : 'free', S.asleep || n.energy > 70 ? 'disabled' : '');
     b.innerHTML = html; mountArt(b);
     const r = b.querySelector('.row'); if (r) r.onclick = tuckIn;
-  }
+  },
 
-  else if (which === 'care'){
+  care(b, sp){
+    let html = '';
     if (S.vet){
       html = `<h2>Care</h2><p class="lede">${S.name} is on the ground and will not get up. A vet can bring it back.</p>`;
       html += rowHTML('', 'Call the vet', 'Restores health and clears every illness. Costs some trust.', '30c');
@@ -2530,10 +2536,10 @@ function renderSheet(which){
         treat(REMEDIES[i].id);
       });
     }
-  }
+  },
 
-  else if (which === 'shop'){
-    html = `<h2>Shop</h2><p class="lede">Coins come from digs, cleaning up and the games. Everything here belongs to ${S.name} alone.</p>
+  shop(b, sp){
+    let html = `<h2>Shop</h2><p class="lede">Coins come from digs, cleaning up and the games. Everything here belongs to ${S.name} alone.</p>
       <p class="note" style="margin-bottom:8px">Coats</p>`;
     html += SKINS[S.sp].map(k => {
       const own = S.skinsOwned.includes(k.id), worn = S.skin === k.id;
@@ -2562,10 +2568,10 @@ function renderSheet(which){
     b.querySelectorAll('[data-skin]').forEach(r => r.onclick = () => buySkin(r.getAttribute('data-skin')));
     const hatRows = Array.from(b.querySelectorAll('.row')).slice(SKINS[S.sp].length);
     hatRows.forEach((r,i) => r.onclick = () => buyHat(HAT_SHOP[i].id));
-  }
+  },
 
-  else if (which === 'nest'){
-    html = `<h2>The nest</h2><p class="lede">Every animal here ages and gets hungry whether or not it is the one on screen. Coins are shared.</p>`;
+  nest(b, sp){
+    let html = `<h2>The nest</h2><p class="lede">Every animal here ages and gets hungry whether or not it is the one on screen. Coins are shared.</p>`;
     html += G.pets.map((p,i) => {
       const active = i === G.active;
       let sub;
@@ -2595,9 +2601,10 @@ function renderSheet(which){
     b.querySelectorAll('[data-pet]').forEach(r => r.onclick = () => switchPet(+r.getAttribute('data-pet')));
     const newRow = b.querySelectorAll('.row')[G.pets.length];
     if (newRow) newRow.onclick = newEgg;
-  }
+  },
 
-  else if (which === 'dossier'){
+  dossier(b, sp){
+    let html = '';
     if (!hatched()){
       b.innerHTML = `<h2>Field dossier</h2><p class="lede">Choose an egg first. Each species is drawn from its own skeleton, so the sprite shows what the notes claim.</p>`;
     } else {
@@ -2635,13 +2642,19 @@ function renderSheet(which){
         Store.del(SAVE_KEY).then(() => location.reload());
       };
     }
-  }
+  },
 
-  else if (which === 'away'){
+  away(b, sp){
     b.innerHTML = `<h2>While you were gone</h2><p class="lede">${G.awayText}</p>
       ${rowHTML('', 'Back to the habitat', 'Pick up where you left off.', '')}`;
     b.querySelector('.row').onclick = closeSheet;
   }
+};
+
+function renderSheet(which){
+  const sheet = SHEETS[which];
+  if (!sheet) return;
+  sheet($('sheetBody'), hatched() ? SPECIES[S.sp] : null);
 }
 
 /* -------------------------------- naming ---------------------------------- */

@@ -72,4 +72,5 @@ lit, outlined pixels. Frames are baked lazily and cached by
 | Needs, illness, bond, economy, the nest | `src/05-sim.js` |
 | Minigames, feeding animation, behaviour | `src/06-render.js` |
 | Sheets, chrome, input, save/load | `src/07-ui.js` |
+| A new bottom sheet | a key in `SHEETS` in `src/07-ui.js`, nothing else |
 | Colours, layout, buttons | `src/style.css` |
