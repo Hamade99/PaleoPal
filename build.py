@@ -34,7 +34,10 @@ def main():
 
     out = ROOT / "dist" / "paleopal.html"
     out.parent.mkdir(exist_ok=True)
-    out.write_text(html)
+    # newline="\n" is load-bearing on Windows. The default translates every "\n"
+    # to "\r\n", so a rebuild with no source change still rewrites all 133KB and
+    # lands as a whole-file diff.
+    out.write_text(html, newline="\n")
     print("wrote", out, f"({len(html):,} bytes)")
 
 if __name__ == "__main__":

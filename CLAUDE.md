@@ -8,7 +8,13 @@ because the obvious alternative was tried and failed.
 
 ```
 python3 build.py        # inlines src/ into dist/paleopal.html
+python build.py         # same thing on Windows, where there is no python3
 ```
+
+The build is byte-reproducible: rebuilding with no source change must leave
+`dist/paleopal.html` untouched. If `git status` shows it dirty after a no-op
+build, something has reintroduced CRLF — check `newline` in `build.py` and
+`.gitattributes`.
 
 Open `index.html` for development, `dist/paleopal.html` to check the build.
 There is no test suite. After a change, open the page and confirm the console is
