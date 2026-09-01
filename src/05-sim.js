@@ -5,7 +5,13 @@
    nest of up to six animals; all of them age, only one is on screen.
    ========================================================================== */
 
+/* The save is the product. A player's streak, their named animals and the time
+   they put in all live in this one blob, so nothing here may drop it on the
+   floor. SAVE_KEY keeps its historical name so existing installs still find
+   their data; the version now travels inside the save, not in the key. */
+const SAVE_VERSION = 2;
 const SAVE_KEY = 'paleopal:save:2';
+const BACKUP_KEY = 'paleopal:save:backup';
 const MAX_PETS = 6;
 
 const FOODS = [
@@ -64,8 +70,54 @@ function freshPet(){
   };
 }
 function freshGame(){
-  return { v:2, pets:[freshPet()], active:0, coins:24, sound:true, lastDay:'', streak:0,
+  return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, lastDay:'', streak:0,
            lastTick:Date.now(), lastSeen:Date.now() };
+}
+
+/* --------------------------- loading a save --------------------------------
+   Adding a field needs no migration: Object.assign over freshGame/freshPet
+   already fills in anything a older save is missing. A migration is only for
+   a change that reshapes or reinterprets existing data.
+
+   Each entry is keyed by the version it reads and must return the save one
+   version further on, with o.v updated:
+
+     MIGRATIONS[2] = o => { o.pets.forEach(p => p.joy = p.happy); o.v = 3; return o; };
+
+   Nothing is registered yet; version 2 is the first schema that shipped.
+   -------------------------------------------------------------------------- */
+const MIGRATIONS = {};
+
+/* Returns { game, why, keep, from }. `game` is null when the save could not be
+   used, and then `why` completes the sentence "Your saved nest ..." and `keep`
+   holds the original text so the caller can park it somewhere safe. */
+function loadSave(raw){
+  const fail = why => ({ game:null, why, keep:raw, from:null });
+  if (!raw) return { game:null, why:null, keep:null, from:null };
+
+  let o;
+  try { o = JSON.parse(raw); } catch(e){ return fail('could not be read'); }
+  if (!o || typeof o !== 'object') return fail('was not in a shape the game understands');
+
+  const from = o.v | 0;
+  if (from > SAVE_VERSION) return fail('was written by a newer version of the game');
+
+  let v = from;
+  while (v < SAVE_VERSION){
+    const step = MIGRATIONS[v];
+    if (!step) return fail('is version ' + v + ', which this build cannot upgrade');
+    o = step(o);
+    if (!o || (o.v | 0) <= v) return fail('stalled while upgrading from version ' + v);
+    v = o.v | 0;
+  }
+
+  if (!Array.isArray(o.pets) || !o.pets.length) return fail('had no animals in it');
+
+  const g = Object.assign(freshGame(), o);
+  g.pets = o.pets.map(p => Object.assign(freshPet(), p));
+  g.active = clamp(o.active | 0, 0, g.pets.length - 1);
+  g.v = SAVE_VERSION;
+  return { game:g, why:null, keep:null, from };
 }
 const trait = k => TRAITS[k][S.traits[k]];
 const hatched = () => !!S && !!S.sp && !!S.born;

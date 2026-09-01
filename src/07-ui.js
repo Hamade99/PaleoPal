@@ -167,9 +167,11 @@ function refresh(){
 
 /* -------------------------------- sheets ---------------------------------- */
 let openPanel = null;
+/* the only sheets that mean anything before there is a hatched animal */
+const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble'];
 function openSheet(which){
   if (mode === 'game') return;
-  if (mode !== 'live' && which !== 'dossier' && which !== 'nest') return;
+  if (mode !== 'live' && !SHEETS_PRE_HATCH.includes(which)) return;
   openPanel = which;
   renderSheet(which);
   $('sheet').classList.add('on'); $('scrim').classList.add('on');
@@ -401,7 +403,8 @@ const SHEETS = {
       };
       rows[2].onclick = () => {
         if (!armedW){ armedW = true; rows[2].querySelector('.px').textContent = 'sure?'; setTimeout(()=>{armedW=false; if(openPanel==='dossier') renderSheet('dossier');}, 3000); return; }
-        Store.del(SAVE_KEY).then(() => location.reload());
+        // a deliberate wipe clears the safety net too, which is what the row promises
+        Promise.all([Store.del(SAVE_KEY), Store.del(BACKUP_KEY)]).then(() => location.reload());
       };
     }
   },
@@ -409,6 +412,15 @@ const SHEETS = {
   away(b, sp){
     b.innerHTML = `<h2>While you were gone</h2><p class="lede">${G.awayText}</p>
       ${rowHTML('', 'Back to the habitat', 'Pick up where you left off.', '')}`;
+    b.querySelector('.row').onclick = closeSheet;
+  },
+
+  trouble(b, sp){
+    b.innerHTML = `<h2>Could not open your nest</h2><p class="lede">${G.loadWarning}</p>
+      <p class="note">Nothing was thrown away. The unreadable save is still on this
+      device under <code>${BACKUP_KEY}</code>, so a later build may be able to
+      recover it.</p>
+      ${rowHTML('', 'Start fresh', 'Choose a new egg and begin again.', '')}`;
     b.querySelector('.row').onclick = closeSheet;
   }
 };
@@ -576,16 +588,19 @@ function frame(now){
 async function boot(){
   buildChrome();
   G = freshGame();
-  const raw = await Store.get(SAVE_KEY);
-  if (raw){
-    try {
-      const o = JSON.parse(raw);
-      if (o && o.v === 2 && Array.isArray(o.pets) && o.pets.length){
-        G = Object.assign(freshGame(), o);
-        G.pets = o.pets.map(p => Object.assign(freshPet(), p));
-        G.active = clamp(o.active|0, 0, G.pets.length-1);
-      }
-    } catch(e){}
+  const loaded = loadSave(await Store.get(SAVE_KEY));
+  if (loaded.game){
+    G = loaded.game;
+    // an upgraded save is written back at once, so a crash before the next
+    // autosave cannot leave the old shape sitting on disk
+    if (loaded.from !== SAVE_VERSION) await Store.set(SAVE_KEY, JSON.stringify(G));
+  } else if (loaded.keep){
+    // A save we cannot read is still the player's. Park it under the backup
+    // key and tell them, rather than starting over in silence.
+    await Store.set(BACKUP_KEY, loaded.keep);
+    G.loadWarning = 'Your saved nest ' + loaded.why + ', so this is a fresh start. ' +
+                    'The old save has not been deleted.';
+    console.warn('paleopal: save ' + loaded.why + '; kept a copy at ' + BACKUP_KEY);
   }
   S = G.pets[G.active];
   if (hatched()){
@@ -601,6 +616,7 @@ async function boot(){
   } else mode = S.sp ? 'egg' : 'choose';
   G.lastTick = Date.now();
   dailyCheck();
+  if (G.loadWarning) setTimeout(() => openSheet('trouble'), 500);
   refresh(); paintChrome();
   requestAnimationFrame(frame);
 }

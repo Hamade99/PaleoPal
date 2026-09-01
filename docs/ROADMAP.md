@@ -30,8 +30,9 @@ Nothing here is started. Ordered roughly by value.
 - No accessibility pass: no keyboard path through the sheets, no reduced-motion
   handling beyond a CSS transition disable, no screen-reader labels on the
   meters.
-- No automated tests. The Playwright scripts used during development exercised
-  flows manually and were not kept.
+- No automated tests in the repo. The Playwright scripts used during the
+  structure pass (boot and hatch, render every sheet, drive every save path)
+  live outside it and should be brought in.
 
 ## Known rough edges
 
