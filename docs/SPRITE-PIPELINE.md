@@ -89,8 +89,14 @@ offsets, which is why gear stays put across stages and animations.
 4. Put the skull on `M.head` so it lights as its own form.
 5. Return the anchors.
 6. Add a `SPECIES` entry and a `SKINS` list in `registry.js`, including
-   `strideBase` (stride fraction × hip height) or the gait will desync.
-7. Add it to the egg choice arrays in `06-render.js` and `07-ui.js`.
+   `strideBase` (stride fraction × hip height) or the gait will desync, plus
+   `eggTint` and `lure` for the egg choice screen.
+
+That is the whole list. The egg row draws itself, hit-tests itself and labels
+itself from `SPECIES` via `eggChoices()`, so there is nothing to add in
+`06-render.js`, `07-ui.js` or `index.html`. Slots are centred and tighten as
+the row grows; past about six species the row will need to become a scroller
+rather than a single line.
 
 Every `checks` line in the registry is a promise that the sprite draws that
 feature. Do not add one without adding the geometry.

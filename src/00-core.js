@@ -70,6 +70,9 @@ const SFX = {
 function makeCv(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
 function readCtx(c){ return c.getContext('2d', { willReadFrequently:true }); }
 const article = w => /^[aeiou]/i.test(w) ? 'an ' : 'a ';
+/* the copy is written out in words, so counts that appear in a sentence are too */
+const NUM_WORD = ['No','One','Two','Three','Four','Five','Six','Seven','Eight'];
+const numWord = n => NUM_WORD[n] || String(n);
 
 /* tapered tube through a centreline — the workhorse for necks, tails, limbs */
 function tube(g, pts, widths, col){

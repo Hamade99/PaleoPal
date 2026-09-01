@@ -79,6 +79,10 @@ function buildChrome(){
        <div class="track"><div class="fill" id="fill-${n.k}" style="background:${n.col}"></div><i class="seg"></i></div>
      </div>`).join('');
   $('needs').onclick = () => { if (hatched()) openSheet('vitals'); };
+  $('picks').innerHTML = eggChoices().map(c => {
+    const sp = SPECIES[c.id];
+    return `<span style="left:${(c.x / W * 100).toFixed(1)}%"><b>${sp.common}</b>${sp.lure}</span>`;
+  }).join('');
   $('actions').innerHTML = [
     ['feed','Feed'],['play','Play'],['wash','Wash'],['care','Care'],['shop','Shop']
   ].map(([k,l]) => `<button class="act" id="act-${k}"><span class="ico" data-ico="${k}"></span>${l}</button>`).join('');
@@ -135,7 +139,8 @@ function refresh(){
   if (!hatched()){
     $('dName').textContent = S && S.sp ? 'Nearly out' : 'A warm egg';
     $('dSub').textContent = S && S.sp ? 'Keep tapping the shell' : 'Pick one to begin';
-    $('mood').textContent = S && S.sp ? 'Something is moving in there.' : 'Three eggs are waiting in the nest.';
+    $('mood').textContent = S && S.sp ? 'Something is moving in there.'
+      : numWord(eggChoices().length) + ' eggs are waiting in the nest.';
     $('bond').innerHTML = ''; $('badges').innerHTML = '';
     lamp.className = 'lamp rest';
     paintChrome();
@@ -430,9 +435,8 @@ cv.addEventListener('pointerdown', e => {
   if (AC && AC.state === 'suspended') AC.resume();
 
   if (mode === 'choose'){
-    const keys = ['rex','trike','brachio'], xs = [46, 112, 178];
-    for (let i = 0; i < 3; i++){
-      if (Math.abs(mx - xs[i]) < 20 && my > GROUND - 40 && my < GROUND + 6){ chooseEgg(keys[i]); return; }
+    for (const c of eggChoices()){
+      if (Math.abs(mx - c.x) < c.hit && my > GROUND - 40 && my < GROUND + 6){ chooseEgg(c.id); return; }
     }
     return;
   }

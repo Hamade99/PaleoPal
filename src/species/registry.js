@@ -7,6 +7,7 @@ const SPECIES = {
     id:'rex', draw:drawRex, spec:REX_SPEC, scale:.82, speed:15, strideBase:.46*46,
     name:'Tyrannosaurus rex', common:'T. rex', diet:'carnivore',
     likes:['fish','meat'], dislikes:['fern'],
+    eggTint:'#7e9c54', lure:'eats meat',
     era:'Late Cretaceous, 68-66 million years ago, western North America',
     facts:[
       'Its bite is the strongest measured for any land animal, around 35,000 newtons.',
@@ -22,6 +23,7 @@ const SPECIES = {
     id:'trike', draw:drawTrike, spec:TRI_SPEC, scale:.86, speed:10, strideBase:.34*41,
     name:'Triceratops horridus', common:'Triceratops', diet:'herbivore',
     likes:['fern','cycad'], dislikes:['fish'],
+    eggTint:'#ab7040', lure:'eats ferns',
     era:'Late Cretaceous, 68-66 million years ago, Hell Creek',
     facts:[
       'Horn cores grew keratin sheaths that ran past the bone, so living horns were longer than the skeleton shows.',
@@ -37,6 +39,7 @@ const SPECIES = {
     id:'brachio', draw:drawBrachio, spec:BRA_SPEC, scale:.66, speed:5.5, strideBase:.30*46,
     name:'Brachiosaurus altithorax', common:'Brachiosaurus', diet:'herbivore',
     likes:['berry','cycad'], dislikes:['meat'],
+    eggTint:'#71958a', lure:'eats berries',
     era:'Late Jurassic, 154-150 million years ago, North America',
     facts:[
       'The forelimbs run about 1.2 times the length of the hindlimbs, which is why the back slopes backward.',
@@ -50,6 +53,23 @@ const SPECIES = {
   }
 };
 
+/* ------------------------------ the egg choice -----------------------------
+   Three places need the same row of eggs: the renderer draws it, the pointer
+   handler hit-tests it, and the label strip under the stage names it. All
+   three derive from SPECIES here, so adding a species is a registry edit and
+   nothing else.
+
+   Slots are centred on the canvas and spaced EGG_GAP apart, tightening once
+   the row would otherwise run off the edges. The hit radius follows the gap so
+   neighbouring eggs can never claim the same tap.
+   -------------------------------------------------------------------------- */
+const EGG_GAP = 66, EGG_MARGIN = 24, EGG_HIT = 20;
+function eggChoices(){
+  const ids = Object.keys(SPECIES), n = ids.length;
+  const gap = n < 2 ? 0 : Math.min(EGG_GAP, (W - EGG_MARGIN*2) / (n - 1));
+  const hit = n < 2 ? EGG_HIT : Math.min(EGG_HIT, gap/2);
+  return ids.map((id, i) => ({ id, x: W/2 + (i - (n-1)/2) * gap, hit }));
+}
 
 /* --------------------------------- skins -----------------------------------
    A skin swaps the three body ramps and paints an optional pattern onto the

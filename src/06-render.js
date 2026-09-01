@@ -119,16 +119,15 @@ function drawScene(now){
 }
 
 function drawChoose(now){
-  const keys = ['rex','trike','brachio'], xs = [46, 112, 178];
-  keys.forEach((k, i) => {
+  eggChoices().forEach((c, i) => {
     const bounce = Math.sin(now/420 + i*2) * 2;
-    drawEggArt(ctx, xs[i], GROUND - 16 + bounce, k, 0);
+    drawEggArt(ctx, c.x, GROUND - 16 + bounce, c.id, 0);
     ctx.fillStyle = 'rgba(16,26,24,.55)';
-    ctx.beginPath(); ctx.ellipse(xs[i], GROUND + 1, 11, 3, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(c.x, GROUND + 1, 11, 3, 0, 0, 7); ctx.fill();
   });
 }
 function drawEggArt(g, cx, cy, spId, cracks){
-  const tint = { rex:'#7e9c54', trike:'#ab7040', brachio:'#71958a' }[spId];
+  const tint = SPECIES[spId].eggTint;
   g.fillStyle = '#221a12'; g.beginPath(); g.ellipse(cx, cy, 13, 17, 0, 0, 7); g.fill();
   g.fillStyle = '#efe3c4'; g.beginPath(); g.ellipse(cx, cy, 12, 16, 0, 0, 7); g.fill();
   g.fillStyle = '#faf4de'; g.beginPath(); g.ellipse(cx - 4, cy - 6, 3.5, 4, 0, 0, 7); g.fill();

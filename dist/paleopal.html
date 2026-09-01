@@ -190,11 +190,8 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
     <i class="lamp" id="lamp"></i>
     <canvas id="scene" width="224" height="168"></canvas>
     <div class="badge" id="badges"></div>
-    <div class="picks" id="picks" hidden>
-      <span style="left:20.5%"><b>T. rex</b>eats meat</span>
-      <span style="left:50%"><b>Triceratops</b>eats ferns</span>
-      <span style="left:79.5%"><b>Brachiosaurus</b>eats berries</span>
-    </div>
+    <!-- filled by buildChrome() from SPECIES, so it stays in step with the eggs -->
+    <div class="picks" id="picks" hidden></div>
     <div class="bubble" id="bubble"></div>
   </div>
 
@@ -284,6 +281,9 @@ const SFX = {
 function makeCv(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
 function readCtx(c){ return c.getContext('2d', { willReadFrequently:true }); }
 const article = w => /^[aeiou]/i.test(w) ? 'an ' : 'a ';
+/* the copy is written out in words, so counts that appear in a sentence are too */
+const NUM_WORD = ['No','One','Two','Three','Four','Five','Six','Seven','Eight'];
+const numWord = n => NUM_WORD[n] || String(n);
 
 /* tapered tube through a centreline — the workhorse for necks, tails, limbs */
 function tube(g, pts, widths, col){
@@ -985,6 +985,7 @@ const SPECIES = {
     id:'rex', draw:drawRex, spec:REX_SPEC, scale:.82, speed:15, strideBase:.46*46,
     name:'Tyrannosaurus rex', common:'T. rex', diet:'carnivore',
     likes:['fish','meat'], dislikes:['fern'],
+    eggTint:'#7e9c54', lure:'eats meat',
     era:'Late Cretaceous, 68-66 million years ago, western North America',
     facts:[
       'Its bite is the strongest measured for any land animal, around 35,000 newtons.',
@@ -1000,6 +1001,7 @@ const SPECIES = {
     id:'trike', draw:drawTrike, spec:TRI_SPEC, scale:.86, speed:10, strideBase:.34*41,
     name:'Triceratops horridus', common:'Triceratops', diet:'herbivore',
     likes:['fern','cycad'], dislikes:['fish'],
+    eggTint:'#ab7040', lure:'eats ferns',
     era:'Late Cretaceous, 68-66 million years ago, Hell Creek',
     facts:[
       'Horn cores grew keratin sheaths that ran past the bone, so living horns were longer than the skeleton shows.',
@@ -1015,6 +1017,7 @@ const SPECIES = {
     id:'brachio', draw:drawBrachio, spec:BRA_SPEC, scale:.66, speed:5.5, strideBase:.30*46,
     name:'Brachiosaurus altithorax', common:'Brachiosaurus', diet:'herbivore',
     likes:['berry','cycad'], dislikes:['meat'],
+    eggTint:'#71958a', lure:'eats berries',
     era:'Late Jurassic, 154-150 million years ago, North America',
     facts:[
       'The forelimbs run about 1.2 times the length of the hindlimbs, which is why the back slopes backward.',
@@ -1028,6 +1031,23 @@ const SPECIES = {
   }
 };
 
+/* ------------------------------ the egg choice -----------------------------
+   Three places need the same row of eggs: the renderer draws it, the pointer
+   handler hit-tests it, and the label strip under the stage names it. All
+   three derive from SPECIES here, so adding a species is a registry edit and
+   nothing else.
+
+   Slots are centred on the canvas and spaced EGG_GAP apart, tightening once
+   the row would otherwise run off the edges. The hit radius follows the gap so
+   neighbouring eggs can never claim the same tap.
+   -------------------------------------------------------------------------- */
+const EGG_GAP = 66, EGG_MARGIN = 24, EGG_HIT = 20;
+function eggChoices(){
+  const ids = Object.keys(SPECIES), n = ids.length;
+  const gap = n < 2 ? 0 : Math.min(EGG_GAP, (W - EGG_MARGIN*2) / (n - 1));
+  const hit = n < 2 ? EGG_HIT : Math.min(EGG_HIT, gap/2);
+  return ids.map((id, i) => ({ id, x: W/2 + (i - (n-1)/2) * gap, hit }));
+}
 
 /* --------------------------------- skins -----------------------------------
    A skin swaps the three body ramps and paints an optional pattern onto the
@@ -1914,16 +1934,15 @@ function drawScene(now){
 }
 
 function drawChoose(now){
-  const keys = ['rex','trike','brachio'], xs = [46, 112, 178];
-  keys.forEach((k, i) => {
+  eggChoices().forEach((c, i) => {
     const bounce = Math.sin(now/420 + i*2) * 2;
-    drawEggArt(ctx, xs[i], GROUND - 16 + bounce, k, 0);
+    drawEggArt(ctx, c.x, GROUND - 16 + bounce, c.id, 0);
     ctx.fillStyle = 'rgba(16,26,24,.55)';
-    ctx.beginPath(); ctx.ellipse(xs[i], GROUND + 1, 11, 3, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(c.x, GROUND + 1, 11, 3, 0, 0, 7); ctx.fill();
   });
 }
 function drawEggArt(g, cx, cy, spId, cracks){
-  const tint = { rex:'#7e9c54', trike:'#ab7040', brachio:'#71958a' }[spId];
+  const tint = SPECIES[spId].eggTint;
   g.fillStyle = '#221a12'; g.beginPath(); g.ellipse(cx, cy, 13, 17, 0, 0, 7); g.fill();
   g.fillStyle = '#efe3c4'; g.beginPath(); g.ellipse(cx, cy, 12, 16, 0, 0, 7); g.fill();
   g.fillStyle = '#faf4de'; g.beginPath(); g.ellipse(cx - 4, cy - 6, 3.5, 4, 0, 0, 7); g.fill();
@@ -2298,6 +2317,10 @@ function buildChrome(){
        <div class="track"><div class="fill" id="fill-${n.k}" style="background:${n.col}"></div><i class="seg"></i></div>
      </div>`).join('');
   $('needs').onclick = () => { if (hatched()) openSheet('vitals'); };
+  $('picks').innerHTML = eggChoices().map(c => {
+    const sp = SPECIES[c.id];
+    return `<span style="left:${(c.x / W * 100).toFixed(1)}%"><b>${sp.common}</b>${sp.lure}</span>`;
+  }).join('');
   $('actions').innerHTML = [
     ['feed','Feed'],['play','Play'],['wash','Wash'],['care','Care'],['shop','Shop']
   ].map(([k,l]) => `<button class="act" id="act-${k}"><span class="ico" data-ico="${k}"></span>${l}</button>`).join('');
@@ -2354,7 +2377,8 @@ function refresh(){
   if (!hatched()){
     $('dName').textContent = S && S.sp ? 'Nearly out' : 'A warm egg';
     $('dSub').textContent = S && S.sp ? 'Keep tapping the shell' : 'Pick one to begin';
-    $('mood').textContent = S && S.sp ? 'Something is moving in there.' : 'Three eggs are waiting in the nest.';
+    $('mood').textContent = S && S.sp ? 'Something is moving in there.'
+      : numWord(eggChoices().length) + ' eggs are waiting in the nest.';
     $('bond').innerHTML = ''; $('badges').innerHTML = '';
     lamp.className = 'lamp rest';
     paintChrome();
@@ -2649,9 +2673,8 @@ cv.addEventListener('pointerdown', e => {
   if (AC && AC.state === 'suspended') AC.resume();
 
   if (mode === 'choose'){
-    const keys = ['rex','trike','brachio'], xs = [46, 112, 178];
-    for (let i = 0; i < 3; i++){
-      if (Math.abs(mx - xs[i]) < 20 && my > GROUND - 40 && my < GROUND + 6){ chooseEgg(keys[i]); return; }
+    for (const c of eggChoices()){
+      if (Math.abs(mx - c.x) < c.hit && my > GROUND - 40 && my < GROUND + 6){ chooseEgg(c.id); return; }
     }
     return;
   }
