@@ -1,0 +1,5 @@
+# Source and build output are LF everywhere. build.py writes LF explicitly;
+# this keeps Windows checkouts from reintroducing CRLF and turning every
+# rebuild of dist/paleopal.html into a whole-file diff.
+* text=auto eol=lf
+*.png binary

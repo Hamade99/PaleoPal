@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#0e1417">
+<title>Paleopal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand">PALEO<span>PAL</span></div>
+    <div style="display:flex;align-items:center;gap:9px">
+      <div class="wallet"><i id="coinArt"></i><span id="coins">0</span></div>
+      <button class="iconbtn" id="btnNest" aria-label="Open the nest"><i id="nestCount"></i></button>
+      <button class="iconbtn" id="btnDossier" aria-label="Open dossier">i</button>
+    </div>
+  </div>
+
+  <div class="ident">
+    <div class="dname" id="dName" tabindex="0" role="button">…</div>
+    <div class="dsub" id="dSub"></div>
+    <input id="nameEdit" hidden maxlength="14" aria-label="Rename">
+  </div>
+
+  <div class="needs" id="needs"></div>
+
+  <div class="stage">
+    <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+    <i class="lamp" id="lamp"></i>
+    <canvas id="scene" width="224" height="168"></canvas>
+    <div class="badge" id="badges"></div>
+    <div class="picks" id="picks" hidden>
+      <span style="left:20.5%"><b>T. rex</b>eats meat</span>
+      <span style="left:50%"><b>Triceratops</b>eats ferns</span>
+      <span style="left:79.5%"><b>Brachiosaurus</b>eats berries</span>
+    </div>
+    <div class="bubble" id="bubble"></div>
+  </div>
+
+  <div class="moodrow">
+    <div class="mood" id="mood"></div>
+    <div class="bondwrap" id="bond"></div>
+  </div>
+
+  <div class="actions" id="actions"></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <div class="grip"></div>
+  <div id="sheetBody"></div>
+</div>
+<script src="src/00-core.js"></script>
+<script src="src/01-colour.js"></script>
+<script src="src/02-sprite-engine.js"></script>
+<script src="src/species/rex.js"></script>
+<script src="src/species/triceratops.js"></script>
+<script src="src/species/brachiosaurus.js"></script>
+<script src="src/species/registry.js"></script>
+<script src="src/04-world.js"></script>
+<script src="src/05-sim.js"></script>
+<script src="src/06-render.js"></script>
+<script src="src/07-ui.js"></script>
+</body>
+</html>

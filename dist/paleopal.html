@@ -1,0 +1,2815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#0e1417">
+<title>Paleopal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1417; --deep:#141d21; --panel:#1b262a; --line:#2b3a3f;
+  --bone:#e9e1cb; --dim:#93a29c; --ink:#101a18;
+  --moss:#7ea55f; --ochre:#d9a441; --rust:#c2603c; --sky:#7fb2c9;
+  --safe: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  align-items:flex-start;
+  background:radial-gradient(120% 80% at 50% 0%,#182226 0%,var(--bg) 60%);
+  color:var(--bone);
+  font-family:Inter,system-ui,sans-serif;
+  display:flex;justify-content:center;
+  overscroll-behavior:none;
+}
+#app{
+  width:100%;max-width:440px;margin:auto 0;
+  display:flex;flex-direction:column;
+  padding:10px 12px calc(10px + var(--safe));
+  position:relative;
+}
+
+/* ---------- top ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.brand{font-family:'Pixelify Sans',monospace;font-weight:700;font-size:19px;letter-spacing:.5px;color:var(--bone)}
+.brand span{color:var(--moss)}
+.wallet{display:flex;align-items:center;gap:6px;font-family:'Pixelify Sans';font-size:17px;color:var(--ochre);
+  background:#161f22;border:1px solid var(--line);border-radius:7px;padding:3px 9px 2px;box-shadow:0 2px 0 #0b1113}
+#coinArt{display:flex}
+.iconbtn{background:#1b2529;border:1px solid var(--line);color:var(--dim);width:34px;height:34px;border-radius:8px;
+  cursor:pointer;font-size:14px;font-family:'Pixelify Sans';display:grid;place-items:center;box-shadow:0 2px 0 #0b1113}
+.iconbtn:active{transform:translateY(2px);box-shadow:none}
+#btnNest{position:relative}
+#nestCount{position:absolute;right:-3px;top:-4px;min-width:14px;height:14px;border-radius:8px;
+  background:var(--moss);color:#0e1417;font-family:'Pixelify Sans';font-size:10px;line-height:14px;
+  text-align:center;font-style:normal}
+#nestCount:empty{display:none}
+.row.pet.here{border-color:var(--moss);box-shadow:0 2px 0 #0b1214,inset 0 0 0 1px rgba(126,165,95,.35)}
+.row .art{overflow:hidden}
+.iconbtn:hover{color:var(--bone);border-color:#3d5158}
+
+/* ---------- identity ---------- */
+.ident{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.dname{font-family:'Pixelify Sans';font-size:22px;line-height:1;cursor:pointer;border-bottom:1px dashed transparent}
+.dname:hover{border-bottom-color:var(--line)}
+.dsub{font-size:12.5px;color:var(--dim)}
+#nameEdit{font:inherit;font-family:'Pixelify Sans';font-size:22px;background:var(--panel);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:1px 6px;width:150px}
+
+/* ---------- needs ---------- */
+.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px}
+.need{background:var(--deep);border:1px solid var(--line);border-radius:9px;padding:6px 7px 7px}
+.need b{display:block;font-weight:500;font-size:10.5px;color:var(--dim);margin-bottom:5px;letter-spacing:.1px}
+.track{position:relative;height:7px;background:#080d0f;box-shadow:inset 0 0 0 1px #000;overflow:hidden}
+.fill{height:100%;width:50%;transition:width .5s linear,background .4s}
+.seg{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,transparent 0 4px,var(--deep) 4px 6px)}
+.need.low b{color:var(--rust)}
+
+/* ---------- stage ---------- */
+.stage{position:relative;border-radius:13px;background:#1d282c;padding:9px 9px 11px;
+  border:1px solid #35474c;box-shadow:inset 0 1px 0 #43585e,0 4px 0 #0a1012}
+canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:pointer;
+  border-radius:5px;box-shadow:0 0 0 2px #0a0f11,inset 0 0 0 1px #000}
+.screw{position:absolute;width:4px;height:4px;border-radius:50%;background:#0e1618;box-shadow:0 1px 0 #4a5f65}
+.screw.tl{left:3px;top:3px}.screw.tr{right:3px;top:3px}.screw.bl{left:3px;bottom:3px}.screw.br{right:3px;bottom:3px}
+.lamp{position:absolute;right:9px;bottom:3px;width:5px;height:5px;border-radius:50%;
+  background:var(--moss);box-shadow:0 0 5px rgba(126,165,95,.9)}
+.lamp.rest{background:var(--sky);box-shadow:0 0 5px rgba(127,178,201,.8)}
+.lamp.bad{background:var(--rust);box-shadow:0 0 6px rgba(194,96,60,.95)}
+.bubble{
+  position:absolute;left:50%;top:16px;transform:translate(-50%,-6px);
+  background:var(--bone);color:var(--ink);font-size:12.5px;font-weight:500;
+  padding:6px 10px;border-radius:9px;max-width:88%;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;line-height:1.25;
+  box-shadow:0 4px 0 rgba(0,0,0,.35)
+}
+.bubble.on{opacity:1;transform:translate(-50%,0)}
+.picks span{position:absolute;bottom:16px;transform:translateX(-50%);text-align:center;
+  font-size:10.5px;color:#b9c4bd;line-height:1.35;white-space:nowrap;
+  background:rgba(10,18,16,.78);border:1px solid rgba(90,116,104,.5);border-radius:6px;padding:3px 7px}
+.picks b{display:block;font-size:11.5px;color:var(--bone);font-weight:600;font-family:'Pixelify Sans';letter-spacing:.3px}
+.badge{
+  position:absolute;left:16px;bottom:19px;display:flex;gap:5px;flex-wrap:wrap;max-width:70%;
+}
+.tag{background:rgba(16,26,24,.82);border:1px solid #3a4d45;color:var(--bone);font-size:10.5px;
+  padding:3px 7px;border-radius:20px;display:flex;align-items:center;gap:4px}
+.tag.warn{border-color:#7a3a2b;color:#f0b7a3}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--moss)}
+.tag.warn .dot{background:var(--rust)}
+
+/* ---------- mood strip ---------- */
+.moodrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 2px 10px}
+.mood{font-size:13px;color:var(--bone)}
+.mood em{font-style:normal;color:var(--dim)}
+.bondwrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)}
+.pip{width:8px;height:8px;border-radius:2px;background:#243034;transform:rotate(45deg)}
+.pip.on{background:var(--rust)}
+
+/* ---------- actions ---------- */
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding-top:2px}
+.act{
+  background:linear-gradient(#26343a,#1a2429);border:1px solid #35474c;color:var(--bone);
+  border-radius:9px;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-family:'Pixelify Sans';font-size:12px;letter-spacing:.3px;cursor:pointer;position:relative;padding:5px 2px;
+  box-shadow:inset 0 1px 0 #43585e,0 3px 0 #0b1214
+}
+.act:active{transform:translateY(3px);box-shadow:inset 0 1px 0 #43585e}
+.act .ico{display:flex;height:24px;align-items:center}
+.act[disabled]{opacity:.3;cursor:default;box-shadow:none;transform:none}
+.act .nub{position:absolute;top:5px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--rust);box-shadow:0 0 5px rgba(194,96,60,.9)}
+
+/* ---------- sheets ---------- */
+.scrim{position:fixed;inset:0;background:rgba(6,10,11,.65);opacity:0;pointer-events:none;transition:opacity .2s;z-index:5}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:50%;bottom:0;transform:translate(-50%,102%);
+  width:100%;max-width:440px;margin:auto 0;background:var(--deep);border:1px solid var(--line);border-bottom:0;
+  border-radius:18px 18px 0 0;padding:14px 14px calc(16px + var(--safe));z-index:6;
+  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:82vh;overflow-y:auto
+}
+.sheet.on{transform:translate(-50%,0)}
+.sheet h2{font-family:'Pixelify Sans';font-size:18px;font-weight:700;margin-bottom:2px}
+.sheet p.lede{font-size:12.5px;color:var(--dim);margin-bottom:12px;line-height:1.45}
+.grip{width:38px;height:4px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.row{
+  box-shadow:0 2px 0 #0b1214;
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--line);color:var(--bone);
+  border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer;font:inherit
+}
+.row:active{transform:translateY(2px);box-shadow:none}
+.row[disabled]{opacity:.4;cursor:default}
+.row .art{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center}
+.row .art canvas{image-rendering:pixelated}
+.row .t{flex:1;min-width:0}
+.row .t b{display:block;font-size:13.5px;font-weight:600}
+.row .t small{display:block;font-size:11.5px;color:var(--dim);margin-top:1px;line-height:1.35}
+.row .px{font-family:'Pixelify Sans';font-size:15px;color:var(--ochre);flex:0 0 auto}
+.row .px.own{color:var(--moss)}
+.log{font-size:12.5px;line-height:1.5;color:var(--bone);border-left:2px solid var(--line);padding:2px 0 2px 10px;margin-bottom:9px}
+.log time{display:block;font-size:10.5px;color:var(--dim);margin-bottom:1px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-size:10.5px;color:var(--dim);font-weight:500}
+.stat span{font-family:'Pixelify Sans';font-size:15px}
+.note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:4px}
+.trait{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:20px;
+  padding:3px 9px;font-size:11.5px;margin:0 5px 5px 0}
+.hr{height:1px;background:var(--line);margin:12px 0}
+.gamebar{display:flex;justify-content:space-between;font-family:'Pixelify Sans';font-size:15px;padding:0 2px 8px}
+.tiny{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.5}
+button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand">PALEO<span>PAL</span></div>
+    <div style="display:flex;align-items:center;gap:9px">
+      <div class="wallet"><i id="coinArt"></i><span id="coins">0</span></div>
+      <button class="iconbtn" id="btnNest" aria-label="Open the nest"><i id="nestCount"></i></button>
+      <button class="iconbtn" id="btnDossier" aria-label="Open dossier">i</button>
+    </div>
+  </div>
+
+  <div class="ident">
+    <div class="dname" id="dName" tabindex="0" role="button">…</div>
+    <div class="dsub" id="dSub"></div>
+    <input id="nameEdit" hidden maxlength="14" aria-label="Rename">
+  </div>
+
+  <div class="needs" id="needs"></div>
+
+  <div class="stage">
+    <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+    <i class="lamp" id="lamp"></i>
+    <canvas id="scene" width="224" height="168"></canvas>
+    <div class="badge" id="badges"></div>
+    <div class="picks" id="picks" hidden>
+      <span style="left:20.5%"><b>T. rex</b>eats meat</span>
+      <span style="left:50%"><b>Triceratops</b>eats ferns</span>
+      <span style="left:79.5%"><b>Brachiosaurus</b>eats berries</span>
+    </div>
+    <div class="bubble" id="bubble"></div>
+  </div>
+
+  <div class="moodrow">
+    <div class="mood" id="mood"></div>
+    <div class="bondwrap" id="bond"></div>
+  </div>
+
+  <div class="actions" id="actions"></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <div class="grip"></div>
+  <div id="sheetBody"></div>
+</div>
+<script>
+'use strict';
+/* ==========================================================================
+   PALEOPAL — a pocket dinosaur care sim
+   Sections: core → sprites → species → world → sim → render → ui
+   ========================================================================== */
+
+const W = 224, H = 168, GROUND = 140;
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+const lerp  = (a,b,t) => a + (b-a)*t;
+const rnd   = (a,b) => a + Math.random()*(b-a);
+const pick  = a => a[(Math.random()*a.length)|0];
+const $     = id => document.getElementById(id);
+const HOUR  = 3600e3, MIN = 60e3;
+
+/* ---------- storage: works as artifact, as a file, and inside a webview ---- */
+const Store = {
+  async get(k){
+    if (window.storage) { try { const r = await window.storage.get(k); return r ? r.value : null; } catch(e){ return null; } }
+    try { return localStorage.getItem(k); } catch(e){ return null; }
+  },
+  async set(k,v){
+    if (window.storage) { try { await window.storage.set(k,v); return; } catch(e){ return; } }
+    try { localStorage.setItem(k,v); } catch(e){}
+  },
+  async del(k){
+    if (window.storage) { try { await window.storage.delete(k); return; } catch(e){ return; } }
+    try { localStorage.removeItem(k); } catch(e){}
+  }
+};
+
+/* ---------- audio ---------- */
+let AC = null;
+function tone(f, dur, type, vol, delay, slide){
+  if (!G || !G.sound) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    const t = AC.currentTime + (delay||0);
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(28, f + slide), t + dur);
+    g.gain.setValueAtTime(vol || .06, t);
+    g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t); o.stop(t + dur + .04);
+  }catch(e){}
+}
+const SFX = {
+  chomp:()=>{tone(200,.06,'square',.07);tone(140,.08,'square',.07,.06);},
+  coin :()=>{tone(880,.06,'square',.05);tone(1320,.09,'square',.05,.06);},
+  purr :()=>{tone(300,.14,'sine',.05,0,90);},
+  crack:()=>tone(130,.07,'sawtooth',.09,0,-45),
+  hatch:()=>[523,659,784,1046].forEach((f,i)=>tone(f,.13,'square',.06,i*.1)),
+  bonk :()=>tone(95,.15,'square',.09,0,-45),
+  wash :()=>tone(420,.14,'triangle',.06,0,520),
+  yawn :()=>tone(480,.42,'sine',.05,0,-300),
+  roar :()=>{tone(72,.5,'sawtooth',.11,0,-32);tone(54,.55,'square',.08,.05,-22);},
+  pop  :()=>tone(340,.05,'triangle',.07),
+  sneeze:()=>{tone(700,.05,'square',.05);tone(240,.16,'sawtooth',.08,.05,-120);}
+};
+
+/* ==========================================================================
+   SPRITE PIPELINE
+   Shapes are drawn as smooth paths on an offscreen canvas, then hard-quantised
+   (alpha threshold + palette snap) and given a dilated outline. That gives real
+   pixel art with correct anatomy instead of hand-typed ASCII blobs.
+   ========================================================================== */
+
+function makeCv(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+function readCtx(c){ return c.getContext('2d', { willReadFrequently:true }); }
+const article = w => /^[aeiou]/i.test(w) ? 'an ' : 'a ';
+
+/* tapered tube through a centreline — the workhorse for necks, tails, limbs */
+function tube(g, pts, widths, col){
+  const n = pts.length;
+  const left = [], right = [];
+  for (let i=0;i<n;i++){
+    const p = pts[i];
+    const a = pts[Math.max(0,i-1)], b = pts[Math.min(n-1,i+1)];
+    let dx = b[0]-a[0], dy = b[1]-a[1];
+    const L = Math.hypot(dx,dy) || 1; dx/=L; dy/=L;
+    const w = widths[i]/2;
+    left.push([p[0]-dy*w, p[1]+dx*w]);
+    right.push([p[0]+dy*w, p[1]-dx*w]);
+  }
+  if (col) g.fillStyle = col;
+  g.beginPath();
+  curveThrough(g, left, true);
+  const rr = right.slice().reverse();
+  for (let i=0;i<rr.length;i++) g.lineTo(rr[i][0], rr[i][1]);
+  g.closePath(); g.fill();
+  // round the caps so tips read as tips, not chisels
+  g.beginPath(); g.arc(pts[0][0],pts[0][1],Math.max(.5,widths[0]/2),0,7); g.fill();
+  g.beginPath(); g.arc(pts[n-1][0],pts[n-1][1],Math.max(.5,widths[n-1]/2),0,7); g.fill();
+}
+function curveThrough(g, p, start){
+  if (start) g.moveTo(p[0][0], p[0][1]);
+  for (let i=0;i<p.length-1;i++){
+    const a=p[i], b=p[i+1];
+    const prev=p[Math.max(0,i-1)], next=p[Math.min(p.length-1,i+2)];
+    const c1=[a[0]+(b[0]-prev[0])/6, a[1]+(b[1]-prev[1])/6];
+    const c2=[b[0]-(next[0]-a[0])/6, b[1]-(next[1]-a[1])/6];
+    g.bezierCurveTo(c1[0],c1[1],c2[0],c2[1],b[0],b[1]);
+  }
+}
+function blob(g, pts, col){
+  if (col) g.fillStyle = col;
+  g.beginPath();
+  const p = pts.concat([pts[0],pts[1]]);
+  g.moveTo(p[0][0],p[0][1]);
+  for (let i=0;i<p.length-1;i++){
+    const a=p[i], b=p[i+1];
+    const prev=p[(i-1+p.length)%p.length], next=p[(i+2)%p.length];
+    g.bezierCurveTo(a[0]+(b[0]-prev[0])/6, a[1]+(b[1]-prev[1])/6,
+                    b[0]-(next[0]-a[0])/6, b[1]-(next[1]-a[1])/6, b[0],b[1]);
+  }
+  g.closePath(); g.fill();
+}
+function oval(g,x,y,rx,ry,col,rot){
+  if (col) g.fillStyle=col; g.beginPath(); g.ellipse(x,y,Math.abs(rx),Math.abs(ry),rot||0,0,7); g.fill();
+}
+
+/* hard-edge pass: kill antialiasing, snap to the species ramp, dilate outline */
+function crisp(src, palette, outline){
+  const w = src.width, h = src.height;
+  const g = readCtx(src);
+  const img = g.getImageData(0,0,w,h), d = img.data;
+  const ramp = palette.map(hex => [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16),hex]);
+  const solid = new Uint8Array(w*h);
+  for (let i=0;i<w*h;i++){
+    const o=i*4;
+    if (d[o+3] < 118){ d[o+3]=0; continue; }
+    d[o+3]=255; solid[i]=1;
+    let best=ramp[0], bd=1e9;
+    for (const c of ramp){
+      const dd=(c[0]-d[o])**2+(c[1]-d[o+1])**2+(c[2]-d[o+2])**2;
+      if (dd<bd){bd=dd;best=c;}
+    }
+    d[o]=best[0]; d[o+1]=best[1]; d[o+2]=best[2];
+  }
+  // dilate a 1px outline into the transparent border
+  const oc = [parseInt(outline.slice(1,3),16),parseInt(outline.slice(3,5),16),parseInt(outline.slice(5,7),16)];
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const i=y*w+x; if (solid[i]) continue;
+    if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
+      const o=i*4; d[o]=oc[0]; d[o+1]=oc[1]; d[o+2]=oc[2]; d[o+3]=255;
+    }
+  }
+  g.putImageData(img,0,0);
+  return src;
+}
+
+/* trim transparent margins so anchors and ground contact stay exact */
+function trim(src){
+  const w=src.width,h=src.height,g=readCtx(src);
+  const d=g.getImageData(0,0,w,h).data;
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    if(d[(y*w+x)*4+3]){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  }
+  if (x1<0) return {cv:src,ox:0,oy:0,w,h};
+  const nw=x1-x0+1, nh=y1-y0+1, out=makeCv(nw,nh);
+  out.getContext('2d').drawImage(src,x0,y0,nw,nh,0,0,nw,nh);
+  return {cv:out, ox:x0, oy:y0, w:nw, h:nh};
+}
+
+/* ==========================================================================
+   COLOUR + LIGHTING
+   Palettes are generated as hue-shifted ramps: shadows drift cooler and more
+   saturated, highlights warmer and less saturated. Shading uses one light,
+   from the upper left, applied through a distance field so the form reads
+   instead of pillowing evenly around the outline.
+   ========================================================================== */
+
+function hexToHsl(hex){
+  let r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  const mx = Math.max(r,g,b), mn = Math.min(r,g,b), l = (mx+mn)/2;
+  let h = 0, s = 0;
+  if (mx !== mn){
+    const d = mx - mn;
+    s = l > .5 ? d/(2-mx-mn) : d/(mx+mn);
+    h = mx === r ? (g-b)/d + (g<b?6:0) : mx === g ? (b-r)/d + 2 : (r-g)/d + 4;
+    h *= 60;
+  }
+  return [h, s, l];
+}
+function hslToHex(h, s, l){
+  h = ((h % 360) + 360) % 360; s = clamp(s,0,1); l = clamp(l,0,1);
+  const c = (1 - Math.abs(2*l-1)) * s, x = c * (1 - Math.abs((h/60)%2 - 1)), m = l - c/2;
+  let r,g,b;
+  if (h<60) [r,g,b]=[c,x,0]; else if (h<120) [r,g,b]=[x,c,0]; else if (h<180) [r,g,b]=[0,c,x];
+  else if (h<240) [r,g,b]=[0,x,c]; else if (h<300) [r,g,b]=[x,0,c]; else [r,g,b]=[c,0,x];
+  const q = v => Math.round((v+m)*255).toString(16).padStart(2,'0');
+  return '#' + q(r) + q(g) + q(b);
+}
+/* five steps, darkest first, with the hue rotated along the ramp */
+function ramp(base, opts){
+  opts = opts || {};
+  const [h,s,l] = hexToHsl(base);
+  const spread = opts.spread || .17, shift = opts.shift || 22;
+  const out = [];
+  for (let i=0;i<5;i++){
+    const t = (i-2)/2;                                   // -1 shadow … +1 light
+    out.push(hslToHex(
+      h + (t<0 ? t*shift : t*shift*.55),                 // shadows swing further
+      clamp(s + (t<0 ? .10*-t : -.13*t), .05, 1),
+      clamp(l + t*spread, .05, .95)
+    ));
+  }
+  return out;
+}
+function shiftRamp(r, n){ return r.map((_,i) => r[clamp(i+n,0,4)]); }
+
+/* material keys: each shape is painted onto its own layer with a flat key
+   colour, so material boundaries stay exact and never blend into each other */
+const LAYERS = ['far','skin','belly','limb','head','mark','crest','horn','mouth','sclera','pupil','glint'];
+const MARK_LAYER = LAYERS.indexOf('mark');   // only paints where a body layer already is
+const BODY_TOP   = LAYERS.indexOf('head');
+
+function buildMaterials(spec){
+  const skin = ramp(spec.skin), horn = ramp(spec.horn, {spread:.12, shift:14});
+  return {
+    far:    { r: shiftRamp(skin, -2), lit:.45 },
+    skin:   { r: skin,                lit:1 },
+    belly:  { r: ramp(spec.belly),    lit:.65 },
+    limb:   { r: shiftRamp(skin, 0),  lit:1.1 },
+    head:   { r: skin,                lit:.9 },
+    mark:   { r: ramp(spec.mark || spec.crest), lit:.85 },
+    crest:  { r: ramp(spec.crest),    lit:.7 },
+    horn:   { r: horn,                lit:1.15 },
+    mouth:  { r: ramp(spec.mouth, {spread:.10}), lit:.35 },
+    sclera: { r: ramp('#f6f2e2', {spread:.07}),  lit:.3 },
+    pupil:  { r: ramp('#181410', {spread:.05}),  lit:0 },
+    glint:  { r: ramp('#fffdf2', {spread:.04}),  lit:0 },
+    outline: spec.outline
+  };
+}
+
+/* ---------- composite the layers, light them, draw a selective outline ----- */
+const LIGHT = [-0.66, -0.75];      // upper-left
+const RIM = 6;                     // how deep the lit/shadowed band reaches
+
+function composeSprite(layerCanvases, mats, w, h){
+  const n = w*h;
+  const id = new Int8Array(n).fill(-1);
+  for (let li=0; li<LAYERS.length; li++){
+    const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
+    if (li === MARK_LAYER){
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && id[i] <= BODY_TOP) id[i] = li;
+    } else {
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118) id[i] = li;
+    }
+  }
+  // distance from the silhouette edge (two-pass chamfer)
+  const dist = new Float32Array(n);
+  const BIG = 1e6;
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const i = y*w+x;
+    if (id[i] < 0){ dist[i] = 0; continue; }
+    const out = (x===0||id[i-1]<0) || (x===w-1||id[i+1]<0) || (y===0||id[i-w]<0) || (y===h-1||id[i+w]<0);
+    const seam = (x>0&&id[i-1]!==id[i]) || (x<w-1&&id[i+1]!==id[i]) ||
+                 (y>0&&id[i-w]!==id[i]) || (y<h-1&&id[i+w]!==id[i]);
+    dist[i] = out ? 0 : seam ? 2.6 : BIG;
+  }
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const i = y*w+x; if (!dist[i]) continue;
+    let v = dist[i];
+    if (x>0) v = Math.min(v, dist[i-1]+1);
+    if (y>0) v = Math.min(v, dist[i-w]+1);
+    if (x>0&&y>0) v = Math.min(v, dist[i-w-1]+1.41);
+    if (x<w-1&&y>0) v = Math.min(v, dist[i-w+1]+1.41);
+    dist[i] = Math.min(v, BIG);
+  }
+  for (let y=h-1;y>=0;y--) for (let x=w-1;x>=0;x--){
+    const i = y*w+x; if (!dist[i]) continue;
+    let v = dist[i];
+    if (x<w-1) v = Math.min(v, dist[i+1]+1);
+    if (y<h-1) v = Math.min(v, dist[i+w]+1);
+    if (x<w-1&&y<h-1) v = Math.min(v, dist[i+w+1]+1.41);
+    if (x>0&&y<h-1) v = Math.min(v, dist[i+w-1]+1.41);
+    dist[i] = v;
+  }
+
+  const out = makeCv(w,h), og = readCtx(out), img = og.createImageData(w,h), D = img.data;
+  const rgbCache = new Map();
+  const put = (i, hex, a) => {
+    let c = rgbCache.get(hex);
+    if (!c){ c = [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)]; rgbCache.set(hex,c); }
+    D[i*4]=c[0]; D[i*4+1]=c[1]; D[i*4+2]=c[2]; D[i*4+3]=a;
+  };
+  const outRamp = ramp(mats.outline, {spread:.09, shift:10});
+
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const i = y*w+x;
+    if (id[i] < 0) continue;
+    const m = mats[LAYERS[id[i]]];
+    const d = dist[i];
+    let step = 0;
+    if (m.lit > 0 && d < RIM){
+      // inward gradient of the distance field points away from the surface
+      const gx = (dist[i + (x<w-1?1:0)] - dist[i - (x>0?1:0)]);
+      const gy = (dist[i + (y<h-1?w:0)] - dist[i - (y>0?w:0)]);
+      const len = Math.hypot(gx,gy) || 1;
+      const nx = -gx/len, ny = -gy/len;                   // outward normal
+      const lam = nx*LIGHT[0] + ny*LIGHT[1];
+      step = Math.round(lam * (1 - d/RIM) * 2.6 * m.lit);
+    }
+    put(i, m.r[clamp(2 + step, 0, 4)], 255);
+  }
+  // selective outline: sample the material it hugs, brighten it on the lit side
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const i = y*w+x;
+    if (id[i] >= 0) continue;
+    let near = -1, ox = 0, oy = 0;
+    if (x>0 && id[i-1]>=0){ near = id[i-1]; ox = 1; }
+    else if (x<w-1 && id[i+1]>=0){ near = id[i+1]; ox = -1; }
+    if (near < 0){
+      if (y>0 && id[i-w]>=0){ near = id[i-w]; oy = 1; }
+      else if (y<h-1 && id[i+w]>=0){ near = id[i+w]; oy = -1; }
+    }
+    if (near < 0) continue;
+    const lam = ox*LIGHT[0] + oy*LIGHT[1];
+    put(i, outRamp[clamp(1 + Math.round(lam*1.4), 0, 3)], 255);
+  }
+  og.putImageData(img,0,0);
+  return out;
+}
+
+/* ==========================================================================
+   SPECIES ART
+   Anatomy follows current reconstructions: lipped jaws and a barrel torso on
+   the tyrannosaur, oversized horn sheaths and jugal horns on the ceratopsian,
+   a sixty-degree S-curved neck over a shoulder hump on the brachiosaur.
+   Proportions are then pushed toward a toy: bigger skull, bigger eye, shorter
+   snout, rounder body. Shapes are painted onto material layers, and the
+   lighting pass in the colour module turns those layers into shaded pixels.
+   ========================================================================== */
+
+const BAKE_W = 232, BAKE_H = 210, BAKE_G = 196, BAKE_CX = 104;
+
+const STAGE = [
+  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, neck:.44, limb:.68, tail:.54, horn:.14 },
+  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, neck:.68, limb:.83, tail:.76, horn:.48 },
+  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, neck:.87, limb:.93, tail:.90, horn:.80 },
+  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, neck:1.00, limb:1.00, tail:1.00, horn:1.00 }
+];
+
+/* --------------------------- gait and limbs -------------------------------
+   The foot follows a stance/swing path against the ground, and the leg is
+   solved with two-bone inverse kinematics. Bone lengths never change and a
+   planted foot never slides, which is what stops a walk cycle looking rubbery.
+   -------------------------------------------------------------------------- */
+function gaitFoot(phase, stride, lift, duty){
+  phase = ((phase % 1) + 1) % 1;
+  if (phase < duty){                       // planted: starts ahead, slides back
+    const t = phase / duty;
+    return [stride * (-0.5 + t), 0];
+  }
+  const t = (phase - duty) / (1 - duty);   // airborne: swings from back to front
+  return [stride * (0.5 - t), -lift * Math.sin(Math.PI * t)];
+}
+function limbIK(g, hx, hy, tx, ty, L1, L2, w, bend){
+  const dx = tx - hx, dy = ty - hy;
+  const raw = Math.hypot(dx, dy) || 0.001;
+  const d = clamp(raw, Math.abs(L1 - L2) + 0.01, (L1 + L2) * 0.995);
+  const ux = dx / raw, uy = dy / raw;
+  const a = (L1*L1 - L2*L2 + d*d) / (2*d);
+  const h = Math.sqrt(Math.max(0, L1*L1 - a*a));
+  const kx = hx + ux*a - uy*h*bend, ky = hy + uy*a + ux*h*bend;
+  const ax = hx + ux*d, ay = hy + uy*d;
+  tube(g, [[hx,hy],[kx,ky]], [w, w*.64]);
+  tube(g, [[kx,ky],[ax,ay]], [w*.64, w*.44]);
+  return [ax, ay];
+}
+/* hy is the hip height above the ground line at y = 0, so the leg always reaches */
+function legStep(g, hx, hy, phase, w, cfg, hornG){
+  const len = Math.max(4, -hy);
+  const mt = len * cfg.mt;
+  if (cfg.thigh) oval(g, hx, hy + len*.17, w*.92, len*.25);
+  const [ox, oy] = gaitFoot(phase, len*cfg.stride, len*cfg.lift, cfg.duty);
+  const tx = hx + ox + len*(cfg.fwd||0), ty = oy;
+  const ank = limbIK(g, hx, hy, tx + mt*cfg.back, ty - mt, (len-mt)/2*1.02, (len-mt)/2*1.02, w, cfg.bend);
+  drawFoot(g, hornG, ank, tx, ty, w, cfg.foot || 'bird');
+  return [tx, ty];
+}
+function drawFoot(g, hornG, ank, tx, ty, w, kind){
+  if (kind === 'hoof'){
+    // sauropod manus: the metacarpals stand in a vertical column and the whole
+    // hand is a single hoof. No digits are visible in life, so none are drawn.
+    tube(g, [[ank[0], ank[1]],[tx, ty - w*.44]], [w*.56, w*.60]);
+    blob(g, [[tx - w*.32, ty - w*.52],[tx + w*.32, ty - w*.52],
+             [tx + w*.36, ty - w*.10],[tx, ty - w*.03],[tx - w*.36, ty - w*.10]]);
+    return;
+  }
+  if (kind === 'pad'){
+    // sauropod pes: a wedge, deep at the heel where the fleshy pad sits and
+    // sloping forward onto three claw-bearing inner toes
+    tube(g, [[ank[0], ank[1]],[tx + w*.26, ty - w*.46]], [w*.50, w*.54]);
+    blob(g, [[tx + w*.52, ty - w*.08],[tx + w*.60, ty - w*.40],[tx + w*.30, ty - w*.60],
+             [tx - w*.16, ty - w*.44],[tx - w*.44, ty - w*.20],[tx - w*.40, ty - w*.03],
+             [tx + w*.10, ty]]);
+    if (hornG){
+      blob(hornG, [[tx - w*.36, ty - w*.22],[tx - w*.58, ty - w*.10],[tx - w*.36, ty - w*.01]]);
+      blob(hornG, [[tx - w*.20, ty - w*.30],[tx - w*.44, ty - w*.24],[tx - w*.24, ty - w*.12]]);
+    }
+    return;
+  }
+  if (kind === 'column'){
+    // ceratopsian foot: short, broad and blunt-hooved
+    tube(g, [[ank[0], ank[1]],[tx + w*.10, ty - w*.34]], [w*.50, w*.54]);
+    blob(g, [[tx + w*.36, ty - w*.06],[tx + w*.40, ty - w*.34],[tx, ty - w*.46],
+             [tx - w*.36, ty - w*.28],[tx - w*.38, ty - w*.02]]);
+    if (hornG){
+      blob(hornG, [[tx - w*.28, ty - w*.20],[tx - w*.46, ty - w*.08],[tx - w*.26, ty - w*.01]]);
+      blob(hornG, [[tx - w*.08, ty - w*.26],[tx - w*.28, ty - w*.22],[tx - w*.10, ty - w*.10]]);
+    }
+    return;
+  }
+  tube(g, [[ank[0],ank[1]],[tx,ty]], [w*.46, w*.4]);
+  oval(g, tx - w*.1, ty - w*.15, w*.56, w*.28);
+}
+function samplePath(pts, t){
+  let total = 0; const seg = [];
+  for (let i=0;i<pts.length-1;i++){ const d = Math.hypot(pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]); seg.push(d); total += d; }
+  let want = clamp(t,0,1) * total;
+  for (let i=0;i<seg.length;i++){
+    if (want <= seg[i] || i === seg.length-1){
+      const u = seg[i] ? clamp(want/seg[i],0,1) : 0;
+      return [lerp(pts[i][0], pts[i+1][0], u), lerp(pts[i][1], pts[i+1][1], u)];
+    }
+    want -= seg[i];
+  }
+  return pts[pts.length-1];
+}
+function toes(g, x, y, n, dir, size){
+  for (let i=0;i<n;i++) oval(g, x + dir*i*size*1.7, y, size*.78, size*.55);
+}
+function eyeAt(M, x, y, r, state){
+  if (state === 1){                                        // closed: a soft lid line
+    tube(M.pupil, [[x-r*1.5,y-r*.1],[x,y+r*.45],[x+r*1.5,y-r*.1]], [r*.55,r*.6,r*.55]);
+    return;
+  }
+  if (state === 2){                                        // squinting, pleased
+    tube(M.pupil, [[x-r*1.4,y+r*.45],[x,y-r*.5],[x+r*1.4,y+r*.45]], [r*.55,r*.6,r*.55]);
+    return;
+  }
+  oval(M.sclera, x, y, r*1.1, r*1.24);
+  oval(M.pupil,  x - r*.12, y + r*.14, r*.66, r*.86);
+  oval(M.glint,  x - r*.46, y - r*.44, r*.3, r*.3);
+}
+
+/* ------------------------------- T. rex ----------------------------------- */
+
+/* ------------------------------ hats -------------------------------------- */
+const HAT_ART = {
+  frond:  g => { g.fillStyle='#6f9c55'; g.fillRect(4,4,2,5); [[1,1],[3,0],[6,0],[8,1],[2,3],[7,3]].forEach(q=>g.fillRect(q[0],q[1],2,2)); },
+  cap:    g => { g.fillStyle='#b08a4a'; g.fillRect(2,1,6,4); g.fillStyle='#8a6a36'; g.fillRect(0,5,10,2); },
+  goggles:g => { g.fillStyle='#3a4d55'; g.fillRect(0,2,10,3); g.fillStyle='#9fd2e0'; g.fillRect(1,3,3,2); g.fillRect(6,3,3,2); },
+  cone:   g => { g.fillStyle='#d95f7f'; g.fillRect(4,0,2,2); g.fillRect(3,2,4,2); g.fillRect(2,4,6,2); g.fillStyle='#5fb0a5'; g.fillRect(1,6,8,2); },
+  hardhat:g => { g.fillStyle='#e0a92f'; g.fillRect(2,1,6,4); g.fillStyle='#c48c1c'; g.fillRect(0,5,10,2); g.fillRect(4,0,2,2); },
+  crown:  g => { g.fillStyle='#d9a83f'; g.fillRect(0,0,2,3); g.fillRect(4,0,2,3); g.fillRect(8,0,2,3); g.fillRect(0,3,10,3); g.fillStyle='#c04848'; g.fillRect(4,4,2,2); }
+};
+function hatCanvas(id){
+  const c = makeCv(12,11), g = readCtx(c);
+  g.save(); g.translate(1,1); HAT_ART[id](g); g.restore();
+  const d = g.getImageData(0,0,12,11), px = d.data, solid = new Uint8Array(12*11);
+  for (let i=0;i<12*11;i++){ if (px[i*4+3] >= 118){ px[i*4+3] = 255; solid[i] = 1; } else px[i*4+3] = 0; }
+  for (let y=0;y<11;y++) for (let x=0;x<12;x++){
+    const i = y*12+x; if (solid[i]) continue;
+    if ((x>0&&solid[i-1])||(x<11&&solid[i+1])||(y>0&&solid[i-12])||(y<10&&solid[i+12])){
+      px[i*4]=0x24; px[i*4+1]=0x1d; px[i*4+2]=0x13; px[i*4+3]=255;
+    }
+  }
+  g.putImageData(d,0,0);
+  return c;
+}
+const HATS = {};
+for (const k in HAT_ART) HATS[k] = hatCanvas(k);
+
+/* ---------------------------- frame baking -------------------------------- */
+const POSES = {
+  idle:  [ {body:0, legPhase:0, tail:.2}, {body:1.3, legPhase:0, tail:-.2} ],
+  walk:  [ {body:.2, legPhase:0,     tail:0},   {body:1.5, legPhase:1/6, tail:.43},
+           {body:.7, legPhase:2/6,   tail:.43}, {body:.2, legPhase:3/6, tail:0},
+           {body:1.5, legPhase:4/6,  tail:-.43},{body:.7, legPhase:5/6, tail:-.43} ],
+  eat:   [ {body:0, legPhase:0, jaw:1, droop:.7, tail:.3}, {body:0, legPhase:0, jaw:.12, droop:.7, tail:-.1} ],
+  sleep: [ {body:-2.5, legPhase:0, droop:1.5, tail:.1, eye:1} ],
+  cheer: [ {body:5, legPhase:.5, jaw:.8, tail:.9, eye:2}, {body:0, legPhase:0, jaw:.35, tail:-.7, eye:2} ],
+  sick:  [ {body:-1.5, legPhase:0, droop:1.1, tail:-.1, eye:1}, {body:-2.4, legPhase:0, droop:1.2, tail:0, eye:1} ]
+};
+const matCache = new Map();
+function matsFor(spId, skinId){
+  const key = spId + '|' + skinId;
+  if (!matCache.has(key)){
+    const k = skinOf(spId, skinId);
+    matCache.set(key, buildMaterials(Object.assign({}, SPECIES[spId].spec, {
+      skin:k.skin, belly:k.belly, crest:k.crest, mark:k.mark
+    })));
+  }
+  return matCache.get(key);
+}
+const frameCache = new Map();
+function frameOf(spId, stage, anim, idx, blinking, skinId){
+  skinId = skinId || 'wild';
+  const poses = POSES[anim] || POSES.idle;
+  const pose = poses[idx % poses.length];
+  const eye = pose.eye !== undefined ? pose.eye : (blinking ? 1 : 0);
+  const key = spId+'|'+skinId+'|'+stage+'|'+anim+'|'+(idx%poses.length)+'|'+eye;
+  if (frameCache.has(key)) return frameCache.get(key);
+
+  const sp = SPECIES[spId], st = STAGE[stage], k = st.s * sp.scale;
+  const canvases = [], M = {};
+  for (const name of LAYERS){
+    const c = makeCv(BAKE_W, BAKE_H), g = readCtx(c);
+    g.fillStyle = '#000';
+    g.translate(BAKE_CX, BAKE_G); g.scale(k, k);
+    canvases.push(c); M[name] = g;
+  }
+  const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
+  const anchors = sp.draw(M, P);
+  paintPattern(M.mark, skinOf(spId, skinId).pattern);
+
+  const composed = composeSprite(canvases, matsFor(spId, skinId), BAKE_W, BAKE_H);
+  const t = trim(composed);
+  const conv = a => [BAKE_CX + a[0]*k - t.ox, BAKE_G + a[1]*k - t.oy];
+  const out = {
+    cv: t.cv, w: t.w, h: t.h,
+    ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
+    eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
+    eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head
+  };
+  frameCache.set(key, out);
+  return out;
+}
+
+/* Tyrannosaurus rex sprite
+   Part of Paleopal. Load order matters; see build.py. */
+
+const REX_SPEC = { skin:'#7e9c54', belly:'#b8bd80', crest:'#5b7940', horn:'#e9dfba',
+                   mouth:'#8e4a45', outline:'#241d13' };
+const REX_GAIT = { stride:.46, lift:.17, duty:.56, mt:.22, back:.34, bend:1, thigh:false, foot:'bird' };
+function drawRex(M, P){
+  const st = STAGE[P.stage];
+  const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
+  const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+
+  // skeleton landmarks. Hip is the acetabulum; everything else hangs off it.
+  const hipX = 16,  hipY = -46*lM - bob;
+  const backY = hipY - 24*lM, withX = -18, withY = hipY - 25*lM;
+  const bellyY = hipY + 9*lM, throatY = hipY + 3*lM;
+  const hx = withX - 26*nM - 4*hM, hy = withY - 10*nM - 2 + dr*9;
+  const sM = st.snout;
+  const sn = 25*hM*sM, hh = 14.5*hM;
+  const T = d => hipX + d*tM;
+
+  // far limb first, behind everything
+  blob(M.far, [[hipX+9*lM, hipY-11*lM],[hipX+12*lM, hipY+4*lM],[hipX+2*lM, hipY+15*lM],
+               [hipX-9*lM, hipY+13*lM],[hipX-13*lM, hipY-1*lM],[hipX-8*lM, hipY-11*lM]]);
+  legStep(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 14*lM, REX_GAIT);
+
+  // one continuous mass from nape to tail tip: neck, ribcage, hips and tail
+  const topLine = [[hx+11, hy-hh*.35],[withX, withY],[0, backY-1],[hipX+7, backY+1],[T(23), hipY-18*lM+sw*2]];
+  blob(M.skin, [
+    [hx+11, hy-hh*.35],                     // nape at the skull
+    [withX, withY],                         // withers
+    [0, backY-1],                           // back
+    [hipX+7, backY+1],                      // over the hips
+    [T(23), hipY-18*lM+sw*2],               // deep tail base
+    [T(48), hipY-13*lM+sw*4],
+    [T(72), hipY-7*lM+sw*6],                // tail tip
+    [T(70), hipY-4*lM+sw*6],
+    [T(43), hipY-1*lM+sw*4],
+    [T(17), hipY+4*lM],
+    [hipX-6, bellyY],                       // belly
+    [-8, bellyY-1],
+    [withX-7, throatY-2],                   // chest and throat
+    [hx+9, hy+hh*.58]
+  ]);
+
+  // skull: deep behind the eye, tapering to a blunt muzzle
+  blob(M.head, [[hx+13, hy-hh*.12],[hx+11, hy-hh*.96],[hx-sn*.34, hy-hh*1.03],
+                [hx-sn*.86, hy-hh*.72],[hx-sn*1.0, hy-hh*.08],[hx-sn*.92, hy+hh*.24],
+                [hx-sn*.45, hy+hh*.32],[hx+13, hy+hh*.36]]);
+  // hinged lower jaw. Lips cover the teeth, so a shut mouth shows none of them
+  M.head.save(); M.head.translate(hx+10, hy+hh*.14); M.head.rotate(jaw*.44);
+  blob(M.head, [[3,-hh*.28],[-sn*.38,-hh*.3],[-sn*.94,-hh*.04],[-sn*.88,hh*.3],[-sn*.34,hh*.46],[3,hh*.4]]);
+  M.head.restore();
+  if (jaw > .06){
+    M.mouth.save(); M.mouth.translate(hx+10, hy+hh*.14); M.mouth.rotate(jaw*.44);
+    blob(M.mouth, [[0,-hh*.2],[-sn*.38,-hh*.22],[-sn*.8,-hh*.02],[-sn*.76,hh*.18],[-sn*.28,hh*.26],[0,hh*.22]]);
+    M.mouth.restore();
+    for (let i=0;i<4;i++) oval(M.horn, hx - sn*.2 - i*sn*.17, hy + hh*.14, Math.max(.8,1.2*hM), Math.max(1.1,2*hM));
+  }
+
+  const ex = hx - sn*.46, ey = hy - hh*.42;
+  // lacrimal ridge above the eye, and the keratin row along the neck and back
+  blob(M.crest, [[ex+7*hM, ey-hh*.32],[ex+1*hM, ey-hh*.66],[ex-7*hM, ey-hh*.5],[ex-6*hM, ey-hh*.26]]);
+  for (let i=0;i<10;i++){
+    const q = samplePath(topLine, .04 + i*.088);          // ride the actual back line
+    oval(M.crest, q[0], q[1] + 1.6*lM, 2.3*lM, 1.4*lM);
+  }
+  oval(M.belly, -6, bellyY - 2*lM, 17*lM, 4*lM);
+  oval(M.belly, hx - sn*.3, hy + hh*.26, sn*.3, hh*.16);
+
+  // two-fingered hand, palm turned inward the way a theropod wrist actually sits
+  const ax = withX + 9, ay = withY + 22*lM;
+  tube(M.limb, [[ax,ay],[ax-11*lM,ay+11*lM],[ax-20*lM,ay+7*lM]], [10*lM, 7.2*lM, 5.4*lM]);
+  toes(M.horn, ax-23*lM, ay+6*lM, 2, -1, Math.max(1.3, 2.3*lM));
+
+  // near limb: a heavy drumstick over the femur, then shank and bird foot
+  blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM],[hipX+5*lM, hipY+18*lM],
+                [hipX-8*lM, hipY+15*lM],[hipX-14*lM, hipY-1*lM],[hipX-9*lM, hipY-13*lM]]);
+  const foot = legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT);
+  toes(M.horn, foot[0]-9*lM, foot[1]-1, 3, -1, Math.max(1.2, 2.1*lM));
+
+  eyeAt(M, ex, ey, 3.5*hM, P.eye);
+  oval(M.mouth, hx - sn*.84, hy - hh*.34, Math.max(.8,1.2*hM), Math.max(.8,1.1*hM));
+
+  return { eye:[ex,ey], eyeR:3.5*hM, mouth:[hx - sn*.82, hy + hh*.12],
+           hat:[hx - sn*.16, hy - hh*1.02], top: hy - hh };
+}
+
+
+/* Triceratops horridus sprite
+   Part of Paleopal. Load order matters; see build.py. */
+
+/* ----------------------------- Triceratops --------------------------------- */
+const TRI_SPEC = { skin:'#ab7040', belly:'#ca9b64', crest:'#8a5228', horn:'#efe6c8',
+                   mouth:'#7e3a30', outline:'#26190f' };
+const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
+const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
+function drawTrike(M, P){
+  const st = STAGE[P.stage];
+  const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail, hF = st.horn, sM = st.snout;
+  const bob = P.body, sw = P.tail||0, dr = P.droop||0;
+
+  const hipX = 24, hipY = -41*lM - bob;
+  const shX = -12, shY = -38*lM - bob;
+  const withY = hipY - 24*lM;                 // tall neural spines make a shoulder hump
+  const backY = hipY - 20*lM, bellyY = hipY + 13*lM;
+  const T = d => hipX + d*tM;
+
+  legStep(M.far, hipX-7, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
+  legStep(M.far, shX-7,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE);
+
+  // barrel body: deepest at the shoulder hump, dipping over the back, short tail
+  blob(M.skin, [
+    [shX-11, withY+6*lM],                     // nape, meeting the frill
+    [shX,    withY],                          // shoulder hump
+    [6,      backY-1],                        // back
+    [hipX+3, backY+2],                        // hips
+    [T(9),   hipY-16*lM+sw*2],                // hip bulge
+    [T(21),  hipY-11*lM+sw*4],                // tail base
+    [T(34),  hipY-4*lM+sw*6],                 // tail tip
+    [T(32),  hipY-1*lM+sw*6],
+    [T(16),  hipY+3*lM],
+    [T(4),   hipY+8*lM],
+    [hipX-4, bellyY],                         // belly
+    [2,      bellyY+2*lM],
+    [shX+2,  bellyY-1*lM],
+    [shX-9,  hipY+2*lM]                       // throat
+  ]);
+
+  // frill: solid bone shield, tilted back, with epoccipital scallops on the rim
+  const fx = shX - 15*nM - 4, fy = hipY - 14*lM - 8*nM + dr*4;
+  const fRx = 17.5*hM*(.34+.66*hF), fRy = 20.5*hM*(.34+.66*hF);
+  const rim = [];
+  for (let i=0;i<=12;i++){                    // epoccipitals scallop the rim itself
+    const a = Math.PI*1.20 + (Math.PI*1.28) * i/12;
+    const r = (i % 2) ? 1.0 : .90;
+    rim.push([fx + Math.cos(a)*fRx*r, fy + Math.sin(a)*fRy*r]);
+  }
+  rim.push([fx - fRx*.5, fy + fRy*.62], [fx - fRx*.95, fy - fRy*.15]);
+  blob(M.head, rim);
+
+  // skull: long, low and carried well forward of the frill
+  const hx = fx - 19*hM*sM, hy = fy + 9*hM, sn = 21*hM*sM, hh = 10.5*hM;
+  blob(M.head, [[hx+18*hM, hy-hh*1.15],[hx-sn*.42, hy-hh*1.2],[hx-sn*.94, hy-hh*.55],
+                [hx-sn*1.02, hy+hh*.35],[hx-sn*.45, hy+hh*.95],[hx+18*hM, hy+hh*.9]]);
+  // hooked rostral beak
+  blob(M.horn, [[hx-sn*.84, hy-hh*.62],[hx-sn*1.36, hy-hh*.02],[hx-sn*1.2, hy+hh*.62],
+                [hx-sn*.66, hy+hh*.74]]);
+  const ex = hx - sn*.38, ey = hy - hh*.34;
+  // brow horns: the keratin sheath ran past the bone core, so they are long
+  tube(M.horn, [[ex+4*hM, ey-hh*.7],[ex-10*hM*hF, ey-(hh*.8+hh*1.15*hF)],
+                [ex-24*hM*hF, ey-(hh*.85+hh*1.5*hF)]], [7.4*hM, 4.0*hM, 1.0*hM]);
+  tube(M.horn, [[ex-4*hM, ey-hh*.78],[ex-17*hM*hF, ey-(hh*.7+hh*.85*hF)],
+                [ex-31*hM*hF, ey-(hh*.7+hh*1.05*hF)]], [6.3*hM, 3.4*hM, .9*hM]);
+  tube(M.horn, [[hx-sn*.76, hy-hh*.3],[hx-sn*.92, hy-hh*(.5+.55*hF)]], [4.4*hM, 1.3*hM]);
+  blob(M.horn, [[hx-sn*.06, hy+hh*.5],[hx-sn*.34, hy+hh*.44],[hx-sn*.16, hy+hh*1.35]]); // jugal horn
+
+  // low nubbin feature scales over the flank and tail base
+  for (const q of [[-2,-10],[9,-13],[20,-11],[13,-5],[28,-8],[2,-4]])
+    oval(M.crest, q[0], hipY + q[1]*lM, 1.7*lM, 1.2*lM);
+
+  oval(M.belly, 6, bellyY - 3*lM, 22*lM, 5*lM);
+
+  legStep(M.limb, hipX+2, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
+  legStep(M.limb, shX+4, shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
+
+  eyeAt(M, ex, ey, 3.1*hM, P.eye);
+  oval(M.mouth, hx - sn*.74, hy - hh*.12, Math.max(.8,1.2*hM), Math.max(.8,1*hM));
+
+  return { eye:[ex,ey], eyeR:3.1*hM, mouth:[hx - sn*1.15, hy + hh*.25],
+           hat:[fx - fRx*.1, fy - fRy*.95], top: fy - fRy };
+}
+
+
+/* Brachiosaurus altithorax sprite
+   Part of Paleopal. Load order matters; see build.py. */
+
+/* ---------------------------- Brachiosaurus -------------------------------- */
+const BRA_SPEC = { skin:'#71958a', belly:'#a9ba8e', crest:'#88a894', horn:'#e2e3bc',
+                   mouth:'#4c3a35', outline:'#1b2422' };
+const BRA_FORE = { stride:.30, lift:.06, duty:.74, mt:.07, back:0,   bend:-1, thigh:false, foot:'hoof' };
+const BRA_HIND = { stride:.30, lift:.06, duty:.74, mt:.15, back:.30, bend:1,  thigh:true,  foot:'pad' };
+function drawBrachio(M, P){
+  const st = STAGE[P.stage];
+  const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
+  const bob = P.body, sw = P.tail||0, dr = P.droop||0;
+  // forelimbs about 1.2 times the hindlimbs: the trait the animal is named for
+  const foreLen = 56*lM, hindLen = 46*lM;
+  const shX = -14, shY = -foreLen - bob, hipX = 30, hipY = -hindLen - bob;
+
+  legStep(M.far, shX-7,  shY+4, (P.legPhase+.25)%1, 14*lM, BRA_FORE);
+  legStep(M.far, hipX-7, hipY+3,(P.legPhase+.5)%1,  14*lM, BRA_HIND);
+
+  // short tail for a sauropod, carried clear of the ground
+  tube(M.skin, [[hipX,hipY],[hipX+22*tM,hipY+1+sw*3],[hipX+44*tM,hipY+3+sw*5],
+                [hipX+66*tM,hipY+6+sw*7],[hipX+86*tM,hipY+10+sw*9]],
+       [31*lM, 22*lM, 14*lM, 7*lM, 2.5*lM]);
+  // the back slopes down from the shoulders to the hips
+  tube(M.skin, [[shX,shY],[8,shY+8],[hipX,hipY]], [39*lM, 44*lM, 34*lM]);
+  oval(M.skin, shX + 2, shY - 6*lM, 18*lM, 12*lM);          // shoulder hump
+
+  // neck near sixty degrees, S-curved, drooping slightly at the head end
+  const nl = 58*nM;
+  const n1 = [shX - 9,  shY - nl*.30];
+  const n2 = [shX - 19, shY - nl*.63];
+  const n3 = [shX - 23, shY - nl*.94 + dr*10];
+  tube(M.head, [[shX-3, shY-9],n1,n2,n3], [26*lM, 18*lM, 13*lM, 11*lM]);
+
+  const sM = st.snout;
+  const hx = n3[0] - 7*hM, hy = n3[1] - 4*hM, sn = 16*hM*sM, hh = 8*hM;
+  blob(M.head, [[hx+10*hM,hy-hh*.8],[hx-sn*.35,hy-hh*1.15],[hx-sn*1.0,hy-hh*.3],
+                [hx-sn*.95,hy+hh*.7],[hx-sn*.2,hy+hh*1.05],[hx+10*hM,hy+hh*.85]]);
+  // tall nasal chamber sitting on the roof of a very small skull
+  blob(M.crest, [[hx+2*hM,hy-hh*1.0],[hx-sn*.16,hy-hh*2.05],[hx-sn*.62,hy-hh*1.8],[hx-sn*.6,hy-hh*.85]]);
+  oval(M.mouth, hx - sn*.5, hy - hh*1.55, Math.max(.8,1.1*hM), Math.max(.8,1.0*hM));
+
+  oval(M.belly, 8, hipY + 15*lM, 16*lM, 4.2*lM);
+
+  const nf = legStep(M.limb, shX+4, shY+2, (P.legPhase+.75)%1, 17*lM, BRA_FORE);
+  legStep(M.limb, hipX+2, hipY, P.legPhase, 17*lM, BRA_HIND, M.horn);
+  oval(M.horn, nf[0] - 5.4*lM, nf[1] - 2.6*lM, 1.9*lM, 2.2*lM);   // short brachiosaurid thumb claw
+
+  eyeAt(M, hx - sn*.48, hy - hh*.3, 2.9*hM, P.eye);
+
+  return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
+           hat:[hx - sn*.3, hy - hh*2.05], top: hy - hh*2.05 };
+}
+
+
+/* Species registry, field notes and coats
+   Part of Paleopal. Load order matters; see build.py. */
+
+/* --------------------------- species registry ------------------------------ */
+const SPECIES = {
+  rex: {
+    id:'rex', draw:drawRex, spec:REX_SPEC, scale:.82, speed:15, strideBase:.46*46,
+    name:'Tyrannosaurus rex', common:'T. rex', diet:'carnivore',
+    likes:['fish','meat'], dislikes:['fern'],
+    era:'Late Cretaceous, 68-66 million years ago, western North America',
+    facts:[
+      'Its bite is the strongest measured for any land animal, around 35,000 newtons.',
+      'Work on tooth wear and jaw foramina points to lips covering the teeth, so a closed mouth showed none of them.',
+      'Belly ribs called gastralia made the torso barrel-shaped rather than lean.',
+      'Each hand has exactly two fingers, and the palms faced inward, not down.',
+      'Both eyes face forward, so it judged distance the way a hawk does.'
+    ],
+    checks:['Lips covering the teeth','Deep barrel torso','Two fingers, palms inward',
+            'Level spine, tail as counterweight','Keratin row down the neck','Forward-facing eyes']
+  },
+  trike: {
+    id:'trike', draw:drawTrike, spec:TRI_SPEC, scale:.86, speed:10, strideBase:.34*41,
+    name:'Triceratops horridus', common:'Triceratops', diet:'herbivore',
+    likes:['fern','cycad'], dislikes:['fish'],
+    era:'Late Cretaceous, 68-66 million years ago, Hell Creek',
+    facts:[
+      'Horn cores grew keratin sheaths that ran past the bone, so living horns were longer than the skeleton shows.',
+      'The frill is solid bone, ringed with small knobs called epoccipitals.',
+      'Skin impressions show large scales with scattered low nubbins, not the spines older art gave it.',
+      'A jugal horn juts down from each cheek, below the eye.',
+      'T. horridus carried a long snout and only a small nasal horn.'
+    ],
+    checks:['Horns above the eyes, sheathed long','Solid frill with rim knobs','Hooked rostral beak',
+            'Jugal horn on each cheek','Nubbin feature scales','Upright hind legs, elbows held out']
+  },
+  brachio: {
+    id:'brachio', draw:drawBrachio, spec:BRA_SPEC, scale:.66, speed:5.5, strideBase:.30*46,
+    name:'Brachiosaurus altithorax', common:'Brachiosaurus', diet:'herbivore',
+    likes:['berry','cycad'], dislikes:['meat'],
+    era:'Late Jurassic, 154-150 million years ago, North America',
+    facts:[
+      'The forelimbs run about 1.2 times the length of the hindlimbs, which is why the back slopes backward.',
+      'The neck was probably held near sixty degrees with a slight S-curve, not straight up like a mast.',
+      'A hump of tall vertebral spines over the shoulders anchored the neck muscles.',
+      'Its nasal chambers formed a crest on the roof of a very small skull.',
+      'The tail is short for a sauropod, and one big thumb claw sits on each forefoot.'
+    ],
+    checks:['Forelimbs longer than hindlimbs','Back sloping down to the hips','Shoulder hump at the neck base',
+            'S-curved neck near sixty degrees','Nasal crest on the skull','Thumb claw on each forefoot']
+  }
+};
+
+
+/* --------------------------------- skins -----------------------------------
+   A skin swaps the three body ramps and paints an optional pattern onto the
+   mark layer. Patterns are deterministic so a coat does not crawl between
+   animation frames.
+   -------------------------------------------------------------------------- */
+const SKINS = {
+  rex: [
+    { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
+      skin:'#7e9c54', belly:'#b8bd80', crest:'#5b7940', mark:'#4a6634',
+      note:'The olive coat it hatched in.' },
+    { id:'ash',    name:'Ashfall',   cost:70,  pattern:'stripes',
+      skin:'#6f7a72', belly:'#a9b0a2', crest:'#4a534d', mark:'#39413c',
+      note:'Cold grey with charcoal banding down the flank.' },
+    { id:'ember',  name:'Ember',     cost:120, pattern:'patches',
+      skin:'#a8603a', belly:'#d69a5e', crest:'#7c4224', mark:'#71321a',
+      note:'Rust and scorch marks. Loud, and it knows it.' },
+    { id:'canopy', name:'Canopy',    cost:170, pattern:'speckle',
+      skin:'#4f7a4a', belly:'#9dbd7a', crest:'#395c37', mark:'#93b25c',
+      note:'Deep forest green flecked with light through leaves.' }
+  ],
+  trike: [
+    { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
+      skin:'#ab7040', belly:'#ca9b64', crest:'#8a5228', mark:'#7a4522',
+      note:'The tan coat it hatched in.' },
+    { id:'chalk',  name:'Chalk',     cost:70,  pattern:'spots',
+      skin:'#c3ab8c', belly:'#e6d8bc', crest:'#95805f', mark:'#8a7050',
+      note:'Bleached bone with dark rosettes.' },
+    { id:'ochre',  name:'Ochre',     cost:120, pattern:'stripes',
+      skin:'#c26a30', belly:'#e8a75c', crest:'#8e4620', mark:'#6f2f18',
+      note:'A display animal. Banding runs the whole body.' },
+    { id:'basalt', name:'Basalt',    cost:170, pattern:'patches',
+      skin:'#5c6470', belly:'#98a1ad', crest:'#3f4650', mark:'#333944',
+      note:'Volcanic grey-blue with darker plates.' }
+  ],
+  brachio: [
+    { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
+      skin:'#71958a', belly:'#a9ba8e', crest:'#88a894', mark:'#5c7f74',
+      note:'The sage coat it hatched in.' },
+    { id:'dune',   name:'Dune',      cost:70,  pattern:'patches',
+      skin:'#b9a173', belly:'#ded0a2', crest:'#c6b088', mark:'#8c7548',
+      note:'Sand and dry grass. Vanishes on the floodplain.' },
+    { id:'slate',  name:'Slate',     cost:120, pattern:'stripes',
+      skin:'#6d7d92', belly:'#a9b6c4', crest:'#7f8fa2', mark:'#3f4b5c',
+      note:'Storm grey with vertical shadow banding.' },
+    { id:'fernwood',name:'Fernwood', cost:170, pattern:'spots',
+      skin:'#4e7a63', belly:'#9dba8e', crest:'#5f8a72', mark:'#8fb27c',
+      note:'Wet forest green dappled with pale rings.' }
+  ]
+};
+function skinOf(spId, skinId){
+  const list = SKINS[spId];
+  return list.find(k => k.id === skinId) || list[0];
+}
+/* patterns are drawn in local sprite units and masked to the body by the
+   compositor, so they can be laid down as simple full-field shapes */
+function paintPattern(g, kind){
+  if (!kind || kind === 'none') return;
+  if (kind === 'stripes'){
+    for (let i=0;i<17;i++){
+      const x = -110 + i*14;
+      tube(g, [[x-5,-140],[x+3,-72],[x+10,4]], [5.5, 6.5, 4.5]);
+    }
+    return;
+  }
+  if (kind === 'spots'){
+    for (let i=0;i<64;i++){
+      const x = -110 + ((i*47) % 232);
+      const y = -4 - ((i*61) % 132);
+      oval(g, x, y, 3.6, 3.0);
+    }
+    return;
+  }
+  if (kind === 'speckle'){
+    for (let i=0;i<170;i++){
+      const x = -110 + ((i*29) % 232);
+      const y = -2 - ((i*43) % 136);
+      oval(g, x, y, 1.5, 1.3);
+    }
+    return;
+  }
+  if (kind === 'patches'){
+    const pts = [[-66,-96],[-14,-74],[32,-100],[74,-64],[-44,-42],[12,-36],
+                 [56,-28],[-80,-58],[92,-48],[-30,-112],[46,-120],[8,-58]];
+    pts.forEach((q,i) => oval(g, q[0], q[1], 12 + (i%3)*5, 8 + (i%2)*5));
+  }
+}
+
+
+/* ==========================================================================
+   WORLD
+   The habitat is built the same way as the animals: flat colour blocked into
+   integer columns, dithered gradients instead of smooth ones, one light from
+   the upper left, and depth carried by parallax rather than by blur.
+   ========================================================================== */
+
+const SKY_SPECS = {
+  night: { top:'#0a1124', low:'#28374f', far:'#1c2942', mid:'#151f2d', tree:'#111d20',
+           grass:'#2b4331', dirt:'#382f27', water:'#22405a', tint:'rgba(16,24,54,.44)' },
+  dawn:  { top:'#2c3f70', low:'#e39a6c', far:'#5d5b7c', mid:'#44465d', tree:'#2e4038',
+           grass:'#5b7949', dirt:'#7b6046', water:'#7d6f86', tint:'rgba(196,124,84,.13)' },
+  day:   { top:'#4d9dc9', low:'#c3e2d8', far:'#8fa79d', mid:'#6c8b6f', tree:'#3e5a44',
+           grass:'#78a051', dirt:'#a5825a', water:'#6fa6b8', tint:'rgba(0,0,0,0)' },
+  dusk:  { top:'#2b2854', low:'#da834b', far:'#504563', mid:'#3a3347', tree:'#2b3934',
+           grass:'#597047', dirt:'#6f553f', water:'#6b5570', tint:'rgba(96,62,116,.20)' }
+};
+function skyPhase(d){
+  const h = d.getHours() + d.getMinutes()/60;
+  if (h < 5 || h >= 21) return 'night';
+  if (h < 7.5) return 'dawn';
+  if (h < 18)  return 'day';
+  return 'dusk';
+}
+const BAYER = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+const mixHex = (a,b,t) => {
+  const A = [1,3,5].map(i=>parseInt(a.slice(i,i+2),16)), B = [1,3,5].map(i=>parseInt(b.slice(i,i+2),16));
+  return '#' + A.map((v,i)=>Math.round(lerp(v,B[i],t)).toString(16).padStart(2,'0')).join('');
+};
+const STARS = Array.from({length:54}, () => ({x:rnd(2,W-2), y:rnd(3,92), p:rnd(0,6.3), b:rnd(.4,1)}));
+const MOTES = Array.from({length:14}, () => ({x:rnd(0,W), y:rnd(40,GROUND-6), vx:rnd(2,7), vy:rnd(-3,3), p:rnd(0,6.3)}));
+
+/* --------------------------- baked backdrop -------------------------------- */
+const bgCache = new Map();
+function ridge(g, cfg){
+  // integer-column heightfield: no antialiasing, so the silhouette stays crisp
+  for (let x=0;x<W;x++){
+    let h = cfg.base;
+    for (const w of cfg.waves) h += Math.sin(x*w[0] + w[1]) * w[2];
+    h = Math.round(h);
+    g.fillStyle = cfg.col; g.fillRect(x, h, 1, GROUND - h + 2);
+    g.fillStyle = cfg.lit; g.fillRect(x, h, 1, 1);
+    let hn = cfg.base;
+    for (const w of cfg.waves) hn += Math.sin((x+1)*w[0] + w[1]) * w[2];
+    if (Math.round(hn) > h) g.fillRect(x, h, 1, 2);          // catch light on left faces
+  }
+}
+function conifer(g, x, base, h, body, litc){
+  g.fillStyle = '#2f2822';
+  g.fillRect(x, base - Math.round(h*.2), 2, Math.round(h*.2));
+  for (let k=0;k<3;k++){                                    // three tiers, each wider than the last
+    const topY = Math.round(base - h + k*h*.26);
+    const botY = Math.round(base - h + k*h*.26 + h*.40);
+    const maxW = Math.round(h*.26 + k*h*.11);
+    const rows = Math.max(2, botY - topY);
+    for (let r=0;r<rows;r++){
+      const wd = Math.max(1, Math.round(maxW * (r+1)/rows));
+      g.fillStyle = body; g.fillRect(x - (wd>>1), topY + r, wd, 1);
+      g.fillStyle = litc; g.fillRect(x - (wd>>1), topY + r, Math.max(1, wd*.4|0), 1);
+    }
+  }
+}
+
+function boulder(g, x, base, w, h, col, lit, shd){
+  for (let i=0;i<h;i++){
+    const t = i/h, wd = Math.round(w * (0.55 + 0.45*Math.sin((1-t)*Math.PI*0.5)));
+    g.fillStyle = col; g.fillRect(x - (wd>>1), base - h + i, wd, 1);
+    g.fillStyle = shd; g.fillRect(x + (wd>>1) - 2, base - h + i, 2, 1);
+    if (i < 2){ g.fillStyle = lit; g.fillRect(x - (wd>>1) + 1, base - h + i, Math.max(1,wd-3), 1); }
+  }
+}
+function fallenLog(g, x, base, len, col, lit, shd){
+  g.fillStyle = col; g.fillRect(x, base - 5, len, 5);
+  g.fillStyle = lit; g.fillRect(x, base - 5, len, 1);
+  g.fillStyle = shd; g.fillRect(x, base - 1, len, 1);
+  g.fillStyle = shd; g.fillRect(x + len - 3, base - 5, 3, 5);
+  g.fillStyle = lit; g.fillRect(x + len - 2, base - 4, 1, 3);
+  for (let i=6;i<len-6;i+=7){ g.fillStyle = shd; g.fillRect(x+i, base-4, 1, 3); }
+}
+function cycadPlant(g, x, base, h, col, lit, shd){
+  g.fillStyle = shd; g.fillRect(x-2, base - h*.35, 5, h*.35);
+  g.fillStyle = col; g.fillRect(x-1, base - h*.35, 3, h*.35);
+  for (let a=0;a<5;a++){
+    const ang = 0.35 + a*0.52, len = h * (0.72 - Math.abs(a-2)*0.08);
+    const dir = a < 2 ? -1 : a > 2 ? 1 : 0;
+    const dx = dir === 0 ? 0 : dir;
+    for (let t=1;t<=7;t++){
+      const u = t/7;
+      const px = Math.round(x + dx * Math.cos(ang) * len * u * (dir?1:0));
+      const py = Math.round(base - h*.35 - Math.sin(ang) * len * u + u*u*3);
+      const lf = Math.max(1, Math.round(lerp(3.2, 1, u)));
+      g.fillStyle = (t & 1) ? col : shd; g.fillRect(px - 1, py - lf, 2, lf*2);
+      if (t < 3){ g.fillStyle = lit; g.fillRect(px - 1, py - lf, 2, 1); }
+    }
+  }
+}
+function reeds(g, x, base, n, col, lit){
+  for (let i=0;i<n;i++){
+    const rx = x + i*3, h = 6 + ((i*7)%5);
+    g.fillStyle = col; g.fillRect(rx, base - h, 1, h);
+    g.fillStyle = lit; g.fillRect(rx, base - h, 1, 2);
+    g.fillStyle = col; g.fillRect(rx + (i&1?1:-1), base - h + 2, 1, 2);
+  }
+}
+function bakeBg(phase){
+  if (bgCache.has(phase)) return bgCache.get(phase);
+  const S_ = SKY_SPECS[phase], c = makeCv(W,H), g = readCtx(c);
+  const horizon = 108;
+
+  // dithered sky: five steps with a 4x4 ordered dither across each boundary
+  for (let y=0;y<horizon;y++){
+    const f = (y/horizon) * 4, i = Math.floor(f), fr = f - i;
+    const a = mixHex(S_.top, S_.low, clamp(i/4,0,1)), b = mixHex(S_.top, S_.low, clamp((i+1)/4,0,1));
+    for (let x=0;x<W;x++){ g.fillStyle = (BAYER[y&3][x&3]/16 < fr) ? b : a; g.fillRect(x,y,1,1); }
+  }
+  g.fillStyle = S_.low; g.fillRect(0, horizon, W, GROUND - horizon + 2);
+
+  // three depth planes, each flatter and lighter than the one in front
+  ridge(g, { base:74, col: mixHex(S_.far, S_.low, .68), lit: mixHex(S_.far, S_.low, .78),
+             waves:[[.019,.3,13],[.044,2.6,6]] });
+  ridge(g, { base:84, col: mixHex(S_.far, S_.low, .42), lit: mixHex(S_.far, S_.low, .62),
+             waves:[[.031,1.1,11],[.071,.4,5],[.013,2.2,7]] });
+  // volcano on the far plane
+  (function(){
+    const px = 168, top = 52, half = 26;
+    for (let x=px-half;x<=px+half;x++){
+      const t = Math.abs(x-px)/half;
+      let y = Math.round(top + Math.pow(t,1.3)*40 + 4);
+      if (t < .26) y += 3 - Math.round(t*8);
+      g.fillStyle = mixHex(S_.far, '#000000', .22); g.fillRect(x, y, 1, GROUND-y+2);
+      g.fillStyle = x < px ? mixHex(S_.far,S_.low,.4) : mixHex(S_.far,'#000000',.42);
+      g.fillRect(x, y, 1, 1);
+    }
+    g.fillStyle = '#c4562f'; g.fillRect(px-6, top+6, 12, 2);
+    g.fillStyle = '#e8a44a'; g.fillRect(px-4, top+6, 6, 1);
+    g.fillStyle = 'rgba(210,150,120,.20)'; g.fillRect(px-3, top-8, 6, 12); g.fillRect(px-1, top-15, 4, 8);
+  })();
+  ridge(g, { base:100, col: mixHex(S_.mid, S_.low, .2), lit: mixHex(S_.mid, S_.low, .45),
+             waves:[[.048,3.4,8],[.11,1.7,3]] });
+
+  // treeline sitting on the middle plane
+  const treeBody = mixHex(S_.tree, S_.low, .18), treeLit = mixHex(S_.tree, S_.low, .38);
+  [[14,26],[26,19],[38,23],[196,24],[208,17],[184,20],[120,15],[132,21]]
+    .forEach(t => conifer(g, t[0], GROUND-2, t[1], treeBody, treeLit));
+
+  // ground: lit grass edge, then dithered dirt
+  const grassLit = mixHex(S_.grass, S_.low, .40), grassDark = mixHex(S_.grass, '#000000', .32);
+  for (let x=0;x<W;x++){                                    // tufted, not a ruled line
+    const t = (Math.sin(x*.7) > .3 ? 1 : 0) + (Math.sin(x*.31 + 2) > .55 ? 1 : 0) + (Math.sin(x*1.3+1) > .8 ? 1 : 0);
+    g.fillStyle = S_.grass; g.fillRect(x, GROUND-1-t, 1, 5+t);
+    g.fillStyle = grassLit; g.fillRect(x, GROUND-1-t, 1, 1);
+  }
+  g.fillStyle = grassDark; g.fillRect(0, GROUND+3, W, 1);
+  const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.22), d2 = mixHex(S_.dirt,S_.low,.22);
+  for (let y=GROUND+4;y<H;y++) for (let x=0;x<W;x++){
+    const t = (y-GROUND-4)/(H-GROUND-4);
+    g.fillStyle = (BAYER[y&3][x&3]/16 < t*.75) ? d1 : d0; g.fillRect(x,y,1,1);
+  }
+  for (let i=0;i<26;i++){                                   // pebbles
+    const x = (rnd(2,W-4))|0, y = (GROUND+6+rnd(0,H-GROUND-9))|0;
+    g.fillStyle = d1; g.fillRect(x,y,2,2); g.fillStyle = d2; g.fillRect(x,y,1,1);
+  }
+  for (let i=0;i<16;i++){                                   // grass tufts
+    const x = (rnd(4,W-4))|0, y = (GROUND+5+rnd(0,H-GROUND-10))|0;
+    g.fillStyle = mixHex(S_.grass,'#000000',.15); g.fillRect(x,y,1,3);
+    g.fillRect(x-1,y+1,1,2); g.fillRect(x+1,y+1,1,2);
+  }
+  // scenery on the ground line, behind where the animal walks
+  const rockCol = mixHex(S_.mid,'#000000',.12), rockLit = mixHex(S_.mid, S_.low,.42), rockShd = mixHex(S_.mid,'#000000',.38);
+  boulder(g, 68, GROUND+2, 17, 10, rockCol, rockLit, rockShd);
+  boulder(g, 78, GROUND+2, 9, 6, rockCol, rockLit, rockShd);
+  boulder(g, 133, GROUND+1, 12, 7, rockCol, rockLit, rockShd);
+  const logCol = mixHex(S_.dirt,'#000000',.18), logLit = mixHex(S_.dirt, S_.low,.34), logShd = mixHex(S_.dirt,'#000000',.44);
+  fallenLog(g, 92, GROUND+2, 34, logCol, logLit, logShd);
+  const plCol = mixHex(S_.tree, S_.low, .22), plLit = mixHex(S_.tree, S_.low, .5), plShd = mixHex(S_.tree,'#000000',.35);
+  cycadPlant(g, 32, GROUND+2, 22, plCol, plLit, plShd);
+  cycadPlant(g, 116, GROUND+1, 15, plCol, plLit, plShd);
+  cycadPlant(g, 190, GROUND+3, 19, plCol, plLit, plShd);
+  // watering hole, cut into the dirt on the right
+  const px0 = 142, px1 = 212;
+  for (let x=px0;x<px1;x++){
+    const t = (x-px0)/(px1-px0), dep = Math.round(Math.sin(t*Math.PI)*11);
+    if (dep <= 1) continue;
+    g.fillStyle = mixHex(S_.dirt,'#000000',.45); g.fillRect(x, GROUND+6, 1, 2);
+    g.fillStyle = mixHex(S_.water,'#000000',.25); g.fillRect(x, GROUND+8, 1, dep);
+    g.fillStyle = S_.water; g.fillRect(x, GROUND+8, 1, Math.max(1, dep-3));
+    g.fillStyle = mixHex(S_.water,S_.low,.45); g.fillRect(x, GROUND+8, 1, 1);
+  }
+  reeds(g, 138, GROUND+8, 5, plShd, plLit);
+  reeds(g, 205, GROUND+8, 4, plShd, plLit);
+  bgCache.set(phase,c);
+  return c;
+}
+
+/* --------------------------- moving backdrop ------------------------------- */
+const CLOUDS = [
+  { x:30,  y:16, v:1.9, w:26, h:5, near:1 }, { x:140, y:10, v:2.6, w:34, h:6, near:1 },
+  { x:88,  y:32, v:1.1, w:20, h:4, near:0 }, { x:196, y:26, v:1.4, w:24, h:4, near:0 }
+];
+let flyer = null, flyerAt = 4000;
+function drawSkyBody(g, phase, now){
+  // the sun and moon ride an arc keyed to the player's actual clock
+  const d = new Date(), h = d.getHours() + d.getMinutes()/60;
+  const night = phase === 'night';
+  const t = clamp(night ? ((h + 3) % 24) / 12 : (h - 6) / 13, 0, 1);
+  const cx = 18 + t*(W-36), cy = 62 - Math.sin(clamp(t,0,1)*Math.PI) * 44;
+  if (night){
+    g.fillStyle = '#e8e6d2'; g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
+    g.fillStyle = SKY_SPECS[phase].top; g.beginPath(); g.arc(cx-3.5, cy-2.5, 6, 0, 7); g.fill();
+  } else {
+    g.fillStyle = phase === 'day' ? 'rgba(250,238,170,.35)' : 'rgba(250,200,140,.3)';
+    g.beginPath(); g.arc(cx, cy, 12, 0, 7); g.fill();
+    g.fillStyle = phase === 'day' ? '#f7ecac' : '#f6c887';
+    g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
+  }
+}
+function drawClouds(g, phase, dt){
+  const lit = phase === 'night' ? 'rgba(196,206,232,.30)' : 'rgba(248,246,234,.92)';
+  const shd = phase === 'night' ? 'rgba(150,162,192,.26)' : 'rgba(214,214,204,.85)';
+  for (const c of CLOUDS){
+    c.x += c.v * dt/1000 * 4; if (c.x > W + c.w) c.x = -c.w;
+    const x = Math.round(c.x), y = c.y, w = c.near ? c.w : c.w*.7, hh = c.near ? c.h : c.h-1;
+    g.fillStyle = lit;
+    g.fillRect(x - w/2, y, w, hh);
+    g.fillRect(x - w/4, y - 3, w/2, 3);
+    g.fillRect(x + w/6, y - 5, w/4, 2);
+    g.fillStyle = shd; g.fillRect(x - w/2, y + hh - 1, w, 1);
+  }
+}
+function drawFlyers(g, dt, now){
+  if (!flyer && now > flyerAt){ flyer = { x:-14, y: rnd(18,54), v: rnd(26,40), p:0 }; }
+  if (!flyer) return;
+  flyer.x += flyer.v * dt/1000; flyer.p += dt;
+  if (flyer.x > W + 14){ flyer = null; flyerAt = now + rnd(25,60)*1000; return; }
+  const up = Math.sin(flyer.p/130) > 0;
+  g.fillStyle = 'rgba(40,48,54,.7)';
+  const x = Math.round(flyer.x), y = Math.round(flyer.y);
+  g.fillRect(x-1, y, 3, 1);
+  if (up){ g.fillRect(x-5, y-2, 4, 1); g.fillRect(x+2, y-2, 4, 1); }
+  else   { g.fillRect(x-5, y+2, 4, 1); g.fillRect(x+2, y+2, 4, 1); }
+}
+function drawMotes(g, dt, phase){
+  g.fillStyle = phase === 'night' ? 'rgba(190,205,235,.30)' : 'rgba(255,248,208,.45)';
+  for (const m of MOTES){
+    m.x += m.vx * dt/1000; m.y += Math.sin(m.p + performance.now()/1400) * .08;
+    if (m.x > W+2) m.x = -2;
+    g.fillRect(m.x|0, m.y|0, 1, 1);
+  }
+}
+function drawWater(g, phase, now){
+  const S_ = SKY_SPECS[phase];
+  g.fillStyle = mixHex(S_.water, S_.low, .55);
+  for (let i=0;i<4;i++){
+    const y = GROUND + 10 + i*2;
+    const span = Math.sin(((y - GROUND - 8)/11)) ;
+    const half = Math.round(Math.sqrt(Math.max(0, 1 - Math.pow((y-GROUND-8)/12, 2))) * 30);
+    if (half < 4) continue;
+    const w = Math.round(6 + Math.abs(Math.sin(now/760 + i*1.7)) * (half - 4));
+    const cx = 177 + Math.round(Math.sin(now/1100 + i*2.2) * (half - w) * .5);
+    g.fillRect(cx - (w>>1), y, w, 1);
+  }
+}
+
+/* ---------------------- foreground, drawn over the animal ------------------ */
+const FRONDS = [ {x:-3, s:1.15, p:0, dir:1}, {x:W+3, s:1.0, p:2.4, dir:-1} ];
+function drawFronds(g, phase, now){
+  const S_ = SKY_SPECS[phase];
+  const dark = mixHex(S_.tree,'#000000',.40), body = S_.tree, lit = mixHex(S_.tree,S_.low,.32);
+  for (const f of FRONDS){
+    for (let a=0;a<4;a++){
+      const ang = 0.44 + a*0.36 + Math.sin(now/1300 + f.p + a*.7) * 0.05;
+      const len = (44 - a*5) * f.s;
+      const bx = f.x, by = H + 3;
+      for (let t=1;t<=13;t++){
+        const u = t/13;
+        const x = Math.round(bx + f.dir * Math.cos(ang) * len * u);
+        const y = Math.round(by - Math.sin(ang) * len * u + u*u*5);
+        const lf = Math.max(1, Math.round(lerp(7, 1.5, u) * f.s));
+        g.fillStyle = (t & 1) ? body : dark;
+        g.fillRect(x - 1, y - lf, 2, lf*2);                  // leaflets across the spine
+        g.fillStyle = dark; g.fillRect(x - 1, y - 1, 2, 2);  // spine
+        if (t < 5){ g.fillStyle = lit; g.fillRect(x - 1, y - lf, 2, 2); }
+      }
+    }
+  }
+}
+
+/* ------------------------------ particles --------------------------------- */
+let parts = [];
+function emit(type, x, y, n, opt){
+  opt = opt || {};
+  for (let i=0;i<n;i++) parts.push({
+    type, x: x + rnd(-4,4), y: y + rnd(-3,3),
+    vx: opt.vx !== undefined ? rnd(-opt.vx,opt.vx) : rnd(-9,9),
+    vy: opt.vy !== undefined ? opt.vy + rnd(-6,6) : rnd(-26,-10),
+    g: opt.g || 0, life: opt.life || rnd(700,1200), age: 0, col: opt.col
+  });
+}
+function stepParts(dt){
+  for (const p of parts){ p.age += dt; p.vy += p.g*dt/1000; p.x += p.vx*dt/1000; p.y += p.vy*dt/1000; }
+  parts = parts.filter(p => p.age < p.life);
+}
+function heartPx(g,x,y,c){ g.fillStyle=c; g.fillRect(x+1,y,1,1); g.fillRect(x+3,y,1,1); g.fillRect(x,y+1,5,2); g.fillRect(x+1,y+3,3,1); g.fillRect(x+2,y+4,1,1); }
+function drawParts(g){
+  for (const p of parts){
+    const x = Math.round(p.x), y = Math.round(p.y), fade = p.age/p.life;
+    if (p.type==='heart'){ heartPx(g,x,y,'#e2697c'); g.fillStyle='#f0a3b0'; g.fillRect(x+1,y+1,1,1); }
+    else if (p.type==='spark'){ g.fillStyle = p.col||'#fff6d8'; g.fillRect(x,y,2,2); g.fillStyle='#ffffff'; g.fillRect(x,y,1,1); }
+    else if (p.type==='crumb'){ g.fillStyle = p.col||'#9b7a52'; g.fillRect(x,y,1,1); }
+    else if (p.type==='bubbleZ'){ g.fillStyle='#dfe4f6'; g.fillRect(x,y,2,2); g.fillRect(x+2,y-2,2,2); }
+    else if (p.type==='stink'){ g.fillStyle = fade<.5?'#7d9c5a':'#5d7a44'; g.fillRect(x,y,2,2); }
+    else if (p.type==='note'){ g.fillStyle='#e8dcbf'; g.fillRect(x,y,2,4); g.fillRect(x+2,y-1,2,2); }
+  }
+}
+
+/* --------------------------- props: food & mess ---------------------------- */
+function drawItem(g, id, x, y, s){
+  s = s || 1; g.save(); g.translate(x,y); g.scale(s,s);
+  const px = (c,a,b,w,h)=>{ g.fillStyle=c; g.fillRect(a,b,w||1,h||1); };
+  if (id==='berry'){ px('#4e7a4a',2,-2,1,2); px('#8f2b36',0,0,5,4); px('#b83b45',0,0,4,3); px('#e08a92',1,1,1,1); }
+  if (id==='fish'){ px('#5b7c90',0,0,6,3); px('#7fa3b8',0,0,6,2); px('#c9dde6',1,1,2,1); px('#5b7c90',6,0,2,3); px('#1a140e',1,0,1,1); }
+  if (id==='fern'){ px('#3f6440',2,0,1,5); for(let i=0;i<3;i++){ px('#6f9c55',1,1+i,1,1); px('#8fb763',3,1+i,1,1);} px('#8fb763',0,2,1,1); px('#6f9c55',4,2,1,1); }
+  if (id==='cycad'){ px('#5a4a2a',2,3,2,2); px('#8a6b2c',1,0,4,4); px('#a8863c',1,0,3,3); px('#d0ae5c',2,1,1,1); }
+  if (id==='meat'){ px('#82382a',0,0,5,4); px('#a04a34',0,0,5,3); px('#c46a4c',1,1,2,1); px('#efe9d8',5,2,2,2); }
+  if (id==='cake'){ px('#b8823f',0,1,6,4); px('#d1a05e',0,1,6,3); px('#f0dcae',0,0,6,1); px('#b83b45',2,-1,2,2); }
+  if (id==='rock'){ px('#6e6a5e',0,0,6,4); px('#8b8578',0,0,5,3); px('#a8a294',3,0,2,1); }
+  g.restore();
+}
+function drawMess(g, x, y){
+  g.fillStyle='#513218'; g.fillRect(x-3,y-2,7,3);
+  g.fillStyle='#6b4322'; g.fillRect(x-3,y-2,6,2); g.fillRect(x-2,y-4,5,2); g.fillRect(x-1,y-6,3,2);
+  g.fillStyle='#8a5c33'; g.fillRect(x-1,y-5,2,1); g.fillRect(x-2,y-2,2,1);
+}
+
+/* ==========================================================================
+   CARE SIM
+   Every number runs on wall-clock time, so an animal ages identically whether
+   the tab is focused, backgrounded, or closed for two days. The keeper holds a
+   nest of up to six animals; all of them age, only one is on screen.
+   ========================================================================== */
+
+const SAVE_KEY = 'paleopal:save:2';
+const MAX_PETS = 6;
+
+const FOODS = [
+  { id:'fern',  name:'Fern frond',  cost:4,  fill:26, joy:3,  treat:false, note:'Cheap roughage. Herbivores love it.' },
+  { id:'berry', name:'Ripe berries',cost:5,  fill:22, joy:6,  treat:false, note:'Sweet, small, gone in a second.' },
+  { id:'cycad', name:'Cycad cone',  cost:7,  fill:34, joy:4,  treat:false, note:'Dense and filling. Takes a while to chew.' },
+  { id:'fish',  name:'River fish',  cost:8,  fill:36, joy:5,  treat:false, note:'Oily and rich. Carnivores go quiet for it.' },
+  { id:'meat',  name:'Haunch',      cost:12, fill:48, joy:7,  treat:false, note:'A full meal. Expensive.' },
+  { id:'cake',  name:'Honey cake',  cost:10, fill:10, joy:22, treat:true,  note:'A treat. Three in an hour and the stomach protests.' }
+];
+const REMEDIES = [
+  { id:'ginger', name:'Ginger root',  cost:12, cures:'bellyache', note:'Settles a churning stomach.' },
+  { id:'broth',  name:'Warm broth',   cost:10, cures:'chill',     note:'For shivering and sneezing.' },
+  { id:'dust',   name:'Dust bath',    cost:8,  cures:'mites',     note:'Grit works the parasites out of the skin.' },
+  { id:'company',name:'Sit together', cost:0,  cures:'blues',     note:'No cure in a bottle. Just time and attention.' }
+];
+const ILLS = {
+  bellyache:{ name:'Bellyache',  symptom:'Puffed up and turning away from food.',       drain:'hunger' },
+  chill:    { name:'Chill',      symptom:'Shivering, and sneezing every few seconds.',  drain:'energy' },
+  mites:    { name:'Skin mites', symptom:'Scratching constantly. The flies stay close.',drain:'hygiene' },
+  blues:    { name:'The blues',  symptom:'Head low, tail still, no interest in play.',  drain:'joy' }
+};
+const HAT_SHOP = [
+  { id:'frond',   name:'Fern sprig',   cost:20,  slot:'head' },
+  { id:'goggles', name:'Dig goggles',  cost:45,  slot:'face' },
+  { id:'cap',     name:'Field cap',    cost:70,  slot:'head' },
+  { id:'cone',    name:'Party cone',   cost:95,  slot:'head' },
+  { id:'hardhat', name:'Site helmet',  cost:130, slot:'head' },
+  { id:'crown',   name:'Bone crown',   cost:200, slot:'head' }
+];
+const TRAITS = {
+  appetite:[ {id:'greedy', name:'Bottomless', note:'Gets hungry fast and never says no.', hunger:1.35, foodJoy:1.0},
+             {id:'picky',  name:'Particular', note:'Eats slowly, and only really enjoys its favourites.', hunger:.78, foodJoy:.7} ],
+  tempo:   [ {id:'spirited',name:'Spirited',  note:'Never stops moving. Burns energy quickly.', energy:1.3, speed:1.35, joy:1.15},
+             {id:'placid',  name:'Placid',    note:'Content to stand and watch the clouds.',    energy:.75, speed:.7,  joy:.85} ],
+  social:  [ {id:'bold',   name:'Bold',       note:'Comes straight over when you reach in.',    bond:1.25, lonely:.8},
+             {id:'shy',    name:'Cautious',   note:'Takes longer to trust, then never lets go.',bond:.75, lonely:1.3} ]
+};
+const NAMES = ['Pebble','Norbert','Tiny','Bonk','Fern','Cleo','Spike','Dot','Pip','Tank','Mochi','Juniper','Rust','Marrow','Basil','Willow','Grub','Tuck'];
+const GROWTH_GATES = [20, 90, 240];      // minutes of well-cared-for time
+
+/* sleep window, in local hours */
+const BED_HOUR = 21, WAKE_HOUR = 6;
+const ENERGY_AWAKE = 8.5, ENERGY_ASLEEP = 20;   // points per hour
+
+let G = null, S = null;
+
+function freshPet(){
+  return {
+    sp:null, name:'', born:0, growth:0, hat:null, face:null, owned:[], skin:'wild', skinsOwned:['wild'],
+    needs:{ hunger:78, energy:88, hygiene:100, joy:70 },
+    health:100, bond:6, vet:false,
+    traits:{ appetite:0, tempo:0, social:0 },
+    asleep:false, ills:[], treats:[], mess:[], log:[],
+    nightAwake:0, petBank:0, stageSeen:0, messTimer:0
+  };
+}
+function freshGame(){
+  return { v:2, pets:[freshPet()], active:0, coins:24, sound:true, lastDay:'', streak:0,
+           lastTick:Date.now(), lastSeen:Date.now() };
+}
+const trait = k => TRAITS[k][S.traits[k]];
+const hatched = () => !!S && !!S.sp && !!S.born;
+const stageIdx = () => S.growth < GROWTH_GATES[0] ? 0 : S.growth < GROWTH_GATES[1] ? 1 : S.growth < GROWTH_GATES[2] ? 2 : 3;
+const bondPips = () => clamp(Math.floor(S.bond/20), 0, 5);
+const ageDays  = () => (Date.now()-S.born)/86400e3;
+const hasIll   = id => S.ills.some(i => i.id === id);
+const isNight  = () => { const h = new Date().getHours(); return h >= BED_HOUR || h < WAKE_HOUR; };
+
+function logEvent(txt){
+  S.log.unshift({ t:Date.now(), txt });
+  if (S.log.length > 60) S.log.length = 60;
+}
+function careScore(){
+  const n = S.needs;
+  return clamp((n.hunger + n.energy + n.hygiene + n.joy) / 400, 0, 1);
+}
+function moodOf(){
+  if (!hatched()) return { key:'egg', line:'The egg is warm.' };
+  if (S.vet) return { key:'ill', line:'is too weak to stand. Take it to the vet.' };
+  if (S.asleep) return { key:'sleep', line:'is fast asleep.' };
+  const ill = S.ills[0];
+  if (ill) return { key:'ill', line:'is unwell. ' + ILLS[ill.id].symptom };
+  const n = S.needs;
+  if (n.hunger < 22) return { key:'hungry', line:'is hungry enough to nose at the dirt.' };
+  if (n.energy < 20) return { key:'tired',  line:'keeps blinking slowly. It needs sleep.' };
+  if (n.hygiene < 25)return { key:'dirty',  line:'smells, honestly. The flies agree.' };
+  if (n.joy < 25)    return { key:'bored',  line:'is bored and keeps looking at you.' };
+  if (careScore() > .82 && S.bond > 55) return { key:'happy', line:'is delighted with everything.' };
+  if (careScore() > .6) return { key:'content', line:'is content.' };
+  return { key:'meh', line:'is getting by.' };
+}
+
+/* ------------------------------ the tick ---------------------------------- */
+function simulateAll(ms, online){
+  const keep = G.active;
+  for (let i=0;i<G.pets.length;i++){ S = G.pets[i]; simulate(ms, online && i === keep); }
+  S = G.pets[keep];
+}
+function simulate(ms, online){
+  if (!hatched() || ms <= 0) return;
+  const h = ms / HOUR, n = S.needs;
+  const tA = trait('appetite'), tT = trait('tempo'), tS = trait('social');
+  const asleep = S.asleep;
+
+  n.hunger  = clamp(n.hunger  - 7.5 * tA.hunger * h * (asleep ? .45 : 1), 0, 100);
+  n.hygiene = clamp(n.hygiene - 4.0 * h * (asleep ? .5 : 1), 0, 100);
+  n.joy     = clamp(n.joy     - 6.0 * tT.joy * h * (asleep ? .3 : 1) * tS.lonely, 0, 100);
+  n.energy  = asleep ? clamp(n.energy + ENERGY_ASLEEP * h, 0, 100)
+                     : clamp(n.energy - ENERGY_AWAKE * tT.energy * h, 0, 100);
+
+  if (!asleep && isNight()) S.nightAwake += h; else S.nightAwake = Math.max(0, S.nightAwake - h*.5);
+
+  const roll = perHour => Math.random() < 1 - Math.pow(1 - clamp(perHour,0,.95), h);
+  S.treats = S.treats.filter(t => Date.now() - t < HOUR);
+  if (!hasIll('bellyache') && S.treats.length >= 3 && roll(.6)) fallIll('bellyache');
+  if (!hasIll('chill')     && S.nightAwake > 2   && roll(.35)) fallIll('chill');
+  if (!hasIll('mites')     && n.hygiene < 20     && roll(.5))  fallIll('mites');
+  if (!hasIll('blues')     && n.joy < 15         && roll(.4))  fallIll('blues');
+
+  const ill = S.ills.length;
+  if (ill) S.health = clamp(S.health - 7 * ill * h, 0, 100);
+  else if (careScore() > .55) S.health = clamp(S.health + 9 * h, 0, 100);
+  else if (careScore() < .3)  S.health = clamp(S.health - 5 * h, 0, 100);
+  if (S.health <= 0 && !S.vet){ S.vet = true; S.asleep = true; logEvent(S.name + ' collapsed. It needs a vet.'); }
+
+  const worst = Math.min(n.hunger, n.energy, n.hygiene, n.joy);
+  if (worst < 15) S.bond = clamp(S.bond - 3 * h, 0, 100);
+  else if (careScore() > .75) S.bond = clamp(S.bond + 1.2 * tS.bond * h, 0, 100);
+
+  const cs = careScore();
+  const rate = S.vet ? 0 : cs > .6 ? 1 : cs > .35 ? .5 : .12;
+  S.growth += (ms/MIN) * rate * (online ? 1 : .55);
+
+  if (!asleep && !S.vet){
+    S.messTimer = (S.messTimer || rnd(18,32)*MIN) - ms;
+    if (S.messTimer <= 0 && S.mess.length < 4){
+      S.mess.push({ x: rnd(28, W-28) });
+      n.hygiene = clamp(n.hygiene - 11, 0, 100);
+      S.messTimer = rnd(22,40)*MIN;
+      if (online){ say('Oops.'); SFX.pop(); }
+    }
+  }
+
+  const sleepy = isNight();
+  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30))) setSleep(true, online);
+  if (asleep && !S.vet && n.energy >= 99) setSleep(false, online);
+  if (asleep && !S.vet && !sleepy && n.energy > 72) setSleep(false, online);
+
+  const st = stageIdx();
+  if (st !== S.stageSeen){
+    S.stageSeen = st;
+    logEvent(S.name + ' is now ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '.');
+    if (online){ say(S.name + ' grew into ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '!'); SFX.roar(); emit('heart', dino.x, GROUND-40, 8); }
+  }
+}
+function fallIll(id){
+  S.ills.push({ id, since: Date.now() });
+  logEvent(S.name + ' came down with ' + ILLS[id].name.toLowerCase() + '.');
+}
+function setSleep(v, online){
+  if (S.asleep === v) return;
+  S.asleep = v;
+  if (v){ if (online){ say('Yawn.'); SFX.yawn(); } }
+  else   { if (online){ say('Morning.'); } }
+}
+
+/* --------------------------- player actions -------------------------------- */
+function feed(id){
+  const f = FOODS.find(x => x.id === id), sp = SPECIES[S.sp];
+  if (G.coins < f.cost) return refuse('Not enough coins. Dig, or win it at the games.');
+  if (S.asleep) return refuse(S.name + ' is asleep.');
+  if (hasIll('bellyache')) return refuse(S.name + ' turns away from it. Settle the stomach first.');
+  if (S.needs.hunger > 94) return refuse(S.name + ' is full.');
+  G.coins -= f.cost;
+  closeSheet();
+  tossFood(id);                                   // the food arcs in; effects land on the bite
+  refreshLight();
+}
+function swallow(id){
+  const f = FOODS.find(x => x.id === id), sp = SPECIES[S.sp];
+  const loved = sp.likes.includes(id), hated = sp.dislikes.includes(id);
+  const tA = trait('appetite');
+  S.needs.hunger = clamp(S.needs.hunger + f.fill * (hated ? .5 : 1), 0, 100);
+  S.needs.joy = clamp(S.needs.joy + (f.joy + (loved ? 9 : hated ? -6 : 0)) * tA.foodJoy, 0, 100);
+  if (loved){ S.bond = clamp(S.bond + 1.5, 0, 100); emit('heart', dino.x, dinoTop - 4, 3, {vy:-16}); }
+  if (f.treat) S.treats.push(Date.now());
+  S.tally = S.tally || {};
+  S.tally.meals = (S.tally.meals || 0) + 1;
+  say(loved ? 'Its favourite. Gone in one gulp.' : hated ? 'It eats it. Slowly. Resentfully.' : 'Nom.');
+  refresh();
+}
+function scrub(){
+  if (S.asleep) return refuse(S.name + ' is asleep.');
+  const n = S.mess.length;
+  S.mess.forEach(m => emit('spark', m.x, GROUND-6, 4));
+  S.mess = [];
+  G.coins += n;
+  S.needs.hygiene = clamp(S.needs.hygiene + 22 + n*10, 0, 100);
+  S.needs.joy = clamp(S.needs.joy + 4, 0, 100);
+  SFX.wash();
+  say(n ? 'Scrubbed clean. Found ' + n + ' coin' + (n>1?'s':'') + ' in the muck.' : 'A good rinse.');
+  emit('spark', dino.x, GROUND-30, 8);
+  refresh();
+}
+function pet(){
+  if (!hatched() || S.asleep || S.vet) return;
+  const now = performance.now();
+  if (now - (S.lastPetAt||0) < 320) return;
+  S.lastPetAt = now;
+  S.petBank++;
+  const gain = clamp(1.1 - S.bond/160, .25, 1.1) * trait('social').bond;
+  S.bond = clamp(S.bond + gain, 0, 100);
+  S.needs.joy = clamp(S.needs.joy + 1.6, 0, 100);
+  emit('heart', dino.x + rnd(-8,8), dinoTop - 4, 1, {vy:-16, life:900});
+  SFX.purr();
+  if (hasIll('blues') && S.petBank >= 8) cure('company', true);
+  refreshLight();
+}
+function tuckIn(){
+  if (!hatched()) return;
+  if (S.vet) return refuse(S.name + ' is already down.');
+  if (S.asleep) return refuse(S.name + ' is already asleep.');
+  if (S.needs.energy > 70) return refuse('Too wide awake to settle. Try below 70 energy.');
+  setSleep(true, true);
+  S.bond = clamp(S.bond + 1.5, 0, 100);
+  S.nightAwake = 0;
+  closeSheet();
+  say(S.name + ' curls up and goes out like a light.');
+  refresh();
+}
+function treat(remedyId){
+  const r = REMEDIES.find(x => x.id === remedyId);
+  if (G.coins < r.cost) return refuse('Not enough coins.');
+  if (!S.ills.length) return refuse('Nothing to treat. ' + S.name + ' is well.');
+  if (hasIll(r.cures)) return cure(remedyId);
+  G.coins -= r.cost;
+  S.bond = clamp(S.bond - 2, 0, 100);
+  SFX.bonk();
+  say('That was not it. ' + S.name + ' looks no better.');
+  logEvent('Tried ' + r.name.toLowerCase() + '. Wrong call.');
+  refresh();
+}
+function cure(remedyId, free){
+  const r = REMEDIES.find(x => x.id === remedyId);
+  if (!free) G.coins -= r.cost;
+  S.ills = S.ills.filter(i => i.id !== r.cures);
+  S.health = clamp(S.health + 30, 0, 100);
+  S.bond = clamp(S.bond + 4, 0, 100);
+  S.petBank = 0;
+  if (r.cures === 'chill') S.nightAwake = 0;
+  if (r.cures === 'mites') S.needs.hygiene = clamp(S.needs.hygiene + 30, 0, 100);
+  if (r.cures === 'blues') S.needs.joy = clamp(S.needs.joy + 25, 0, 100);
+  SFX.hatch();
+  anim.play('cheer', 1400);
+  emit('heart', dino.x, GROUND-40, 6);
+  say(S.name + ' shakes it off. That was the right call.');
+  logEvent('Cured ' + ILLS[r.cures].name.toLowerCase() + '.');
+  refresh();
+}
+function vetVisit(){
+  if (G.coins < 30) return refuse('The vet costs 30 coins.');
+  G.coins -= 30; S.vet = false; S.health = 60; S.ills = [];
+  S.needs.hunger = Math.max(S.needs.hunger, 50);
+  S.needs.joy = Math.max(S.needs.joy, 40);
+  S.bond = clamp(S.bond - 5, 0, 100);
+  setSleep(false, true);
+  logEvent('Came home from the vet.');
+  say(S.name + ' is home and steady again.');
+  refresh();
+}
+function buyHat(id){
+  const h = HAT_SHOP.find(x => x.id === id), slot = h.slot;
+  if (S.owned.includes(id)){ S[slot] = S[slot] === id ? null : id; SFX.pop(); refresh(); return; }
+  if (G.coins < h.cost) return refuse('Not enough coins.');
+  G.coins -= h.cost; S.owned.push(id); S[slot] = id;
+  SFX.coin(); say('Suits it.');
+  refresh();
+}
+function buySkin(id){
+  const k = skinOf(S.sp, id);
+  if (S.skinsOwned.includes(id)){
+    S.skin = id; SFX.pop(); say(S.name + ' tries on ' + k.name.toLowerCase() + '.');
+    refresh(); return;
+  }
+  if (G.coins < k.cost) return refuse('Not enough coins.');
+  G.coins -= k.cost; S.skinsOwned.push(id); S.skin = id;
+  SFX.coin(); say('A whole new coat.');
+  logEvent('Unlocked the ' + k.name.toLowerCase() + ' coat.');
+  refresh();
+}
+function doTrick(){
+  if (bondPips() < 3) return refuse(S.name + ' does not know you well enough yet.');
+  if (S.asleep) return refuse(S.name + ' is asleep.');
+  S.needs.joy = clamp(S.needs.joy + 12, 0, 100);
+  S.needs.energy = clamp(S.needs.energy - 3, 0, 100);
+  S.bond = clamp(S.bond + .8, 0, 100);
+  anim.play('cheer', 1600); SFX.roar();
+  emit('note', dino.x, dinoTop, 5, {vy:-18, life:1100});
+  say(pick(['It spins on the spot.','A short, proud roar.','It stamps twice and looks at you.']));
+  closeSheet(); refresh();
+}
+function refuse(msg){ SFX.bonk(); say(msg); }
+
+/* ------------------------------- the nest ---------------------------------- */
+function switchPet(i){
+  if (i === G.active || !G.pets[i]) return;
+  G.active = i; S = G.pets[i];
+  dino.x = W/2; dino.tx = W/2; dino.dist = 0; dino.dig = 0;
+  feedFX = null;
+  mode = hatched() ? 'live' : (S.sp ? 'egg' : 'choose');
+  anim.play('idle', 0);
+  closeSheet();
+  document.title = (S.name || 'Paleopal') + ' — Paleopal';
+  if (hatched()) say(S.name + ' trots over.');
+  refresh(); paintChrome(); save();
+}
+function newEgg(){
+  if (G.pets.length >= MAX_PETS) return refuse('The nest is full at ' + MAX_PETS + '.');
+  G.pets.push(freshPet());
+  G.active = G.pets.length - 1;
+  S = G.pets[G.active];
+  mode = 'choose';
+  closeSheet(); refresh(); paintChrome(); save();
+}
+function releasePet(i){
+  if (G.pets.length <= 1) return refuse('That is your only animal.');
+  G.pets.splice(i, 1);
+  G.active = clamp(G.active >= i ? G.active - 1 : G.active, 0, G.pets.length - 1);
+  S = G.pets[G.active];
+  mode = hatched() ? 'live' : (S.sp ? 'egg' : 'choose');
+  closeSheet(); refresh(); paintChrome(); save();
+}
+
+/* ==========================================================================
+   BEHAVIOUR + RENDER
+   ========================================================================== */
+
+const cv = $('scene'), ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+let mode = 'boot';            // boot | choose | egg | live | game
+let dino = { x: W/2, dir: -1, tx: W/2, until: 0, walking:false, dig:0, digAt: 0, dist: 0 };
+let dinoTop = GROUND - 40, dinoBox = [0,0,0,0];
+let egg = { cracks: 0, wob: 0 };
+let game = null, feedFX = null;
+let blinkAt = 0, blinking = false;
+
+const anim = {
+  name:'idle', frame:0, t:0, until:0,
+  play(n, ms){ this.name = n; this.frame = 0; this.t = 0; this.until = performance.now() + ms; },
+  pick(){
+    if (performance.now() < this.until) return this.name;
+    if (S.vet || S.asleep) return 'sleep';
+    if (S.ills.length) return 'sick';
+    return dino.walking ? 'walk' : 'idle';
+  }
+};
+
+let sayTimer = 0;
+function say(text, ms){
+  const b = $('bubble');
+  b.textContent = text; b.classList.add('on');
+  clearTimeout(sayTimer);
+  sayTimer = setTimeout(() => b.classList.remove('on'), ms || 2800);
+}
+
+/* ------------------------------ feeding ----------------------------------- */
+function tossFood(id){
+  feedFX = { id, t: 0, phase: 'fly', from: [dino.x - dino.dir*46, 8], id2: id };
+  SFX.pop();
+}
+function stepFeed(dt){
+  if (!feedFX) return;
+  feedFX.t += dt;
+  if (feedFX.phase === 'fly' && feedFX.t > 620){
+    feedFX.phase = 'bite'; feedFX.t = 0;
+    anim.play('eat', 1500); SFX.chomp();
+    emit('crumb', dino.x - 12*dino.dir, GROUND-26, 8, {vy:12, g:90, life:600});
+    swallow(feedFX.id);
+  } else if (feedFX.phase === 'bite' && feedFX.t > 900){
+    feedFX = null;
+  }
+}
+function drawFeed(g, mouth){
+  if (!feedFX || feedFX.phase !== 'fly') return;
+  const u = clamp(feedFX.t / 620, 0, 1);
+  const x = lerp(feedFX.from[0], mouth[0], u);
+  const y = lerp(feedFX.from[1], mouth[1], u) - Math.sin(u*Math.PI) * 22;
+  drawItem(g, feedFX.id, Math.round(x) - 3, Math.round(y) - 2, 1.6);
+}
+
+/* ------------------------------ behaviour --------------------------------- */
+function stepBehaviour(dt, now){
+  if (mode !== 'live') return;
+  const busy = feedFX || performance.now() < anim.until;
+  const canMove = !S.asleep && !S.vet && !S.ills.length && !busy;
+
+  if (dino.dig > 0){
+    dino.dig -= dt;
+    if (Math.random() < .35) emit('crumb', dino.x - 12*dino.dir, GROUND-2, 1, {vy:-18, g:120, life:520});
+    if (dino.dig <= 0){
+      const found = 3 + ((Math.random()*4)|0) + (bondPips() >= 4 ? 3 : 0);
+      G.coins += found;
+      SFX.coin(); emit('spark', dino.x - 12*dino.dir, GROUND-8, 6);
+      say('Dug up a fossil chip. +' + found + ' coins.');
+      dino.digAt = now + rnd(6,11)*MIN;
+      refreshLight();
+    }
+    dino.walking = false;
+    return;
+  }
+  if (!canMove){ dino.walking = false; return; }
+
+  if (now > dino.until){ dino.tx = rnd(26, W-26); dino.until = now + rnd(2600, 6500) / trait('tempo').speed; }
+  const d = dino.tx - dino.x;
+  if (Math.abs(d) > 3){
+    dino.walking = true; dino.dir = d > 0 ? 1 : -1;
+    const step = SPECIES[S.sp].speed * trait('tempo').speed * (0.6 + stageIdx()*0.14) * dt/1000;
+    dino.x += dino.dir * step;
+    dino.dist += step;
+  } else dino.walking = false;
+
+  if (now > dino.digAt && !dino.walking && S.needs.energy > 30){ dino.dig = 1800; say('Sniff, sniff...'); }
+}
+
+/* ------------------------------- draw ------------------------------------- */
+let lastSceneAt = 0;
+function drawScene(now){
+  const dt = clamp(now - lastSceneAt, 0, 120); lastSceneAt = now;
+  const phase = skyPhase(new Date());
+  ctx.drawImage(bakeBg(phase), 0, 0);
+
+  if (phase === 'night'){
+    for (const s of STARS){
+      const tw = Math.sin(now/520 + s.p);
+      if (tw > .15){ ctx.fillStyle = tw > .8 ? '#ffffff' : 'rgba(232,228,200,.8)'; ctx.fillRect(s.x|0, s.y|0, 1, 1); }
+    }
+  }
+  drawSkyBody(ctx, phase, now);
+  drawClouds(ctx, phase, dt);
+  drawFlyers(ctx, dt, now);
+  drawWater(ctx, phase, now);
+  if (phase !== 'night') drawMotes(ctx, dt, phase);
+
+  if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
+  if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
+  if (mode === 'game'){ drawGame(now, phase); return; }
+  drawLive(now);
+  drawFronds(ctx, phase, now);
+  const tint = SKY_SPECS[phase].tint;
+  if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
+}
+
+function drawChoose(now){
+  const keys = ['rex','trike','brachio'], xs = [46, 112, 178];
+  keys.forEach((k, i) => {
+    const bounce = Math.sin(now/420 + i*2) * 2;
+    drawEggArt(ctx, xs[i], GROUND - 16 + bounce, k, 0);
+    ctx.fillStyle = 'rgba(16,26,24,.55)';
+    ctx.beginPath(); ctx.ellipse(xs[i], GROUND + 1, 11, 3, 0, 0, 7); ctx.fill();
+  });
+}
+function drawEggArt(g, cx, cy, spId, cracks){
+  const tint = { rex:'#7e9c54', trike:'#ab7040', brachio:'#71958a' }[spId];
+  g.fillStyle = '#221a12'; g.beginPath(); g.ellipse(cx, cy, 13, 17, 0, 0, 7); g.fill();
+  g.fillStyle = '#efe3c4'; g.beginPath(); g.ellipse(cx, cy, 12, 16, 0, 0, 7); g.fill();
+  g.fillStyle = '#faf4de'; g.beginPath(); g.ellipse(cx - 4, cy - 6, 3.5, 4, 0, 0, 7); g.fill();
+  g.fillStyle = tint;
+  [[-5,1],[4,-3],[0,7],[6,5],[-6,7],[2,-8]].forEach(p => g.fillRect(cx+p[0], cy+p[1], 3, 3));
+  if (cracks > 0){
+    g.strokeStyle = '#221a12'; g.lineWidth = 1; g.beginPath();
+    let x = cx - 6, y = cy - 9;
+    g.moveTo(x, y);
+    for (let i = 0; i < cracks; i++){ x += (i%2 ? 5 : 4) * (i%2?1:-1) + 4; y += 4; g.lineTo(x, y); }
+    g.stroke();
+  }
+}
+function drawEgg(now){
+  const wob = egg.wob > 0 ? Math.sin(now/40) * 2 : 0;
+  egg.wob = Math.max(0, egg.wob - .06);
+  ctx.fillStyle = 'rgba(16,26,24,.5)';
+  ctx.beginPath(); ctx.ellipse(W/2, GROUND + 1, 12, 3, 0, 0, 7); ctx.fill();
+  drawEggArt(ctx, W/2 + wob, GROUND - 16, S.sp, egg.cracks);
+}
+
+/* headgear rides the anchors the sprite hands back, so it sits on the skull or
+   across the eyes rather than floating at a guessed offset */
+function drawGear(g, f, x, y, flip){
+  const place = (id, anchor, scale) => {
+    if (!id || !HATS[id]) return;
+    const art = HATS[id], w = art.width * scale, hgt = art.height * scale;
+    const ax = flip ? x + (f.ox - anchor[0]) : x - f.ox + anchor[0];
+    const ay = y - f.oy + anchor[1];
+    g.save(); g.translate(Math.round(ax), Math.round(ay));
+    if (flip) g.scale(-1, 1);
+    g.drawImage(art, -w/2, -hgt, w, hgt);
+    g.restore();
+  };
+  place(S.hat, f.hat, Math.max(.6, f.hs * 1.55));
+  if (S.face && HATS[S.face]){
+    const art = HATS[S.face], scale = Math.max(.5, f.eyeR * 3.6 / art.width);
+    const w = art.width * scale, hgt = art.height * scale;
+    const ax = flip ? x + (f.ox - f.eye[0]) : x - f.ox + f.eye[0];
+    const ay = y - f.oy + f.eye[1];
+    g.save(); g.translate(Math.round(ax), Math.round(ay));
+    if (flip) g.scale(-1, 1);
+    g.drawImage(art, -w*.42, -hgt*.55, w, hgt);
+    g.restore();
+  }
+}
+
+function drawLive(now){
+  for (const m of S.mess){
+    drawMess(ctx, m.x|0, GROUND - 1);
+    const fx = m.x + Math.sin(now/280 + m.x) * 5, fy = GROUND - 12 + Math.cos(now/430 + m.x) * 2;
+    ctx.fillStyle = '#2f2f2f'; ctx.fillRect(fx|0, fy|0, 1, 1);
+    if (Math.random() < .01) emit('stink', m.x, GROUND - 6, 1, {vy:-12, life:1000});
+  }
+  if (now > blinkAt){ blinking = true; blinkAt = now + rnd(2400, 5200); setTimeout(() => blinking = false, 150); }
+
+  const st = stageIdx(), a = anim.pick(), sp = SPECIES[S.sp];
+  anim.t += 16;
+  let fr;
+  if (a === 'walk'){
+    const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
+    fr = Math.floor((dino.dist / cycle) * POSES.walk.length);
+  } else {
+    const fps = a === 'eat' ? 220 : a === 'cheer' ? 200 : 900;
+    fr = Math.floor(anim.t / fps);
+  }
+  const f = frameOf(S.sp, st, a, fr, blinking && a === 'idle', S.skin);
+
+  const flip = dino.dir > 0;
+  const x = Math.round(dino.x), y = GROUND;
+  ctx.fillStyle = 'rgba(16,26,24,.32)';
+  ctx.beginPath(); ctx.ellipse(x, y + 1, f.w * .38, 3, 0, 0, 7); ctx.fill();
+
+  ctx.save(); ctx.translate(x, y);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(f.cv, -f.ox, -f.oy);
+  ctx.restore();
+
+  dinoTop = y - f.oy;
+  dinoBox = flip ? [x - (f.w - f.ox), dinoTop, x + f.ox, y] : [x - f.ox, dinoTop, x - f.ox + f.w, y];
+  drawGear(ctx, f, x, y, flip);
+
+  const mouth = [flip ? x + (f.ox - f.mouth[0]) : x - f.ox + f.mouth[0], y - f.oy + f.mouth[1]];
+  drawFeed(ctx, mouth);
+
+  if (S.asleep && Math.random() < .02) emit('bubbleZ', x + 10*(flip?-1:1), dinoTop + 4, 1, {vy:-14, vx:4, life:1500});
+  if (hasIll('chill') && Math.random() < .012){ emit('spark', x - 14*dino.dir, dinoTop + 8, 2, {col:'#cfe0e8'}); SFX.sneeze(); }
+  if (hasIll('mites') && Math.random() < .02) emit('crumb', x + rnd(-10,10), dinoTop + 10, 1, {col:'#8a7350', vy:-6, g:40});
+  if (dino.dig > 0){ ctx.fillStyle='#8f6f4c'; ctx.fillRect(x - 16*dino.dir, GROUND-2, 6, 2); }
+
+  if (S.asleep){ ctx.fillStyle = 'rgba(14,16,44,.28)'; ctx.fillRect(0, 0, W, H); }
+  drawParts(ctx);
+}
+
+/* ============================== MINIGAMES ================================== */
+const GAMES = {
+  snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:2 },
+  stomp: { name:'Bug hunt',   blurb:'Critters scurry across the pen. Tap each one before it reaches the edge.', pay:2 },
+  leap:  { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:3 }
+};
+function startGame(kind){
+  if (S.asleep) return refuse(S.name + ' is asleep.');
+  if (S.vet) return refuse(S.name + ' is in no state to play.');
+  if (S.needs.energy < 12) return refuse('Too tired to run around.');
+  closeSheet();
+  mode = 'game'; feedFX = null;
+  if (kind === 'snack') game = { kind, x:W/2, tx:W/2, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
+  if (kind === 'stomp') game = { kind, bugs:[], score:0, missed:0, left:30, spawn:.6 };
+  if (kind === 'leap')  game = { kind, obs:[], score:0, left:30, y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0 };
+  say(GAMES[kind].blurb.split('.')[0] + '.');
+  paintChrome();
+}
+function endGame(){
+  if (!game) return;
+  const g = GAMES[game.kind], earned = game.score * g.pay;
+  G.coins += earned;
+  S.needs.joy = clamp(S.needs.joy + Math.min(34, game.score * 2.4), 0, 100);
+  S.needs.energy = clamp(S.needs.energy - 7, 0, 100);
+  S.bond = clamp(S.bond + (game.score > 8 ? 3 : 1), 0, 100);
+  if (game.score > 8) logEvent('A good run at ' + g.name.toLowerCase() + ': ' + game.score + '.');
+  say(game.score ? 'Scored ' + game.score + '. That is ' + earned + ' coins.' : 'Nothing scored. Next time.');
+  if (game.score) SFX.coin();
+  game = null; mode = 'live';
+  paintChrome(); refresh();
+}
+function stepGame(dt, now){
+  if (!game) return;
+  game.left -= dt/1000;
+  if (game.left <= 0) return endGame();
+  if (game.kind === 'snack') return stepSnack(dt, now);
+  if (game.kind === 'stomp') return stepStomp(dt, now);
+  if (game.kind === 'leap')  return stepLeap(dt, now);
+}
+function drawGame(now, phase){
+  if (game.kind === 'snack') drawSnack(now);
+  if (game.kind === 'stomp') drawStomp(now);
+  if (game.kind === 'leap')  drawLeap(now);
+  drawParts(ctx);
+  ctx.fillStyle = 'rgba(16,22,24,.78)'; ctx.fillRect(0, 0, W, 9);
+  ctx.fillStyle = game.left < 6 ? '#c2603c' : '#7ea55f';
+  ctx.fillRect(1, 2, Math.round((W-2) * game.left/30), 5);
+}
+function gameSprite(anim2, frame, scaleTo){
+  const f = frameOf(S.sp, stageIdx(), anim2, frame, false, S.skin);
+  return { f, sc: Math.min(1, scaleTo / f.h) };
+}
+
+/* ------ snack run ------ */
+function stepSnack(dt, now){
+  let vx = 0;
+  if (game.kL) vx -= 110; if (game.kR) vx += 110;
+  if (!vx) vx = clamp((game.tx - game.x) * 7, -135, 135);
+  if (now < game.stun) vx = 0;
+  game.x = clamp(game.x + vx * dt/1000, 18, W-18);
+  game.spawn -= dt/1000;
+  if (game.spawn <= 0){
+    game.spawn = rnd(.42, .72);
+    const sp = SPECIES[S.sp], rock = Math.random() < .22;
+    game.items.push({ x: rnd(16, W-16), y: 4, vy: rnd(44, 62), id: rock ? 'rock' : pick(sp.likes.concat(['berry','fern'])), rock });
+  }
+  const mouthY = GROUND - 34;
+  for (const it of game.items){
+    it.y += it.vy * dt/1000;
+    if (it.y > mouthY - 6 && it.y < mouthY + 22 && Math.abs(it.x - game.x) < 15){
+      it.dead = true;
+      if (it.rock){ game.combo = 0; game.stun = now + 750; SFX.bonk(); emit('spark', game.x, mouthY, 4, {col:'#e8c352'}); }
+      else { game.combo++; game.score += game.combo >= 5 ? 2 : 1; SFX.chomp(); emit('spark', it.x, it.y, 3); }
+    }
+    if (it.y > GROUND){ it.dead = true; if (!it.rock) game.combo = 0; }
+  }
+  game.items = game.items.filter(i => !i.dead);
+}
+function drawSnack(now){
+  for (const it of game.items) drawItem(ctx, it.id, it.x - 3, it.y - 2, 1.5);
+  const { f, sc } = gameSprite(now < game.stun ? 'sick' : 'walk', Math.floor(now/130), 44);
+  const flip = game.tx < game.x;
+  ctx.save(); ctx.translate(Math.round(game.x), GROUND);
+  if (flip) ctx.scale(-1,1);
+  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
+  ctx.restore();
+  scoreTag('Caught ' + game.score + (game.combo >= 5 ? '  x2' : ''));
+}
+
+/* ------ bug hunt ------ */
+function drawBug(g, b, now){
+  const wig = Math.sin(now/90 + b.x) * 1;
+  if (b.type === 0){                            // millipede
+    g.fillStyle = '#4a3a24';
+    for (let i=0;i<5;i++) g.fillRect(b.x - i*3, b.y + (i%2?0:1) + wig, 3, 3);
+    g.fillStyle = '#6f5836'; g.fillRect(b.x, b.y + wig, 3, 2);
+    g.fillStyle = '#2a2118'; g.fillRect(b.x+3, b.y + wig, 1, 1);
+  } else {                                      // dragonfly
+    g.fillStyle = '#3a5c52'; g.fillRect(b.x - 6, b.y + wig, 9, 2);
+    g.fillStyle = '#8fc4b8'; g.fillRect(b.x - 1, b.y + wig, 3, 2);
+    const up = Math.sin(now/60) > 0;
+    g.fillStyle = 'rgba(200,230,235,.75)';
+    g.fillRect(b.x - 4, b.y - (up?3:-2) + wig, 6, 2);
+  }
+}
+function stepStomp(dt, now){
+  game.spawn -= dt/1000;
+  if (game.spawn <= 0){
+    game.spawn = rnd(.35, .7);
+    const type = Math.random() < .5 ? 0 : 1;
+    const dir = Math.random() < .5 ? 1 : -1;
+    game.bugs.push({ x: dir > 0 ? -8 : W+8, y: type ? rnd(GROUND-38, GROUND-14) : rnd(GROUND+2, H-8),
+                     vx: dir * rnd(28, 52) * (type ? 1.35 : 1), type });
+  }
+  for (const b of game.bugs){ b.x += b.vx * dt/1000; if (b.x < -14 || b.x > W+14) b.dead = true; }
+  game.bugs = game.bugs.filter(b => !b.dead);
+}
+function drawStomp(now){
+  const { f, sc } = gameSprite('idle', Math.floor(now/700), 44);
+  ctx.save(); ctx.translate(34, GROUND); ctx.scale(-1, 1);
+  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc); ctx.restore();
+  for (const b of game.bugs) drawBug(ctx, b, now);
+  scoreTag('Caught ' + game.score);
+}
+function tapStomp(mx, my){
+  for (const b of game.bugs){
+    if (Math.abs(b.x - mx) < 11 && Math.abs(b.y - my) < 11){
+      b.dead = true; game.score++; SFX.chomp();
+      emit('spark', b.x, b.y, 4, {col:'#cfe0a8'});
+      return;
+    }
+  }
+  SFX.bonk();
+}
+
+/* ------ river leap ------ */
+function stepLeap(dt, now){
+  game.run += dt/1000 * game.speed;
+  game.speed = Math.min(140, game.speed + dt/1000 * 3);
+  game.vy += 340 * dt/1000;
+  game.y = Math.min(0, game.y + game.vy * dt/1000);
+  if (game.y === 0) game.vy = 0;
+  game.spawn -= dt/1000;
+  if (game.spawn <= 0){
+    game.spawn = rnd(.85, 1.5) * (110 / game.speed);
+    game.obs.push({ x: W + 12, kind: Math.random() < .5 ? 'log' : 'rock', hit:false, past:false });
+  }
+  for (const o of game.obs){
+    o.x -= game.speed * dt/1000;
+    if (!o.hit && Math.abs(o.x - 54) < 13 && game.y > -14){
+      o.hit = true; game.speed = Math.max(70, game.speed * .7);
+      game.stun = now + 500; SFX.bonk(); emit('crumb', 54, GROUND-8, 6, {col:'#9b7a52', vy:-20, g:120});
+    }
+    if (!o.past && o.x < 40){ o.past = true; if (!o.hit){ game.score++; SFX.coin(); } }
+    if (o.x < -20) o.dead = true;
+  }
+  game.obs = game.obs.filter(o => !o.dead);
+}
+function leapJump(){
+  if (!game || game.kind !== 'leap') return;
+  if (game.y < -1) return;
+  game.vy = -132; SFX.purr();
+}
+function drawLeap(now){
+  // scrolling ground streaks sell the speed
+  ctx.fillStyle = 'rgba(60,44,28,.5)';
+  for (let i=0;i<14;i++){
+    const x = ((i*22 - game.run) % (W+30) + W+30) % (W+30) - 15;
+    ctx.fillRect(x, GROUND + 6 + (i%3)*6, 9, 2);
+  }
+  for (const o of game.obs){
+    const x = Math.round(o.x);
+    if (o.kind === 'log'){
+      ctx.fillStyle = '#5d4426'; ctx.fillRect(x-11, GROUND-7, 22, 7);
+      ctx.fillStyle = '#7b5c33'; ctx.fillRect(x-11, GROUND-7, 22, 2);
+      ctx.fillStyle = '#3d2c18'; ctx.fillRect(x+8, GROUND-7, 3, 7);
+    } else {
+      ctx.fillStyle = '#5f5a4e'; ctx.fillRect(x-8, GROUND-11, 16, 11);
+      ctx.fillStyle = '#7b7566'; ctx.fillRect(x-6, GROUND-11, 11, 3);
+      ctx.fillStyle = '#3c382f'; ctx.fillRect(x+4, GROUND-8, 4, 8);
+    }
+  }
+  const airborne = game.y < -2;
+  const { f, sc } = gameSprite(now < game.stun ? 'sick' : airborne ? 'cheer' : 'walk',
+                               airborne ? 0 : Math.floor(game.run / 9), 42);
+  ctx.save(); ctx.translate(54, GROUND + Math.round(game.y));
+  ctx.scale(-1, 1);
+  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
+  ctx.restore();
+  scoreTag('Cleared ' + game.score);
+}
+
+function scoreTag(text){
+  ctx.font = '9px monospace';
+  const w = ctx.measureText(text).width + 10;
+  ctx.fillStyle = 'rgba(16,26,24,.82)'; ctx.fillRect(4, H - 17, w, 13);
+  ctx.fillStyle = '#e9e1cb'; ctx.fillText(text, 9, H - 7);
+}
+
+/* ==========================================================================
+   INTERFACE
+   All text lives in the DOM so it stays crisp on a phone. The canvas only ever
+   draws the world.
+   ========================================================================== */
+
+const NEED_META = [
+  { k:'hunger',  label:'Hunger',  col:'#c98a4a' },
+  { k:'energy',  label:'Energy',  col:'#d9c04a' },
+  { k:'hygiene', label:'Clean',   col:'#7fb2c9' },
+  { k:'joy',     label:'Joy',     col:'#c96f86' }
+];
+const ICON_ART = {
+  feed: g => {
+    g.fillStyle='#82382a'; g.fillRect(2,2,7,8);
+    g.fillStyle='#a04a34'; g.fillRect(2,2,6,7);
+    g.fillStyle='#c46a4c'; g.fillRect(3,3,3,2);
+    g.fillStyle='#d8d0b4'; g.fillRect(8,5,3,2); g.fillRect(10,3,2,2); g.fillRect(10,7,2,2);
+  },
+  play: g => {
+    for (let y=0;y<12;y++) for (let x=0;x<12;x++){
+      const dx=x-5.5, dy=y-5.5, d=Math.hypot(dx,dy);
+      if (d > 5.4) continue;
+      g.fillStyle = d > 4.3 ? '#2f6f6a' : (dx+dy < -3.2 ? '#a7dbd3' : '#5fb0a5');
+      g.fillRect(x,y,1,1);
+    }
+    g.fillStyle='#2f6f6a'; g.fillRect(1,5,10,1); g.fillRect(5,1,1,10);
+  },
+  wash: g => {
+    g.fillStyle='#4b7f99'; g.fillRect(4,1,3,2); g.fillRect(3,3,5,2); g.fillRect(2,5,7,4); g.fillRect(3,9,5,2);
+    g.fillStyle='#7fb2c9'; g.fillRect(4,2,2,2); g.fillRect(3,4,4,4); g.fillRect(4,8,3,2);
+    g.fillStyle='#d6ecf4'; g.fillRect(4,4,2,2);
+    g.fillStyle='#e8f4fa'; g.fillRect(10,2,1,1); g.fillRect(11,5,1,1); g.fillRect(9,7,1,1);
+  },
+  care: g => {
+    g.fillStyle='#8f3f26'; g.fillRect(1,3,4,1); g.fillRect(7,3,4,1); g.fillRect(0,4,12,4);
+    g.fillRect(1,8,10,1); g.fillRect(2,9,8,1); g.fillRect(3,10,6,1); g.fillRect(4,11,4,1);
+    g.fillStyle='#c2603c'; g.fillRect(1,4,10,3); g.fillRect(2,7,8,1); g.fillRect(3,8,6,1);
+    g.fillStyle='#f2ded0'; g.fillRect(5,4,2,5); g.fillRect(3,6,6,2);
+  },
+  shop: g => {
+    g.fillStyle='#5c4726'; g.fillRect(1,4,10,8);
+    g.fillStyle='#8a6a36'; g.fillRect(1,4,9,7);
+    g.fillStyle='#b08a4a'; g.fillRect(1,4,9,2);
+    g.fillStyle='#5c4726'; g.fillRect(3,1,1,3); g.fillRect(8,1,1,3); g.fillRect(4,0,4,1);
+    g.fillStyle='#d9a83f'; g.fillRect(5,7,2,2);
+  },
+  coin: g => {
+    g.fillStyle='#8a6a1e'; g.fillRect(2,1,8,10); g.fillRect(1,2,10,8);
+    g.fillStyle='#d9a83f'; g.fillRect(2,2,7,8); g.fillRect(3,1,5,10);
+    g.fillStyle='#f0d888'; g.fillRect(3,2,2,2);
+    g.fillStyle='#8a6a1e'; g.fillRect(5,3,2,6); g.fillRect(4,4,4,1); g.fillRect(4,7,4,1);
+  },
+  nest: g => {
+    g.fillStyle='#6b5230'; g.fillRect(0,7,12,4); g.fillRect(1,6,10,1);
+    g.fillStyle='#8a6a3c'; g.fillRect(1,7,10,1); g.fillRect(0,9,12,1);
+    g.fillStyle='#efe3c4'; g.fillRect(3,3,3,4); g.fillRect(2,4,5,3);
+    g.fillStyle='#cfc3a4'; g.fillRect(7,4,3,3); g.fillRect(6,5,5,2);
+  }
+};
+function pixelIcon(id, w, h){
+  const c = makeCv(w,h), g = readCtx(c);
+  ICON_ART[id](g);
+  const d = g.getImageData(0,0,w,h), px = d.data, solid = new Uint8Array(w*h);
+  for (let i=0;i<w*h;i++){ if (px[i*4+3] >= 118){ px[i*4+3]=255; solid[i]=1; } else px[i*4+3]=0; }
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+    const i=y*w+x; if (solid[i]) continue;
+    if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
+      px[i*4]=0x14; px[i*4+1]=0x1c; px[i*4+2]=0x1e; px[i*4+3]=255;
+    }
+  }
+  g.putImageData(d,0,0);
+  return c;
+}
+
+function buildChrome(){
+  $('needs').innerHTML = NEED_META.map(n =>
+    `<div class="need" id="need-${n.k}"><b>${n.label}</b>
+       <div class="track"><div class="fill" id="fill-${n.k}" style="background:${n.col}"></div><i class="seg"></i></div>
+     </div>`).join('');
+  $('needs').onclick = () => { if (hatched()) openSheet('vitals'); };
+  $('actions').innerHTML = [
+    ['feed','Feed'],['play','Play'],['wash','Wash'],['care','Care'],['shop','Shop']
+  ].map(([k,l]) => `<button class="act" id="act-${k}"><span class="ico" data-ico="${k}"></span>${l}</button>`).join('');
+  document.querySelectorAll('[data-ico]').forEach(sl => {
+    const c = pixelIcon(sl.getAttribute('data-ico'), 12, 12);
+    c.style.width = '24px'; c.style.height = '24px'; c.style.imageRendering = 'pixelated';
+    sl.appendChild(c);
+  });
+  const coin = pixelIcon('coin', 12, 12);
+  coin.style.cssText = 'width:13px;height:13px;image-rendering:pixelated';
+  $('coinArt').appendChild(coin);
+  const nest = pixelIcon('nest', 12, 12);
+  nest.style.cssText = 'width:18px;height:18px;image-rendering:pixelated';
+  $('btnNest').appendChild(nest);
+  $('act-feed').onclick = () => openSheet('feed');
+  $('act-play').onclick = () => openSheet('play');
+  $('act-wash').onclick = () => { scrub(); };
+  $('act-care').onclick = () => openSheet('care');
+  $('act-shop').onclick = () => openSheet('shop');
+  $('btnNest').onclick = () => openSheet('nest');
+  $('btnDossier').onclick = () => openSheet('dossier');
+  $('dName').onclick = beginRename;
+  $('dName').onkeydown = e => { if (e.key === 'Enter') beginRename(); };
+  $('scrim').onclick = closeSheet;
+}
+function paintChrome(){
+  const busy = mode !== 'live';
+  ['feed','play','wash','care','shop'].forEach(k => { $('act-'+k).disabled = busy; });
+  const careBtn = $('act-care');
+  const old = careBtn.querySelector('.nub'); if (old) old.remove();
+  if (hatched() && (S.ills.length || S.vet)){
+    const n = document.createElement('i'); n.className = 'nub'; careBtn.appendChild(n);
+  }
+  $('nestCount').textContent = G.pets.length > 1 ? G.pets.length : '';
+}
+
+/* ------------------------------- refresh ---------------------------------- */
+function refreshLight(){
+  if (!G) return;
+  $('coins').textContent = Math.floor(G.coins);
+  if (!hatched()) return;
+  for (const n of NEED_META){
+    const v = S.needs[n.k];
+    $('fill-'+n.k).style.width = v + '%';
+    $('fill-'+n.k).style.background = v < 22 ? '#c2603c' : v < 45 ? '#d9a441' : n.col;
+    $('need-'+n.k).classList.toggle('low', v < 22);
+  }
+}
+function refresh(){
+  refreshLight();
+  $('picks').hidden = !(mode === 'choose');
+  $('needs').style.display = hatched() ? '' : 'none';
+  const lamp = $('lamp');
+  if (!hatched()){
+    $('dName').textContent = S && S.sp ? 'Nearly out' : 'A warm egg';
+    $('dSub').textContent = S && S.sp ? 'Keep tapping the shell' : 'Pick one to begin';
+    $('mood').textContent = S && S.sp ? 'Something is moving in there.' : 'Three eggs are waiting in the nest.';
+    $('bond').innerHTML = ''; $('badges').innerHTML = '';
+    lamp.className = 'lamp rest';
+    paintChrome();
+    return;
+  }
+  const sp = SPECIES[S.sp], st = STAGE[stageIdx()];
+  $('dName').textContent = S.name;
+  const d = ageDays();
+  const age = d < 1 ? Math.max(1, Math.round(d*24)) + 'h old' : Math.floor(d) + (Math.floor(d) === 1 ? ' day old' : ' days old');
+  $('dSub').textContent = st.label + ' ' + sp.common + ' · ' + age;
+  $('mood').innerHTML = S.name + ' <em>' + moodOf().line + '</em>';
+  $('bond').innerHTML = 'Bond ' + Array.from({length:5}, (_,i) => `<i class="pip${i < bondPips() ? ' on' : ''}"></i>`).join('');
+  const tags = [];
+  if (S.vet) tags.push(['warn','At their limit']);
+  S.ills.forEach(i => tags.push(['warn', ILLS[i.id].name]));
+  if (S.asleep && !S.vet) tags.push(['', 'Asleep']);
+  if (S.mess.length) tags.push(['warn', S.mess.length + ' to clean']);
+  if (G.streak > 1) tags.push(['', G.streak + '-day streak']);
+  $('badges').innerHTML = tags.slice(0,3).map(([c,t]) => `<span class="tag ${c}"><i class="dot"></i>${t}</span>`).join('');
+  lamp.className = 'lamp' + (S.vet || S.ills.length ? ' bad' : S.asleep ? ' rest' : '');
+  paintChrome();
+  if (openPanel) renderSheet(openPanel);
+}
+
+/* -------------------------------- sheets ---------------------------------- */
+let openPanel = null;
+function openSheet(which){
+  if (mode === 'game') return;
+  if (mode !== 'live' && which !== 'dossier' && which !== 'nest') return;
+  openPanel = which;
+  renderSheet(which);
+  $('sheet').classList.add('on'); $('scrim').classList.add('on');
+}
+function closeSheet(){ openPanel = null; $('sheet').classList.remove('on'); $('scrim').classList.remove('on'); }
+
+function rowHTML(art, title, sub, right, attrs){
+  const slot = art ? `<span class="art" data-art="${art}"></span>` : '';
+  return `<button class="row" ${attrs||''}>${slot}
+    <span class="t"><b>${title}</b><small>${sub}</small></span><span class="px">${right||''}</span></button>`;
+}
+function mountArt(root){
+  root.querySelectorAll('[data-art]').forEach(slot => {
+    const id = slot.getAttribute('data-art');
+    if (!id) return;
+    if (HATS[id]){
+      const c = makeCv(30,28), g = readCtx(c);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(HATS[id], 3, 2, 24, 22);
+      slot.appendChild(c);
+    } else {
+      const c = makeCv(30,30), g = readCtx(c);
+      g.imageSmoothingEnabled = false; drawItem(g, id, 5, 9, 3);
+      slot.appendChild(c);
+    }
+  });
+}
+function portrait(pet, size){
+  const c = makeCv(size, size), g = readCtx(c);
+  g.imageSmoothingEnabled = false;
+  if (!pet.sp){ g.fillStyle = '#3a4a44'; g.fillRect(size/2-5, size/2-7, 10, 14); return c; }
+  const prev = S; S = pet;
+  const st = pet.born ? stageIdx() : 0;
+  S = prev;
+  const f = frameOf(pet.sp, st, 'idle', 0, false, pet.skin || 'wild');
+  const sc = Math.min(size / f.w, size / f.h) * .92;
+  g.drawImage(f.cv, (size - f.w*sc)/2, size - f.h*sc - 1, f.w*sc, f.h*sc);
+  return c;
+}
+
+function renderSheet(which){
+  const b = $('sheetBody'), sp = hatched() ? SPECIES[S.sp] : null;
+  let html = '';
+
+  if (which === 'feed'){
+    html = `<h2>Feed</h2><p class="lede">${sp.common} is a ${sp.diet}. Favourites fill it up and build trust; the wrong food goes down slowly. Treats are for treats.</p>`;
+    html += FOODS.map(f => {
+      const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
+      return rowHTML(f.id, f.name, (loved ? 'Favourite. ' : hated ? 'Dislikes this. ' : '') + f.note, f.cost + 'c');
+    }).join('');
+    b.innerHTML = html; mountArt(b);
+    b.querySelectorAll('.row').forEach((r,i) => r.onclick = () => { feed(FOODS[i].id); });
+  }
+
+  else if (which === 'play'){
+    const trickReady = bondPips() >= 3;
+    html = `<h2>Games</h2><p class="lede">Joy drops about six points an hour and drags health down once it bottoms out. Each game costs a little energy.</p>`;
+    html += Object.keys(GAMES).map(k => rowHTML('', GAMES[k].name, GAMES[k].blurb, GAMES[k].pay + 'c each')).join('');
+    html += `<div class="hr"></div>`;
+    html += rowHTML('', 'Ask for a trick', trickReady ? 'Free. A quick burst of joy.' : 'Unlocks at three bond pips.',
+                    trickReady ? 'free' : 'locked', trickReady ? '' : 'disabled');
+    html += `<p class="note">Petting works too. Press and hold on ${S.name} in the habitat.</p>`;
+    b.innerHTML = html; mountArt(b);
+    const rows = b.querySelectorAll('.row'), keys = Object.keys(GAMES);
+    keys.forEach((k,i) => rows[i].onclick = () => startGame(k));
+    rows[keys.length].onclick = doTrick;
+  }
+
+  else if (which === 'vitals'){
+    const n = S.needs, hr = new Date().getHours();
+    const untilBed = ((BED_HOUR - hr) + 24) % 24;
+    const hoursLeft = (n.energy / (ENERGY_AWAKE * trait('tempo').energy)).toFixed(1);
+    const hoursFull = ((100 - n.energy) / ENERGY_ASLEEP).toFixed(1);
+    html = `<h2>Vitals</h2><p class="lede">What each meter does, and how fast it moves for this animal.</p>
+      <div class="stats">
+        <div class="stat"><b>Hunger</b><span>${Math.round(n.hunger)}%</span></div>
+        <div class="stat"><b>Energy</b><span>${Math.round(n.energy)}%</span></div>
+        <div class="stat"><b>Clean</b><span>${Math.round(n.hygiene)}%</span></div>
+        <div class="stat"><b>Joy</b><span>${Math.round(n.joy)}%</span></div>
+      </div>
+      <div class="log"><time>Energy</time>Falls about ${(ENERGY_AWAKE * trait('tempo').energy).toFixed(1)} points an hour awake, and comes back at ${ENERGY_ASLEEP} an hour asleep. At this level ${S.name} has roughly ${hoursLeft} waking hours left, and a full night takes about ${hoursFull} hours.</div>
+      <div class="log"><time>Sleep</time>${S.name} settles itself between ${BED_HOUR}:00 and ${WAKE_HOUR}:00, or any time energy drops under 6. It wakes on its own once rested. Bedtime is in about ${untilBed} hours. Keeping it up more than two hours past bedtime brings on a chill.</div>
+      <div class="log"><time>Hunger</time>Falls about ${(7.5*trait('appetite').hunger).toFixed(1)} an hour. Under 22 it starts nosing at the dirt; at zero, health follows it down.</div>
+      <div class="log"><time>Clean</time>Falls 4 an hour, and drops 11 more with every mess. Under 20 invites mites.</div>
+      <div class="log"><time>Joy</time>Falls about ${(6*trait('tempo').joy*trait('social').lonely).toFixed(1)} an hour. Games, tricks and petting bring it back. Under 15 for long enough turns into the blues.</div>
+      <div class="hr"></div>`;
+    html += rowHTML('', 'Tuck it in', S.asleep ? S.name + ' is already asleep.' :
+      n.energy > 70 ? 'Available once energy drops below 70.' : 'Settle it early and skip the late night. Builds a little trust.',
+      S.asleep || n.energy > 70 ? '—' : 'free', S.asleep || n.energy > 70 ? 'disabled' : '');
+    b.innerHTML = html; mountArt(b);
+    const r = b.querySelector('.row'); if (r) r.onclick = tuckIn;
+  }
+
+  else if (which === 'care'){
+    if (S.vet){
+      html = `<h2>Care</h2><p class="lede">${S.name} is on the ground and will not get up. A vet can bring it back.</p>`;
+      html += rowHTML('', 'Call the vet', 'Restores health and clears every illness. Costs some trust.', '30c');
+      b.innerHTML = html; mountArt(b);
+      b.querySelector('.row').onclick = vetVisit;
+    } else if (!S.ills.length){
+      html = `<h2>Care</h2><p class="lede">Nothing to treat right now.</p>
+        <div class="stats">
+          <div class="stat"><b>Health</b><span>${Math.round(S.health)}%</span></div>
+          <div class="stat"><b>Bond</b><span>${Math.round(S.bond)}%</span></div>
+        </div>
+        <p class="note">Illness has causes, not bad luck. Three treats in an hour upsets the stomach. Keeping ${S.name} awake past its bedtime brings on a chill. Letting the pen fall below a fifth clean invites mites. And joy sitting near zero turns into the blues.</p>`;
+      b.innerHTML = html;
+    } else {
+      html = `<h2>Care</h2><p class="lede">Read the symptoms and pick the treatment. Guessing wrong costs coins and a little trust.</p>`;
+      html += S.ills.map(i => `<div class="log"><time>Symptom</time>${ILLS[i.id].symptom}</div>`).join('');
+      html += '<div class="hr"></div>';
+      html += REMEDIES.map(r => rowHTML('', r.name, r.note, r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8 pets' : 'free'))).join('');
+      b.innerHTML = html; mountArt(b);
+      b.querySelectorAll('.row').forEach((r,i) => r.onclick = () => {
+        if (REMEDIES[i].id === 'company'){
+          if (hasIll('blues')){ closeSheet(); say('Press and hold on ' + S.name + '. Eight times should do it.'); }
+          else treat('company');
+          return;
+        }
+        treat(REMEDIES[i].id);
+      });
+    }
+  }
+
+  else if (which === 'shop'){
+    html = `<h2>Shop</h2><p class="lede">Coins come from digs, cleaning up and the games. Everything here belongs to ${S.name} alone.</p>
+      <p class="note" style="margin-bottom:8px">Coats</p>`;
+    html += SKINS[S.sp].map(k => {
+      const own = S.skinsOwned.includes(k.id), worn = S.skin === k.id;
+      return `<button class="row" data-skin="${k.id}"><span class="art" data-coat="${k.id}"></span>
+        <span class="t"><b>${k.name}</b><small>${k.note}</small></span>
+        <span class="px${own ? ' own' : ''}">${own ? (worn ? 'worn' : 'wear') : k.cost + 'c'}</span></button>`;
+    }).join('');
+    html += `<div class="hr"></div><p class="note" style="margin-bottom:8px">Headgear</p>`;
+    html += HAT_SHOP.map(h => {
+      const own = S.owned.includes(h.id), worn = S[h.slot] === h.id;
+      const where = h.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.';
+      return rowHTML(h.id, h.name, own ? (worn ? 'Currently worn.' : where) : where, own ? (worn ? 'worn' : 'wear') : h.cost + 'c');
+    }).join('');
+    b.innerHTML = html; mountArt(b);
+    b.querySelectorAll('[data-coat]').forEach(slot => {
+      const id = slot.getAttribute('data-coat');
+      const f = frameOf(S.sp, stageIdx(), 'idle', 0, false, id);
+      const c = makeCv(34,30), g = readCtx(c);
+      g.imageSmoothingEnabled = false;
+      const sc = Math.min(34 / f.w, 30 / f.h) * .95;
+      g.drawImage(f.cv, (34 - f.w*sc)/2, 30 - f.h*sc, f.w*sc, f.h*sc);
+      c.style.imageRendering = 'pixelated';
+      slot.appendChild(c);
+    });
+    b.querySelectorAll('.px').forEach(p => { if (p.textContent === 'worn' || p.textContent === 'wear') p.classList.add('own'); });
+    b.querySelectorAll('[data-skin]').forEach(r => r.onclick = () => buySkin(r.getAttribute('data-skin')));
+    const hatRows = Array.from(b.querySelectorAll('.row')).slice(SKINS[S.sp].length);
+    hatRows.forEach((r,i) => r.onclick = () => buyHat(HAT_SHOP[i].id));
+  }
+
+  else if (which === 'nest'){
+    html = `<h2>The nest</h2><p class="lede">Every animal here ages and gets hungry whether or not it is the one on screen. Coins are shared.</p>`;
+    html += G.pets.map((p,i) => {
+      const active = i === G.active;
+      let sub;
+      if (!p.sp) sub = 'An unchosen egg.';
+      else if (!p.born) sub = 'Still in the shell.';
+      else {
+        const prev = S; S = p;
+        const worst = Math.min(p.needs.hunger, p.needs.energy, p.needs.hygiene, p.needs.joy);
+        sub = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + ' · ' +
+              (p.vet ? 'needs a vet' : p.ills.length ? ILLS[p.ills[0].id].name.toLowerCase() :
+               worst < 25 ? 'needs attention' : p.asleep ? 'asleep' : 'doing fine');
+        S = prev;
+      }
+      return `<button class="row pet${active ? ' here' : ''}" data-pet="${i}">
+        <span class="art" data-pet-art="${i}"></span>
+        <span class="t"><b>${p.name || 'Unnamed'}</b><small>${sub}</small></span>
+        <span class="px">${active ? 'here' : 'visit'}</span></button>`;
+    }).join('');
+    html += '<div class="hr"></div>';
+    html += rowHTML('', 'Take a new egg', G.pets.length >= MAX_PETS ? 'The nest holds ' + MAX_PETS + '.' : 'Start another animal from scratch.',
+                    G.pets.length >= MAX_PETS ? 'full' : 'new', G.pets.length >= MAX_PETS ? 'disabled' : '');
+    b.innerHTML = html; mountArt(b);
+    b.querySelectorAll('[data-pet-art]').forEach(slot => {
+      const c = portrait(G.pets[+slot.getAttribute('data-pet-art')], 34);
+      c.style.imageRendering = 'pixelated'; slot.appendChild(c);
+    });
+    b.querySelectorAll('[data-pet]').forEach(r => r.onclick = () => switchPet(+r.getAttribute('data-pet')));
+    const newRow = b.querySelectorAll('.row')[G.pets.length];
+    if (newRow) newRow.onclick = newEgg;
+  }
+
+  else if (which === 'dossier'){
+    if (!hatched()){
+      b.innerHTML = `<h2>Field dossier</h2><p class="lede">Choose an egg first. Each species is drawn from its own skeleton, so the sprite shows what the notes claim.</p>`;
+    } else {
+      const t = ['appetite','tempo','social'].map(k => `<span class="trait">${trait(k).name}</span>`).join('');
+      html = `<h2>${S.name}</h2><p class="lede">${sp.name} · ${sp.era}</p>
+        <div class="stats">
+          <div class="stat"><b>Stage</b><span>${STAGE[stageIdx()].label}</span></div>
+          <div class="stat"><b>Well-kept time</b><span>${Math.floor(S.growth)} min</span></div>
+        </div>
+        <p class="note" style="margin-bottom:8px">Temperament</p>${t}
+        <p class="note">${['appetite','tempo','social'].map(k => trait(k).note).join(' ')}</p>
+        <div class="hr"></div>
+        <p class="note" style="margin-bottom:6px">Field notes</p>
+        ${sp.facts.map(f => `<div class="log">${f}</div>`).join('')}
+        <p class="note" style="margin:10px 0 6px">Drawn on the sprite</p>
+        ${sp.checks.map(c => `<div class="log">${c}</div>`).join('')}
+        <div class="hr"></div>
+        <p class="note" style="margin-bottom:6px">Diary</p>
+        ${S.log.length ? S.log.slice(0,10).map(l => `<div class="log"><time>${new Date(l.t).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</time>${l.txt}</div>`).join('') : '<p class="note">Nothing has happened yet.</p>'}
+        <div class="hr"></div>
+        ${rowHTML('', G.sound ? 'Sound on' : 'Sound off', 'Beeps, chomps and roars.', G.sound ? 'on' : 'off')}
+        ${rowHTML('', 'Release ' + S.name, G.pets.length > 1 ? 'Removes this animal from the nest for good.' : 'You cannot release your only animal.', 'release', G.pets.length > 1 ? '' : 'disabled')}
+        ${rowHTML('', 'Wipe everything', 'Deletes the whole nest and starts over.', 'reset')}`;
+      b.innerHTML = html; mountArt(b);
+      const rows = b.querySelectorAll('.row');
+      rows[0].onclick = () => { G.sound = !G.sound; save(); renderSheet('dossier'); };
+      let armedR = false, armedW = false;
+      rows[1].onclick = () => {
+        if (G.pets.length <= 1) return;
+        if (!armedR){ armedR = true; rows[1].querySelector('.px').textContent = 'sure?'; setTimeout(()=>{armedR=false; if(openPanel==='dossier') renderSheet('dossier');}, 3000); return; }
+        releasePet(G.active);
+      };
+      rows[2].onclick = () => {
+        if (!armedW){ armedW = true; rows[2].querySelector('.px').textContent = 'sure?'; setTimeout(()=>{armedW=false; if(openPanel==='dossier') renderSheet('dossier');}, 3000); return; }
+        Store.del(SAVE_KEY).then(() => location.reload());
+      };
+    }
+  }
+
+  else if (which === 'away'){
+    b.innerHTML = `<h2>While you were gone</h2><p class="lede">${G.awayText}</p>
+      ${rowHTML('', 'Back to the habitat', 'Pick up where you left off.', '')}`;
+    b.querySelector('.row').onclick = closeSheet;
+  }
+}
+
+/* -------------------------------- naming ---------------------------------- */
+function beginRename(){
+  if (!hatched()) return;
+  const inp = $('nameEdit');
+  inp.hidden = false; $('dName').style.display = 'none';
+  inp.value = S.name; inp.focus(); inp.select();
+}
+$('nameEdit').addEventListener('blur', () => {
+  const inp = $('nameEdit');
+  S.name = (inp.value.trim() || S.name || 'Pip').slice(0,14);
+  inp.hidden = true; $('dName').style.display = '';
+  document.title = S.name + ' — Paleopal';
+  save(); refresh();
+});
+$('nameEdit').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); e.stopPropagation(); });
+
+/* -------------------------------- input ----------------------------------- */
+function canvasPos(e){
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
+}
+let holding = false, holdPos = null;
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  const [mx, my] = canvasPos(e);
+  holdPos = [mx, my];
+  if (AC && AC.state === 'suspended') AC.resume();
+
+  if (mode === 'choose'){
+    const keys = ['rex','trike','brachio'], xs = [46, 112, 178];
+    for (let i = 0; i < 3; i++){
+      if (Math.abs(mx - xs[i]) < 20 && my > GROUND - 40 && my < GROUND + 6){ chooseEgg(keys[i]); return; }
+    }
+    return;
+  }
+  if (mode === 'egg'){
+    egg.cracks++; egg.wob = 1; SFX.crack();
+    if (egg.cracks >= 6) hatch();
+    return;
+  }
+  if (mode === 'game'){
+    if (game.kind === 'snack') game.tx = mx;
+    if (game.kind === 'stomp') tapStomp(mx, my);
+    if (game.kind === 'leap')  leapJump();
+    return;
+  }
+  if (mode === 'live'){
+    if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet(); return; }
+    if (bondPips() >= 2 && !S.asleep && !S.vet){
+      dino.tx = clamp(mx, 22, W-22);
+      dino.until = performance.now() + 4000;
+    }
+  }
+});
+cv.addEventListener('pointermove', e => {
+  const p = canvasPos(e); holdPos = p;
+  if (mode === 'game' && game && game.kind === 'snack' && e.buttons) game.tx = p[0];
+});
+window.addEventListener('pointerup', () => { holding = false; });
+window.addEventListener('pointercancel', () => { holding = false; });
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ if (openPanel) closeSheet(); else if (mode === 'game') endGame(); return; }
+  if (mode === 'game' && game){
+    if (game.kind === 'snack'){
+      if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = true;
+      if (e.key === 'ArrowRight'|| e.key === 'd') game.kR = true;
+    }
+    if (game.kind === 'leap' && (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w')) leapJump();
+  }
+});
+window.addEventListener('keyup', e => {
+  if (mode === 'game' && game && game.kind === 'snack'){
+    if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = false;
+    if (e.key === 'ArrowRight'|| e.key === 'd') game.kR = false;
+  }
+});
+
+/* ------------------------------ lifecycle --------------------------------- */
+function chooseEgg(id){
+  S.sp = id; S.name = pick(NAMES.filter(n => !G.pets.some(p => p.name === n))) || pick(NAMES);
+  S.traits = { appetite:(Math.random()*2)|0, tempo:(Math.random()*2)|0, social:(Math.random()*2)|0 };
+  mode = 'egg'; egg.cracks = 0;
+  SFX.pop(); say('Tap the egg until it opens.');
+  refresh(); save();
+}
+function hatch(){
+  S.born = Date.now();
+  mode = 'live';
+  dino.digAt = performance.now() + 40e3;
+  SFX.hatch(); emit('heart', W/2, GROUND-24, 8);
+  logEvent(S.name + ' hatched.');
+  document.title = S.name + ' — Paleopal';
+  say('Hello. Tap the name above to rename it.', 4200);
+  refresh(); paintChrome(); save();
+}
+
+let saveAt = 0;
+function save(){ if (!G) return; G.lastSeen = Date.now(); Store.set(SAVE_KEY, JSON.stringify(G)); }
+
+function awayReport(gapMs){
+  const mins = Math.round(gapMs / MIN), bits = [];
+  if (mins < 90) bits.push('You were away about ' + mins + ' minutes.');
+  else if (mins < 60*30) bits.push('You were away about ' + Math.round(mins/60) + ' hours.');
+  else bits.push('You were away ' + Math.round(mins/1440) + ' days.');
+  const trouble = G.pets.filter(p => p.born && (p.vet || p.ills.length || Math.min(p.needs.hunger, p.needs.joy, p.needs.hygiene) < 25));
+  if (!trouble.length) bits.push(G.pets.length > 1 ? 'Everyone held up fine.' : 'It held up fine.');
+  else bits.push(trouble.map(p => p.name + ' ' + (p.vet ? 'collapsed and needs a vet' :
+      p.ills.length ? 'has ' + ILLS[p.ills[0].id].name.toLowerCase() : 'needs attention')).join(', ') + '.');
+  const mess = G.pets.reduce((a,p) => a + p.mess.length, 0);
+  if (mess) bits.push('There are ' + mess + ' messes to clean.');
+  G.awayText = bits.join(' ');
+}
+function dailyCheck(){
+  const today = new Date().toDateString();
+  if (G.lastDay === today) return;
+  const yest = new Date(Date.now() - 86400e3).toDateString();
+  G.streak = G.lastDay === yest ? G.streak + 1 : 1;
+  G.lastDay = today;
+  if (hatched()){
+    const bonus = 5 + Math.min(20, G.streak * 3);
+    G.coins += bonus;
+    logEvent('Day ' + G.streak + ' together. +' + bonus + ' coins.');
+    setTimeout(() => say('Day ' + G.streak + ' together. +' + bonus + ' coins.'), 1400);
+  }
+}
+
+/* ------------------------------- main loop -------------------------------- */
+let lastFrame = performance.now(), accum = 0;
+function frame(now){
+  const dt = clamp(now - lastFrame, 0, 120);
+  lastFrame = now;
+
+  if (G){
+    const real = Date.now();
+    if (real - G.lastTick > 500){
+      let left = Math.min(real - G.lastTick, 12*HOUR);
+      G.lastTick = real;
+      while (left > 0){ const chunk = Math.min(left, 5*MIN); simulateAll(chunk, true); left -= chunk; }
+    }
+  }
+
+  stepBehaviour(dt, now);
+  stepFeed(dt);
+  if (mode === 'game') stepGame(dt, now);
+  stepParts(dt);
+  if (holding && holdPos && mode === 'live' &&
+      holdPos[0] >= dinoBox[0]-4 && holdPos[0] <= dinoBox[2]+4 && holdPos[1] >= dinoBox[1]-4) pet();
+
+  if (G) drawScene(now);
+  accum += dt;
+  if (accum > 1000){ accum = 0; refresh(); }
+  if (now - saveAt > 6000){ saveAt = now; save(); }
+  requestAnimationFrame(frame);
+}
+
+async function boot(){
+  buildChrome();
+  G = freshGame();
+  const raw = await Store.get(SAVE_KEY);
+  if (raw){
+    try {
+      const o = JSON.parse(raw);
+      if (o && o.v === 2 && Array.isArray(o.pets) && o.pets.length){
+        G = Object.assign(freshGame(), o);
+        G.pets = o.pets.map(p => Object.assign(freshPet(), p));
+        G.active = clamp(o.active|0, 0, G.pets.length-1);
+      }
+    } catch(e){}
+  }
+  S = G.pets[G.active];
+  if (hatched()){
+    mode = 'live';
+    const gap = clamp(Date.now() - (G.lastTick || Date.now()), 0, 14*86400e3);
+    if (gap > 60e3){
+      let left = Math.min(gap, 3*86400e3);
+      while (left > 0){ const chunk = Math.min(left, 10*MIN); simulateAll(chunk, false); left -= chunk; }
+      awayReport(gap);
+      setTimeout(() => openSheet('away'), 500);
+    }
+    document.title = S.name + ' — Paleopal';
+  } else mode = S.sp ? 'egg' : 'choose';
+  G.lastTick = Date.now();
+  dailyCheck();
+  refresh(); paintChrome();
+  requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+window.addEventListener('pagehide', save);
+boot();
+
+</script>
+</body>
+</html>
