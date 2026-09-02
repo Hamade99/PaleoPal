@@ -51,6 +51,52 @@ const ICON_ART = {
     g.fillStyle='#f0d888'; g.fillRect(3,2,2,2);
     g.fillStyle='#8a6a1e'; g.fillRect(5,3,2,6); g.fillRect(4,4,4,1); g.fillRect(4,7,4,1);
   },
+  /* the meter strip: one glyph per need, the way the classic devices did it */
+  hunger: g => {
+    g.fillStyle='#d8d0b4'; g.fillRect(8,1,2,4); g.fillRect(7,1,1,2); g.fillRect(10,1,1,2);
+    g.fillStyle='#82382a'; g.fillRect(1,4,9,7); g.fillRect(2,3,7,1);
+    g.fillStyle='#a04a34'; g.fillRect(1,4,8,5);
+    g.fillStyle='#c46a4c'; g.fillRect(2,5,3,3);
+  },
+  energy: g => {
+    const bolt=[[6,0,3],[5,1,3],[4,2,3],[3,3,4],[2,4,7],[5,5,3],[4,6,3],[3,7,3],[2,8,3],[2,9,2]];
+    g.fillStyle='#8a6a1e'; for (const [x,y,w] of bolt) g.fillRect(x,y+1,w,1);
+    g.fillStyle='#d9c04a'; for (const [x,y,w] of bolt) g.fillRect(x,y,w,1);
+    g.fillStyle='#f4e79a'; g.fillRect(5,1,2,1); g.fillRect(4,2,2,1);
+  },
+  hygiene: g => {
+    const drop=[[5,0,2],[5,1,2],[4,2,4],[3,3,6],[3,4,6],[2,5,8],[2,6,8],[2,7,8],[3,8,6],[4,9,4]];
+    g.fillStyle='#4b7f99'; for (const [x,y,w] of drop) g.fillRect(x,y,w,1);
+    g.fillStyle='#7fb2c9'; g.fillRect(3,3,5,5); g.fillRect(4,2,3,1); g.fillRect(4,8,4,1);
+    g.fillStyle='#d6ecf4'; g.fillRect(4,4,2,2); g.fillRect(4,3,1,1);
+  },
+  joy: g => {
+    const heart=[[2,1,3],[7,1,3],[1,2,10],[1,3,10],[1,4,10],[2,5,8],[3,6,6],[4,7,4],[5,8,2]];
+    g.fillStyle='#8f3050'; for (const [x,y,w] of heart) g.fillRect(x,y,w,1);
+    g.fillStyle='#c96f86'; g.fillRect(2,2,8,2); g.fillRect(2,1,2,1); g.fillRect(7,1,2,1);
+    g.fillRect(2,4,7,1); g.fillRect(3,5,5,1); g.fillRect(4,6,3,1);
+    g.fillStyle='#f0a8b8'; g.fillRect(2,2,2,2);
+  },
+  /* the case buttons */
+  sound: g => {
+    g.fillStyle='#3a2408';
+    g.fillRect(0,4,2,4); g.fillRect(2,3,1,6); g.fillRect(3,2,1,8); g.fillRect(4,1,1,10);
+    g.fillStyle='#1d4a33';
+    g.fillRect(7,4,1,4); g.fillRect(9,2,1,8); g.fillRect(8,3,1,1); g.fillRect(8,8,1,1);
+    g.fillRect(10,1,1,1); g.fillRect(10,10,1,1);
+  },
+  mute: g => {
+    g.fillStyle='#3a2408';
+    g.fillRect(0,4,2,4); g.fillRect(2,3,1,6); g.fillRect(3,2,1,8); g.fillRect(4,1,1,10);
+    g.fillStyle='#c2603c';
+    for (let i=0;i<5;i++){ g.fillRect(7+i,3+i,1,1); g.fillRect(11-i,3+i,1,1); }
+  },
+  bone: g => {
+    g.fillStyle='#b8ad90';
+    g.fillRect(3,5,6,3); g.fillRect(1,3,3,3); g.fillRect(1,7,3,3); g.fillRect(8,3,3,3); g.fillRect(8,7,3,3);
+    g.fillStyle='#efe6cf';
+    g.fillRect(3,5,6,2); g.fillRect(1,3,3,2); g.fillRect(8,3,3,2); g.fillRect(1,7,2,2); g.fillRect(8,7,2,2);
+  },
   nest: g => {
     g.fillStyle='#6b5230'; g.fillRect(0,7,12,4); g.fillRect(1,6,10,1);
     g.fillStyle='#8a6a3c'; g.fillRect(1,7,10,1); g.fillRect(0,9,12,1);
@@ -75,7 +121,8 @@ function pixelIcon(id, w, h){
 
 function buildChrome(){
   $('needs').innerHTML = NEED_META.map(n =>
-    `<div class="need" id="need-${n.k}"><b>${n.label}</b>
+    `<div class="need" id="need-${n.k}">
+       <div class="cap"><span data-nico="${n.k}"></span><b>${n.label}</b></div>
        <div class="track"><div class="fill" id="fill-${n.k}" style="background:${n.col}"></div><i class="seg"></i></div>
      </div>`).join('');
   $('needs').onclick = () => { if (hatched()) openSheet('vitals'); };
@@ -88,15 +135,24 @@ function buildChrome(){
   ].map(([k,l]) => `<button class="act" id="act-${k}"><span class="ico" data-ico="${k}"></span>${l}</button>`).join('');
   document.querySelectorAll('[data-ico]').forEach(sl => {
     const c = pixelIcon(sl.getAttribute('data-ico'), 12, 12);
-    c.style.width = '24px'; c.style.height = '24px'; c.style.imageRendering = 'pixelated';
+    c.style.imageRendering = 'pixelated';
+    sl.appendChild(c);
+  });
+  document.querySelectorAll('[data-nico]').forEach(sl => {
+    const c = pixelIcon(sl.getAttribute('data-nico'), 12, 12);
+    c.style.imageRendering = 'pixelated';
     sl.appendChild(c);
   });
   const coin = pixelIcon('coin', 12, 12);
   coin.style.cssText = 'width:13px;height:13px;image-rendering:pixelated';
   $('coinArt').appendChild(coin);
   const nest = pixelIcon('nest', 12, 12);
-  nest.style.cssText = 'width:18px;height:18px;image-rendering:pixelated';
+  nest.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnNest').appendChild(nest);
+  const bone = pixelIcon('bone', 12, 12);
+  bone.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
+  $('btnDev').appendChild(bone);
+  paintSound();
   $('act-feed').onclick = () => openSheet('feed');
   $('act-play').onclick = () => openSheet('play');
   $('act-wash').onclick = () => { scrub(); };
@@ -104,9 +160,50 @@ function buildChrome(){
   $('act-shop').onclick = () => openSheet('shop');
   $('btnNest').onclick = () => openSheet('nest');
   $('btnDossier').onclick = () => openSheet('dossier');
+  $('btnSound').onclick = toggleSound;
+  $('btnDev').onclick = () => openSheet('dev');
   $('dName').onclick = beginRename;
   $('dName').onkeydown = e => { if (e.key === 'Enter') beginRename(); };
   $('scrim').onclick = closeSheet;
+  armBrandHold();
+}
+
+/* The sound switch lives on the case, not three taps deep in the dossier. It
+   swaps its own glyph so the state is readable without opening anything. */
+let soundIcon = null, soundShown = null;
+function toggleSound(){
+  G.sound = !G.sound;
+  if (G.sound) SFX.pop();
+  paintSound(); save();
+  if (openPanel === 'dossier' || openPanel === 'dev') renderSheet(openPanel);
+}
+/* paintChrome runs about once a second, so the glyph is only rebuilt on a flip */
+function paintSound(){
+  const btn = $('btnSound'), on = !G || !!G.sound;
+  if (on === soundShown) return;
+  soundShown = on;
+  if (soundIcon) soundIcon.remove();
+  soundIcon = pixelIcon(on ? 'sound' : 'mute', 12, 12);
+  soundIcon.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
+  btn.appendChild(soundIcon);
+  btn.classList.toggle('off', !on);
+  btn.setAttribute('aria-pressed', String(!on));
+  btn.title = on ? 'Sound on' : 'Sound off';
+}
+
+/* Long-press the brand plate to show or hide the developer button. The flag
+   lives on the save, so the choice survives a reload. */
+function armBrandHold(){
+  const brand = document.querySelector('.brand');
+  if (!brand) return;
+  let timer = 0;
+  const start = () => { timer = setTimeout(() => {
+    G.dev = !G.dev; save(); paintChrome();
+    say(G.dev ? 'Developer tools on.' : 'Developer tools off.');
+  }, 700); };
+  const stop = () => clearTimeout(timer);
+  brand.addEventListener('pointerdown', start);
+  ['pointerup','pointerleave','pointercancel'].forEach(e => brand.addEventListener(e, stop));
 }
 function paintChrome(){
   const busy = mode !== 'live';
@@ -117,6 +214,8 @@ function paintChrome(){
     const n = document.createElement('i'); n.className = 'nub'; careBtn.appendChild(n);
   }
   $('nestCount').textContent = G.pets.length > 1 ? G.pets.length : '';
+  $('btnDev').hidden = !G.dev;
+  paintSound();
 }
 
 /* ------------------------------- refresh ---------------------------------- */
@@ -168,7 +267,7 @@ function refresh(){
 /* -------------------------------- sheets ---------------------------------- */
 let openPanel = null;
 /* the only sheets that mean anything before there is a hatched animal */
-const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble'];
+const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble', 'dev'];
 function openSheet(which){
   if (mode === 'game') return;
   if (mode !== 'live' && !SHEETS_PRE_HATCH.includes(which)) return;
@@ -394,7 +493,7 @@ const SHEETS = {
         ${rowHTML('', 'Wipe everything', 'Deletes the whole nest and starts over.', 'reset')}`;
       b.innerHTML = html; mountArt(b);
       const rows = b.querySelectorAll('.row');
-      rows[0].onclick = () => { G.sound = !G.sound; save(); renderSheet('dossier'); };
+      rows[0].onclick = toggleSound;
       let armedR = false, armedW = false;
       rows[1].onclick = () => {
         if (G.pets.length <= 1) return;
@@ -407,6 +506,54 @@ const SHEETS = {
         Promise.all([Store.del(SAVE_KEY), Store.del(BACKUP_KEY)]).then(() => location.reload());
       };
     }
+  },
+
+  /* Developer tools. Chips rather than rows: every control here is a single
+     switch and the whole harness has to fit on one screen so a sprite can be
+     stepped through four stages without scrolling. */
+  dev(b, sp){
+    const chips = (rows) => `<div class="chips">` + rows.map(([label, act, cls]) =>
+      `<button class="chip ${cls||''}" data-dev="${act}">${label}</button>`).join('') + `</div>`;
+    const st = hatched() ? stageIdx() : -1;
+    let html = `<h2>Developer tools</h2>
+      <p class="lede">A test harness. Everything here writes the same fields the
+      simulation writes, so nothing below can reach a state the game could not.
+      Long-press the PALEOPAL plate to hide this button.</p>`;
+
+    html += `<p class="note" style="margin-bottom:7px">Coins · ${Math.floor(G.coins)}</p>`;
+    html += chips([['Fill purse','fillPurse'],['+100','add100'],['+1000','add1000'],['Empty','emptyPurse','warn']]);
+
+    if (hatched()){
+      html += `<p class="note" style="margin-bottom:7px">Growth stage</p>`;
+      html += `<div class="chips">` + STAGE.map((s2,i) =>
+        `<button class="chip${i === st ? ' on' : ''}" data-dev="stage${i}">${s2.label}</button>`).join('') + `</div>`;
+
+      html += `<p class="note" style="margin-bottom:7px">Needs · health ${Math.round(S.health)} · bond ${Math.round(S.bond)}</p>`;
+      html += chips([['Fill every meter','fillNeeds'],['Drain to 8','drainNeeds','warn'],
+                     ['Max bond','maxBond'],['Zero bond','zeroBond','warn'],
+                     [S.asleep ? 'Wake up' : 'Sleep','toggleSleep'],['Collapse','collapse','warn']]);
+
+      html += `<p class="note" style="margin-bottom:7px">Illness</p>`;
+      html += `<div class="chips">` + Object.keys(ILLS).map(id =>
+        `<button class="chip${hasIll(id) ? ' on' : ''}" data-dev="ill:${id}">${ILLS[id].name}</button>`).join('') +
+        `<button class="chip" data-dev="cureAll">Cure all</button></div>`;
+
+      html += `<p class="note" style="margin-bottom:7px">Pen · ${S.mess.length} mess</p>`;
+      html += chips([['Drop a mess','addMess'],['Clear','clearMess'],['Unlock every coat and hat','unlockAll']]);
+    }
+
+    html += `<p class="note" style="margin-bottom:7px">Skeleton${hatched() ? ' · ' + SPECIES[S.sp].common : ''}</p>`;
+    html += `<div class="chips">` + Object.keys(SPECIES).map(id =>
+      `<button class="chip${hatched() && S.sp === id ? ' on' : ''}" data-dev="sp:${id}">${SPECIES[id].common}</button>`).join('') +
+      (S && S.sp && !S.born ? `<button class="chip" data-dev="hatchNow">Hatch now</button>` : '') + `</div>`;
+
+    html += `<p class="note" style="margin-bottom:7px">Keeper · day ${G.streak}</p>`;
+    html += chips([[G.sound ? 'Sound on' : 'Sound off','sound'],['Bump streak','bumpStreak']]);
+    html += `<p class="tiny">Growth stages are set by parking well-kept minutes on a gate
+      (${GROWTH_GATES.join(', ')}), which is exactly how the simulation moves them.</p>`;
+
+    b.innerHTML = html;
+    b.querySelectorAll('[data-dev]').forEach(c => c.onclick = () => devAction(c.getAttribute('data-dev')));
   },
 
   away(b, sp){
@@ -424,6 +571,21 @@ const SHEETS = {
     b.querySelector('.row').onclick = closeSheet;
   }
 };
+
+/* One switch per chip. Kept out of the sheet body so the panel stays a view. */
+function devAction(a){
+  if (a.startsWith('stage')) return DEV.setStage(+a.slice(5));
+  if (a.startsWith('ill:'))  return DEV.toggleIll(a.slice(4));
+  if (a.startsWith('sp:'))   return DEV.becomeSpecies(a.slice(3));
+  switch (a){
+    case 'add100':  return DEV.addCoins(100);
+    case 'add1000': return DEV.addCoins(1000);
+    case 'maxBond': return DEV.setBond(100);
+    case 'zeroBond':return DEV.setBond(0);
+    case 'sound':   return toggleSound();
+    default:        if (DEV[a]) DEV[a]();
+  }
+}
 
 function renderSheet(which){
   const sheet = SHEETS[which];

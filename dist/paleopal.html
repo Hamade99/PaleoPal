@@ -3,152 +3,275 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<meta name="theme-color" content="#0e1417">
+<meta name="theme-color" content="#2a1c0c">
 <title>Paleopal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* ==========================================================================
+   PALEOPAL — the case
+   The game lives inside one moulded, speckled dinosaur egg: a shell, a bone
+   bezel, a recessed screen and physical keys. All of it is CSS. The project
+   ships no image assets and this file does not add any; the speckles are
+   tiled radial gradients and the mouldings are layered insets.
+   ========================================================================== */
 :root{
+  /* screen side — the canvas art is tuned to these, so they do not move */
   --bg:#0e1417; --deep:#141d21; --panel:#1b262a; --line:#2b3a3f;
   --bone:#e9e1cb; --dim:#93a29c; --ink:#101a18;
   --moss:#7ea55f; --ochre:#d9a441; --rust:#c2603c; --sky:#7fb2c9;
-  --safe: env(safe-area-inset-bottom, 0px);
+
+  /* shell side — warm sandstone plastic, jungle-green keys */
+  --shell-hi:#e8c078; --shell:#cb943f; --shell-mid:#b47c2f;
+  --shell-lo:#8a5c1f; --shell-edge:#573609;
+  --speck-a:rgba(84,49,12,.50); --speck-b:rgba(126,84,32,.40);
+  --bezel-hi:#f6efdc; --bezel:#ddd1b1; --bezel-lo:#a4936d; --bezel-edge:#6b5d3f;
+  --key:#316d4b; --key-hi:#4a936a; --key-lo:#1a4530; --key-edge:#0e2a1c;
+  --safe:env(safe-area-inset-bottom,0px);
+
+  /* one speckle field, reused wherever the shell plastic shows */
+  --speckles:
+    radial-gradient(1.7px 1.7px at 17px 23px,var(--speck-a) 98%,transparent),
+    radial-gradient(1.2px 1.2px at 61px 70px,var(--speck-a) 98%,transparent),
+    radial-gradient(2.3px 2.3px at 40px 11px,var(--speck-b) 98%,transparent),
+    radial-gradient(1.4px 1.4px at 88px 47px,var(--speck-a) 98%,transparent),
+    radial-gradient(2.0px 2.0px at 12px 96px,var(--speck-b) 98%,transparent),
+    radial-gradient(1.1px 1.1px at 71px 33px,var(--speck-a) 98%,transparent),
+    radial-gradient(1.8px 1.8px at 34px 58px,var(--speck-b) 98%,transparent);
+  --speckle-size:97px 97px,97px 97px,131px 131px,131px 131px,73px 73px,73px 73px,113px 113px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  align-items:flex-start;
-  background:radial-gradient(120% 80% at 50% 0%,#182226 0%,var(--bg) 60%);
+  background:
+    radial-gradient(90% 55% at 50% 108%,rgba(126,165,95,.10),transparent 70%),
+    radial-gradient(120% 80% at 50% 0%,#241a10 0%,#0d0906 65%);
   color:var(--bone);
   font-family:Inter,system-ui,sans-serif;
-  display:flex;justify-content:center;
+  display:flex;align-items:flex-start;justify-content:center;
   overscroll-behavior:none;
 }
-#app{
-  width:100%;max-width:440px;margin:auto 0;
-  display:flex;flex-direction:column;
-  padding:10px 12px calc(10px + var(--safe));
-  position:relative;
-}
+#app{width:100%;max-width:440px;margin:auto 0;padding:14px 10px calc(14px + var(--safe));position:relative}
 
-/* ---------- top ---------- */
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-.brand{font-family:'Pixelify Sans',monospace;font-weight:700;font-size:19px;letter-spacing:.5px;color:var(--bone)}
-.brand span{color:var(--moss)}
-.wallet{display:flex;align-items:center;gap:6px;font-family:'Pixelify Sans';font-size:17px;color:var(--ochre);
-  background:#161f22;border:1px solid var(--line);border-radius:7px;padding:3px 9px 2px;box-shadow:0 2px 0 #0b1113}
+/* ---------- the shell ---------- */
+.shell{
+  position:relative;padding:50px 17px 46px;
+  border-radius:44% 44% 38% 38% / 11% 11% 8% 8%;
+  background-image:var(--speckles),
+    radial-gradient(130% 62% at 50% -6%,var(--shell-hi) 0%,var(--shell) 40%,var(--shell-mid) 68%,var(--shell-lo) 100%);
+  background-size:var(--speckle-size),100% 100%;
+  border:2px solid var(--shell-edge);
+  box-shadow:
+    inset 0 3px 0 rgba(255,236,196,.55),
+    inset 0 -6px 14px rgba(60,34,4,.5),
+    inset 0 0 0 6px rgba(255,225,170,.10),
+    0 12px 0 #3d2708, 0 20px 34px rgba(0,0,0,.6);
+}
+/* the keychain tab at the crown */
+.loop{
+  position:absolute;left:50%;top:-13px;transform:translateX(-50%);
+  width:34px;height:20px;border-radius:11px 11px 4px 4px;
+  background:linear-gradient(var(--shell-hi),var(--shell-mid));
+  border:2px solid var(--shell-edge);border-bottom:0;
+}
+.loop::after{content:"";position:absolute;left:50%;top:5px;transform:translateX(-50%);
+  width:11px;height:9px;border-radius:50%;background:#2a1a06;box-shadow:inset 0 -1px 0 rgba(255,220,160,.35)}
+
+/* ---------- faceplate head ---------- */
+.shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:0 6px;margin-bottom:12px}
+.brand{
+  flex:0 0 100%;text-align:center;position:relative;
+  font-family:'Pixelify Sans',monospace;font-weight:700;font-size:20px;letter-spacing:2px;
+  color:#3a2408;text-shadow:0 1px 0 rgba(255,236,196,.6);
+}
+.brand span{color:#1d4a33}
+.brand .rivet{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
+  width:46px;height:3px;border-radius:2px;background:rgba(87,54,9,.35);box-shadow:0 1px 0 rgba(255,236,196,.45)}
+.tools{display:flex;align-items:center;gap:7px;margin-top:9px}
+.wallet{
+  display:flex;align-items:center;gap:6px;font-family:'Pixelify Sans';font-size:17px;color:var(--ochre);
+  background:linear-gradient(#20292c,#151d20);border:2px solid var(--shell-edge);border-radius:9px;
+  padding:4px 10px 3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 3px 0 rgba(61,39,8,.85)
+}
 #coinArt{display:flex}
-.iconbtn{background:#1b2529;border:1px solid var(--line);color:var(--dim);width:34px;height:34px;border-radius:8px;
-  cursor:pointer;font-size:14px;font-family:'Pixelify Sans';display:grid;place-items:center;box-shadow:0 2px 0 #0b1113}
-.iconbtn:active{transform:translateY(2px);box-shadow:none}
+.iconbtn{
+  background:linear-gradient(var(--shell-hi),var(--shell-mid));
+  border:2px solid var(--shell-edge);color:#3a2408;
+  width:36px;height:36px;border-radius:10px;cursor:pointer;
+  font-size:15px;font-family:'Pixelify Sans';display:grid;place-items:center;
+  box-shadow:inset 0 1px 0 rgba(255,242,214,.7),0 4px 0 rgba(61,39,8,.9)
+}
+.iconbtn:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,242,214,.7)}
+.iconbtn:hover{background:linear-gradient(#f0cb87,var(--shell))}
+/* muted reads as a dimmed key, not a dead one */
+.iconbtn.off{filter:saturate(.4) brightness(.88)}
+.iconbtn.dev{background:linear-gradient(var(--key-hi),var(--key));border-color:var(--key-edge);
+  box-shadow:inset 0 1px 0 rgba(190,240,210,.45),0 4px 0 var(--key-edge)}
+.iconbtn.dev:hover{background:linear-gradient(#5aa87a,var(--key-hi))}
+.iconbtn.dev:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(190,240,210,.45)}
 #btnNest{position:relative}
-#nestCount{position:absolute;right:-3px;top:-4px;min-width:14px;height:14px;border-radius:8px;
-  background:var(--moss);color:#0e1417;font-family:'Pixelify Sans';font-size:10px;line-height:14px;
-  text-align:center;font-style:normal}
+#nestCount{position:absolute;right:-4px;top:-5px;min-width:16px;height:16px;border-radius:9px;
+  background:var(--rust);color:#fff;font-family:'Pixelify Sans';font-size:10px;line-height:15px;
+  text-align:center;font-style:normal;border:1.5px solid var(--shell-edge)}
 #nestCount:empty{display:none}
-.row.pet.here{border-color:var(--moss);box-shadow:0 2px 0 #0b1214,inset 0 0 0 1px rgba(126,165,95,.35)}
-.row .art{overflow:hidden}
-.iconbtn:hover{color:var(--bone);border-color:#3d5158}
+
+/* ---------- bone bezel around the screen ---------- */
+.bezel{
+  position:relative;border-radius:22px;padding:11px;
+  background:linear-gradient(160deg,var(--bezel-hi),var(--bezel) 45%,var(--bezel-lo));
+  border:2px solid var(--bezel-edge);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.8),inset 0 -3px 6px rgba(88,74,46,.45),
+             0 5px 0 rgba(61,39,8,.55),0 0 0 3px rgba(87,54,9,.35)
+}
+.screw{position:absolute;width:7px;height:7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#efe6cd,#8d7d5a);
+  box-shadow:inset 0 0 0 1px rgba(80,66,38,.7),0 1px 0 rgba(255,255,255,.5)}
+.screw::after{content:"";position:absolute;left:1px;top:3px;width:5px;height:1px;background:rgba(70,58,32,.8)}
+.screw.tl{left:5px;top:5px}.screw.tr{right:5px;top:5px}
+.screw.bl{left:5px;bottom:5px}.screw.br{right:5px;bottom:5px}
+
+.screen{
+  border-radius:14px;padding:10px 10px 11px;
+  background:linear-gradient(#131c20,var(--bg));
+  border:1px solid #05090a;
+  box-shadow:inset 0 3px 10px rgba(0,0,0,.85),inset 0 0 0 1px rgba(126,165,95,.10)
+}
 
 /* ---------- identity ---------- */
-.ident{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-.dname{font-family:'Pixelify Sans';font-size:22px;line-height:1;cursor:pointer;border-bottom:1px dashed transparent}
+.ident{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.dname{font-family:'Pixelify Sans';font-size:22px;line-height:1;cursor:pointer;border-bottom:1px dashed transparent;color:var(--bone)}
 .dname:hover{border-bottom-color:var(--line)}
 .dsub{font-size:12.5px;color:var(--dim)}
-#nameEdit{font:inherit;font-family:'Pixelify Sans';font-size:22px;background:var(--panel);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:1px 6px;width:150px}
+#nameEdit{font:inherit;font-family:'Pixelify Sans';font-size:22px;background:var(--panel);color:var(--bone);
+  border:1px solid var(--line);border-radius:6px;padding:1px 6px;width:150px}
 
-/* ---------- needs ---------- */
-.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px}
-.need{background:var(--deep);border:1px solid var(--line);border-radius:9px;padding:6px 7px 7px}
-.need b{display:block;font-weight:500;font-size:10.5px;color:var(--dim);margin-bottom:5px;letter-spacing:.1px}
-.track{position:relative;height:7px;background:#080d0f;box-shadow:inset 0 0 0 1px #000;overflow:hidden}
-.fill{height:100%;width:50%;transition:width .5s linear,background .4s}
-.seg{position:absolute;inset:0;pointer-events:none;
-  background:repeating-linear-gradient(90deg,transparent 0 4px,var(--deep) 4px 6px)}
+/* ---------- needs: the classic icon strip, one chunky meter each ---------- */
+.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.need{background:linear-gradient(#1a2529,#121a1d);border:1px solid var(--line);border-radius:10px;
+  padding:5px 6px 6px;display:flex;flex-direction:column;gap:4px}
+.need .cap{display:flex;align-items:center;gap:4px;min-height:14px}
+.need .cap canvas{image-rendering:pixelated;width:14px;height:14px;flex:0 0 14px}
+.need b{font-weight:600;font-size:10px;color:var(--dim);letter-spacing:.2px;text-transform:uppercase}
+.track{position:relative;height:9px;border-radius:5px;background:#05090a;
+  box-shadow:inset 0 0 0 1px #000,inset 0 2px 3px rgba(0,0,0,.9);overflow:hidden}
+.fill{height:100%;width:50%;border-radius:5px;transition:width .5s linear,background .4s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.30)}
+.seg{position:absolute;inset:0;pointer-events:none;border-radius:5px;
+  background:repeating-linear-gradient(90deg,transparent 0 5px,rgba(5,9,10,.85) 5px 6px)}
 .need.low b{color:var(--rust)}
+.need.low{border-color:#6d3527;animation:lowpulse 1.6s ease-in-out infinite}
+@keyframes lowpulse{50%{box-shadow:0 0 8px rgba(194,96,60,.35)}}
 
-/* ---------- stage ---------- */
-.stage{position:relative;border-radius:13px;background:#1d282c;padding:9px 9px 11px;
-  border:1px solid #35474c;box-shadow:inset 0 1px 0 #43585e,0 4px 0 #0a1012}
-canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:pointer;
-  border-radius:5px;box-shadow:0 0 0 2px #0a0f11,inset 0 0 0 1px #000}
-.screw{position:absolute;width:4px;height:4px;border-radius:50%;background:#0e1618;box-shadow:0 1px 0 #4a5f65}
-.screw.tl{left:3px;top:3px}.screw.tr{right:3px;top:3px}.screw.bl{left:3px;bottom:3px}.screw.br{right:3px;bottom:3px}
-.lamp{position:absolute;right:9px;bottom:3px;width:5px;height:5px;border-radius:50%;
-  background:var(--moss);box-shadow:0 0 5px rgba(126,165,95,.9)}
-.lamp.rest{background:var(--sky);box-shadow:0 0 5px rgba(127,178,201,.8)}
-.lamp.bad{background:var(--rust);box-shadow:0 0 6px rgba(194,96,60,.95)}
+/* ---------- stage: the glass over the world ---------- */
+.stage{position:relative}
+.lcd{position:relative;border-radius:7px;overflow:hidden;
+  box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(126,165,95,.16),inset 0 0 0 1px #000}
+canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:pointer}
+.glare{position:absolute;inset:0;pointer-events:none;border-radius:7px;
+  background:linear-gradient(147deg,rgba(255,255,255,.10) 0 22%,rgba(255,255,255,0) 46%)}
+.lamp{position:absolute;right:4px;bottom:-7px;width:6px;height:6px;border-radius:50%;
+  background:var(--moss);box-shadow:0 0 6px rgba(126,165,95,.95)}
+.lamp.rest{background:var(--sky);box-shadow:0 0 6px rgba(127,178,201,.85)}
+.lamp.bad{background:var(--rust);box-shadow:0 0 7px rgba(194,96,60,.95)}
+
 .bubble{
-  position:absolute;left:50%;top:16px;transform:translate(-50%,-6px);
+  position:absolute;left:50%;top:34px;transform:translate(-50%,-6px);
   background:var(--bone);color:var(--ink);font-size:12.5px;font-weight:500;
-  padding:6px 10px;border-radius:9px;max-width:88%;text-align:center;
+  padding:6px 10px;border-radius:9px;max-width:86%;text-align:center;
   opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;line-height:1.25;
-  box-shadow:0 4px 0 rgba(0,0,0,.35)
+  box-shadow:0 4px 0 rgba(0,0,0,.4);z-index:2
 }
 .bubble.on{opacity:1;transform:translate(-50%,0)}
-.picks span{position:absolute;bottom:16px;transform:translateX(-50%);text-align:center;
+.picks span{position:absolute;bottom:14px;transform:translateX(-50%);text-align:center;
   font-size:10.5px;color:#b9c4bd;line-height:1.35;white-space:nowrap;
-  background:rgba(10,18,16,.78);border:1px solid rgba(90,116,104,.5);border-radius:6px;padding:3px 7px}
+  background:rgba(10,18,16,.82);border:1px solid rgba(90,116,104,.55);border-radius:6px;padding:3px 7px}
 .picks b{display:block;font-size:11.5px;color:var(--bone);font-weight:600;font-family:'Pixelify Sans';letter-spacing:.3px}
-.badge{
-  position:absolute;left:16px;bottom:19px;display:flex;gap:5px;flex-wrap:wrap;max-width:70%;
-}
-.tag{background:rgba(16,26,24,.82);border:1px solid #3a4d45;color:var(--bone);font-size:10.5px;
-  padding:3px 7px;border-radius:20px;display:flex;align-items:center;gap:4px}
-.tag.warn{border-color:#7a3a2b;color:#f0b7a3}
+/* badges ride the top of the screen, clear of the foreground cycads */
+.badge{position:absolute;left:5px;top:5px;right:5px;display:flex;gap:4px;flex-wrap:wrap}
+.tag{background:rgba(10,18,16,.86);border:1px solid #3a4d45;color:var(--bone);font-size:10px;
+  padding:2px 6px;border-radius:20px;display:flex;align-items:center;gap:4px;line-height:1.4}
+.tag.warn{border-color:#8a4130;color:#f5c3ad;background:rgba(48,17,9,.86)}
 .dot{width:5px;height:5px;border-radius:50%;background:var(--moss)}
 .tag.warn .dot{background:var(--rust)}
 
 /* ---------- mood strip ---------- */
-.moodrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 2px 10px}
-.mood{font-size:13px;color:var(--bone)}
+.moodrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:11px 2px 1px}
+.mood{font-size:13px;color:var(--bone);line-height:1.35}
 .mood em{font-style:normal;color:var(--dim)}
-.bondwrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)}
+.bondwrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);flex:0 0 auto}
 .pip{width:8px;height:8px;border-radius:2px;background:#243034;transform:rotate(45deg)}
-.pip.on{background:var(--rust)}
+.pip.on{background:var(--rust);box-shadow:0 0 5px rgba(194,96,60,.55)}
 
-/* ---------- actions ---------- */
-.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;padding-top:2px}
+/* ---------- physical keys ---------- */
+.keys{padding-top:14px}
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .act{
-  background:linear-gradient(#26343a,#1a2429);border:1px solid #35474c;color:var(--bone);
-  border-radius:9px;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  font-family:'Pixelify Sans';font-size:12px;letter-spacing:.3px;cursor:pointer;position:relative;padding:5px 2px;
-  box-shadow:inset 0 1px 0 #43585e,0 3px 0 #0b1214
+  background:linear-gradient(var(--key-hi),var(--key) 46%,var(--key-lo));
+  border:2px solid var(--key-edge);color:#eaf6ee;
+  border-radius:14px;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  font-family:'Pixelify Sans';font-size:12px;letter-spacing:.4px;cursor:pointer;position:relative;padding:6px 2px;
+  box-shadow:inset 0 2px 0 rgba(198,246,214,.45),inset 0 -3px 6px rgba(0,0,0,.35),0 5px 0 var(--key-edge),0 7px 8px rgba(40,24,4,.45)
 }
-.act:active{transform:translateY(3px);box-shadow:inset 0 1px 0 #43585e}
-.act .ico{display:flex;height:24px;align-items:center}
-.act[disabled]{opacity:.3;cursor:default;box-shadow:none;transform:none}
-.act .nub{position:absolute;top:5px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--rust);box-shadow:0 0 5px rgba(194,96,60,.9)}
+.act:hover{background:linear-gradient(#57a678,var(--key-hi) 46%,var(--key))}
+.act:active{transform:translateY(5px);box-shadow:inset 0 2px 0 rgba(198,246,214,.45),inset 0 -3px 6px rgba(0,0,0,.35)}
+.act .ico{display:flex;height:26px;align-items:center}
+.act .ico canvas{width:26px;height:26px}
+.act[disabled]{opacity:.34;cursor:default;box-shadow:0 5px 0 var(--key-edge);transform:none;filter:grayscale(.5)}
+.act .nub{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;
+  background:var(--rust);border:1px solid #40140a;box-shadow:0 0 6px rgba(194,96,60,.95)}
+
+/* moulded nameplate and speaker slots at the foot of the case */
+.plate{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px;
+  font-family:'Pixelify Sans';font-size:11px;letter-spacing:2.4px;color:rgba(52,32,6,.85);
+  text-shadow:0 1px 0 rgba(255,240,204,.65)}
+.grille{width:34px;height:9px;border-radius:5px;
+  background:repeating-linear-gradient(90deg,rgba(87,54,9,.34) 0 2px,transparent 2px 5px);
+  box-shadow:0 1px 0 rgba(255,236,196,.45)}
 
 /* ---------- sheets ---------- */
-.scrim{position:fixed;inset:0;background:rgba(6,10,11,.65);opacity:0;pointer-events:none;transition:opacity .2s;z-index:5}
+.scrim{position:fixed;inset:0;background:rgba(10,6,2,.72);opacity:0;pointer-events:none;transition:opacity .2s;z-index:5}
 .scrim.on{opacity:1;pointer-events:auto}
 .sheet{
   position:fixed;left:50%;bottom:0;transform:translate(-50%,102%);
-  width:100%;max-width:440px;margin:auto 0;background:var(--deep);border:1px solid var(--line);border-bottom:0;
-  border-radius:18px 18px 0 0;padding:14px 14px calc(16px + var(--safe));z-index:6;
-  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:82vh;overflow-y:auto
+  width:100%;max-width:440px;background:var(--deep);
+  border:2px solid var(--bezel-edge);border-bottom:0;
+  border-radius:20px 20px 0 0;padding:14px 14px calc(18px + var(--safe));z-index:6;
+  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:84vh;overflow-y:auto;
+  box-shadow:0 -8px 30px rgba(0,0,0,.6)
 }
 .sheet.on{transform:translate(-50%,0)}
-.sheet h2{font-family:'Pixelify Sans';font-size:18px;font-weight:700;margin-bottom:2px}
+.sheet h2{font-family:'Pixelify Sans';font-size:19px;font-weight:700;margin-bottom:2px;color:var(--bone)}
 .sheet p.lede{font-size:12.5px;color:var(--dim);margin-bottom:12px;line-height:1.45}
-.grip{width:38px;height:4px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.grip{width:44px;height:5px;border-radius:3px;background:var(--bezel-lo);margin:0 auto 12px}
 .row{
-  box-shadow:0 2px 0 #0b1214;
   display:flex;align-items:center;gap:11px;width:100%;text-align:left;
-  background:var(--panel);border:1px solid var(--line);color:var(--bone);
-  border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer;font:inherit
+  background:linear-gradient(var(--panel),#172125);border:1px solid var(--line);color:var(--bone);
+  border-radius:12px;padding:10px 12px;margin-bottom:7px;cursor:pointer;font:inherit;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 3px 0 #0b1214
 }
-.row:active{transform:translateY(2px);box-shadow:none}
-.row[disabled]{opacity:.4;cursor:default}
-.row .art{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center}
+.row:hover{border-color:#3d5158}
+.row:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.row[disabled]{opacity:.4;cursor:default;box-shadow:none;transform:none}
+.row .art{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;overflow:hidden}
 .row .art canvas{image-rendering:pixelated}
 .row .t{flex:1;min-width:0}
 .row .t b{display:block;font-size:13.5px;font-weight:600}
 .row .t small{display:block;font-size:11.5px;color:var(--dim);margin-top:1px;line-height:1.35}
 .row .px{font-family:'Pixelify Sans';font-size:15px;color:var(--ochre);flex:0 0 auto}
 .row .px.own{color:var(--moss)}
+.row.pet.here{border-color:var(--moss);box-shadow:0 3px 0 #0b1214,inset 0 0 0 1px rgba(126,165,95,.4)}
+
+/* chips: a compact row of one-tap switches, used by the developer sheet */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.chip{font:inherit;font-family:'Pixelify Sans';font-size:12.5px;letter-spacing:.3px;cursor:pointer;
+  background:linear-gradient(var(--panel),#172125);border:1px solid var(--line);color:var(--bone);
+  border-radius:9px;padding:7px 11px;box-shadow:0 3px 0 #0b1214}
+.chip:hover{border-color:#3d5158}
+.chip:active{transform:translateY(3px);box-shadow:none}
+.chip.on{background:linear-gradient(var(--key-hi),var(--key));border-color:var(--key-edge);color:#eaf6ee}
+.chip.warn{color:#f0b7a3;border-color:#7a3a2b}
+
 .log{font-size:12.5px;line-height:1.5;color:var(--bone);border-left:2px solid var(--line);padding:2px 0 2px 10px;margin-bottom:9px}
 .log time{display:block;font-size:10.5px;color:var(--dim);margin-bottom:1px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
@@ -162,45 +285,71 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touc
 .gamebar{display:flex;justify-content:space-between;font-family:'Pixelify Sans';font-size:15px;padding:0 2px 8px}
 .tiny{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.5}
 button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+@media (max-width:360px){
+  .shell{padding:44px 12px 40px}
+  .act{min-height:58px;font-size:11px}
+  .iconbtn{width:33px;height:33px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="topbar">
-    <div class="brand">PALEO<span>PAL</span></div>
-    <div style="display:flex;align-items:center;gap:9px">
-      <div class="wallet"><i id="coinArt"></i><span id="coins">0</span></div>
-      <button class="iconbtn" id="btnNest" aria-label="Open the nest"><i id="nestCount"></i></button>
-      <button class="iconbtn" id="btnDossier" aria-label="Open dossier">i</button>
+  <!-- The whole game sits inside one speckled egg-shaped case, the way a
+       Tamagotchi does: a moulded shell, a bone bezel, a recessed screen, and
+       physical keys along the bottom. Everything is CSS; the project has no
+       image assets and this does not change that. -->
+  <div class="shell">
+    <i class="loop"></i>
+
+    <div class="shellhead">
+      <div class="brand">PALEO<span>PAL</span><i class="rivet"></i></div>
+      <div class="tools">
+        <div class="wallet"><i id="coinArt"></i><span id="coins">0</span></div>
+        <button class="iconbtn" id="btnSound" aria-label="Sound on or off"></button>
+        <button class="iconbtn" id="btnNest" aria-label="Open the nest"><i id="nestCount"></i></button>
+        <button class="iconbtn" id="btnDossier" aria-label="Open dossier">i</button>
+        <button class="iconbtn dev" id="btnDev" aria-label="Developer tools" hidden></button>
+      </div>
+    </div>
+
+    <div class="bezel">
+      <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+      <div class="screen">
+        <div class="ident">
+          <div class="dname" id="dName" tabindex="0" role="button">…</div>
+          <div class="dsub" id="dSub"></div>
+          <input id="nameEdit" hidden maxlength="14" aria-label="Rename">
+        </div>
+
+        <div class="needs" id="needs"></div>
+
+        <div class="stage">
+          <div class="lcd">
+            <canvas id="scene" width="224" height="168"></canvas>
+            <div class="badge" id="badges"></div>
+            <!-- filled by buildChrome() from SPECIES, so it stays in step with the eggs -->
+            <div class="picks" id="picks" hidden></div>
+            <div class="bubble" id="bubble"></div>
+            <i class="glare"></i>
+          </div>
+          <i class="lamp" id="lamp"></i>
+        </div>
+
+        <div class="moodrow">
+          <div class="mood" id="mood"></div>
+          <div class="bondwrap" id="bond"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="keys">
+      <div class="actions" id="actions"></div>
+      <div class="plate"><i class="grille"></i><span>PALEOPAL · MK I</span><i class="grille"></i></div>
     </div>
   </div>
-
-  <div class="ident">
-    <div class="dname" id="dName" tabindex="0" role="button">…</div>
-    <div class="dsub" id="dSub"></div>
-    <input id="nameEdit" hidden maxlength="14" aria-label="Rename">
-  </div>
-
-  <div class="needs" id="needs"></div>
-
-  <div class="stage">
-    <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
-    <i class="lamp" id="lamp"></i>
-    <canvas id="scene" width="224" height="168"></canvas>
-    <div class="badge" id="badges"></div>
-    <!-- filled by buildChrome() from SPECIES, so it stays in step with the eggs -->
-    <div class="picks" id="picks" hidden></div>
-    <div class="bubble" id="bubble"></div>
-  </div>
-
-  <div class="moodrow">
-    <div class="mood" id="mood"></div>
-    <div class="bondwrap" id="bond"></div>
-  </div>
-
-  <div class="actions" id="actions"></div>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -1543,7 +1692,7 @@ function freshPet(){
   };
 }
 function freshGame(){
-  return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, lastDay:'', streak:0,
+  return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, dev:true, lastDay:'', streak:0,
            lastTick:Date.now(), lastSeen:Date.now() };
 }
 
@@ -1864,6 +2013,96 @@ function releasePet(i){
   mode = hatched() ? 'live' : (S.sp ? 'egg' : 'choose');
   closeSheet(); refresh(); paintChrome(); save();
 }
+
+/* ==========================================================================
+   DEVELOPER TOOLS
+   A test harness, not a cheat menu. There is no way to check a sprite across
+   four growth stages, or to see what mites look like, without either playing
+   for four hours or reaching in and setting the value. Everything here writes
+   the same fields the simulation writes, so nothing below can produce a state
+   the game could not have reached on its own.
+
+   `G.dev` gates the button in the top bar; long-pressing the brand plate
+   toggles it. It ships on. See ROADMAP.md — it comes off before release.
+   ========================================================================== */
+const DEV_COINS = 99999;
+
+const DEV = {
+  /* --- purse --- */
+  fillPurse(){ G.coins = DEV_COINS; DEV.done('Purse filled.'); },
+  addCoins(n){ G.coins = clamp(G.coins + n, 0, DEV_COINS); DEV.done('+' + n + ' coins.'); },
+  emptyPurse(){ G.coins = 0; DEV.done('Purse emptied.'); },
+
+  /* --- growth ---
+     stageIdx() compares against GROWTH_GATES with <, so parking growth exactly
+     on a gate lands in the stage above it. stageSeen is moved with it, or the
+     next tick announces a growth spurt that did not happen. */
+  setStage(i){
+    if (!hatched()) return refuse('Hatch something first.');
+    S.growth = i === 0 ? 0 : GROWTH_GATES[i-1];
+    S.stageSeen = i;
+    DEV.done(S.name + ' is now ' + article(STAGE[i].label) + STAGE[i].label.toLowerCase() + '.');
+  },
+
+  /* --- needs and health --- */
+  fillNeeds(){
+    for (const k in S.needs) S.needs[k] = 100;
+    S.health = 100; S.vet = false; S.asleep = false;
+    DEV.done('Every meter full.');
+  },
+  drainNeeds(){
+    for (const k in S.needs) S.needs[k] = 8;
+    DEV.done('Every meter down to eight.');
+  },
+  setBond(v){ S.bond = clamp(v, 0, 100); DEV.done('Bond set to ' + Math.round(S.bond) + '.'); },
+  collapse(){ S.health = 0; S.vet = true; S.asleep = true; DEV.done(S.name + ' has collapsed.'); },
+  toggleSleep(){ S.asleep = !S.asleep; DEV.done(S.asleep ? 'Asleep.' : 'Awake.'); },
+
+  /* --- illness --- */
+  toggleIll(id){
+    if (hasIll(id)) S.ills = S.ills.filter(i => i.id !== id);
+    else S.ills.push({ id, since: Date.now() });
+    DEV.done(hasIll(id) ? ILLS[id].name + ' set.' : ILLS[id].name + ' cleared.');
+  },
+  cureAll(){ S.ills = []; S.vet = false; S.health = Math.max(S.health, 60); DEV.done('All clear.'); },
+
+  /* --- world --- */
+  addMess(){ if (S.mess.length < 4) S.mess.push({ x: rnd(28, W-28) }); DEV.done('Mess dropped.'); },
+  clearMess(){ S.mess = []; DEV.done('Pen cleaned.'); },
+
+  /* --- wardrobe --- */
+  unlockAll(){
+    S.skinsOwned = SKINS[S.sp].map(k => k.id);
+    S.owned = HAT_SHOP.map(h => h.id);
+    DEV.done('Every coat and every hat unlocked.');
+  },
+
+  /* --- species ---
+     Coats are per species, so the wardrobe has to be reset with the skeleton
+     or S.skin points at an id that SKINS[S.sp] has never heard of. */
+  becomeSpecies(id){
+    S.sp = id;
+    S.skin = 'wild'; S.skinsOwned = ['wild'];
+    if (!S.born){ S.born = Date.now(); S.stageSeen = stageIdx(); }
+    if (!S.name) S.name = pick(NAMES);
+    mode = 'live';
+    DEV.done('Now ' + article(SPECIES[id].common) + SPECIES[id].common + '.');
+  },
+  hatchNow(){
+    if (!S.sp) return refuse('Pick an egg first.');
+    if (S.born) return refuse('Already hatched.');
+    hatch();
+  },
+
+  /* --- time --- */
+  bumpStreak(){ G.streak += 1; G.lastDay = new Date().toDateString(); DEV.done('Streak is ' + G.streak + '.'); },
+
+  done(msg){
+    save(); refresh(); paintChrome();
+    if (msg) say(msg);
+    if (openPanel) renderSheet(openPanel);
+  }
+};
 
 /* ==========================================================================
    BEHAVIOUR + RENDER
@@ -2341,6 +2580,52 @@ const ICON_ART = {
     g.fillStyle='#f0d888'; g.fillRect(3,2,2,2);
     g.fillStyle='#8a6a1e'; g.fillRect(5,3,2,6); g.fillRect(4,4,4,1); g.fillRect(4,7,4,1);
   },
+  /* the meter strip: one glyph per need, the way the classic devices did it */
+  hunger: g => {
+    g.fillStyle='#d8d0b4'; g.fillRect(8,1,2,4); g.fillRect(7,1,1,2); g.fillRect(10,1,1,2);
+    g.fillStyle='#82382a'; g.fillRect(1,4,9,7); g.fillRect(2,3,7,1);
+    g.fillStyle='#a04a34'; g.fillRect(1,4,8,5);
+    g.fillStyle='#c46a4c'; g.fillRect(2,5,3,3);
+  },
+  energy: g => {
+    const bolt=[[6,0,3],[5,1,3],[4,2,3],[3,3,4],[2,4,7],[5,5,3],[4,6,3],[3,7,3],[2,8,3],[2,9,2]];
+    g.fillStyle='#8a6a1e'; for (const [x,y,w] of bolt) g.fillRect(x,y+1,w,1);
+    g.fillStyle='#d9c04a'; for (const [x,y,w] of bolt) g.fillRect(x,y,w,1);
+    g.fillStyle='#f4e79a'; g.fillRect(5,1,2,1); g.fillRect(4,2,2,1);
+  },
+  hygiene: g => {
+    const drop=[[5,0,2],[5,1,2],[4,2,4],[3,3,6],[3,4,6],[2,5,8],[2,6,8],[2,7,8],[3,8,6],[4,9,4]];
+    g.fillStyle='#4b7f99'; for (const [x,y,w] of drop) g.fillRect(x,y,w,1);
+    g.fillStyle='#7fb2c9'; g.fillRect(3,3,5,5); g.fillRect(4,2,3,1); g.fillRect(4,8,4,1);
+    g.fillStyle='#d6ecf4'; g.fillRect(4,4,2,2); g.fillRect(4,3,1,1);
+  },
+  joy: g => {
+    const heart=[[2,1,3],[7,1,3],[1,2,10],[1,3,10],[1,4,10],[2,5,8],[3,6,6],[4,7,4],[5,8,2]];
+    g.fillStyle='#8f3050'; for (const [x,y,w] of heart) g.fillRect(x,y,w,1);
+    g.fillStyle='#c96f86'; g.fillRect(2,2,8,2); g.fillRect(2,1,2,1); g.fillRect(7,1,2,1);
+    g.fillRect(2,4,7,1); g.fillRect(3,5,5,1); g.fillRect(4,6,3,1);
+    g.fillStyle='#f0a8b8'; g.fillRect(2,2,2,2);
+  },
+  /* the case buttons */
+  sound: g => {
+    g.fillStyle='#3a2408';
+    g.fillRect(0,4,2,4); g.fillRect(2,3,1,6); g.fillRect(3,2,1,8); g.fillRect(4,1,1,10);
+    g.fillStyle='#1d4a33';
+    g.fillRect(7,4,1,4); g.fillRect(9,2,1,8); g.fillRect(8,3,1,1); g.fillRect(8,8,1,1);
+    g.fillRect(10,1,1,1); g.fillRect(10,10,1,1);
+  },
+  mute: g => {
+    g.fillStyle='#3a2408';
+    g.fillRect(0,4,2,4); g.fillRect(2,3,1,6); g.fillRect(3,2,1,8); g.fillRect(4,1,1,10);
+    g.fillStyle='#c2603c';
+    for (let i=0;i<5;i++){ g.fillRect(7+i,3+i,1,1); g.fillRect(11-i,3+i,1,1); }
+  },
+  bone: g => {
+    g.fillStyle='#b8ad90';
+    g.fillRect(3,5,6,3); g.fillRect(1,3,3,3); g.fillRect(1,7,3,3); g.fillRect(8,3,3,3); g.fillRect(8,7,3,3);
+    g.fillStyle='#efe6cf';
+    g.fillRect(3,5,6,2); g.fillRect(1,3,3,2); g.fillRect(8,3,3,2); g.fillRect(1,7,2,2); g.fillRect(8,7,2,2);
+  },
   nest: g => {
     g.fillStyle='#6b5230'; g.fillRect(0,7,12,4); g.fillRect(1,6,10,1);
     g.fillStyle='#8a6a3c'; g.fillRect(1,7,10,1); g.fillRect(0,9,12,1);
@@ -2365,7 +2650,8 @@ function pixelIcon(id, w, h){
 
 function buildChrome(){
   $('needs').innerHTML = NEED_META.map(n =>
-    `<div class="need" id="need-${n.k}"><b>${n.label}</b>
+    `<div class="need" id="need-${n.k}">
+       <div class="cap"><span data-nico="${n.k}"></span><b>${n.label}</b></div>
        <div class="track"><div class="fill" id="fill-${n.k}" style="background:${n.col}"></div><i class="seg"></i></div>
      </div>`).join('');
   $('needs').onclick = () => { if (hatched()) openSheet('vitals'); };
@@ -2378,15 +2664,24 @@ function buildChrome(){
   ].map(([k,l]) => `<button class="act" id="act-${k}"><span class="ico" data-ico="${k}"></span>${l}</button>`).join('');
   document.querySelectorAll('[data-ico]').forEach(sl => {
     const c = pixelIcon(sl.getAttribute('data-ico'), 12, 12);
-    c.style.width = '24px'; c.style.height = '24px'; c.style.imageRendering = 'pixelated';
+    c.style.imageRendering = 'pixelated';
+    sl.appendChild(c);
+  });
+  document.querySelectorAll('[data-nico]').forEach(sl => {
+    const c = pixelIcon(sl.getAttribute('data-nico'), 12, 12);
+    c.style.imageRendering = 'pixelated';
     sl.appendChild(c);
   });
   const coin = pixelIcon('coin', 12, 12);
   coin.style.cssText = 'width:13px;height:13px;image-rendering:pixelated';
   $('coinArt').appendChild(coin);
   const nest = pixelIcon('nest', 12, 12);
-  nest.style.cssText = 'width:18px;height:18px;image-rendering:pixelated';
+  nest.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnNest').appendChild(nest);
+  const bone = pixelIcon('bone', 12, 12);
+  bone.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
+  $('btnDev').appendChild(bone);
+  paintSound();
   $('act-feed').onclick = () => openSheet('feed');
   $('act-play').onclick = () => openSheet('play');
   $('act-wash').onclick = () => { scrub(); };
@@ -2394,9 +2689,50 @@ function buildChrome(){
   $('act-shop').onclick = () => openSheet('shop');
   $('btnNest').onclick = () => openSheet('nest');
   $('btnDossier').onclick = () => openSheet('dossier');
+  $('btnSound').onclick = toggleSound;
+  $('btnDev').onclick = () => openSheet('dev');
   $('dName').onclick = beginRename;
   $('dName').onkeydown = e => { if (e.key === 'Enter') beginRename(); };
   $('scrim').onclick = closeSheet;
+  armBrandHold();
+}
+
+/* The sound switch lives on the case, not three taps deep in the dossier. It
+   swaps its own glyph so the state is readable without opening anything. */
+let soundIcon = null, soundShown = null;
+function toggleSound(){
+  G.sound = !G.sound;
+  if (G.sound) SFX.pop();
+  paintSound(); save();
+  if (openPanel === 'dossier' || openPanel === 'dev') renderSheet(openPanel);
+}
+/* paintChrome runs about once a second, so the glyph is only rebuilt on a flip */
+function paintSound(){
+  const btn = $('btnSound'), on = !G || !!G.sound;
+  if (on === soundShown) return;
+  soundShown = on;
+  if (soundIcon) soundIcon.remove();
+  soundIcon = pixelIcon(on ? 'sound' : 'mute', 12, 12);
+  soundIcon.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
+  btn.appendChild(soundIcon);
+  btn.classList.toggle('off', !on);
+  btn.setAttribute('aria-pressed', String(!on));
+  btn.title = on ? 'Sound on' : 'Sound off';
+}
+
+/* Long-press the brand plate to show or hide the developer button. The flag
+   lives on the save, so the choice survives a reload. */
+function armBrandHold(){
+  const brand = document.querySelector('.brand');
+  if (!brand) return;
+  let timer = 0;
+  const start = () => { timer = setTimeout(() => {
+    G.dev = !G.dev; save(); paintChrome();
+    say(G.dev ? 'Developer tools on.' : 'Developer tools off.');
+  }, 700); };
+  const stop = () => clearTimeout(timer);
+  brand.addEventListener('pointerdown', start);
+  ['pointerup','pointerleave','pointercancel'].forEach(e => brand.addEventListener(e, stop));
 }
 function paintChrome(){
   const busy = mode !== 'live';
@@ -2407,6 +2743,8 @@ function paintChrome(){
     const n = document.createElement('i'); n.className = 'nub'; careBtn.appendChild(n);
   }
   $('nestCount').textContent = G.pets.length > 1 ? G.pets.length : '';
+  $('btnDev').hidden = !G.dev;
+  paintSound();
 }
 
 /* ------------------------------- refresh ---------------------------------- */
@@ -2458,7 +2796,7 @@ function refresh(){
 /* -------------------------------- sheets ---------------------------------- */
 let openPanel = null;
 /* the only sheets that mean anything before there is a hatched animal */
-const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble'];
+const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble', 'dev'];
 function openSheet(which){
   if (mode === 'game') return;
   if (mode !== 'live' && !SHEETS_PRE_HATCH.includes(which)) return;
@@ -2684,7 +3022,7 @@ const SHEETS = {
         ${rowHTML('', 'Wipe everything', 'Deletes the whole nest and starts over.', 'reset')}`;
       b.innerHTML = html; mountArt(b);
       const rows = b.querySelectorAll('.row');
-      rows[0].onclick = () => { G.sound = !G.sound; save(); renderSheet('dossier'); };
+      rows[0].onclick = toggleSound;
       let armedR = false, armedW = false;
       rows[1].onclick = () => {
         if (G.pets.length <= 1) return;
@@ -2697,6 +3035,54 @@ const SHEETS = {
         Promise.all([Store.del(SAVE_KEY), Store.del(BACKUP_KEY)]).then(() => location.reload());
       };
     }
+  },
+
+  /* Developer tools. Chips rather than rows: every control here is a single
+     switch and the whole harness has to fit on one screen so a sprite can be
+     stepped through four stages without scrolling. */
+  dev(b, sp){
+    const chips = (rows) => `<div class="chips">` + rows.map(([label, act, cls]) =>
+      `<button class="chip ${cls||''}" data-dev="${act}">${label}</button>`).join('') + `</div>`;
+    const st = hatched() ? stageIdx() : -1;
+    let html = `<h2>Developer tools</h2>
+      <p class="lede">A test harness. Everything here writes the same fields the
+      simulation writes, so nothing below can reach a state the game could not.
+      Long-press the PALEOPAL plate to hide this button.</p>`;
+
+    html += `<p class="note" style="margin-bottom:7px">Coins · ${Math.floor(G.coins)}</p>`;
+    html += chips([['Fill purse','fillPurse'],['+100','add100'],['+1000','add1000'],['Empty','emptyPurse','warn']]);
+
+    if (hatched()){
+      html += `<p class="note" style="margin-bottom:7px">Growth stage</p>`;
+      html += `<div class="chips">` + STAGE.map((s2,i) =>
+        `<button class="chip${i === st ? ' on' : ''}" data-dev="stage${i}">${s2.label}</button>`).join('') + `</div>`;
+
+      html += `<p class="note" style="margin-bottom:7px">Needs · health ${Math.round(S.health)} · bond ${Math.round(S.bond)}</p>`;
+      html += chips([['Fill every meter','fillNeeds'],['Drain to 8','drainNeeds','warn'],
+                     ['Max bond','maxBond'],['Zero bond','zeroBond','warn'],
+                     [S.asleep ? 'Wake up' : 'Sleep','toggleSleep'],['Collapse','collapse','warn']]);
+
+      html += `<p class="note" style="margin-bottom:7px">Illness</p>`;
+      html += `<div class="chips">` + Object.keys(ILLS).map(id =>
+        `<button class="chip${hasIll(id) ? ' on' : ''}" data-dev="ill:${id}">${ILLS[id].name}</button>`).join('') +
+        `<button class="chip" data-dev="cureAll">Cure all</button></div>`;
+
+      html += `<p class="note" style="margin-bottom:7px">Pen · ${S.mess.length} mess</p>`;
+      html += chips([['Drop a mess','addMess'],['Clear','clearMess'],['Unlock every coat and hat','unlockAll']]);
+    }
+
+    html += `<p class="note" style="margin-bottom:7px">Skeleton${hatched() ? ' · ' + SPECIES[S.sp].common : ''}</p>`;
+    html += `<div class="chips">` + Object.keys(SPECIES).map(id =>
+      `<button class="chip${hatched() && S.sp === id ? ' on' : ''}" data-dev="sp:${id}">${SPECIES[id].common}</button>`).join('') +
+      (S && S.sp && !S.born ? `<button class="chip" data-dev="hatchNow">Hatch now</button>` : '') + `</div>`;
+
+    html += `<p class="note" style="margin-bottom:7px">Keeper · day ${G.streak}</p>`;
+    html += chips([[G.sound ? 'Sound on' : 'Sound off','sound'],['Bump streak','bumpStreak']]);
+    html += `<p class="tiny">Growth stages are set by parking well-kept minutes on a gate
+      (${GROWTH_GATES.join(', ')}), which is exactly how the simulation moves them.</p>`;
+
+    b.innerHTML = html;
+    b.querySelectorAll('[data-dev]').forEach(c => c.onclick = () => devAction(c.getAttribute('data-dev')));
   },
 
   away(b, sp){
@@ -2714,6 +3100,21 @@ const SHEETS = {
     b.querySelector('.row').onclick = closeSheet;
   }
 };
+
+/* One switch per chip. Kept out of the sheet body so the panel stays a view. */
+function devAction(a){
+  if (a.startsWith('stage')) return DEV.setStage(+a.slice(5));
+  if (a.startsWith('ill:'))  return DEV.toggleIll(a.slice(4));
+  if (a.startsWith('sp:'))   return DEV.becomeSpecies(a.slice(3));
+  switch (a){
+    case 'add100':  return DEV.addCoins(100);
+    case 'add1000': return DEV.addCoins(1000);
+    case 'maxBond': return DEV.setBond(100);
+    case 'zeroBond':return DEV.setBond(0);
+    case 'sound':   return toggleSound();
+    default:        if (DEV[a]) DEV[a]();
+  }
+}
 
 function renderSheet(which){
   const sheet = SHEETS[which];

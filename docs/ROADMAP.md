@@ -4,6 +4,11 @@ Nothing here is started. Ordered roughly by value.
 
 ## Before it can ship on Android
 
+- **Turn the developer button off.** `G.dev` defaults to `true` in
+  `freshGame()`. Flip that default before a release build; the long-press on
+  the brand plate stays as the way back in. Nothing else needs removing — the
+  `DEV` object is harmless without a way to reach it.
+
 - **Local notifications.** This is the actual retention mechanism for a pet
   game: fire when hunger crosses 25, or when an illness starts. Native plugin
   call, not a web API, so it lands during the Capacitor wrap.
@@ -26,7 +31,9 @@ Nothing here is started. Ordered roughly by value.
 
 - Frame cache growth: keyed by `species|skin|stage|anim|frame|eye`, with four
   coats and four stages the ceiling is now noticeably higher. Add an LRU cap.
-- Sound is thin. Three oscillator shapes doing everything.
+- Sound is thin. Three oscillator shapes doing everything. There is a mute
+  switch on the case now, which is the short answer, but the mix wants a pass:
+  everything is roughly the same loudness.
 - No accessibility pass: no keyboard path through the sheets, no reduced-motion
   handling beyond a CSS transition disable, no screen-reader labels on the
   meters.
@@ -37,7 +44,9 @@ Nothing here is started. Ordered roughly by value.
 ## Known rough edges
 
 - The volcano reads as a cone but is partly hidden by the ridge in front of it.
-- Foreground cycads can overlap the status badges at the bottom-left.
 - `drawStomp` places the animal at a fixed x; on a very small phone it crowds
   the left edge.
+- The canvas scales to a non-integer multiple of 224 at most phone widths, so
+  the pixel grid is slightly uneven. Snapping the LCD to whole multiples would
+  fix it and cost some width.
 - Minigames do not scale their difficulty to the animal's growth stage.

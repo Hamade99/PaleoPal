@@ -23,9 +23,9 @@ ORDER = [
 ]
 
 def main():
-    html = (ROOT / "index.html").read_text()
-    css = (ROOT / "src/style.css").read_text()
-    js = "\n".join((ROOT / f).read_text() for f in ORDER)
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "src/style.css").read_text(encoding="utf-8")
+    js = "\n".join((ROOT / f).read_text(encoding="utf-8") for f in ORDER)
 
     html = html.replace('<link rel="stylesheet" href="src/style.css">',
                         "<style>\n" + css + "\n</style>")
@@ -36,8 +36,11 @@ def main():
     out.parent.mkdir(exist_ok=True)
     # newline="\n" is load-bearing on Windows. The default translates every "\n"
     # to "\r\n", so a rebuild with no source change still rewrites all 133KB and
-    # lands as a whole-file diff.
-    out.write_text(html, newline="\n")
+    # lands as a whole-file diff. The encoding is spelled out for the same
+    # reason: the default is the machine's locale, cp1252 on Windows, which
+    # both mangles the em dashes and would fall over on the first character
+    # outside that set.
+    out.write_text(html, newline="\n", encoding="utf-8")
     print("wrote", out, f"({len(html):,} bytes)")
 
 if __name__ == "__main__":

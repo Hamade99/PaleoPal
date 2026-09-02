@@ -212,6 +212,70 @@ and camouflage to the shop, with icons that preview the actual coat.
 
 ---
 
+## Session 7 — The case, a mute switch, developer tools
+
+**Asked for.** A mute button first, because every sound was playing and it had
+worn thin. Then a way to hand yourself coins, and a way to grow and shrink an
+animal on demand so the sprites could be looked at without playing for four
+hours. Then the real request: make the interface nicer — more Android, more
+Tamagotchi, more dinosaur — and put the whole thing inside a Tamagotchi-like
+object.
+
+**Research.** Bandai's device is an egg because *tama* is egg; the shell is
+speckled moulded plastic, the LCD is deeply recessed behind a printed border,
+and there are three keys in a row underneath. The Japan House piece on the
+30th anniversary makes the point that the icon strip — a food glyph, a heart —
+was doing the emotional work, not the pet sprite. That is the part worth
+stealing, and it is why the need meters now carry pixel glyphs.
+
+**The case.** One `.shell` wrapping everything: an egg-shaped body in warm
+sandstone with a tiled speckle field, a bone `.bezel` with four screws, a
+recessed `.screen`, and five moulded jungle-green keys along the bottom. All
+CSS. No image assets were added, because there are none in the project and
+that was worth keeping.
+
+Two things fell out of it:
+
+- **The status badges moved to the top of the LCD.** They were bottom-left,
+  where the foreground cycads draw over them — a rough edge that had been
+  sitting in the roadmap. Putting them along the top fixes it *and* reads more
+  like the classic icon strip. The speech bubble dropped to `top:34px` so the
+  two never collide.
+- **`.picks` and `.badge` now sit inside `.lcd`.** They were positioned against
+  `.stage`, which has padding, so the egg labels were off by a few pixels from
+  the egg hit-boxes they were labelling. They line up exactly now.
+
+**Sound.** The switch was three taps deep in the dossier. It is a key on the
+case now, and the dossier row calls the same `toggleSound()`, so there is one
+switch with two handles rather than two switches. The glyph is rebuilt only
+when the state actually flips — `paintChrome()` runs about once a second.
+
+**Developer tools.** `DEV` in `05-sim.js`, surfaced as a `dev` sheet of chips.
+The rule it follows: every method writes the same fields the simulation writes.
+Setting a growth stage parks `S.growth` exactly on a `GROWTH_GATES` boundary
+and moves `S.stageSeen` with it — miss that second half and the next tick
+announces a growth spurt that did not happen. `becomeSpecies` resets the
+wardrobe with the skeleton, because coats are per species and `S.skin` would
+otherwise point at an id `SKINS[S.sp]` has never heard of.
+
+`G.dev` gates the button and ships **on**. Long-press the brand plate to hide
+it. Turning that default off is now the first item in the roadmap.
+
+**Encoding.** `build.py` read and wrote without an explicit encoding, so it was
+using the machine's locale — cp1252 on this box. It happened to round-trip,
+because reading UTF-8 bytes as cp1252 and writing them back gives the same
+bytes, but it is an accident that breaks the moment a source file is edited by
+anything that decodes properly. Every read and write is now `encoding="utf-8"`.
+The build is still byte-reproducible.
+
+**Verified in a browser**, not just in the editor: console clean, the mute
+switch persists to the save and silences `SFX` without throwing, and a contact
+sheet of all three species across all four growth stages renders correctly. No
+horizontal overflow at 320, 360 or 412 px; the keys come out 46–64 px wide and
+66 px tall.
+
+---
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

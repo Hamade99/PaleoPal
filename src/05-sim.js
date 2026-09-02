@@ -70,7 +70,7 @@ function freshPet(){
   };
 }
 function freshGame(){
-  return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, lastDay:'', streak:0,
+  return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, dev:true, lastDay:'', streak:0,
            lastTick:Date.now(), lastSeen:Date.now() };
 }
 
@@ -391,3 +391,93 @@ function releasePet(i){
   mode = hatched() ? 'live' : (S.sp ? 'egg' : 'choose');
   closeSheet(); refresh(); paintChrome(); save();
 }
+
+/* ==========================================================================
+   DEVELOPER TOOLS
+   A test harness, not a cheat menu. There is no way to check a sprite across
+   four growth stages, or to see what mites look like, without either playing
+   for four hours or reaching in and setting the value. Everything here writes
+   the same fields the simulation writes, so nothing below can produce a state
+   the game could not have reached on its own.
+
+   `G.dev` gates the button in the top bar; long-pressing the brand plate
+   toggles it. It ships on. See ROADMAP.md — it comes off before release.
+   ========================================================================== */
+const DEV_COINS = 99999;
+
+const DEV = {
+  /* --- purse --- */
+  fillPurse(){ G.coins = DEV_COINS; DEV.done('Purse filled.'); },
+  addCoins(n){ G.coins = clamp(G.coins + n, 0, DEV_COINS); DEV.done('+' + n + ' coins.'); },
+  emptyPurse(){ G.coins = 0; DEV.done('Purse emptied.'); },
+
+  /* --- growth ---
+     stageIdx() compares against GROWTH_GATES with <, so parking growth exactly
+     on a gate lands in the stage above it. stageSeen is moved with it, or the
+     next tick announces a growth spurt that did not happen. */
+  setStage(i){
+    if (!hatched()) return refuse('Hatch something first.');
+    S.growth = i === 0 ? 0 : GROWTH_GATES[i-1];
+    S.stageSeen = i;
+    DEV.done(S.name + ' is now ' + article(STAGE[i].label) + STAGE[i].label.toLowerCase() + '.');
+  },
+
+  /* --- needs and health --- */
+  fillNeeds(){
+    for (const k in S.needs) S.needs[k] = 100;
+    S.health = 100; S.vet = false; S.asleep = false;
+    DEV.done('Every meter full.');
+  },
+  drainNeeds(){
+    for (const k in S.needs) S.needs[k] = 8;
+    DEV.done('Every meter down to eight.');
+  },
+  setBond(v){ S.bond = clamp(v, 0, 100); DEV.done('Bond set to ' + Math.round(S.bond) + '.'); },
+  collapse(){ S.health = 0; S.vet = true; S.asleep = true; DEV.done(S.name + ' has collapsed.'); },
+  toggleSleep(){ S.asleep = !S.asleep; DEV.done(S.asleep ? 'Asleep.' : 'Awake.'); },
+
+  /* --- illness --- */
+  toggleIll(id){
+    if (hasIll(id)) S.ills = S.ills.filter(i => i.id !== id);
+    else S.ills.push({ id, since: Date.now() });
+    DEV.done(hasIll(id) ? ILLS[id].name + ' set.' : ILLS[id].name + ' cleared.');
+  },
+  cureAll(){ S.ills = []; S.vet = false; S.health = Math.max(S.health, 60); DEV.done('All clear.'); },
+
+  /* --- world --- */
+  addMess(){ if (S.mess.length < 4) S.mess.push({ x: rnd(28, W-28) }); DEV.done('Mess dropped.'); },
+  clearMess(){ S.mess = []; DEV.done('Pen cleaned.'); },
+
+  /* --- wardrobe --- */
+  unlockAll(){
+    S.skinsOwned = SKINS[S.sp].map(k => k.id);
+    S.owned = HAT_SHOP.map(h => h.id);
+    DEV.done('Every coat and every hat unlocked.');
+  },
+
+  /* --- species ---
+     Coats are per species, so the wardrobe has to be reset with the skeleton
+     or S.skin points at an id that SKINS[S.sp] has never heard of. */
+  becomeSpecies(id){
+    S.sp = id;
+    S.skin = 'wild'; S.skinsOwned = ['wild'];
+    if (!S.born){ S.born = Date.now(); S.stageSeen = stageIdx(); }
+    if (!S.name) S.name = pick(NAMES);
+    mode = 'live';
+    DEV.done('Now ' + article(SPECIES[id].common) + SPECIES[id].common + '.');
+  },
+  hatchNow(){
+    if (!S.sp) return refuse('Pick an egg first.');
+    if (S.born) return refuse('Already hatched.');
+    hatch();
+  },
+
+  /* --- time --- */
+  bumpStreak(){ G.streak += 1; G.lastDay = new Date().toDateString(); DEV.done('Streak is ' + G.streak + '.'); },
+
+  done(msg){
+    save(); refresh(); paintChrome();
+    if (msg) say(msg);
+    if (openPanel) renderSheet(openPanel);
+  }
+};

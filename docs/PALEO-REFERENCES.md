@@ -48,3 +48,27 @@ this came from research during development rather than from memory.
 - One consistent light source, here upper-left.
 - Selective outlining: the outline lightens where light strikes it.
 - Ordered dithering across gradient boundaries instead of smooth interpolation.
+
+## The case
+
+The shell is copied from the shape of the thing, not from any one model.
+
+- **The device is an egg on purpose.** *Tama* is egg, *gotchi* from *watch*.
+  Every version Bandai has shipped keeps the egg, and the shell is speckled
+  moulded plastic — which is also, conveniently, what a dinosaur egg looks
+  like. That coincidence is the whole design.
+- **The LCD is deeply recessed** behind a printed border, on the Nano a
+  droplet-shaped frame. Here it is a bone bezel with four screws.
+- **Three keys in a row underneath**, A/B/C left to right. Paleopal needs five
+  actions, so it keeps five keys but takes the moulding and the travel.
+- **The icon strip did the emotional work.** Japan House's piece on the 30th
+  anniversary makes the point that a food glyph and a heart, a few pixels each,
+  carried the pet's state across every language barrier — the sprite was not
+  doing it alone. That is why each need meter has a glyph rather than only a
+  label.
+- Palette pulled toward jungle and amber rather than the original slate: ochre
+  and sandstone for the shell, bone for the bezel, jungle green for the keys.
+
+Sources: Japan House Los Angeles, *The Hatching of an Icon* (Tamagotchi at 30);
+the Tamagotchi wiki entries for the Nano and Connection lines; CCTP-506's
+teardown of the device's architecture.

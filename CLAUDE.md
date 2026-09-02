@@ -16,6 +16,11 @@ The build is byte-reproducible: rebuilding with no source change must leave
 build, something has reintroduced CRLF — check `newline` in `build.py` and
 `.gitattributes`.
 
+Every source file is UTF-8 and `build.py` says so explicitly. If you patch a
+file with a script, pass `encoding="utf-8"` on both the read and the write:
+the default is the machine's locale, which is cp1252 on Windows, and it will
+quietly turn every `·` and `—` into mojibake.
+
 Open `index.html` for development, `dist/paleopal.html` to check the build.
 There is no test suite. After a change, open the page and confirm the console is
 clean; sprite changes need a visual check across all four growth stages, not
@@ -36,6 +41,10 @@ just the adult.
   Bigger skull, bigger eye, shorter snout, rounder body.
 - **All text lives in the DOM.** The canvas draws only the world.
 - **No `localStorage` directly.** Go through `Store` in `00-core.js`.
+- **No image assets.** The case, the icons and the animals are all drawn from
+  code. Keep it that way.
+- **The developer tools are a harness, not a cheat menu.** Anything added to
+  `DEV` must write the same fields the simulation writes.
 
 ## Sprite work
 

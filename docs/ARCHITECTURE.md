@@ -74,3 +74,30 @@ lit, outlined pixels. Frames are baked lazily and cached by
 | Sheets, chrome, input, save/load | `src/07-ui.js` |
 | A new bottom sheet | a key in `SHEETS` in `src/07-ui.js`, nothing else |
 | Colours, layout, buttons | `src/style.css` |
+| The case: shell, bezel, keys | `src/style.css`, `index.html` |
+| A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
+
+## The case
+
+Everything the player sees sits inside one moulded shell — a speckled
+dinosaur egg with a bone bezel, a recessed screen and five physical keys. It is
+entirely CSS: the speckles are a tiled set of radial gradients reused through
+the `--speckles` custom property, and the mouldings are layered `inset`
+shadows. The project ships no image assets and the case did not change that.
+
+`index.html` carries the structure (`.shell` → `.bezel` → `.screen` → `.lcd`)
+and `style.css` carries the look. No element id changed when the case went in,
+which is why nothing in the render, world or sim modules had to move: those
+three touch the DOM in exactly two places, `$('scene')` and `$('bubble')`.
+
+## Developer tools
+
+`DEV` in `05-sim.js` is a test harness, not a cheat menu. Every method writes
+the same fields the simulation writes, so nothing it can do produces a state
+the game could not have reached on its own — setting a growth stage parks
+`S.growth` on a `GROWTH_GATES` boundary and moves `S.stageSeen` with it, the
+way `simulate()` would have.
+
+The `dev` sheet in `07-ui.js` is the only view of it, and `G.dev` gates the
+button in the top bar. It ships **on**; long-pressing the brand plate toggles
+it. See `ROADMAP.md`.

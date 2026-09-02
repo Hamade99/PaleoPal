@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<meta name="theme-color" content="#0e1417">
+<meta name="theme-color" content="#2a1c0c">
 <title>Paleopal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,39 +12,59 @@
 </head>
 <body>
 <div id="app">
-  <div class="topbar">
-    <div class="brand">PALEO<span>PAL</span></div>
-    <div style="display:flex;align-items:center;gap:9px">
-      <div class="wallet"><i id="coinArt"></i><span id="coins">0</span></div>
-      <button class="iconbtn" id="btnNest" aria-label="Open the nest"><i id="nestCount"></i></button>
-      <button class="iconbtn" id="btnDossier" aria-label="Open dossier">i</button>
+  <!-- The whole game sits inside one speckled egg-shaped case, the way a
+       Tamagotchi does: a moulded shell, a bone bezel, a recessed screen, and
+       physical keys along the bottom. Everything is CSS; the project has no
+       image assets and this does not change that. -->
+  <div class="shell">
+    <i class="loop"></i>
+
+    <div class="shellhead">
+      <div class="brand">PALEO<span>PAL</span><i class="rivet"></i></div>
+      <div class="tools">
+        <div class="wallet"><i id="coinArt"></i><span id="coins">0</span></div>
+        <button class="iconbtn" id="btnSound" aria-label="Sound on or off"></button>
+        <button class="iconbtn" id="btnNest" aria-label="Open the nest"><i id="nestCount"></i></button>
+        <button class="iconbtn" id="btnDossier" aria-label="Open dossier">i</button>
+        <button class="iconbtn dev" id="btnDev" aria-label="Developer tools" hidden></button>
+      </div>
+    </div>
+
+    <div class="bezel">
+      <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+      <div class="screen">
+        <div class="ident">
+          <div class="dname" id="dName" tabindex="0" role="button">…</div>
+          <div class="dsub" id="dSub"></div>
+          <input id="nameEdit" hidden maxlength="14" aria-label="Rename">
+        </div>
+
+        <div class="needs" id="needs"></div>
+
+        <div class="stage">
+          <div class="lcd">
+            <canvas id="scene" width="224" height="168"></canvas>
+            <div class="badge" id="badges"></div>
+            <!-- filled by buildChrome() from SPECIES, so it stays in step with the eggs -->
+            <div class="picks" id="picks" hidden></div>
+            <div class="bubble" id="bubble"></div>
+            <i class="glare"></i>
+          </div>
+          <i class="lamp" id="lamp"></i>
+        </div>
+
+        <div class="moodrow">
+          <div class="mood" id="mood"></div>
+          <div class="bondwrap" id="bond"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="keys">
+      <div class="actions" id="actions"></div>
+      <div class="plate"><i class="grille"></i><span>PALEOPAL · MK I</span><i class="grille"></i></div>
     </div>
   </div>
-
-  <div class="ident">
-    <div class="dname" id="dName" tabindex="0" role="button">…</div>
-    <div class="dsub" id="dSub"></div>
-    <input id="nameEdit" hidden maxlength="14" aria-label="Rename">
-  </div>
-
-  <div class="needs" id="needs"></div>
-
-  <div class="stage">
-    <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
-    <i class="lamp" id="lamp"></i>
-    <canvas id="scene" width="224" height="168"></canvas>
-    <div class="badge" id="badges"></div>
-    <!-- filled by buildChrome() from SPECIES, so it stays in step with the eggs -->
-    <div class="picks" id="picks" hidden></div>
-    <div class="bubble" id="bubble"></div>
-  </div>
-
-  <div class="moodrow">
-    <div class="mood" id="mood"></div>
-    <div class="bondwrap" id="bond"></div>
-  </div>
-
-  <div class="actions" id="actions"></div>
 </div>
 
 <div class="scrim" id="scrim"></div>
