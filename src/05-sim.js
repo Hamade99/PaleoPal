@@ -263,7 +263,10 @@ function scrub(){
   emit('spark', dino.x, GROUND-30, 8);
   refresh();
 }
-function pet(){
+/* `at` is the point in canvas units that was actually touched. Hearts used to
+   come off a fixed spot above the sprite, which read as unrelated to the tap;
+   they now rise from under the finger. */
+function pet(at){
   if (!hatched() || S.asleep || S.vet) return;
   const now = performance.now();
   if (now - (S.lastPetAt||0) < 320) return;
@@ -272,7 +275,8 @@ function pet(){
   const gain = clamp(1.1 - S.bond/160, .25, 1.1) * trait('social').bond;
   S.bond = clamp(S.bond + gain, 0, 100);
   S.needs.joy = clamp(S.needs.joy + 1.6, 0, 100);
-  emit('heart', dino.x + rnd(-8,8), dinoTop - 4, 1, {vy:-16, life:900});
+  const hx = at ? at[0] : dino.x, hy = at ? at[1] : dinoTop - 4;
+  emit('heart', hx - 3, hy - 6, 1, {vx:5, vy:-19, life:1000});
   SFX.purr();
   if (hasIll('blues') && S.petBank >= 8) cure('company', true);
   refreshLight();

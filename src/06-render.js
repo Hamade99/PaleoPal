@@ -225,7 +225,7 @@ function drawLive(now){
 /* ============================== MINIGAMES ================================== */
 const GAMES = {
   snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:2 },
-  stomp: { name:'Bug hunt',   blurb:'Critters scurry across the pen. Tap each one before it reaches the edge.', pay:2 },
+  stomp: { name:'Bug hunt',   blurb:'Critters cross the pen. Tap to send your animal at them and it will do the rest.', pay:2 },
   leap:  { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:3 }
 };
 function startGame(kind){
@@ -235,7 +235,8 @@ function startGame(kind){
   closeSheet();
   mode = 'game'; feedFX = null;
   if (kind === 'snack') game = { kind, x:W/2, tx:W/2, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
-  if (kind === 'stomp') game = { kind, bugs:[], score:0, missed:0, left:30, spawn:.6 };
+  if (kind === 'stomp') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
+                                 mouth:null, snap:0, bugs:[], score:0, missed:0, left:30, spawn:.6 };
   if (kind === 'leap')  game = { kind, obs:[], score:0, left:30, y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0 };
   say(GAMES[kind].blurb.split('.')[0] + '.');
   paintChrome();
@@ -327,37 +328,123 @@ function drawBug(g, b, now){
     g.fillRect(b.x - 4, b.y - (up?3:-2) + wig, 6, 2);
   }
 }
+/* ------ bug hunt ------
+   The animal used to stand at a fixed x doing nothing while the player picked
+   critters off the screen, which made the pet a spectator in its own minigame.
+   A tap is now a move order: the animal runs to where you pointed, and
+   anything that comes within snapping distance of its mouth gets eaten. The
+   walk cycle, the growth stage and the animal's own reach all matter, and the
+   sprite is doing the work instead of watching.
+   -------------------------------------------------------------------------- */
+const STOMP_H = 44;                            // drawn sprite height in the pen
+
+function stompSprite(now){
+  const snapping = now < game.snap;
+  const sp = SPECIES[S.sp], st = stageIdx();
+  if (snapping) return gameSprite('eat', Math.floor(now/150), STOMP_H);
+  if (!game.walking) return gameSprite('idle', Math.floor(now/700), STOMP_H);
+  // one sprite stride to one stride of ground, the same rule the habitat uses
+  const probe = gameSprite('walk', 0, STOMP_H);
+  const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
+  const frame = Math.floor((game.dist / probe.sc) / cycle * POSES.walk.length);
+  return gameSprite('walk', frame, STOMP_H);
+}
 function stepStomp(dt, now){
-  game.spawn -= dt/1000;
+  const sec = dt / 1000;
+
+  // run toward the last place the player pointed
+  const speed = 52 + stageIdx() * 10;
+  const d = game.tx - game.x;
+  if (Math.abs(d) > 1.5){
+    const step = clamp(d, -speed*sec, speed*sec);
+    game.x = clamp(game.x + step, 12, W - 12);
+    game.dist += Math.abs(step);
+    game.dir = step < 0 ? -1 : 1;
+    game.walking = true;
+  } else game.walking = false;
+
+  game.spawn -= sec;
   if (game.spawn <= 0){
-    game.spawn = rnd(.35, .7);
+    game.spawn = rnd(.45, .85);
     const type = Math.random() < .5 ? 0 : 1;
     const dir = Math.random() < .5 ? 1 : -1;
-    game.bugs.push({ x: dir > 0 ? -8 : W+8, y: type ? rnd(GROUND-38, GROUND-14) : rnd(GROUND+2, H-8),
-                     vx: dir * rnd(28, 52) * (type ? 1.35 : 1), type });
+    game.bugs.push({ x: dir > 0 ? -8 : W+8, y: type ? rnd(GROUND-40, GROUND-16) : rnd(GROUND+2, H-8),
+                     vx: dir * rnd(24, 44) * (type ? 1.3 : 1), type });
   }
-  for (const b of game.bugs){ b.x += b.vx * dt/1000; if (b.x < -14 || b.x > W+14) b.dead = true; }
+  for (const b of game.bugs){
+    b.x += b.vx * sec;
+    if (b.x < -14 || b.x > W+14){ b.dead = true; game.missed++; }
+  }
+
+  /* Snapping range around the mouth. drawStomp parks the mouth anchor on the
+     game each frame; one frame of lag is not visible and it saves baking the
+     frame twice. */
+  const m = game.mouth || [game.x, GROUND - STOMP_H*.6];
+  const reach = 11 + stageIdx() * 2.5;
+  for (const b of game.bugs){
+    if (b.dead) continue;
+    if (Math.abs(b.x - m[0]) < reach && Math.abs(b.y - m[1]) < reach * .95){
+      b.dead = true; game.score++; game.snap = now + 240;
+      SFX.chomp(); emit('spark', b.x, b.y, 5, {col:'#cfe0a8'});
+      emit('crumb', b.x, b.y, 3, {col:'#7d9c5a', vy:-14, g:110});
+    }
+  }
   game.bugs = game.bugs.filter(b => !b.dead);
 }
 function drawStomp(now){
-  const { f, sc } = gameSprite('idle', Math.floor(now/700), 44);
-  ctx.save(); ctx.translate(34, GROUND); ctx.scale(-1, 1);
-  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc); ctx.restore();
   for (const b of game.bugs) drawBug(ctx, b, now);
+
+  const { f, sc } = stompSprite(now);
+  const flip = game.dir > 0;
+  const x = Math.round(game.x);
+  ctx.fillStyle = 'rgba(16,26,24,.32)';
+  ctx.beginPath(); ctx.ellipse(x, GROUND + 1, f.w*sc*.38, 3, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(x, GROUND);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
+  ctx.restore();
+
+  // hand the mouth position to the next step, in canvas units
+  game.mouth = [ x + (flip ? 1 : -1) * (f.ox - f.mouth[0]) * sc,
+                 GROUND - (f.oy - f.mouth[1]) * sc ];
+
+  // a marker where the animal has been told to go, so the order reads
+  if (game.walking){
+    const tx = Math.round(game.tx);
+    ctx.fillStyle = 'rgba(207,224,168,.5)';
+    ctx.fillRect(tx-3, GROUND+3, 7, 1); ctx.fillRect(tx, GROUND+1, 1, 5);
+  }
   scoreTag('Caught ' + game.score);
 }
 function tapStomp(mx, my){
+  // tapping a critter aims at the critter; tapping the pen aims at the pen
+  let best = null, bd = 26;
   for (const b of game.bugs){
-    if (Math.abs(b.x - mx) < 11 && Math.abs(b.y - my) < 11){
-      b.dead = true; game.score++; SFX.chomp();
-      emit('spark', b.x, b.y, 4, {col:'#cfe0a8'});
-      return;
-    }
+    const d = Math.hypot(b.x - mx, (b.y - my) * .7);
+    if (d < bd){ bd = d; best = b; }
   }
-  SFX.bonk();
+  game.tx = clamp(best ? best.x : mx, 12, W - 12);
 }
 
-/* ------ river leap ------ */
+/* ------ river leap ------
+   Three faults: the obstacles were plain rectangles whose bases sat a pixel
+   above the grass line, so they appeared to hover; the habitat props sat
+   there unmoving behind an animal that was supposed to be running; and there
+   were only two obstacles in the deck.
+
+   The pen is now overdrawn from the grass line down with a ground that
+   scrolls, silhouette scrub behind the runner and tufts in front of it, all
+   at different rates, so the animal is running through somewhere rather than
+   on the spot. Obstacles are bedded two pixels into the grass and carry a
+   contact shadow, and the water hazard the game is named for now exists.
+   -------------------------------------------------------------------------- */
+const LEAP_OBS = {
+  log:   { half:12, clear:14 },
+  rock:  { half:9,  clear:18 },
+  water: { half:17, clear:8  }
+};
+const LEAP_KINDS = ['log','rock','water','log','rock'];
+
 function stepLeap(dt, now){
   game.run += dt/1000 * game.speed;
   game.speed = Math.min(140, game.speed + dt/1000 * 3);
@@ -367,50 +454,158 @@ function stepLeap(dt, now){
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
     game.spawn = rnd(.85, 1.5) * (110 / game.speed);
-    game.obs.push({ x: W + 12, kind: Math.random() < .5 ? 'log' : 'rock', hit:false, past:false });
+    game.obs.push({ x: W + 14, kind: pick(LEAP_KINDS), hit:false, past:false });
   }
   for (const o of game.obs){
     o.x -= game.speed * dt/1000;
-    if (!o.hit && Math.abs(o.x - 54) < 13 && game.y > -14){
+    const cfg = LEAP_OBS[o.kind];
+    if (!o.hit && Math.abs(o.x - 54) < cfg.half && game.y > -cfg.clear){
       o.hit = true; game.speed = Math.max(70, game.speed * .7);
-      game.stun = now + 500; SFX.bonk(); emit('crumb', 54, GROUND-8, 6, {col:'#9b7a52', vy:-20, g:120});
+      game.stun = now + 500; SFX.bonk();
+      if (o.kind === 'water') emit('spark', 54, GROUND-2, 8, {col:'#9fd2e0', vy:-30, g:150});
+      else emit('crumb', 54, GROUND-8, 6, {col:'#9b7a52', vy:-20, g:120});
     }
-    if (!o.past && o.x < 40){ o.past = true; if (!o.hit){ game.score++; SFX.coin(); } }
-    if (o.x < -20) o.dead = true;
+    if (!o.past && o.x < 40){
+      o.past = true;
+      if (!o.hit){ game.score++; SFX.coin(); emit('spark', 54, GROUND-26, 3, {col:'#f0d888'}); }
+    }
+    if (o.x < -24) o.dead = true;
   }
   game.obs = game.obs.filter(o => !o.dead);
 }
 function leapJump(){
   if (!game || game.kind !== 'leap') return;
   if (game.y < -1) return;
-  game.vy = -132; SFX.purr();
+  game.vy = -136; SFX.purr();
 }
-function drawLeap(now){
-  // scrolling ground streaks sell the speed
-  ctx.fillStyle = 'rgba(60,44,28,.5)';
-  for (let i=0;i<14;i++){
-    const x = ((i*22 - game.run) % (W+30) + W+30) % (W+30) - 15;
-    ctx.fillRect(x, GROUND + 6 + (i%3)*6, 9, 2);
+
+/* The track, overdrawn so the habitat props do not sit still behind a running
+   animal. Three scroll rates: scrub, ground, tufts. */
+function drawLeapGround(){
+  const S_ = SKY_SPECS[skyPhase(new Date())];
+  const grass = S_.grass, grassLit = mixHex(S_.grass, S_.low, .40);
+  const grassDark = mixHex(S_.grass, '#000000', .34);
+  const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.26), d2 = mixHex(S_.dirt, S_.low,.22);
+  const scrub = mixHex(S_.tree, S_.low, .14), scrubLit = mixHex(S_.tree, S_.low, .34);
+
+  // scrub on the far side of the track, drifting past slowly
+  for (let i=0;i<10;i++){
+    const x = ((((i*47.3) - game.run*.42) % (W+70)) + W+70) % (W+70) - 35;
+    const h = 6 + (i % 4) * 4, w = 5 + (i % 3) * 3;
+    ctx.fillStyle = scrub;
+    ctx.fillRect(x|0, GROUND-1-h, w, h);
+    ctx.fillRect((x|0)-2, Math.round(GROUND-1-h*.55), w+4, Math.round(h*.55));
+    ctx.fillStyle = scrubLit; ctx.fillRect(x|0, GROUND-1-h, w, 1);
   }
-  for (const o of game.obs){
-    const x = Math.round(o.x);
-    if (o.kind === 'log'){
-      ctx.fillStyle = '#5d4426'; ctx.fillRect(x-11, GROUND-7, 22, 7);
-      ctx.fillStyle = '#7b5c33'; ctx.fillRect(x-11, GROUND-7, 22, 2);
-      ctx.fillStyle = '#3d2c18'; ctx.fillRect(x+8, GROUND-7, 3, 7);
-    } else {
-      ctx.fillStyle = '#5f5a4e'; ctx.fillRect(x-8, GROUND-11, 16, 11);
-      ctx.fillStyle = '#7b7566'; ctx.fillRect(x-6, GROUND-11, 11, 3);
-      ctx.fillStyle = '#3c382f'; ctx.fillRect(x+4, GROUND-8, 4, 8);
+
+  // the track itself
+  for (let x=0;x<W;x++){
+    const wx = x + game.run;
+    const t = (Math.sin(wx*.7) > .3 ? 1 : 0) + (Math.sin(wx*.31 + 2) > .55 ? 1 : 0);
+    ctx.fillStyle = grass;    ctx.fillRect(x, GROUND-1-t, 1, 5+t);
+    ctx.fillStyle = grassLit; ctx.fillRect(x, GROUND-1-t, 1, 1);
+  }
+  ctx.fillStyle = grassDark; ctx.fillRect(0, GROUND+3, W, 1);
+  ctx.fillStyle = d0;        ctx.fillRect(0, GROUND+4, W, H-GROUND-4);
+  for (let i=0;i<34;i++){
+    const x = ((((i*17.7) - game.run) % (W+26)) + W+26) % (W+26) - 13;
+    const y = GROUND + 6 + ((i*11) % (H-GROUND-9));
+    ctx.fillStyle = d1; ctx.fillRect(x|0, y, 2 + (i%2), 1);
+    if (i % 3 === 0){ ctx.fillStyle = d2; ctx.fillRect(x|0, y-1, 1, 1); }
+  }
+}
+function drawLeapTufts(){
+  const S_ = SKY_SPECS[skyPhase(new Date())];
+  const near = mixHex(S_.grass, '#000000', .42);
+  for (let i=0;i<14;i++){
+    const x = ((((i*21.1) - game.run*1.45) % (W+34)) + W+34) % (W+34) - 17;
+    const y = H - 3 - (i % 3) * 5, h = 4 + (i % 3) * 2;
+    ctx.fillStyle = near;
+    ctx.fillRect(x|0, y-h, 1, h);
+    ctx.fillRect((x|0)-1, y-h+1, 1, h-2); ctx.fillRect((x|0)+1, y-h+1, 1, h-2);
+  }
+}
+/* Obstacles are built column by column so they have a silhouette. Drawn as
+   plain fillRects they came out as a wooden crate and a cardboard box; a log
+   is a cylinder lying on its side, so it needs rounded ends, grain that runs
+   along the trunk rather than across it, and top-to-bottom cylinder shading,
+   and a boulder needs an irregular profile. */
+const BOULDER_PROF = [3,7,11,14,16,17,17,16,15,13,10,6,3];
+
+function drawObstacle(g, o){
+  const x = Math.round(o.x), base = GROUND + 2;   // bedded into the grass
+
+  if (o.kind === 'water'){
+    for (let i=-17;i<=17;i++){
+      const t = Math.abs(i)/17;
+      const dep = Math.round(Math.cos(t * Math.PI/2) * 7) + 1;
+      g.fillStyle = '#241d16'; g.fillRect(x+i, GROUND, 1, 1);          // cut bank
+      g.fillStyle = '#24384a'; g.fillRect(x+i, GROUND+1, 1, dep+2);
+      g.fillStyle = '#3f6b80'; g.fillRect(x+i, GROUND+1, 1, dep);
+      g.fillStyle = '#6fa6b8'; g.fillRect(x+i, GROUND+1, 1, 1);
+    }
+    g.fillStyle = '#a8d4de';                                            // surface glints
+    g.fillRect(x-10, GROUND+3, 5, 1); g.fillRect(x+3, GROUND+5, 6, 1);
+    g.fillRect(x-3, GROUND+7, 3, 1);  g.fillRect(x+9, GROUND+2, 3, 1);
+    return;
+  }
+
+  g.fillStyle = 'rgba(16,26,24,.34)';
+  g.beginPath(); g.ellipse(x, base, o.kind === 'log' ? 15 : 10, 3, 0, 0, 7); g.fill();
+
+  if (o.kind === 'log'){
+    const HW = 12, H0 = 11;
+    for (let i=-HW;i<=HW;i++){
+      const t = Math.abs(i)/HW, cut = Math.round(t*t*t*4);
+      const top = base - H0 + cut, hh = H0 - cut*2;
+      for (let r=0;r<hh;r++){
+        const v = hh > 1 ? r/(hh-1) : 0;                                // cylinder shading
+        g.fillStyle = v < .20 ? '#8a6540' : v < .58 ? '#65482a' : '#3f2c19';
+        g.fillRect(x+i, top+r, 1, 1);
+      }
+    }
+    g.fillStyle = '#4d371f';                                            // grain along the trunk
+    g.fillRect(x-9, base-8, 8, 1); g.fillRect(x-1, base-6, 9, 1);
+    g.fillRect(x-10, base-4, 6, 1); g.fillRect(x+1, base-3, 7, 1);
+    g.fillStyle = '#5c7a45';                                            // moss on the lit top
+    g.fillRect(x-8, base-11, 5, 1); g.fillRect(x-1, base-11, 4, 1); g.fillRect(x+4, base-10, 3, 1);
+    g.fillStyle = '#3f2c19'; g.fillRect(x+8, base-10, 5, 9);            // sawn end, facing out
+    g.fillStyle = '#a8814c'; g.fillRect(x+9, base-9, 4, 7);
+    g.fillStyle = '#8a6a3e'; g.fillRect(x+10, base-7, 2, 3);
+    g.fillStyle = '#c8a06a'; g.fillRect(x+10, base-8, 1, 1);
+    return;
+  }
+
+  for (let i=0;i<BOULDER_PROF.length;i++){
+    const px = x - 6 + i, hh = BOULDER_PROF[i], lit = i < BOULDER_PROF.length * .45;
+    for (let r=0;r<hh;r++){
+      const v = r/hh;
+      g.fillStyle = v < .18 ? (lit ? '#948d7c' : '#6b6558')
+                  : v < .55 ? (lit ? '#6f6a5c' : '#514c42')
+                            : '#3a372f';
+      g.fillRect(px, base - hh + r, 1, 1);
     }
   }
+  g.fillStyle = '#7b7566'; g.fillRect(x-4, base-14, 3, 2);              // facet
+  g.fillStyle = '#33312b'; g.fillRect(x+2, base-9, 3, 1); g.fillRect(x+3, base-8, 2, 4);
+  g.fillStyle = '#6d7d55'; g.fillRect(x-5, base-16, 2, 1);              // lichen
+}
+function drawLeap(now){
+  drawLeapGround();
+  for (const o of game.obs) drawObstacle(ctx, o);
+
   const airborne = game.y < -2;
   const { f, sc } = gameSprite(now < game.stun ? 'sick' : airborne ? 'cheer' : 'walk',
                                airborne ? 0 : Math.floor(game.run / 9), 42);
+  const shrink = clamp(1 + game.y/70, .35, 1);               // the shadow shrinks as it rises
+  ctx.fillStyle = 'rgba(16,26,24,.30)';
+  ctx.beginPath(); ctx.ellipse(54, GROUND + 1, f.w*sc*.36*shrink, 3*shrink, 0, 0, 7); ctx.fill();
   ctx.save(); ctx.translate(54, GROUND + Math.round(game.y));
   ctx.scale(-1, 1);
   ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
   ctx.restore();
+
+  drawLeapTufts();
   scoreTag('Cleared ' + game.score);
 }
 

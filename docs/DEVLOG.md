@@ -276,6 +276,116 @@ horizontal overflow at 320, 360 or 412 px; the keys come out 46–64 px wide and
 
 ---
 
+## Session 8 — Coats that ride the body, the Triceratops, two minigames
+
+**Asked for.** The case read as a phone rather than an animal. Bug hunt left
+the pet standing at the side of its own minigame. Several coats looked wrong,
+specifically Slate on the brachiosaur, Ochre on the trike and Ashfall on the
+rex. The Triceratops was off across the board — short tail, head and frill
+growing at different rates. Hearts appeared above the animal rather than under
+the finger. River leap was dull and its obstacles floated. The developer panel
+covered the screen. The meters and the bond row did not look like they
+belonged next to the pixel scene.
+
+**Coats.** One cause behind all three complaints. `paintPattern` laid its
+shapes down in fixed bake-box coordinates — seventeen near-vertical tubes
+marching across the canvas whatever the animal underneath was doing. On the
+sauropod that is a barcode held up in front of a dinosaur.
+
+The rule the surface detail already followed applies here: ride the body. Each
+draw function now returns `spine`, its centreline from nape to tail tip with
+the body's half-depth at each station, and every pattern is placed against
+that. Bands run perpendicular to the local tangent and are cut short on the
+belly side so they fade into the countershading; spots and speckles sit inside
+the local half-depth; patches ride high on the flank.
+
+Density is a **distance along the spine**, not a count. A count gave the short
+Triceratops the same sixteen bands as the long-necked Brachiosaurus, which on
+the trike closed up into a striped mattress. `stripes` was renamed `bands`,
+because that is now what it is, and the three coat descriptions that promised
+vertical banding were corrected.
+
+The banding shape is also better supported than what it replaced: the
+*Sinosauropteryx* melanosome work gives a countershaded animal with a banded
+tail, which is what the coats now draw.
+
+**Triceratops.** The frill was scaled off `STAGE.horn`, which runs from 0.14 at
+hatchling. So the frill nearly vanished on young animals while the skull, on
+the head column, stayed enormous — exactly the "head and crest grow at
+different rates" complaint. It has its own `STAGE.frill` column now, because a
+baby Triceratops has an obvious deeply scalloped frill and almost no horns.
+
+The frill was also drawn as an upright ellipse centred near the withers, so
+its lower half was buried in the shoulder hump and the whole thing read as a
+lump of neck. It is built in its own tilted frame now and carried high enough
+that the rim stands clear of the body the whole way round. That separation is
+the animal's entire silhouette.
+
+Two things from Horner and Goodwin's growth series went in because the sprite
+can now honestly draw them, and the dossier gained a line for each:
+
+- `STAGE.hornBend` — the brow horns are straight stubs, curve backward in
+  juveniles, straighten in subadults, recurve forward in adults. The horn is a
+  three-point tube whose middle control point bows *against* the tip; without
+  that a recurve just reads as a bent stick.
+- `EPI_DEPTH` — the epoccipitals start as deep deltoid scallops and flatten
+  into the rim with age.
+
+Tail lengthened from 34 to 50 units with a deeper base and a smoother taper,
+torso from 36 to 42. Horn *width* now tracks the sheath as well as the skull;
+scaling thickness on head bulk alone gave hatchlings two fat cones. The jugal
+horn was a hanging tusk and is now a cheek point. The hat anchor moved to the
+rotated crown — it was still using the untilted top of the arc.
+
+**Bug hunt.** The animal stood at a fixed x playing its idle loop while the
+player clicked past it. A tap is now a move order: it runs to where you
+pointed and eats whatever comes within snapping distance of its mouth. The
+walk cycle, the growth stage and the animal's reach all matter. `drawStomp`
+parks the mouth anchor on the game object each frame and `stepStomp` reads it
+next frame — one frame of lag, invisible, and it saves baking the frame twice.
+
+**River leap.** Obstacle bases sat one pixel above the grass line, so they
+hovered; they are bedded two pixels in with a contact shadow. Drawn as plain
+rectangles the log was a wooden crate and the boulder a cardboard box, so both
+are built column by column now — the log with rounded ends, cylinder shading
+and grain running *along* the trunk, the boulder with an irregular profile. A
+water hazard was added, which the game was already named after. And the track
+is overdrawn with three scroll rates — scrub, ground, foreground tufts — so
+the animal is running through somewhere instead of on the spot.
+
+**Hearts** are seven across instead of five and rise from the point that was
+actually touched; `pet()` takes the tap position.
+
+**The developer panel** docks instead of covering: a rail on the right above
+860px, the bottom half below it, and no scrim either way, so the game stays
+visible and clickable while a sprite is stepped through its stages.
+
+**Meters** were rounded gradient pills. They are ten hard cells behind a black
+grid now, square-cornered, with a lit top row and a shaded bottom one. The
+bond row was five rotated CSS squares and is five baked pixel hearts.
+
+**The case** is rounder — a proper dome and a full round base — and has a row
+of osteoderms over the crown and two three-toed feet under it. The keychain
+tab is gone; it was the last part of the case still shaped like a Tamagotchi.
+The scute row is placed on the dome's arc and each plate is rotated normal to
+it, which is the difference between a dorsal crest and a zip fastener. The
+toes are real elements rather than pale circles painted inside a tab, because
+they have to break the silhouette to read as toes.
+
+**Verified in the browser**, not in the editor: every sheet renders for every
+species at every stage, every coat bakes for every species, stage and
+animation, all three games run two hundred frames and end cleanly, headgear
+lands correctly on all twelve species-stage combinations, and hearts emit at
+the tap point. No console errors, no horizontal overflow.
+
+**Working note.** Chrome served stale scripts from memory cache for the first
+visual check of this session, so a contact sheet that looked correct was
+reviewing the previous build. Dev serving now goes through a no-store handler
+kept in the scratchpad. If a change appears not to have taken, check that
+first.
+
+---
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

@@ -49,4 +49,5 @@ Nothing here is started. Ordered roughly by value.
 - The canvas scales to a non-integer multiple of 224 at most phone widths, so
   the pixel grid is slightly uneven. Snapping the LCD to whole multiples would
   fix it and cost some width.
-- Minigames do not scale their difficulty to the animal's growth stage.
+- River leap and Snack run do not scale to the animal's growth stage. Bug hunt
+  now does — running speed and snapping reach both come off `stageIdx()`.

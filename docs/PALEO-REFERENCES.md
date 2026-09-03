@@ -26,6 +26,18 @@ this came from research during development rather than from memory.
 - *T. horridus* has a long snout and only a small nasal horn.
 - Hatchlings emerged nearly hornless with a small frill; both grow in.
 - Upright hindlimbs, forelimbs held with the elbows out.
+- **Growth series** (Horner and Goodwin, ten skulls from a 38 cm baby to
+  two-metre adults, four stages that map onto the game's four):
+  - Postorbital horns are **straight stubs** in babies, **curve backward** in
+    juveniles, **straighten** in subadults and **recurve forward** in adults.
+    The sprite draws this from `STAGE.hornBend`.
+  - The baby frill margin is **deeply scalloped**. Juveniles carry 17–19
+    deltoid epoccipitals, which flatten to low spindles and fuse into the rim
+    with age. The sprite drives scallop depth off the stage.
+  - The frill is present and prominent from the start and lengthens with
+    positive allometry — it is not a late-appearing structure.
+- Tail is roughly a quarter to a third of total length: short for a dinosaur,
+  but distinctly longer than the torso and deep at its base.
 
 ## Brachiosaurus altithorax
 
@@ -40,6 +52,23 @@ this came from research during development rather than from memory.
   forefoot prints are horseshoe-shaped. Brachiosaurids kept a short thumb claw.
 - **Pes**: broad and semi-plantigrade, three large claws on the inner digits,
   with a fleshy heel pad behind them recorded in some trackways.
+
+## Skin and colour
+
+- **Countershading** — dark above, pale below — is the one pattern with direct
+  fossil support, recovered from melanosomes in *Psittacosaurus* (a
+  ceratopsian, so it bears on the Triceratops) and *Sinosauropteryx*. The
+  `belly` material layer is doing this on every animal.
+- *Sinosauropteryx* also preserves a **banded tail** and a bandit mask. Banding
+  that resolves into tail rings is therefore the best-supported pattern
+  available, and it is what the `bands` coats draw.
+- Banding on a living animal runs **perpendicular to the spine and follows the
+  body's curvature**, tightening over the tail and fading into the
+  countershading on the belly. It does not march across the animal at a fixed
+  angle and spacing regardless of anatomy, which is what the first version of
+  the coat painter did.
+- Countershading pattern varies with habitat lighting, which is why
+  *Psittacosaurus* and *Sinosauropteryx* differ despite sharing fossil beds.
 
 ## Pixel art technique
 

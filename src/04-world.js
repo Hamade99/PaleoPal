@@ -300,11 +300,21 @@ function stepParts(dt){
   for (const p of parts){ p.age += dt; p.vy += p.g*dt/1000; p.x += p.vx*dt/1000; p.y += p.vy*dt/1000; }
   parts = parts.filter(p => p.age < p.life);
 }
-function heartPx(g,x,y,c){ g.fillStyle=c; g.fillRect(x+1,y,1,1); g.fillRect(x+3,y,1,1); g.fillRect(x,y+1,5,2); g.fillRect(x+1,y+3,3,1); g.fillRect(x+2,y+4,1,1); }
+/* Seven across rather than five, with a rim and a highlight. The old one was
+   a 5x5 blob that vanished against the animal. */
+function heartPx(g,x,y){
+  g.fillStyle = '#8f2f46';
+  g.fillRect(x+1,y-1,2,1); g.fillRect(x+4,y-1,2,1);
+  g.fillRect(x,y,7,3); g.fillRect(x+1,y+3,5,1); g.fillRect(x+2,y+4,3,1); g.fillRect(x+3,y+5,1,1);
+  g.fillStyle = '#e2697c';
+  g.fillRect(x+1,y,5,2); g.fillRect(x+2,y+2,3,1); g.fillRect(x+3,y+3,1,1);
+  g.fillStyle = '#f6b3c0';
+  g.fillRect(x+1,y,2,1); g.fillRect(x+1,y+1,1,1);
+}
 function drawParts(g){
   for (const p of parts){
     const x = Math.round(p.x), y = Math.round(p.y), fade = p.age/p.life;
-    if (p.type==='heart'){ heartPx(g,x,y,'#e2697c'); g.fillStyle='#f0a3b0'; g.fillRect(x+1,y+1,1,1); }
+    if (p.type==='heart'){ heartPx(g,x,y); }
     else if (p.type==='spark'){ g.fillStyle = p.col||'#fff6d8'; g.fillRect(x,y,2,2); g.fillStyle='#ffffff'; g.fillRect(x,y,1,1); }
     else if (p.type==='crumb'){ g.fillStyle = p.col||'#9b7a52'; g.fillRect(x,y,1,1); }
     else if (p.type==='bubbleZ'){ g.fillStyle='#dfe4f6'; g.fillRect(x,y,2,2); g.fillRect(x+2,y-2,2,2); }

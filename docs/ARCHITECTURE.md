@@ -65,6 +65,7 @@ lit, outlined pixels. Frames are baked lazily and cached by
 | Task | File |
 | --- | --- |
 | Species anatomy, proportions, growth-stage shape | `src/species/<name>.js` |
+| Coat patterns | `paintPattern` in `src/species/registry.js` |
 | Field notes, coats, likes and dislikes, speed | `src/species/registry.js` |
 | Growth stage multipliers, gait, feet, hats, poses | `src/02-sprite-engine.js` |
 | Lighting, palettes, material list | `src/01-colour.js` |

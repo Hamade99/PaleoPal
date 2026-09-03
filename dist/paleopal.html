@@ -23,8 +23,9 @@
   --moss:#7ea55f; --ochre:#d9a441; --rust:#c2603c; --sky:#7fb2c9;
 
   /* shell side — warm sandstone plastic, jungle-green keys */
-  --shell-hi:#e8c078; --shell:#cb943f; --shell-mid:#b47c2f;
-  --shell-lo:#8a5c1f; --shell-edge:#573609;
+  --shell-hi:#e3c07a; --shell:#c19243; --shell-mid:#a67a31;
+  --shell-lo:#7d5620; --shell-edge:#4e3209;
+  --scute:#9a6d28; --scute-hi:#d8ab5c;
   --speck-a:rgba(84,49,12,.50); --speck-b:rgba(126,84,32,.40);
   --bezel-hi:#f6efdc; --bezel:#ddd1b1; --bezel-lo:#a4936d; --bezel-edge:#6b5d3f;
   --key:#316d4b; --key-hi:#4a936a; --key-lo:#1a4530; --key-edge:#0e2a1c;
@@ -52,12 +53,18 @@ body{
   display:flex;align-items:flex-start;justify-content:center;
   overscroll-behavior:none;
 }
-#app{width:100%;max-width:440px;margin:auto 0;padding:14px 10px calc(14px + var(--safe));position:relative}
+/* the crest stands 38px proud of the shell and the feet 12px below it, so
+   the padding here is what stops either being clipped on a short viewport */
+#app{width:100%;max-width:440px;margin:auto 0;padding:42px 10px calc(24px + var(--safe));position:relative}
 
 /* ---------- the shell ---------- */
+/* Rounder than the first pass, which was closer to a phone than to an egg:
+   the crown is a proper dome and the base is a full round instead of a
+   softened rectangle. A row of osteoderms runs over the top and two clawed
+   feet carry it, so the case reads as an animal rather than as a gadget. */
 .shell{
-  position:relative;padding:50px 17px 46px;
-  border-radius:44% 44% 38% 38% / 11% 11% 8% 8%;
+  position:relative;padding:54px 19px 44px;
+  border-radius:50% 50% 46% 46% / 22% 22% 17% 17%;
   background-image:var(--speckles),
     radial-gradient(130% 62% at 50% -6%,var(--shell-hi) 0%,var(--shell) 40%,var(--shell-mid) 68%,var(--shell-lo) 100%);
   background-size:var(--speckle-size),100% 100%;
@@ -68,15 +75,47 @@ body{
     inset 0 0 0 6px rgba(255,225,170,.10),
     0 12px 0 #3d2708, 0 20px 34px rgba(0,0,0,.6);
 }
-/* the keychain tab at the crown */
-.loop{
-  position:absolute;left:50%;top:-13px;transform:translateX(-50%);
-  width:34px;height:20px;border-radius:11px 11px 4px 4px;
-  background:linear-gradient(var(--shell-hi),var(--shell-mid));
+/* Osteoderms over the crown. They follow the dome rather than sitting in a
+   straight line, which is the difference between a dorsal crest and a zip
+   fastener: each plate is placed on the arc and rotated to stand normal to
+   it. The keychain tab that used to live here is gone — it was the last
+   piece of the case still shaped like a Tamagotchi. */
+.scutes{position:absolute;left:50%;top:-38px;transform:translateX(-50%);
+  width:219px;height:42px;pointer-events:none}
+.scutes i{position:absolute;bottom:0;width:15px;transform-origin:50% 100%;
+  background:linear-gradient(var(--scute-hi),var(--scute) 62%,var(--shell-lo));
   border:2px solid var(--shell-edge);border-bottom:0;
-}
-.loop::after{content:"";position:absolute;left:50%;top:5px;transform:translateX(-50%);
-  width:11px;height:9px;border-radius:50%;background:#2a1a06;box-shadow:inset 0 -1px 0 rgba(255,220,160,.35)}
+  border-radius:58% 58% 0 0 / 78% 78% 0 0;
+  box-shadow:inset 0 1px 0 rgba(255,246,220,.65)}
+.scutes i:nth-child(1){left:0;   bottom:-20px;height:17px;transform:rotate(-28deg)}
+.scutes i:nth-child(2){left:33px;bottom:-10px;height:23px;transform:rotate(-19deg)}
+.scutes i:nth-child(3){left:66px;bottom:-3px; height:28px;transform:rotate(-9deg)}
+.scutes i:nth-child(4){left:98px;bottom:0;    height:32px;width:19px}
+.scutes i:nth-child(5){left:134px;bottom:-3px;height:28px;transform:rotate(9deg)}
+.scutes i:nth-child(6){left:167px;bottom:-10px;height:23px;transform:rotate(19deg)}
+.scutes i:nth-child(7){left:200px;bottom:-20px;height:17px;transform:rotate(28deg)}
+
+/* Two three-toed feet the case stands on. The toes are real elements rather
+   than pale circles painted inside a tab, because they have to break the
+   silhouette to read as toes — outlined the same way the shell is, with a
+   keratin claw on each. */
+.feet{position:absolute;left:0;right:0;bottom:-12px;
+  display:flex;justify-content:center;gap:54px;pointer-events:none}
+.feet i{position:relative;width:96px;height:22px;
+  border-radius:0 0 10px 10px;
+  background:linear-gradient(var(--shell-mid) 30%,var(--shell-lo));
+  border:2px solid var(--shell-edge);border-top:0}
+.feet b{position:absolute;width:26px;height:21px;bottom:-14px;
+  border-radius:0 0 52% 52% / 0 0 74% 74%;
+  background:linear-gradient(var(--shell-lo),var(--shell-mid));
+  border:2px solid var(--shell-edge);border-top:0;
+  box-shadow:0 3px 0 rgba(30,18,3,.45)}
+.feet b:nth-child(1){left:1px}
+.feet b:nth-child(2){left:33px;width:30px;height:25px;bottom:-18px}
+.feet b:nth-child(3){right:1px}
+.feet b::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
+  width:9px;height:8px;border-radius:0 0 50% 50%;
+  background:var(--bezel-hi);box-shadow:0 0 0 1.5px var(--shell-edge)}
 
 /* ---------- faceplate head ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:0 6px;margin-bottom:12px}
@@ -148,17 +187,19 @@ body{
 
 /* ---------- needs: the classic icon strip, one chunky meter each ---------- */
 .needs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
-.need{background:linear-gradient(#1a2529,#121a1d);border:1px solid var(--line);border-radius:10px;
+.need{background:#141d21;border:1px solid var(--line);border-radius:4px;
   padding:5px 6px 6px;display:flex;flex-direction:column;gap:4px}
 .need .cap{display:flex;align-items:center;gap:4px;min-height:14px}
 .need .cap canvas{image-rendering:pixelated;width:14px;height:14px;flex:0 0 14px}
 .need b{font-weight:600;font-size:10px;color:var(--dim);letter-spacing:.2px;text-transform:uppercase}
-.track{position:relative;height:9px;border-radius:5px;background:#05090a;
-  box-shadow:inset 0 0 0 1px #000,inset 0 2px 3px rgba(0,0,0,.9);overflow:hidden}
-.fill{height:100%;width:50%;border-radius:5px;transition:width .5s linear,background .4s;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.30)}
-.seg{position:absolute;inset:0;pointer-events:none;border-radius:5px;
-  background:repeating-linear-gradient(90deg,transparent 0 5px,rgba(5,9,10,.85) 5px 6px)}
+/* Ten hard cells behind a black grid, square corners, a lit top row and a
+   shaded bottom one — the same read as the meters the canvas would draw. The
+   rounded gradient pill it replaced belonged to a different application. */
+.track{position:relative;height:11px;background:#05090a;border:1px solid #000;overflow:hidden}
+.fill{height:100%;width:50%;transition:width .45s linear,background .4s;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.26),inset 0 -2px 0 rgba(0,0,0,.34)}
+.seg{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#05090a calc(10% - 2px) 10%)}
 .need.low b{color:var(--rust)}
 .need.low{border-color:#6d3527;animation:lowpulse 1.6s ease-in-out infinite}
 @keyframes lowpulse{50%{box-shadow:0 0 8px rgba(194,96,60,.35)}}
@@ -199,9 +240,8 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touc
 .moodrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:11px 2px 1px}
 .mood{font-size:13px;color:var(--bone);line-height:1.35}
 .mood em{font-style:normal;color:var(--dim)}
-.bondwrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);flex:0 0 auto}
-.pip{width:8px;height:8px;border-radius:2px;background:#243034;transform:rotate(45deg)}
-.pip.on{background:var(--rust);box-shadow:0 0 5px rgba(194,96,60,.55)}
+.bondwrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);flex:0 0 auto}
+.bondwrap canvas{image-rendering:pixelated}
 
 /* ---------- physical keys ---------- */
 .keys{padding-top:14px}
@@ -241,6 +281,19 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touc
   box-shadow:0 -8px 30px rgba(0,0,0,.6)
 }
 .sheet.on{transform:translate(-50%,0)}
+
+/* Docked: the developer panel never covers the game. Wide windows get a rail
+   on the right, narrow ones the bottom half, and neither raises a scrim. */
+.sheet.dock{max-height:52vh}
+@media (min-width:860px){
+  .sheet.dock{
+    left:auto;right:0;top:0;bottom:0;width:360px;max-width:38vw;max-height:100vh;
+    transform:translateX(104%);border-radius:16px 0 0 16px;border:2px solid var(--bezel-edge);border-right:0;
+    padding-top:18px
+  }
+  .sheet.dock.on{transform:translateX(0)}
+  .sheet.dock .grip{display:none}
+}
 .sheet h2{font-family:'Pixelify Sans';font-size:19px;font-weight:700;margin-bottom:2px;color:var(--bone)}
 .sheet p.lede{font-size:12.5px;color:var(--dim);margin-bottom:12px;line-height:1.45}
 .grip{width:44px;height:5px;border-radius:3px;background:var(--bezel-lo);margin:0 auto 12px}
@@ -302,7 +355,10 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
        physical keys along the bottom. Everything is CSS; the project has no
        image assets and this does not change that. -->
   <div class="shell">
-    <i class="loop"></i>
+    <div class="scutes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="feet" aria-hidden="true">
+      <i><b></b><b></b><b></b></i><i><b></b><b></b><b></b></i>
+    </div>
 
     <div class="shellhead">
       <div class="brand">PALEO<span>PAL</span><i class="rivet"></i></div>
@@ -702,11 +758,23 @@ function composeSprite(layerCanvases, mats, w, h){
 
 const BAKE_W = 232, BAKE_H = 210, BAKE_G = 196, BAKE_CX = 104;
 
+/* Per-stage multipliers. Every feature that grows on its own schedule gets its
+   own column — merging any two of them has produced a bad sprite at least once.
+
+   `frill` is separate from `horn` for the reason `snout` is separate from
+   `head`: a baby Triceratops already has a frill, deeply scalloped and
+   obvious, while its horns are barely stubs. Driving the frill off the horn
+   column left hatchlings with almost no frill under an enormous skull.
+
+   `hornBend` is the ontogenetic sequence Horner and Goodwin read off a series
+   of ten skulls: the postorbital horns start as straight stubs, curve
+   backward in juveniles, straighten out in subadults, then recurve forward in
+   adults. Negative is backward, positive forward. */
 const STAGE = [
-  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, neck:.44, limb:.68, tail:.54, horn:.14 },
-  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, neck:.68, limb:.83, tail:.76, horn:.48 },
-  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, neck:.87, limb:.93, tail:.90, horn:.80 },
-  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, neck:1.00, limb:1.00, tail:1.00, horn:1.00 }
+  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, neck:.44, limb:.68, tail:.54, horn:.14, frill:.50, hornBend: 0.00 },
+  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, neck:.68, limb:.83, tail:.76, horn:.48, frill:.70, hornBend:-1.00 },
+  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, neck:.87, limb:.93, tail:.90, horn:.80, frill:.86, hornBend:-0.15 },
+  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, neck:1.00, limb:1.00, tail:1.00, horn:1.00, frill:1.00, hornBend: 1.00 }
 ];
 
 /* --------------------------- gait and limbs -------------------------------
@@ -882,7 +950,9 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
-  paintPattern(M.mark, skinOf(spId, skinId).pattern);
+  // the coat rides the body the draw function just laid down, never a path
+  // computed alongside it — the same rule the surface detail follows
+  paintPattern(M.mark, skinOf(spId, skinId).pattern, anchors.spine);
 
   const composed = composeSprite(canvases, matsFor(spId, skinId), BAKE_W, BAKE_H);
   const t = trim(composed);
@@ -980,95 +1050,175 @@ function drawRex(M, P){
   eyeAt(M, ex, ey, 3.5*hM, P.eye);
   oval(M.mouth, hx - sn*.84, hy - hh*.34, Math.max(.8,1.2*hM), Math.max(.8,1.1*hM));
 
+  /* Centreline for the coat painter: nape to tail tip, carrying the body's
+     half-depth at each station so a band knows how far to run. */
+  const spine = [
+    [hx + 13,   hy + hh*.06,  hh*.52],   // nape
+    [withX - 4, withY + 12*lM, 12*lM],   // withers
+    [-4,        hipY - 7*lM,   16*lM],   // ribcage
+    [hipX + 4,  hipY - 7*lM,   16*lM],   // hips
+    [T(24),     hipY - 9*lM,    9*lM],   // tail base
+    [T(48),     hipY - 7*lM,    5.5*lM],
+    [T(72),     hipY - 6*lM,    2.0*lM]  // tail tip
+  ];
+
   return { eye:[ex,ey], eyeR:3.5*hM, mouth:[hx - sn*.82, hy + hh*.12],
-           hat:[hx - sn*.16, hy - hh*1.02], top: hy - hh };
+           hat:[hx - sn*.16, hy - hh*1.02], top: hy - hh, spine };
 }
 
 
 /* Triceratops horridus sprite
-   Part of Paleopal. Load order matters; see build.py. */
+   Part of Paleopal. Load order matters; see build.py.
 
-/* ----------------------------- Triceratops --------------------------------- */
+   Proportions follow the modern skeletals: a deep barrel torso, a tail about
+   one and a quarter times the length of the torso and deep at its base, and a
+   skull that is large but not half the animal. The earlier version had a tail
+   shorter than the torso, which read as a stub.
+
+   Growth follows Horner and Goodwin's series of ten skulls:
+     - the frill is present and deeply scalloped from the start, and lengthens
+       with positive allometry (STAGE.frill)
+     - the epoccipitals along the rim start as deep deltoid scallops and
+       flatten to low spindles that fuse into the margin (EPI_DEPTH)
+     - the brow horns are straight stubs, then curve backward, then straighten,
+       then recurve forward (STAGE.hornBend)
+   -------------------------------------------------------------------------- */
 const TRI_SPEC = { skin:'#ab7040', belly:'#ca9b64', crest:'#8a5228', horn:'#efe6c8',
                    mouth:'#7e3a30', outline:'#26190f' };
 const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
 const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
+/* how far the rim scallops bite in, per growth stage: deltoid when young,
+   low spindles fused to the margin when adult */
+const EPI_DEPTH = [.30, .24, .17, .11];
+
 function drawTrike(M, P){
   const st = STAGE[P.stage];
-  const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail, hF = st.horn, sM = st.snout;
+  const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
+  const hF = st.horn, sM = st.snout, fM = st.frill, bend = st.hornBend;
   const bob = P.body, sw = P.tail||0, dr = P.droop||0;
 
-  const hipX = 24, hipY = -41*lM - bob;
-  const shX = -12, shY = -38*lM - bob;
-  const withY = hipY - 24*lM;                 // tall neural spines make a shoulder hump
-  const backY = hipY - 20*lM, bellyY = hipY + 13*lM;
+  const hipX = 26, hipY = -41*lM - bob;
+  const shX = -16, shY = -38*lM - bob;         // torso 42 long, was 36
+  const withY = hipY - 25*lM;                  // tall neural spines: a shoulder hump
+  const backY = hipY - 20*lM, bellyY = hipY + 14*lM;
   const T = d => hipX + d*tM;
 
   legStep(M.far, hipX-7, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
   legStep(M.far, shX-7,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE);
 
-  // barrel body: deepest at the shoulder hump, dipping over the back, short tail
+  /* One closed mass: nape, ribcage, hips and tail. The tail leaves the hips
+     nearly as deep as the pelvis and tapers the whole way out, which is what
+     stops it reading as a stub bolted on the back. */
   blob(M.skin, [
-    [shX-11, withY+6*lM],                     // nape, meeting the frill
-    [shX,    withY],                          // shoulder hump
-    [6,      backY-1],                        // back
-    [hipX+3, backY+2],                        // hips
-    [T(9),   hipY-16*lM+sw*2],                // hip bulge
-    [T(21),  hipY-11*lM+sw*4],                // tail base
-    [T(34),  hipY-4*lM+sw*6],                 // tail tip
-    [T(32),  hipY-1*lM+sw*6],
-    [T(16),  hipY+3*lM],
-    [T(4),   hipY+8*lM],
-    [hipX-4, bellyY],                         // belly
+    [shX-12, withY+7*lM],                      // nape, meeting the frill
+    [shX-1,  withY],                           // shoulder hump
+    [8,      backY-1],                         // back
+    [hipX+4, backY+2],                         // hips
+    [T(12),  hipY-17*lM+sw*1.5],               // tail base, still deep
+    [T(26),  hipY-13*lM+sw*3],
+    [T(39),  hipY-8.5*lM+sw*5],
+    [T(50),  hipY-4*lM+sw*7],                  // tail tip
+    [T(48),  hipY-1.5*lM+sw*7],
+    [T(34),  hipY+1*lM+sw*4],
+    [T(18),  hipY+5*lM+sw*1.5],
+    [T(5),   hipY+10*lM],
+    [hipX-6, bellyY],                          // belly
     [2,      bellyY+2*lM],
-    [shX+2,  bellyY-1*lM],
-    [shX-9,  hipY+2*lM]                       // throat
+    [shX+3,  bellyY-1*lM],
+    [shX-10, hipY+2*lM]                        // throat
   ]);
 
-  // frill: solid bone shield, tilted back, with epoccipital scallops on the rim
-  const fx = shX - 15*nM - 4, fy = hipY - 14*lM - 8*nM + dr*4;
-  const fRx = 17.5*hM*(.34+.66*hF), fRy = 20.5*hM*(.34+.66*hF);
+  /* Frill: a solid bone shield, tipped back off the skull roof.
+
+     The previous version drew it as an upright ellipse centred near the
+     withers, which meant its lower-back half was buried in the shoulder hump
+     and the whole thing read as a lump of neck rather than a shield. It is
+     now built in its own tilted frame and carried high enough that the rim
+     stands clear of the body outline the whole way round — that separation is
+     the entire silhouette of the animal.
+
+     It rides STAGE.frill, not the horn column: a baby already has an obvious,
+     deeply scalloped frill and almost no horns. */
+  const fx = shX - 14*nM - 3, fy = hipY - 24*lM - 8*nM + dr*4;
+  const fRx = 16.0*hM*fM, fRy = 22.0*hM*fM;
+  const fTilt = -0.40;                          // tipped back off the skull roof
+  const fc = Math.cos(fTilt), fs = Math.sin(fTilt);
+  const rot = (px,py) => [fx + px*fc - py*fs, fy + px*fs + py*fc];
+  const epi = EPI_DEPTH[P.stage];
   const rim = [];
-  for (let i=0;i<=12;i++){                    // epoccipitals scallop the rim itself
-    const a = Math.PI*1.20 + (Math.PI*1.28) * i/12;
-    const r = (i % 2) ? 1.0 : .90;
-    rim.push([fx + Math.cos(a)*fRx*r, fy + Math.sin(a)*fRy*r]);
+  const A0 = Math.PI*1.04, A1 = Math.PI*2.16;   // front-top, over the crown, down the back
+  for (let i=0;i<=16;i++){                      // the epoccipitals scallop the rim itself
+    const a = A0 + (A1-A0)*i/16;
+    const r = (i % 2) ? 1.0 : (1 - epi);
+    rim.push(rot(Math.cos(a)*fRx*r, Math.sin(a)*fRy*r));
   }
-  rim.push([fx - fRx*.5, fy + fRy*.62], [fx - fRx*.95, fy - fRy*.15]);
+  rim.push(rot(fRx*.30, fRy*.86));              // bottom margin, tucking toward the jaw
+  rim.push(rot(-fRx*.62, fRy*.66));             // front-bottom, where the skull joins
   blob(M.head, rim);
 
-  // skull: long, low and carried well forward of the frill
-  const hx = fx - 19*hM*sM, hy = fy + 9*hM, sn = 21*hM*sM, hh = 10.5*hM;
-  blob(M.head, [[hx+18*hM, hy-hh*1.15],[hx-sn*.42, hy-hh*1.2],[hx-sn*.94, hy-hh*.55],
-                [hx-sn*1.02, hy+hh*.35],[hx-sn*.45, hy+hh*.95],[hx+18*hM, hy+hh*.9]]);
-  // hooked rostral beak
-  blob(M.horn, [[hx-sn*.84, hy-hh*.62],[hx-sn*1.36, hy-hh*.02],[hx-sn*1.2, hy+hh*.62],
-                [hx-sn*.66, hy+hh*.74]]);
-  const ex = hx - sn*.38, ey = hy - hh*.34;
-  // brow horns: the keratin sheath ran past the bone core, so they are long
-  tube(M.horn, [[ex+4*hM, ey-hh*.7],[ex-10*hM*hF, ey-(hh*.8+hh*1.15*hF)],
-                [ex-24*hM*hF, ey-(hh*.85+hh*1.5*hF)]], [7.4*hM, 4.0*hM, 1.0*hM]);
-  tube(M.horn, [[ex-4*hM, ey-hh*.78],[ex-17*hM*hF, ey-(hh*.7+hh*.85*hF)],
-                [ex-31*hM*hF, ey-(hh*.7+hh*1.05*hF)]], [6.3*hM, 3.4*hM, .9*hM]);
-  tube(M.horn, [[hx-sn*.76, hy-hh*.3],[hx-sn*.92, hy-hh*(.5+.55*hF)]], [4.4*hM, 1.3*hM]);
-  blob(M.horn, [[hx-sn*.06, hy+hh*.5],[hx-sn*.34, hy+hh*.44],[hx-sn*.16, hy+hh*1.35]]); // jugal horn
+  /* Skull: long, low, and carried well forward and below the frill base. */
+  const hx = fx - 17*hM*sM - 6, hy = fy + 13*hM, sn = 21*hM*sM, hh = 10.0*hM;
+  blob(M.head, [[hx+19*hM, hy-hh*1.05],[hx-sn*.42, hy-hh*1.16],[hx-sn*.94, hy-hh*.55],
+                [hx-sn*1.02, hy+hh*.35],[hx-sn*.45, hy+hh*.95],[hx+19*hM, hy+hh*.9]]);
+  // hooked rostral beak: a parrot hook, not a rounded snout cap
+  blob(M.horn, [[hx-sn*.86, hy-hh*.66],[hx-sn*1.30, hy-hh*.16],[hx-sn*1.34, hy+hh*.34],
+                [hx-sn*1.06, hy+hh*.62],[hx-sn*.70, hy+hh*.70]]);
+  const ex = hx - sn*.36, ey = hy - hh*.30;
+
+  /* Brow horns. The keratin sheath ran well past the bone core, so an adult's
+     are long; the curvature is the ontogenetic sequence — straight stubs, then
+     backward, then straightening, then recurved forward. The mid control point
+     bows against the tip, which is what makes a recurve read as a recurve
+     rather than as a bent stick.
+
+     Width tracks the sheath as well as the skull. Scaling thickness on head
+     bulk alone gave hatchlings two fat cones where they should have stubs. */
+  const hl = hh*(.50 + 1.95*hF);
+  const hw = hM * (.40 + .60*hF);
+  const browHorn = (dx, dy, len, w) => {
+    const bx = ex + dx*hM, by = ey + dy;
+    const tip = [bx - len*(.14 + .44*bend), by - len*.95];
+    const mid = [(bx + tip[0])/2 + len*.18*bend, (by + tip[1])/2 + len*.05];
+    tube(M.horn, [[bx,by], mid, tip], [w*hw, w*.50*hw, w*.12*hw]);
+  };
+  browHorn( 5, -hh*.58, hl,     7.2);
+  browHorn(-3, -hh*.68, hl*.90, 6.0);
+  // nasal horn: small in T. horridus, and small at every age
+  tube(M.horn, [[hx-sn*.74, hy-hh*.28],[hx-sn*.88, hy-hh*(.45+.5*hF)]], [4.0*hM, 1.2*hM]);
+  // jugal horn: a short cheek point aimed down and back, not a hanging tusk
+  blob(M.horn, [[hx-sn*.18, hy+hh*.62],[hx-sn*.44, hy+hh*.56],[hx-sn*.24, hy+hh*1.06]]);
 
   // low nubbin feature scales over the flank and tail base
-  for (const q of [[-2,-10],[9,-13],[20,-11],[13,-5],[28,-8],[2,-4]])
+  for (const q of [[-2,-11],[10,-14],[22,-12],[15,-6],[32,-9],[2,-5],[41,-7]])
     oval(M.crest, q[0], hipY + q[1]*lM, 1.7*lM, 1.2*lM);
 
-  oval(M.belly, 6, bellyY - 3*lM, 22*lM, 5*lM);
+  oval(M.belly, 6, bellyY - 3*lM, 23*lM, 5*lM);
 
   legStep(M.limb, hipX+2, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
   legStep(M.limb, shX+4, shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
 
-  eyeAt(M, ex, ey, 3.1*hM, P.eye);
+  eyeAt(M, ex, ey, 2.7*hM, P.eye);
   oval(M.mouth, hx - sn*.74, hy - hh*.12, Math.max(.8,1.2*hM), Math.max(.8,1*hM));
 
-  return { eye:[ex,ey], eyeR:3.1*hM, mouth:[hx - sn*1.15, hy + hh*.25],
-           hat:[fx - fRx*.1, fy - fRy*.95], top: fy - fRy };
-}
+  /* Centreline for the coat painter: nape to tail tip, with the body's
+     half-depth at each station so a band knows how far to run. */
+  const spine = [
+    [shX-8,   withY+9*lM,   9*lM],   // nape
+    [shX+4,   hipY-6*lM,   17*lM],   // shoulder
+    [10,      hipY-4*lM,   17*lM],
+    [hipX+2,  hipY-3*lM,   16*lM],   // hips
+    [T(13),   hipY-7*lM,   10*lM],   // tail base
+    [T(27),   hipY-6*lM,    7*lM],
+    [T(40),   hipY-4*lM,    4.5*lM],
+    [T(50),   hipY-3*lM,    2.0*lM]  // tail tip
+  ];
 
+  // headgear sits on the crown of the frill, which the tilt moved forward as
+  // well as up — the old anchor was still using the untilted top of the arc
+  const crown = rot(0, -fRy*.90);
+  return { eye:[ex,ey], eyeR:2.7*hM, mouth:[hx - sn*1.15, hy + hh*.25],
+           hat:crown, top: crown[1], spine };
+}
 
 /* Brachiosaurus altithorax sprite
    Part of Paleopal. Load order matters; see build.py. */
@@ -1120,8 +1270,24 @@ function drawBrachio(M, P){
 
   eyeAt(M, hx - sn*.48, hy - hh*.3, 2.9*hM, P.eye);
 
+  /* Centreline for the coat painter. It runs the whole animal, neck included,
+     so banding comes down the neck and resolves into rings out the tail —
+     which is the one place a sauropod coat has somewhere to go. */
+  const spine = [
+    [n3[0], n3[1] + 4,   9*lM],          // base of the skull
+    [n2[0], n2[1],      10*lM],
+    [n1[0], n1[1],      13*lM],
+    [shX - 2, shY + 2,  19*lM],          // shoulder hump
+    [8,       shY + 8,  22*lM],          // deepest, over the ribs
+    [hipX,    hipY,     17*lM],          // hips
+    [hipX + 22*tM, hipY + 1,  11*lM],    // tail
+    [hipX + 44*tM, hipY + 3,   7*lM],
+    [hipX + 66*tM, hipY + 6,   3.5*lM],
+    [hipX + 86*tM, hipY + 10,  1.5*lM]
+  ];
+
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
-           hat:[hx - sn*.3, hy - hh*2.05], top: hy - hh*2.05 };
+           hat:[hx - sn*.3, hy - hh*2.05], top: hy - hh*2.05, spine };
 }
 
 
@@ -1154,12 +1320,14 @@ const SPECIES = {
     era:'Late Cretaceous, 68-66 million years ago, Hell Creek',
     facts:[
       'Horn cores grew keratin sheaths that ran past the bone, so living horns were longer than the skeleton shows.',
-      'The frill is solid bone, ringed with small knobs called epoccipitals.',
+      'The brow horns change direction as the animal grows. They start as straight stubs, curve backward in juveniles, straighten out, then recurve forward in adults.',
+      'The frill is solid bone, ringed with small knobs called epoccipitals. They begin as deep scallops and flatten into the rim with age.',
       'Skin impressions show large scales with scattered low nubbins, not the spines older art gave it.',
       'A jugal horn juts down from each cheek, below the eye.',
       'T. horridus carried a long snout and only a small nasal horn.'
     ],
-    checks:['Horns above the eyes, sheathed long','Solid frill with rim knobs','Hooked rostral beak',
+    checks:['Horns above the eyes, sheathed long','Horn curve reverses between hatchling and adult',
+            'Solid frill with rim knobs, deeper when young','Hooked rostral beak',
             'Jugal horn on each cheek','Nubbin feature scales','Upright hind legs, elbows held out']
   },
   brachio: {
@@ -1208,9 +1376,9 @@ const SKINS = {
     { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
       skin:'#7e9c54', belly:'#b8bd80', crest:'#5b7940', mark:'#4a6634',
       note:'The olive coat it hatched in.' },
-    { id:'ash',    name:'Ashfall',   cost:70,  pattern:'stripes',
+    { id:'ash',    name:'Ashfall',   cost:70,  pattern:'bands',
       skin:'#6f7a72', belly:'#a9b0a2', crest:'#4a534d', mark:'#39413c',
-      note:'Cold grey with charcoal banding down the flank.' },
+      note:'Cold grey, charcoal banding across the flank into tail rings.' },
     { id:'ember',  name:'Ember',     cost:120, pattern:'patches',
       skin:'#a8603a', belly:'#d69a5e', crest:'#7c4224', mark:'#71321a',
       note:'Rust and scorch marks. Loud, and it knows it.' },
@@ -1225,9 +1393,9 @@ const SKINS = {
     { id:'chalk',  name:'Chalk',     cost:70,  pattern:'spots',
       skin:'#c3ab8c', belly:'#e6d8bc', crest:'#95805f', mark:'#8a7050',
       note:'Bleached bone with dark rosettes.' },
-    { id:'ochre',  name:'Ochre',     cost:120, pattern:'stripes',
+    { id:'ochre',  name:'Ochre',     cost:120, pattern:'bands',
       skin:'#c26a30', belly:'#e8a75c', crest:'#8e4620', mark:'#6f2f18',
-      note:'A display animal. Banding runs the whole body.' },
+      note:'A display animal. Banding follows the ribs and rings the tail.' },
     { id:'basalt', name:'Basalt',    cost:170, pattern:'patches',
       skin:'#5c6470', belly:'#98a1ad', crest:'#3f4650', mark:'#333944',
       note:'Volcanic grey-blue with darker plates.' }
@@ -1239,9 +1407,9 @@ const SKINS = {
     { id:'dune',   name:'Dune',      cost:70,  pattern:'patches',
       skin:'#b9a173', belly:'#ded0a2', crest:'#c6b088', mark:'#8c7548',
       note:'Sand and dry grass. Vanishes on the floodplain.' },
-    { id:'slate',  name:'Slate',     cost:120, pattern:'stripes',
+    { id:'slate',  name:'Slate',     cost:120, pattern:'bands',
       skin:'#6d7d92', belly:'#a9b6c4', crest:'#7f8fa2', mark:'#3f4b5c',
-      note:'Storm grey with vertical shadow banding.' },
+      note:'Storm grey, shadow banding down the neck and out the tail.' },
     { id:'fernwood',name:'Fernwood', cost:170, pattern:'spots',
       skin:'#4e7a63', belly:'#9dba8e', crest:'#5f8a72', mark:'#8fb27c',
       note:'Wet forest green dappled with pale rings.' }
@@ -1251,40 +1419,113 @@ function skinOf(spId, skinId){
   const list = SKINS[spId];
   return list.find(k => k.id === skinId) || list[0];
 }
-/* patterns are drawn in local sprite units and masked to the body by the
-   compositor, so they can be laid down as simple full-field shapes */
-function paintPattern(g, kind){
-  if (!kind || kind === 'none') return;
-  if (kind === 'stripes'){
-    for (let i=0;i<17;i++){
-      const x = -110 + i*14;
-      tube(g, [[x-5,-140],[x+3,-72],[x+10,4]], [5.5, 6.5, 4.5]);
+/* ------------------------------ coat patterns ------------------------------
+   A pattern used to be laid down as a field of shapes in fixed sprite-local
+   coordinates: seventeen near-vertical tubes marching across the bake box
+   regardless of where the animal was inside it. On a long-bodied animal that
+   reads as a barcode painted over a dinosaur — it cut across the frill, the
+   neck and the legs at the same angle and the same spacing, and the effect on
+   the sauropod in particular was that the coat did not appear to be on the
+   animal at all.
+
+   The rule the surface detail already follows applies here too: ride the
+   body. Each species draw function now returns `spine`, its centreline from
+   nape to tail tip with the body's half-depth at each station, and every
+   pattern is placed against that. Bands run perpendicular to the spine and
+   tighten toward the tail, so they read as flank banding resolving into tail
+   rings — which is both what the Sinosauropteryx melanosome work supports and
+   what reads as an animal.
+
+   Everything is a deterministic function of the loop index, so a coat does
+   not crawl between animation frames.
+   -------------------------------------------------------------------------- */
+function sampleSpine(spine, t){
+  let total = 0; const seg = [];
+  for (let i=0;i<spine.length-1;i++){
+    const d = Math.hypot(spine[i+1][0]-spine[i][0], spine[i+1][1]-spine[i][1]);
+    seg.push(d); total += d;
+  }
+  let want = clamp(t,0,1) * total;
+  for (let i=0;i<seg.length;i++){
+    if (want <= seg[i] || i === seg.length-1){
+      const u = seg[i] ? clamp(want/seg[i],0,1) : 0;
+      const a = spine[i], b = spine[i+1];
+      return { x:lerp(a[0],b[0],u), y:lerp(a[1],b[1],u), half:lerp(a[2],b[2],u),
+               ang:Math.atan2(b[1]-a[1], b[0]-a[0]) };
+    }
+    want -= seg[i];
+  }
+  const last = spine[spine.length-1];
+  return { x:last[0], y:last[1], half:last[2], ang:0 };
+}
+/* the unit normal to the spine. +normal points at the belly, because sprite
+   local units put the ground at y = 0 and the animal above it. */
+const spineNormal = q => [-Math.sin(q.ang), Math.cos(q.ang)];
+
+/* Total arc length of a spine, so pattern density can be specified as a real
+   distance rather than as a count. A count gives the short-bodied Triceratops
+   the same sixteen bands as the long-necked Brachiosaurus, which on the
+   Triceratops closed up into a striped mattress. */
+function spineLen(spine){
+  let total = 0;
+  for (let i=0;i<spine.length-1;i++)
+    total += Math.hypot(spine[i+1][0]-spine[i][0], spine[i+1][1]-spine[i][1]);
+  return total;
+}
+/* a deterministic 0..1 from an index, so a coat never crawls between frames */
+const jit = (i, m) => ((i * 2654435761) % m) / m;
+
+function paintPattern(g, kind, spine){
+  if (!kind || kind === 'none' || !spine || spine.length < 2) return;
+  const L = spineLen(spine);
+  const count = (perUnit, min) => Math.max(min, Math.round(L * perUnit));
+
+  if (kind === 'bands'){
+    const N = count(1/14, 5);                    // one band every ~14 units
+    for (let i=0;i<N;i++){
+      const t = .10 + (i/Math.max(1,N-1)) * .87;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const reach = q.half * 1.4;
+      const w = lerp(4.6, 1.9, t) * (.82 + jit(i+3, 13)*.4);
+      // the belly side is cut short: banding fades into the countershading
+      tube(g, [[q.x - nx*reach, q.y - ny*reach], [q.x, q.y],
+               [q.x + nx*reach*.62, q.y + ny*reach*.62]], [w*.5, w, w*.44]);
     }
     return;
   }
   if (kind === 'spots'){
-    for (let i=0;i<64;i++){
-      const x = -110 + ((i*47) % 232);
-      const y = -4 - ((i*61) % 132);
-      oval(g, x, y, 3.6, 3.0);
+    const N = count(1/5.2, 10);
+    for (let i=0;i<N;i++){
+      const t = .06 + ((i*0.6180339887) % 1) * .90;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const v = (jit(i+7, 61) - .55) * 1.7;      // across the body, biased upward
+      const r = lerp(4.4, 1.6, t) * (.68 + jit(i+11, 17)*.62) * (1 - Math.abs(v)*.3);
+      oval(g, q.x + nx*q.half*v, q.y + ny*q.half*v, r, r*.82);
     }
     return;
   }
   if (kind === 'speckle'){
-    for (let i=0;i<170;i++){
-      const x = -110 + ((i*29) % 232);
-      const y = -2 - ((i*43) % 136);
-      oval(g, x, y, 1.5, 1.3);
+    const N = count(1/1.1, 40);
+    for (let i=0;i<N;i++){
+      const t = .04 + ((i*0.6180339887) % 1) * .94;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const v = (jit(i+5, 53) - .58) * 1.8;
+      const r = 1.1 + jit(i+13, 7)*.8;
+      oval(g, q.x + nx*q.half*v, q.y + ny*q.half*v, r, r*.9);
     }
     return;
   }
   if (kind === 'patches'){
-    const pts = [[-66,-96],[-14,-74],[32,-100],[74,-64],[-44,-42],[12,-36],
-                 [56,-28],[-80,-58],[92,-48],[-30,-112],[46,-120],[8,-58]];
-    pts.forEach((q,i) => oval(g, q[0], q[1], 12 + (i%3)*5, 8 + (i%2)*5));
+    const N = count(1/17, 5);
+    for (let i=0;i<N;i++){
+      const t = .07 + ((i*0.6180339887) % 1) * .84;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const v = (jit(i+3, 43) - .74) * 1.5;      // sit high on the flank
+      const r = lerp(12, 5, t) * (.75 + jit(i+9, 11)*.5);
+      oval(g, q.x + nx*q.half*v, q.y + ny*q.half*v, r, r*(.58 + jit(i+2,5)*.34), q.ang);
+    }
   }
 }
-
 
 /* ==========================================================================
    WORLD
@@ -1588,11 +1829,21 @@ function stepParts(dt){
   for (const p of parts){ p.age += dt; p.vy += p.g*dt/1000; p.x += p.vx*dt/1000; p.y += p.vy*dt/1000; }
   parts = parts.filter(p => p.age < p.life);
 }
-function heartPx(g,x,y,c){ g.fillStyle=c; g.fillRect(x+1,y,1,1); g.fillRect(x+3,y,1,1); g.fillRect(x,y+1,5,2); g.fillRect(x+1,y+3,3,1); g.fillRect(x+2,y+4,1,1); }
+/* Seven across rather than five, with a rim and a highlight. The old one was
+   a 5x5 blob that vanished against the animal. */
+function heartPx(g,x,y){
+  g.fillStyle = '#8f2f46';
+  g.fillRect(x+1,y-1,2,1); g.fillRect(x+4,y-1,2,1);
+  g.fillRect(x,y,7,3); g.fillRect(x+1,y+3,5,1); g.fillRect(x+2,y+4,3,1); g.fillRect(x+3,y+5,1,1);
+  g.fillStyle = '#e2697c';
+  g.fillRect(x+1,y,5,2); g.fillRect(x+2,y+2,3,1); g.fillRect(x+3,y+3,1,1);
+  g.fillStyle = '#f6b3c0';
+  g.fillRect(x+1,y,2,1); g.fillRect(x+1,y+1,1,1);
+}
 function drawParts(g){
   for (const p of parts){
     const x = Math.round(p.x), y = Math.round(p.y), fade = p.age/p.life;
-    if (p.type==='heart'){ heartPx(g,x,y,'#e2697c'); g.fillStyle='#f0a3b0'; g.fillRect(x+1,y+1,1,1); }
+    if (p.type==='heart'){ heartPx(g,x,y); }
     else if (p.type==='spark'){ g.fillStyle = p.col||'#fff6d8'; g.fillRect(x,y,2,2); g.fillStyle='#ffffff'; g.fillRect(x,y,1,1); }
     else if (p.type==='crumb'){ g.fillStyle = p.col||'#9b7a52'; g.fillRect(x,y,1,1); }
     else if (p.type==='bubbleZ'){ g.fillStyle='#dfe4f6'; g.fillRect(x,y,2,2); g.fillRect(x+2,y-2,2,2); }
@@ -1885,7 +2136,10 @@ function scrub(){
   emit('spark', dino.x, GROUND-30, 8);
   refresh();
 }
-function pet(){
+/* `at` is the point in canvas units that was actually touched. Hearts used to
+   come off a fixed spot above the sprite, which read as unrelated to the tap;
+   they now rise from under the finger. */
+function pet(at){
   if (!hatched() || S.asleep || S.vet) return;
   const now = performance.now();
   if (now - (S.lastPetAt||0) < 320) return;
@@ -1894,7 +2148,8 @@ function pet(){
   const gain = clamp(1.1 - S.bond/160, .25, 1.1) * trait('social').bond;
   S.bond = clamp(S.bond + gain, 0, 100);
   S.needs.joy = clamp(S.needs.joy + 1.6, 0, 100);
-  emit('heart', dino.x + rnd(-8,8), dinoTop - 4, 1, {vy:-16, life:900});
+  const hx = at ? at[0] : dino.x, hy = at ? at[1] : dinoTop - 4;
+  emit('heart', hx - 3, hy - 6, 1, {vx:5, vy:-19, life:1000});
   SFX.purr();
   if (hasIll('blues') && S.petBank >= 8) cure('company', true);
   refreshLight();
@@ -2331,7 +2586,7 @@ function drawLive(now){
 /* ============================== MINIGAMES ================================== */
 const GAMES = {
   snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:2 },
-  stomp: { name:'Bug hunt',   blurb:'Critters scurry across the pen. Tap each one before it reaches the edge.', pay:2 },
+  stomp: { name:'Bug hunt',   blurb:'Critters cross the pen. Tap to send your animal at them and it will do the rest.', pay:2 },
   leap:  { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:3 }
 };
 function startGame(kind){
@@ -2341,7 +2596,8 @@ function startGame(kind){
   closeSheet();
   mode = 'game'; feedFX = null;
   if (kind === 'snack') game = { kind, x:W/2, tx:W/2, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
-  if (kind === 'stomp') game = { kind, bugs:[], score:0, missed:0, left:30, spawn:.6 };
+  if (kind === 'stomp') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
+                                 mouth:null, snap:0, bugs:[], score:0, missed:0, left:30, spawn:.6 };
   if (kind === 'leap')  game = { kind, obs:[], score:0, left:30, y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0 };
   say(GAMES[kind].blurb.split('.')[0] + '.');
   paintChrome();
@@ -2433,37 +2689,123 @@ function drawBug(g, b, now){
     g.fillRect(b.x - 4, b.y - (up?3:-2) + wig, 6, 2);
   }
 }
+/* ------ bug hunt ------
+   The animal used to stand at a fixed x doing nothing while the player picked
+   critters off the screen, which made the pet a spectator in its own minigame.
+   A tap is now a move order: the animal runs to where you pointed, and
+   anything that comes within snapping distance of its mouth gets eaten. The
+   walk cycle, the growth stage and the animal's own reach all matter, and the
+   sprite is doing the work instead of watching.
+   -------------------------------------------------------------------------- */
+const STOMP_H = 44;                            // drawn sprite height in the pen
+
+function stompSprite(now){
+  const snapping = now < game.snap;
+  const sp = SPECIES[S.sp], st = stageIdx();
+  if (snapping) return gameSprite('eat', Math.floor(now/150), STOMP_H);
+  if (!game.walking) return gameSprite('idle', Math.floor(now/700), STOMP_H);
+  // one sprite stride to one stride of ground, the same rule the habitat uses
+  const probe = gameSprite('walk', 0, STOMP_H);
+  const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
+  const frame = Math.floor((game.dist / probe.sc) / cycle * POSES.walk.length);
+  return gameSprite('walk', frame, STOMP_H);
+}
 function stepStomp(dt, now){
-  game.spawn -= dt/1000;
+  const sec = dt / 1000;
+
+  // run toward the last place the player pointed
+  const speed = 52 + stageIdx() * 10;
+  const d = game.tx - game.x;
+  if (Math.abs(d) > 1.5){
+    const step = clamp(d, -speed*sec, speed*sec);
+    game.x = clamp(game.x + step, 12, W - 12);
+    game.dist += Math.abs(step);
+    game.dir = step < 0 ? -1 : 1;
+    game.walking = true;
+  } else game.walking = false;
+
+  game.spawn -= sec;
   if (game.spawn <= 0){
-    game.spawn = rnd(.35, .7);
+    game.spawn = rnd(.45, .85);
     const type = Math.random() < .5 ? 0 : 1;
     const dir = Math.random() < .5 ? 1 : -1;
-    game.bugs.push({ x: dir > 0 ? -8 : W+8, y: type ? rnd(GROUND-38, GROUND-14) : rnd(GROUND+2, H-8),
-                     vx: dir * rnd(28, 52) * (type ? 1.35 : 1), type });
+    game.bugs.push({ x: dir > 0 ? -8 : W+8, y: type ? rnd(GROUND-40, GROUND-16) : rnd(GROUND+2, H-8),
+                     vx: dir * rnd(24, 44) * (type ? 1.3 : 1), type });
   }
-  for (const b of game.bugs){ b.x += b.vx * dt/1000; if (b.x < -14 || b.x > W+14) b.dead = true; }
+  for (const b of game.bugs){
+    b.x += b.vx * sec;
+    if (b.x < -14 || b.x > W+14){ b.dead = true; game.missed++; }
+  }
+
+  /* Snapping range around the mouth. drawStomp parks the mouth anchor on the
+     game each frame; one frame of lag is not visible and it saves baking the
+     frame twice. */
+  const m = game.mouth || [game.x, GROUND - STOMP_H*.6];
+  const reach = 11 + stageIdx() * 2.5;
+  for (const b of game.bugs){
+    if (b.dead) continue;
+    if (Math.abs(b.x - m[0]) < reach && Math.abs(b.y - m[1]) < reach * .95){
+      b.dead = true; game.score++; game.snap = now + 240;
+      SFX.chomp(); emit('spark', b.x, b.y, 5, {col:'#cfe0a8'});
+      emit('crumb', b.x, b.y, 3, {col:'#7d9c5a', vy:-14, g:110});
+    }
+  }
   game.bugs = game.bugs.filter(b => !b.dead);
 }
 function drawStomp(now){
-  const { f, sc } = gameSprite('idle', Math.floor(now/700), 44);
-  ctx.save(); ctx.translate(34, GROUND); ctx.scale(-1, 1);
-  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc); ctx.restore();
   for (const b of game.bugs) drawBug(ctx, b, now);
+
+  const { f, sc } = stompSprite(now);
+  const flip = game.dir > 0;
+  const x = Math.round(game.x);
+  ctx.fillStyle = 'rgba(16,26,24,.32)';
+  ctx.beginPath(); ctx.ellipse(x, GROUND + 1, f.w*sc*.38, 3, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(x, GROUND);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
+  ctx.restore();
+
+  // hand the mouth position to the next step, in canvas units
+  game.mouth = [ x + (flip ? 1 : -1) * (f.ox - f.mouth[0]) * sc,
+                 GROUND - (f.oy - f.mouth[1]) * sc ];
+
+  // a marker where the animal has been told to go, so the order reads
+  if (game.walking){
+    const tx = Math.round(game.tx);
+    ctx.fillStyle = 'rgba(207,224,168,.5)';
+    ctx.fillRect(tx-3, GROUND+3, 7, 1); ctx.fillRect(tx, GROUND+1, 1, 5);
+  }
   scoreTag('Caught ' + game.score);
 }
 function tapStomp(mx, my){
+  // tapping a critter aims at the critter; tapping the pen aims at the pen
+  let best = null, bd = 26;
   for (const b of game.bugs){
-    if (Math.abs(b.x - mx) < 11 && Math.abs(b.y - my) < 11){
-      b.dead = true; game.score++; SFX.chomp();
-      emit('spark', b.x, b.y, 4, {col:'#cfe0a8'});
-      return;
-    }
+    const d = Math.hypot(b.x - mx, (b.y - my) * .7);
+    if (d < bd){ bd = d; best = b; }
   }
-  SFX.bonk();
+  game.tx = clamp(best ? best.x : mx, 12, W - 12);
 }
 
-/* ------ river leap ------ */
+/* ------ river leap ------
+   Three faults: the obstacles were plain rectangles whose bases sat a pixel
+   above the grass line, so they appeared to hover; the habitat props sat
+   there unmoving behind an animal that was supposed to be running; and there
+   were only two obstacles in the deck.
+
+   The pen is now overdrawn from the grass line down with a ground that
+   scrolls, silhouette scrub behind the runner and tufts in front of it, all
+   at different rates, so the animal is running through somewhere rather than
+   on the spot. Obstacles are bedded two pixels into the grass and carry a
+   contact shadow, and the water hazard the game is named for now exists.
+   -------------------------------------------------------------------------- */
+const LEAP_OBS = {
+  log:   { half:12, clear:14 },
+  rock:  { half:9,  clear:18 },
+  water: { half:17, clear:8  }
+};
+const LEAP_KINDS = ['log','rock','water','log','rock'];
+
 function stepLeap(dt, now){
   game.run += dt/1000 * game.speed;
   game.speed = Math.min(140, game.speed + dt/1000 * 3);
@@ -2473,50 +2815,158 @@ function stepLeap(dt, now){
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
     game.spawn = rnd(.85, 1.5) * (110 / game.speed);
-    game.obs.push({ x: W + 12, kind: Math.random() < .5 ? 'log' : 'rock', hit:false, past:false });
+    game.obs.push({ x: W + 14, kind: pick(LEAP_KINDS), hit:false, past:false });
   }
   for (const o of game.obs){
     o.x -= game.speed * dt/1000;
-    if (!o.hit && Math.abs(o.x - 54) < 13 && game.y > -14){
+    const cfg = LEAP_OBS[o.kind];
+    if (!o.hit && Math.abs(o.x - 54) < cfg.half && game.y > -cfg.clear){
       o.hit = true; game.speed = Math.max(70, game.speed * .7);
-      game.stun = now + 500; SFX.bonk(); emit('crumb', 54, GROUND-8, 6, {col:'#9b7a52', vy:-20, g:120});
+      game.stun = now + 500; SFX.bonk();
+      if (o.kind === 'water') emit('spark', 54, GROUND-2, 8, {col:'#9fd2e0', vy:-30, g:150});
+      else emit('crumb', 54, GROUND-8, 6, {col:'#9b7a52', vy:-20, g:120});
     }
-    if (!o.past && o.x < 40){ o.past = true; if (!o.hit){ game.score++; SFX.coin(); } }
-    if (o.x < -20) o.dead = true;
+    if (!o.past && o.x < 40){
+      o.past = true;
+      if (!o.hit){ game.score++; SFX.coin(); emit('spark', 54, GROUND-26, 3, {col:'#f0d888'}); }
+    }
+    if (o.x < -24) o.dead = true;
   }
   game.obs = game.obs.filter(o => !o.dead);
 }
 function leapJump(){
   if (!game || game.kind !== 'leap') return;
   if (game.y < -1) return;
-  game.vy = -132; SFX.purr();
+  game.vy = -136; SFX.purr();
 }
-function drawLeap(now){
-  // scrolling ground streaks sell the speed
-  ctx.fillStyle = 'rgba(60,44,28,.5)';
-  for (let i=0;i<14;i++){
-    const x = ((i*22 - game.run) % (W+30) + W+30) % (W+30) - 15;
-    ctx.fillRect(x, GROUND + 6 + (i%3)*6, 9, 2);
+
+/* The track, overdrawn so the habitat props do not sit still behind a running
+   animal. Three scroll rates: scrub, ground, tufts. */
+function drawLeapGround(){
+  const S_ = SKY_SPECS[skyPhase(new Date())];
+  const grass = S_.grass, grassLit = mixHex(S_.grass, S_.low, .40);
+  const grassDark = mixHex(S_.grass, '#000000', .34);
+  const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.26), d2 = mixHex(S_.dirt, S_.low,.22);
+  const scrub = mixHex(S_.tree, S_.low, .14), scrubLit = mixHex(S_.tree, S_.low, .34);
+
+  // scrub on the far side of the track, drifting past slowly
+  for (let i=0;i<10;i++){
+    const x = ((((i*47.3) - game.run*.42) % (W+70)) + W+70) % (W+70) - 35;
+    const h = 6 + (i % 4) * 4, w = 5 + (i % 3) * 3;
+    ctx.fillStyle = scrub;
+    ctx.fillRect(x|0, GROUND-1-h, w, h);
+    ctx.fillRect((x|0)-2, Math.round(GROUND-1-h*.55), w+4, Math.round(h*.55));
+    ctx.fillStyle = scrubLit; ctx.fillRect(x|0, GROUND-1-h, w, 1);
   }
-  for (const o of game.obs){
-    const x = Math.round(o.x);
-    if (o.kind === 'log'){
-      ctx.fillStyle = '#5d4426'; ctx.fillRect(x-11, GROUND-7, 22, 7);
-      ctx.fillStyle = '#7b5c33'; ctx.fillRect(x-11, GROUND-7, 22, 2);
-      ctx.fillStyle = '#3d2c18'; ctx.fillRect(x+8, GROUND-7, 3, 7);
-    } else {
-      ctx.fillStyle = '#5f5a4e'; ctx.fillRect(x-8, GROUND-11, 16, 11);
-      ctx.fillStyle = '#7b7566'; ctx.fillRect(x-6, GROUND-11, 11, 3);
-      ctx.fillStyle = '#3c382f'; ctx.fillRect(x+4, GROUND-8, 4, 8);
+
+  // the track itself
+  for (let x=0;x<W;x++){
+    const wx = x + game.run;
+    const t = (Math.sin(wx*.7) > .3 ? 1 : 0) + (Math.sin(wx*.31 + 2) > .55 ? 1 : 0);
+    ctx.fillStyle = grass;    ctx.fillRect(x, GROUND-1-t, 1, 5+t);
+    ctx.fillStyle = grassLit; ctx.fillRect(x, GROUND-1-t, 1, 1);
+  }
+  ctx.fillStyle = grassDark; ctx.fillRect(0, GROUND+3, W, 1);
+  ctx.fillStyle = d0;        ctx.fillRect(0, GROUND+4, W, H-GROUND-4);
+  for (let i=0;i<34;i++){
+    const x = ((((i*17.7) - game.run) % (W+26)) + W+26) % (W+26) - 13;
+    const y = GROUND + 6 + ((i*11) % (H-GROUND-9));
+    ctx.fillStyle = d1; ctx.fillRect(x|0, y, 2 + (i%2), 1);
+    if (i % 3 === 0){ ctx.fillStyle = d2; ctx.fillRect(x|0, y-1, 1, 1); }
+  }
+}
+function drawLeapTufts(){
+  const S_ = SKY_SPECS[skyPhase(new Date())];
+  const near = mixHex(S_.grass, '#000000', .42);
+  for (let i=0;i<14;i++){
+    const x = ((((i*21.1) - game.run*1.45) % (W+34)) + W+34) % (W+34) - 17;
+    const y = H - 3 - (i % 3) * 5, h = 4 + (i % 3) * 2;
+    ctx.fillStyle = near;
+    ctx.fillRect(x|0, y-h, 1, h);
+    ctx.fillRect((x|0)-1, y-h+1, 1, h-2); ctx.fillRect((x|0)+1, y-h+1, 1, h-2);
+  }
+}
+/* Obstacles are built column by column so they have a silhouette. Drawn as
+   plain fillRects they came out as a wooden crate and a cardboard box; a log
+   is a cylinder lying on its side, so it needs rounded ends, grain that runs
+   along the trunk rather than across it, and top-to-bottom cylinder shading,
+   and a boulder needs an irregular profile. */
+const BOULDER_PROF = [3,7,11,14,16,17,17,16,15,13,10,6,3];
+
+function drawObstacle(g, o){
+  const x = Math.round(o.x), base = GROUND + 2;   // bedded into the grass
+
+  if (o.kind === 'water'){
+    for (let i=-17;i<=17;i++){
+      const t = Math.abs(i)/17;
+      const dep = Math.round(Math.cos(t * Math.PI/2) * 7) + 1;
+      g.fillStyle = '#241d16'; g.fillRect(x+i, GROUND, 1, 1);          // cut bank
+      g.fillStyle = '#24384a'; g.fillRect(x+i, GROUND+1, 1, dep+2);
+      g.fillStyle = '#3f6b80'; g.fillRect(x+i, GROUND+1, 1, dep);
+      g.fillStyle = '#6fa6b8'; g.fillRect(x+i, GROUND+1, 1, 1);
+    }
+    g.fillStyle = '#a8d4de';                                            // surface glints
+    g.fillRect(x-10, GROUND+3, 5, 1); g.fillRect(x+3, GROUND+5, 6, 1);
+    g.fillRect(x-3, GROUND+7, 3, 1);  g.fillRect(x+9, GROUND+2, 3, 1);
+    return;
+  }
+
+  g.fillStyle = 'rgba(16,26,24,.34)';
+  g.beginPath(); g.ellipse(x, base, o.kind === 'log' ? 15 : 10, 3, 0, 0, 7); g.fill();
+
+  if (o.kind === 'log'){
+    const HW = 12, H0 = 11;
+    for (let i=-HW;i<=HW;i++){
+      const t = Math.abs(i)/HW, cut = Math.round(t*t*t*4);
+      const top = base - H0 + cut, hh = H0 - cut*2;
+      for (let r=0;r<hh;r++){
+        const v = hh > 1 ? r/(hh-1) : 0;                                // cylinder shading
+        g.fillStyle = v < .20 ? '#8a6540' : v < .58 ? '#65482a' : '#3f2c19';
+        g.fillRect(x+i, top+r, 1, 1);
+      }
+    }
+    g.fillStyle = '#4d371f';                                            // grain along the trunk
+    g.fillRect(x-9, base-8, 8, 1); g.fillRect(x-1, base-6, 9, 1);
+    g.fillRect(x-10, base-4, 6, 1); g.fillRect(x+1, base-3, 7, 1);
+    g.fillStyle = '#5c7a45';                                            // moss on the lit top
+    g.fillRect(x-8, base-11, 5, 1); g.fillRect(x-1, base-11, 4, 1); g.fillRect(x+4, base-10, 3, 1);
+    g.fillStyle = '#3f2c19'; g.fillRect(x+8, base-10, 5, 9);            // sawn end, facing out
+    g.fillStyle = '#a8814c'; g.fillRect(x+9, base-9, 4, 7);
+    g.fillStyle = '#8a6a3e'; g.fillRect(x+10, base-7, 2, 3);
+    g.fillStyle = '#c8a06a'; g.fillRect(x+10, base-8, 1, 1);
+    return;
+  }
+
+  for (let i=0;i<BOULDER_PROF.length;i++){
+    const px = x - 6 + i, hh = BOULDER_PROF[i], lit = i < BOULDER_PROF.length * .45;
+    for (let r=0;r<hh;r++){
+      const v = r/hh;
+      g.fillStyle = v < .18 ? (lit ? '#948d7c' : '#6b6558')
+                  : v < .55 ? (lit ? '#6f6a5c' : '#514c42')
+                            : '#3a372f';
+      g.fillRect(px, base - hh + r, 1, 1);
     }
   }
+  g.fillStyle = '#7b7566'; g.fillRect(x-4, base-14, 3, 2);              // facet
+  g.fillStyle = '#33312b'; g.fillRect(x+2, base-9, 3, 1); g.fillRect(x+3, base-8, 2, 4);
+  g.fillStyle = '#6d7d55'; g.fillRect(x-5, base-16, 2, 1);              // lichen
+}
+function drawLeap(now){
+  drawLeapGround();
+  for (const o of game.obs) drawObstacle(ctx, o);
+
   const airborne = game.y < -2;
   const { f, sc } = gameSprite(now < game.stun ? 'sick' : airborne ? 'cheer' : 'walk',
                                airborne ? 0 : Math.floor(game.run / 9), 42);
+  const shrink = clamp(1 + game.y/70, .35, 1);               // the shadow shrinks as it rises
+  ctx.fillStyle = 'rgba(16,26,24,.30)';
+  ctx.beginPath(); ctx.ellipse(54, GROUND + 1, f.w*sc*.36*shrink, 3*shrink, 0, 0, 7); ctx.fill();
   ctx.save(); ctx.translate(54, GROUND + Math.round(game.y));
   ctx.scale(-1, 1);
   ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
   ctx.restore();
+
+  drawLeapTufts();
   scoreTag('Cleared ' + game.score);
 }
 
@@ -2648,6 +3098,30 @@ function pixelIcon(id, w, h){
   return c;
 }
 
+/* The bond row used to be five rotated CSS squares and the meters were CSS
+   pills with rounded ends and a smooth gradient. Neither belonged next to a
+   hard-edged pixel scene. The bond is now five pixel hearts baked the same way
+   the particle hearts are, and the meters are ten hard cells behind a black
+   grid — see .track in the stylesheet. */
+const BOND_PIPS = 5, PIP_W = 9, PIP_H = 7;
+function bondCanvas(on){
+  const c = makeCv(BOND_PIPS*PIP_W, PIP_H), g = readCtx(c);
+  for (let i=0;i<BOND_PIPS;i++){
+    const x = i*PIP_W, lit = i < on;
+    g.fillStyle = lit ? '#8f2f46' : '#232e31';
+    g.fillRect(x+1,1,2,1); g.fillRect(x+4,1,2,1);
+    g.fillRect(x,2,7,2); g.fillRect(x+1,4,5,1); g.fillRect(x+2,5,3,1); g.fillRect(x+3,6,1,1);
+    if (lit){
+      g.fillStyle = '#e2697c';
+      g.fillRect(x+1,2,5,1); g.fillRect(x+2,3,3,1); g.fillRect(x+3,4,1,1);
+      g.fillStyle = '#f6b3c0'; g.fillRect(x+1,2,2,1);
+    }
+  }
+  c.style.cssText = 'width:' + (BOND_PIPS*PIP_W*2) + 'px;height:' + (PIP_H*2) +
+                    'px;image-rendering:pixelated;display:block';
+  return c;
+}
+
 function buildChrome(){
   $('needs').innerHTML = NEED_META.map(n =>
     `<div class="need" id="need-${n.k}">
@@ -2769,7 +3243,7 @@ function refresh(){
     $('dSub').textContent = S && S.sp ? 'Keep tapping the shell' : 'Pick one to begin';
     $('mood').textContent = S && S.sp ? 'Something is moving in there.'
       : numWord(eggChoices().length) + ' eggs are waiting in the nest.';
-    $('bond').innerHTML = ''; $('badges').innerHTML = '';
+    $('bond').innerHTML = ''; delete $('bond').dataset.pips; $('badges').innerHTML = '';
     lamp.className = 'lamp rest';
     paintChrome();
     return;
@@ -2780,7 +3254,13 @@ function refresh(){
   const age = d < 1 ? Math.max(1, Math.round(d*24)) + 'h old' : Math.floor(d) + (Math.floor(d) === 1 ? ' day old' : ' days old');
   $('dSub').textContent = st.label + ' ' + sp.common + ' · ' + age;
   $('mood').innerHTML = S.name + ' <em>' + moodOf().line + '</em>';
-  $('bond').innerHTML = 'Bond ' + Array.from({length:5}, (_,i) => `<i class="pip${i < bondPips() ? ' on' : ''}"></i>`).join('');
+  const bondEl = $('bond');
+  const pips = bondPips();
+  if (bondEl.dataset.pips !== String(pips)){
+    bondEl.dataset.pips = String(pips);
+    bondEl.innerHTML = '<span>Bond</span>';
+    bondEl.appendChild(bondCanvas(pips));
+  }
   const tags = [];
   if (S.vet) tags.push(['warn','At their limit']);
   S.ills.forEach(i => tags.push(['warn', ILLS[i.id].name]));
@@ -2797,14 +3277,26 @@ function refresh(){
 let openPanel = null;
 /* the only sheets that mean anything before there is a hatched animal */
 const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble', 'dev'];
+/* The developer panel docks rather than covering the screen: on a wide window
+   it slides in at the right, on a narrow one it takes the bottom half. It
+   raises no scrim either way, so the game stays visible and clickable while a
+   sprite is being stepped through its stages — which is the entire point of
+   having it. */
+const DOCKED = ['dev'];
 function openSheet(which){
-  if (mode === 'game') return;
+  if (mode === 'game' && which !== 'dev') return;
   if (mode !== 'live' && !SHEETS_PRE_HATCH.includes(which)) return;
+  const dock = DOCKED.includes(which);
   openPanel = which;
   renderSheet(which);
-  $('sheet').classList.add('on'); $('scrim').classList.add('on');
+  $('sheet').classList.toggle('dock', dock);
+  $('sheet').classList.add('on');
+  $('scrim').classList.toggle('on', !dock);
 }
-function closeSheet(){ openPanel = null; $('sheet').classList.remove('on'); $('scrim').classList.remove('on'); }
+function closeSheet(){
+  openPanel = null;
+  $('sheet').classList.remove('on'); $('scrim').classList.remove('on');
+}
 
 function rowHTML(art, title, sub, right, attrs){
   const slot = art ? `<span class="art" data-art="${art}"></span>` : '';
@@ -3081,6 +3573,7 @@ const SHEETS = {
     html += `<p class="tiny">Growth stages are set by parking well-kept minutes on a gate
       (${GROWTH_GATES.join(', ')}), which is exactly how the simulation moves them.</p>`;
 
+    html += `<div class="chips" style="margin-top:12px"><button class="chip" data-dev="close">Close panel</button></div>`;
     b.innerHTML = html;
     b.querySelectorAll('[data-dev]').forEach(c => c.onclick = () => devAction(c.getAttribute('data-dev')));
   },
@@ -3112,6 +3605,7 @@ function devAction(a){
     case 'maxBond': return DEV.setBond(100);
     case 'zeroBond':return DEV.setBond(0);
     case 'sound':   return toggleSound();
+    case 'close':   return closeSheet();
     default:        if (DEV[a]) DEV[a]();
   }
 }
@@ -3168,7 +3662,7 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (mode === 'live'){
-    if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet(); return; }
+    if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet([mx, my]); return; }
     if (bondPips() >= 2 && !S.asleep && !S.vet){
       dino.tx = clamp(mx, 22, W-22);
       dino.until = performance.now() + 4000;
@@ -3177,7 +3671,10 @@ cv.addEventListener('pointerdown', e => {
 });
 cv.addEventListener('pointermove', e => {
   const p = canvasPos(e); holdPos = p;
-  if (mode === 'game' && game && game.kind === 'snack' && e.buttons) game.tx = p[0];
+  if (mode === 'game' && game && e.buttons){
+    if (game.kind === 'snack') game.tx = p[0];
+    if (game.kind === 'stomp') tapStomp(p[0], p[1]);
+  }
 });
 window.addEventListener('pointerup', () => { holding = false; });
 window.addEventListener('pointercancel', () => { holding = false; });
@@ -3267,7 +3764,7 @@ function frame(now){
   if (mode === 'game') stepGame(dt, now);
   stepParts(dt);
   if (holding && holdPos && mode === 'live' &&
-      holdPos[0] >= dinoBox[0]-4 && holdPos[0] <= dinoBox[2]+4 && holdPos[1] >= dinoBox[1]-4) pet();
+      holdPos[0] >= dinoBox[0]-4 && holdPos[0] <= dinoBox[2]+4 && holdPos[1] >= dinoBox[1]-4) pet(holdPos);
 
   if (G) drawScene(now);
   accum += dt;

@@ -12,8 +12,9 @@
   --moss:#7ea55f; --ochre:#d9a441; --rust:#c2603c; --sky:#7fb2c9;
 
   /* shell side — warm sandstone plastic, jungle-green keys */
-  --shell-hi:#e8c078; --shell:#cb943f; --shell-mid:#b47c2f;
-  --shell-lo:#8a5c1f; --shell-edge:#573609;
+  --shell-hi:#e3c07a; --shell:#c19243; --shell-mid:#a67a31;
+  --shell-lo:#7d5620; --shell-edge:#4e3209;
+  --scute:#9a6d28; --scute-hi:#d8ab5c;
   --speck-a:rgba(84,49,12,.50); --speck-b:rgba(126,84,32,.40);
   --bezel-hi:#f6efdc; --bezel:#ddd1b1; --bezel-lo:#a4936d; --bezel-edge:#6b5d3f;
   --key:#316d4b; --key-hi:#4a936a; --key-lo:#1a4530; --key-edge:#0e2a1c;
@@ -41,12 +42,18 @@ body{
   display:flex;align-items:flex-start;justify-content:center;
   overscroll-behavior:none;
 }
-#app{width:100%;max-width:440px;margin:auto 0;padding:14px 10px calc(14px + var(--safe));position:relative}
+/* the crest stands 38px proud of the shell and the feet 12px below it, so
+   the padding here is what stops either being clipped on a short viewport */
+#app{width:100%;max-width:440px;margin:auto 0;padding:42px 10px calc(24px + var(--safe));position:relative}
 
 /* ---------- the shell ---------- */
+/* Rounder than the first pass, which was closer to a phone than to an egg:
+   the crown is a proper dome and the base is a full round instead of a
+   softened rectangle. A row of osteoderms runs over the top and two clawed
+   feet carry it, so the case reads as an animal rather than as a gadget. */
 .shell{
-  position:relative;padding:50px 17px 46px;
-  border-radius:44% 44% 38% 38% / 11% 11% 8% 8%;
+  position:relative;padding:54px 19px 44px;
+  border-radius:50% 50% 46% 46% / 22% 22% 17% 17%;
   background-image:var(--speckles),
     radial-gradient(130% 62% at 50% -6%,var(--shell-hi) 0%,var(--shell) 40%,var(--shell-mid) 68%,var(--shell-lo) 100%);
   background-size:var(--speckle-size),100% 100%;
@@ -57,15 +64,47 @@ body{
     inset 0 0 0 6px rgba(255,225,170,.10),
     0 12px 0 #3d2708, 0 20px 34px rgba(0,0,0,.6);
 }
-/* the keychain tab at the crown */
-.loop{
-  position:absolute;left:50%;top:-13px;transform:translateX(-50%);
-  width:34px;height:20px;border-radius:11px 11px 4px 4px;
-  background:linear-gradient(var(--shell-hi),var(--shell-mid));
+/* Osteoderms over the crown. They follow the dome rather than sitting in a
+   straight line, which is the difference between a dorsal crest and a zip
+   fastener: each plate is placed on the arc and rotated to stand normal to
+   it. The keychain tab that used to live here is gone — it was the last
+   piece of the case still shaped like a Tamagotchi. */
+.scutes{position:absolute;left:50%;top:-38px;transform:translateX(-50%);
+  width:219px;height:42px;pointer-events:none}
+.scutes i{position:absolute;bottom:0;width:15px;transform-origin:50% 100%;
+  background:linear-gradient(var(--scute-hi),var(--scute) 62%,var(--shell-lo));
   border:2px solid var(--shell-edge);border-bottom:0;
-}
-.loop::after{content:"";position:absolute;left:50%;top:5px;transform:translateX(-50%);
-  width:11px;height:9px;border-radius:50%;background:#2a1a06;box-shadow:inset 0 -1px 0 rgba(255,220,160,.35)}
+  border-radius:58% 58% 0 0 / 78% 78% 0 0;
+  box-shadow:inset 0 1px 0 rgba(255,246,220,.65)}
+.scutes i:nth-child(1){left:0;   bottom:-20px;height:17px;transform:rotate(-28deg)}
+.scutes i:nth-child(2){left:33px;bottom:-10px;height:23px;transform:rotate(-19deg)}
+.scutes i:nth-child(3){left:66px;bottom:-3px; height:28px;transform:rotate(-9deg)}
+.scutes i:nth-child(4){left:98px;bottom:0;    height:32px;width:19px}
+.scutes i:nth-child(5){left:134px;bottom:-3px;height:28px;transform:rotate(9deg)}
+.scutes i:nth-child(6){left:167px;bottom:-10px;height:23px;transform:rotate(19deg)}
+.scutes i:nth-child(7){left:200px;bottom:-20px;height:17px;transform:rotate(28deg)}
+
+/* Two three-toed feet the case stands on. The toes are real elements rather
+   than pale circles painted inside a tab, because they have to break the
+   silhouette to read as toes — outlined the same way the shell is, with a
+   keratin claw on each. */
+.feet{position:absolute;left:0;right:0;bottom:-12px;
+  display:flex;justify-content:center;gap:54px;pointer-events:none}
+.feet i{position:relative;width:96px;height:22px;
+  border-radius:0 0 10px 10px;
+  background:linear-gradient(var(--shell-mid) 30%,var(--shell-lo));
+  border:2px solid var(--shell-edge);border-top:0}
+.feet b{position:absolute;width:26px;height:21px;bottom:-14px;
+  border-radius:0 0 52% 52% / 0 0 74% 74%;
+  background:linear-gradient(var(--shell-lo),var(--shell-mid));
+  border:2px solid var(--shell-edge);border-top:0;
+  box-shadow:0 3px 0 rgba(30,18,3,.45)}
+.feet b:nth-child(1){left:1px}
+.feet b:nth-child(2){left:33px;width:30px;height:25px;bottom:-18px}
+.feet b:nth-child(3){right:1px}
+.feet b::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
+  width:9px;height:8px;border-radius:0 0 50% 50%;
+  background:var(--bezel-hi);box-shadow:0 0 0 1.5px var(--shell-edge)}
 
 /* ---------- faceplate head ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:0 6px;margin-bottom:12px}
@@ -137,17 +176,19 @@ body{
 
 /* ---------- needs: the classic icon strip, one chunky meter each ---------- */
 .needs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
-.need{background:linear-gradient(#1a2529,#121a1d);border:1px solid var(--line);border-radius:10px;
+.need{background:#141d21;border:1px solid var(--line);border-radius:4px;
   padding:5px 6px 6px;display:flex;flex-direction:column;gap:4px}
 .need .cap{display:flex;align-items:center;gap:4px;min-height:14px}
 .need .cap canvas{image-rendering:pixelated;width:14px;height:14px;flex:0 0 14px}
 .need b{font-weight:600;font-size:10px;color:var(--dim);letter-spacing:.2px;text-transform:uppercase}
-.track{position:relative;height:9px;border-radius:5px;background:#05090a;
-  box-shadow:inset 0 0 0 1px #000,inset 0 2px 3px rgba(0,0,0,.9);overflow:hidden}
-.fill{height:100%;width:50%;border-radius:5px;transition:width .5s linear,background .4s;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.30)}
-.seg{position:absolute;inset:0;pointer-events:none;border-radius:5px;
-  background:repeating-linear-gradient(90deg,transparent 0 5px,rgba(5,9,10,.85) 5px 6px)}
+/* Ten hard cells behind a black grid, square corners, a lit top row and a
+   shaded bottom one — the same read as the meters the canvas would draw. The
+   rounded gradient pill it replaced belonged to a different application. */
+.track{position:relative;height:11px;background:#05090a;border:1px solid #000;overflow:hidden}
+.fill{height:100%;width:50%;transition:width .45s linear,background .4s;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.26),inset 0 -2px 0 rgba(0,0,0,.34)}
+.seg{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#05090a calc(10% - 2px) 10%)}
 .need.low b{color:var(--rust)}
 .need.low{border-color:#6d3527;animation:lowpulse 1.6s ease-in-out infinite}
 @keyframes lowpulse{50%{box-shadow:0 0 8px rgba(194,96,60,.35)}}
@@ -188,9 +229,8 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touc
 .moodrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:11px 2px 1px}
 .mood{font-size:13px;color:var(--bone);line-height:1.35}
 .mood em{font-style:normal;color:var(--dim)}
-.bondwrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);flex:0 0 auto}
-.pip{width:8px;height:8px;border-radius:2px;background:#243034;transform:rotate(45deg)}
-.pip.on{background:var(--rust);box-shadow:0 0 5px rgba(194,96,60,.55)}
+.bondwrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);flex:0 0 auto}
+.bondwrap canvas{image-rendering:pixelated}
 
 /* ---------- physical keys ---------- */
 .keys{padding-top:14px}
@@ -230,6 +270,19 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touc
   box-shadow:0 -8px 30px rgba(0,0,0,.6)
 }
 .sheet.on{transform:translate(-50%,0)}
+
+/* Docked: the developer panel never covers the game. Wide windows get a rail
+   on the right, narrow ones the bottom half, and neither raises a scrim. */
+.sheet.dock{max-height:52vh}
+@media (min-width:860px){
+  .sheet.dock{
+    left:auto;right:0;top:0;bottom:0;width:360px;max-width:38vw;max-height:100vh;
+    transform:translateX(104%);border-radius:16px 0 0 16px;border:2px solid var(--bezel-edge);border-right:0;
+    padding-top:18px
+  }
+  .sheet.dock.on{transform:translateX(0)}
+  .sheet.dock .grip{display:none}
+}
 .sheet h2{font-family:'Pixelify Sans';font-size:19px;font-weight:700;margin-bottom:2px;color:var(--bone)}
 .sheet p.lede{font-size:12.5px;color:var(--dim);margin-bottom:12px;line-height:1.45}
 .grip{width:44px;height:5px;border-radius:3px;background:var(--bezel-lo);margin:0 auto 12px}

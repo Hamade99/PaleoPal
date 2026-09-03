@@ -10,11 +10,23 @@
 
 const BAKE_W = 232, BAKE_H = 210, BAKE_G = 196, BAKE_CX = 104;
 
+/* Per-stage multipliers. Every feature that grows on its own schedule gets its
+   own column — merging any two of them has produced a bad sprite at least once.
+
+   `frill` is separate from `horn` for the reason `snout` is separate from
+   `head`: a baby Triceratops already has a frill, deeply scalloped and
+   obvious, while its horns are barely stubs. Driving the frill off the horn
+   column left hatchlings with almost no frill under an enormous skull.
+
+   `hornBend` is the ontogenetic sequence Horner and Goodwin read off a series
+   of ten skulls: the postorbital horns start as straight stubs, curve
+   backward in juveniles, straighten out in subadults, then recurve forward in
+   adults. Negative is backward, positive forward. */
 const STAGE = [
-  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, neck:.44, limb:.68, tail:.54, horn:.14 },
-  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, neck:.68, limb:.83, tail:.76, horn:.48 },
-  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, neck:.87, limb:.93, tail:.90, horn:.80 },
-  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, neck:1.00, limb:1.00, tail:1.00, horn:1.00 }
+  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, neck:.44, limb:.68, tail:.54, horn:.14, frill:.50, hornBend: 0.00 },
+  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, neck:.68, limb:.83, tail:.76, horn:.48, frill:.70, hornBend:-1.00 },
+  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, neck:.87, limb:.93, tail:.90, horn:.80, frill:.86, hornBend:-0.15 },
+  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, neck:1.00, limb:1.00, tail:1.00, horn:1.00, frill:1.00, hornBend: 1.00 }
 ];
 
 /* --------------------------- gait and limbs -------------------------------
@@ -190,7 +202,9 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
-  paintPattern(M.mark, skinOf(spId, skinId).pattern);
+  // the coat rides the body the draw function just laid down, never a path
+  // computed alongside it — the same rule the surface detail follows
+  paintPattern(M.mark, skinOf(spId, skinId).pattern, anchors.spine);
 
   const composed = composeSprite(canvases, matsFor(spId, skinId), BAKE_W, BAKE_H);
   const t = trim(composed);

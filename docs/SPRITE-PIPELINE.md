@@ -68,18 +68,54 @@ animation retuning.
 ## 5. Growth stages
 
 `STAGE` holds per-stage multipliers: overall scale, head bulk, **snout length**,
-neck, limb, tail, and horn growth. Snout is separate from head bulk on purpose:
-young animals have large braincases and short muzzles. Applying one multiplier
-to both is what made the Triceratops hatchling look like it had a neck.
+neck, limb, tail, horn growth, **frill**, and **hornBend**. Snout is separate
+from head bulk on purpose: young animals have large braincases and short
+muzzles. Applying one multiplier to both is what made the Triceratops hatchling
+look like it had a neck.
 
-## 6. Anchors
+Every feature that grows on its own schedule gets its own column. `frill` is
+separate from `horn` for the same reason `snout` is separate from `head`: a
+baby Triceratops already has an obvious, deeply scalloped frill and almost no
+horns, and driving the frill off the horn column left hatchlings with a huge
+skull and no shield behind it.
+
+`hornBend` carries the ontogenetic sequence Horner and Goodwin read off a
+growth series of ten skulls — straight stubs, then curving backward, then
+straightening, then recurving forward. Negative is backward, positive forward,
+and the Triceratops draw function builds the horn as a three-point tube whose
+middle control point bows *against* the tip, which is what makes a recurve read
+as a recurve rather than as a bent stick.
+
+## 6. Coats
+
+A coat swaps the three body ramps and paints a pattern onto the `mark` layer,
+which the compositor masks to body pixels only.
+
+**The pattern rides the body.** Each draw function returns `spine`, its
+centreline from nape to tail tip as `[x, y, halfDepth]` stations, and
+`paintPattern` places everything against that: bands run perpendicular to the
+local tangent and are cut short on the belly side, spots and speckles sit
+within the local half-depth, patches ride high on the flank. Density is
+specified as a distance along the spine rather than as a count, so a short
+Triceratops and a long Brachiosaurus come out with the same coat, not the same
+number of marks.
+
+This is the same rule the surface detail follows, and for the same reason.
+Patterns used to be a field of shapes in fixed bake-box coordinates —
+seventeen near-vertical tubes marching across the canvas regardless of where
+the animal sat in it. It read as a barcode painted over a dinosaur.
+
+Everything is a deterministic function of the loop index, so a coat never
+crawls between animation frames.
+
+## 7. Anchors
 
 Each draw function returns `{ eye, eyeR, mouth, hat, top }` in local units. The
 baker converts them to trimmed-sprite pixel coordinates and adds `hs`, the head
 scale. Headgear and the feeding animation use these anchors rather than guessed
 offsets, which is why gear stays put across stages and animations.
 
-## Adding a species
+## Adding a species (numbering continues from above)
 
 1. Copy an existing file in `src/species/`.
 2. Lay out skeletal landmarks in local units with the ground at `y = 0` and the

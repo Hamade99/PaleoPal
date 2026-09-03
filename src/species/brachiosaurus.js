@@ -48,7 +48,23 @@ function drawBrachio(M, P){
 
   eyeAt(M, hx - sn*.48, hy - hh*.3, 2.9*hM, P.eye);
 
+  /* Centreline for the coat painter. It runs the whole animal, neck included,
+     so banding comes down the neck and resolves into rings out the tail —
+     which is the one place a sauropod coat has somewhere to go. */
+  const spine = [
+    [n3[0], n3[1] + 4,   9*lM],          // base of the skull
+    [n2[0], n2[1],      10*lM],
+    [n1[0], n1[1],      13*lM],
+    [shX - 2, shY + 2,  19*lM],          // shoulder hump
+    [8,       shY + 8,  22*lM],          // deepest, over the ribs
+    [hipX,    hipY,     17*lM],          // hips
+    [hipX + 22*tM, hipY + 1,  11*lM],    // tail
+    [hipX + 44*tM, hipY + 3,   7*lM],
+    [hipX + 66*tM, hipY + 6,   3.5*lM],
+    [hipX + 86*tM, hipY + 10,  1.5*lM]
+  ];
+
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
-           hat:[hx - sn*.3, hy - hh*2.05], top: hy - hh*2.05 };
+           hat:[hx - sn*.3, hy - hh*2.05], top: hy - hh*2.05, spine };
 }
 

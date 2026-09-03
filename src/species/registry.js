@@ -27,12 +27,14 @@ const SPECIES = {
     era:'Late Cretaceous, 68-66 million years ago, Hell Creek',
     facts:[
       'Horn cores grew keratin sheaths that ran past the bone, so living horns were longer than the skeleton shows.',
-      'The frill is solid bone, ringed with small knobs called epoccipitals.',
+      'The brow horns change direction as the animal grows. They start as straight stubs, curve backward in juveniles, straighten out, then recurve forward in adults.',
+      'The frill is solid bone, ringed with small knobs called epoccipitals. They begin as deep scallops and flatten into the rim with age.',
       'Skin impressions show large scales with scattered low nubbins, not the spines older art gave it.',
       'A jugal horn juts down from each cheek, below the eye.',
       'T. horridus carried a long snout and only a small nasal horn.'
     ],
-    checks:['Horns above the eyes, sheathed long','Solid frill with rim knobs','Hooked rostral beak',
+    checks:['Horns above the eyes, sheathed long','Horn curve reverses between hatchling and adult',
+            'Solid frill with rim knobs, deeper when young','Hooked rostral beak',
             'Jugal horn on each cheek','Nubbin feature scales','Upright hind legs, elbows held out']
   },
   brachio: {
@@ -81,9 +83,9 @@ const SKINS = {
     { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
       skin:'#7e9c54', belly:'#b8bd80', crest:'#5b7940', mark:'#4a6634',
       note:'The olive coat it hatched in.' },
-    { id:'ash',    name:'Ashfall',   cost:70,  pattern:'stripes',
+    { id:'ash',    name:'Ashfall',   cost:70,  pattern:'bands',
       skin:'#6f7a72', belly:'#a9b0a2', crest:'#4a534d', mark:'#39413c',
-      note:'Cold grey with charcoal banding down the flank.' },
+      note:'Cold grey, charcoal banding across the flank into tail rings.' },
     { id:'ember',  name:'Ember',     cost:120, pattern:'patches',
       skin:'#a8603a', belly:'#d69a5e', crest:'#7c4224', mark:'#71321a',
       note:'Rust and scorch marks. Loud, and it knows it.' },
@@ -98,9 +100,9 @@ const SKINS = {
     { id:'chalk',  name:'Chalk',     cost:70,  pattern:'spots',
       skin:'#c3ab8c', belly:'#e6d8bc', crest:'#95805f', mark:'#8a7050',
       note:'Bleached bone with dark rosettes.' },
-    { id:'ochre',  name:'Ochre',     cost:120, pattern:'stripes',
+    { id:'ochre',  name:'Ochre',     cost:120, pattern:'bands',
       skin:'#c26a30', belly:'#e8a75c', crest:'#8e4620', mark:'#6f2f18',
-      note:'A display animal. Banding runs the whole body.' },
+      note:'A display animal. Banding follows the ribs and rings the tail.' },
     { id:'basalt', name:'Basalt',    cost:170, pattern:'patches',
       skin:'#5c6470', belly:'#98a1ad', crest:'#3f4650', mark:'#333944',
       note:'Volcanic grey-blue with darker plates.' }
@@ -112,9 +114,9 @@ const SKINS = {
     { id:'dune',   name:'Dune',      cost:70,  pattern:'patches',
       skin:'#b9a173', belly:'#ded0a2', crest:'#c6b088', mark:'#8c7548',
       note:'Sand and dry grass. Vanishes on the floodplain.' },
-    { id:'slate',  name:'Slate',     cost:120, pattern:'stripes',
+    { id:'slate',  name:'Slate',     cost:120, pattern:'bands',
       skin:'#6d7d92', belly:'#a9b6c4', crest:'#7f8fa2', mark:'#3f4b5c',
-      note:'Storm grey with vertical shadow banding.' },
+      note:'Storm grey, shadow banding down the neck and out the tail.' },
     { id:'fernwood',name:'Fernwood', cost:170, pattern:'spots',
       skin:'#4e7a63', belly:'#9dba8e', crest:'#5f8a72', mark:'#8fb27c',
       note:'Wet forest green dappled with pale rings.' }
@@ -124,37 +126,110 @@ function skinOf(spId, skinId){
   const list = SKINS[spId];
   return list.find(k => k.id === skinId) || list[0];
 }
-/* patterns are drawn in local sprite units and masked to the body by the
-   compositor, so they can be laid down as simple full-field shapes */
-function paintPattern(g, kind){
-  if (!kind || kind === 'none') return;
-  if (kind === 'stripes'){
-    for (let i=0;i<17;i++){
-      const x = -110 + i*14;
-      tube(g, [[x-5,-140],[x+3,-72],[x+10,4]], [5.5, 6.5, 4.5]);
+/* ------------------------------ coat patterns ------------------------------
+   A pattern used to be laid down as a field of shapes in fixed sprite-local
+   coordinates: seventeen near-vertical tubes marching across the bake box
+   regardless of where the animal was inside it. On a long-bodied animal that
+   reads as a barcode painted over a dinosaur — it cut across the frill, the
+   neck and the legs at the same angle and the same spacing, and the effect on
+   the sauropod in particular was that the coat did not appear to be on the
+   animal at all.
+
+   The rule the surface detail already follows applies here too: ride the
+   body. Each species draw function now returns `spine`, its centreline from
+   nape to tail tip with the body's half-depth at each station, and every
+   pattern is placed against that. Bands run perpendicular to the spine and
+   tighten toward the tail, so they read as flank banding resolving into tail
+   rings — which is both what the Sinosauropteryx melanosome work supports and
+   what reads as an animal.
+
+   Everything is a deterministic function of the loop index, so a coat does
+   not crawl between animation frames.
+   -------------------------------------------------------------------------- */
+function sampleSpine(spine, t){
+  let total = 0; const seg = [];
+  for (let i=0;i<spine.length-1;i++){
+    const d = Math.hypot(spine[i+1][0]-spine[i][0], spine[i+1][1]-spine[i][1]);
+    seg.push(d); total += d;
+  }
+  let want = clamp(t,0,1) * total;
+  for (let i=0;i<seg.length;i++){
+    if (want <= seg[i] || i === seg.length-1){
+      const u = seg[i] ? clamp(want/seg[i],0,1) : 0;
+      const a = spine[i], b = spine[i+1];
+      return { x:lerp(a[0],b[0],u), y:lerp(a[1],b[1],u), half:lerp(a[2],b[2],u),
+               ang:Math.atan2(b[1]-a[1], b[0]-a[0]) };
+    }
+    want -= seg[i];
+  }
+  const last = spine[spine.length-1];
+  return { x:last[0], y:last[1], half:last[2], ang:0 };
+}
+/* the unit normal to the spine. +normal points at the belly, because sprite
+   local units put the ground at y = 0 and the animal above it. */
+const spineNormal = q => [-Math.sin(q.ang), Math.cos(q.ang)];
+
+/* Total arc length of a spine, so pattern density can be specified as a real
+   distance rather than as a count. A count gives the short-bodied Triceratops
+   the same sixteen bands as the long-necked Brachiosaurus, which on the
+   Triceratops closed up into a striped mattress. */
+function spineLen(spine){
+  let total = 0;
+  for (let i=0;i<spine.length-1;i++)
+    total += Math.hypot(spine[i+1][0]-spine[i][0], spine[i+1][1]-spine[i][1]);
+  return total;
+}
+/* a deterministic 0..1 from an index, so a coat never crawls between frames */
+const jit = (i, m) => ((i * 2654435761) % m) / m;
+
+function paintPattern(g, kind, spine){
+  if (!kind || kind === 'none' || !spine || spine.length < 2) return;
+  const L = spineLen(spine);
+  const count = (perUnit, min) => Math.max(min, Math.round(L * perUnit));
+
+  if (kind === 'bands'){
+    const N = count(1/14, 5);                    // one band every ~14 units
+    for (let i=0;i<N;i++){
+      const t = .10 + (i/Math.max(1,N-1)) * .87;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const reach = q.half * 1.4;
+      const w = lerp(4.6, 1.9, t) * (.82 + jit(i+3, 13)*.4);
+      // the belly side is cut short: banding fades into the countershading
+      tube(g, [[q.x - nx*reach, q.y - ny*reach], [q.x, q.y],
+               [q.x + nx*reach*.62, q.y + ny*reach*.62]], [w*.5, w, w*.44]);
     }
     return;
   }
   if (kind === 'spots'){
-    for (let i=0;i<64;i++){
-      const x = -110 + ((i*47) % 232);
-      const y = -4 - ((i*61) % 132);
-      oval(g, x, y, 3.6, 3.0);
+    const N = count(1/5.2, 10);
+    for (let i=0;i<N;i++){
+      const t = .06 + ((i*0.6180339887) % 1) * .90;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const v = (jit(i+7, 61) - .55) * 1.7;      // across the body, biased upward
+      const r = lerp(4.4, 1.6, t) * (.68 + jit(i+11, 17)*.62) * (1 - Math.abs(v)*.3);
+      oval(g, q.x + nx*q.half*v, q.y + ny*q.half*v, r, r*.82);
     }
     return;
   }
   if (kind === 'speckle'){
-    for (let i=0;i<170;i++){
-      const x = -110 + ((i*29) % 232);
-      const y = -2 - ((i*43) % 136);
-      oval(g, x, y, 1.5, 1.3);
+    const N = count(1/1.1, 40);
+    for (let i=0;i<N;i++){
+      const t = .04 + ((i*0.6180339887) % 1) * .94;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const v = (jit(i+5, 53) - .58) * 1.8;
+      const r = 1.1 + jit(i+13, 7)*.8;
+      oval(g, q.x + nx*q.half*v, q.y + ny*q.half*v, r, r*.9);
     }
     return;
   }
   if (kind === 'patches'){
-    const pts = [[-66,-96],[-14,-74],[32,-100],[74,-64],[-44,-42],[12,-36],
-                 [56,-28],[-80,-58],[92,-48],[-30,-112],[46,-120],[8,-58]];
-    pts.forEach((q,i) => oval(g, q[0], q[1], 12 + (i%3)*5, 8 + (i%2)*5));
+    const N = count(1/17, 5);
+    for (let i=0;i<N;i++){
+      const t = .07 + ((i*0.6180339887) % 1) * .84;
+      const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+      const v = (jit(i+3, 43) - .74) * 1.5;      // sit high on the flank
+      const r = lerp(12, 5, t) * (.75 + jit(i+9, 11)*.5);
+      oval(g, q.x + nx*q.half*v, q.y + ny*q.half*v, r, r*(.58 + jit(i+2,5)*.34), q.ang);
+    }
   }
 }
-

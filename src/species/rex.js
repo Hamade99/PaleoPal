@@ -81,7 +81,19 @@ function drawRex(M, P){
   eyeAt(M, ex, ey, 3.5*hM, P.eye);
   oval(M.mouth, hx - sn*.84, hy - hh*.34, Math.max(.8,1.2*hM), Math.max(.8,1.1*hM));
 
+  /* Centreline for the coat painter: nape to tail tip, carrying the body's
+     half-depth at each station so a band knows how far to run. */
+  const spine = [
+    [hx + 13,   hy + hh*.06,  hh*.52],   // nape
+    [withX - 4, withY + 12*lM, 12*lM],   // withers
+    [-4,        hipY - 7*lM,   16*lM],   // ribcage
+    [hipX + 4,  hipY - 7*lM,   16*lM],   // hips
+    [T(24),     hipY - 9*lM,    9*lM],   // tail base
+    [T(48),     hipY - 7*lM,    5.5*lM],
+    [T(72),     hipY - 6*lM,    2.0*lM]  // tail tip
+  ];
+
   return { eye:[ex,ey], eyeR:3.5*hM, mouth:[hx - sn*.82, hy + hh*.12],
-           hat:[hx - sn*.16, hy - hh*1.02], top: hy - hh };
+           hat:[hx - sn*.16, hy - hh*1.02], top: hy - hh, spine };
 }
 

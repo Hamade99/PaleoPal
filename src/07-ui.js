@@ -119,6 +119,30 @@ function pixelIcon(id, w, h){
   return c;
 }
 
+/* The bond row used to be five rotated CSS squares and the meters were CSS
+   pills with rounded ends and a smooth gradient. Neither belonged next to a
+   hard-edged pixel scene. The bond is now five pixel hearts baked the same way
+   the particle hearts are, and the meters are ten hard cells behind a black
+   grid — see .track in the stylesheet. */
+const BOND_PIPS = 5, PIP_W = 9, PIP_H = 7;
+function bondCanvas(on){
+  const c = makeCv(BOND_PIPS*PIP_W, PIP_H), g = readCtx(c);
+  for (let i=0;i<BOND_PIPS;i++){
+    const x = i*PIP_W, lit = i < on;
+    g.fillStyle = lit ? '#8f2f46' : '#232e31';
+    g.fillRect(x+1,1,2,1); g.fillRect(x+4,1,2,1);
+    g.fillRect(x,2,7,2); g.fillRect(x+1,4,5,1); g.fillRect(x+2,5,3,1); g.fillRect(x+3,6,1,1);
+    if (lit){
+      g.fillStyle = '#e2697c';
+      g.fillRect(x+1,2,5,1); g.fillRect(x+2,3,3,1); g.fillRect(x+3,4,1,1);
+      g.fillStyle = '#f6b3c0'; g.fillRect(x+1,2,2,1);
+    }
+  }
+  c.style.cssText = 'width:' + (BOND_PIPS*PIP_W*2) + 'px;height:' + (PIP_H*2) +
+                    'px;image-rendering:pixelated;display:block';
+  return c;
+}
+
 function buildChrome(){
   $('needs').innerHTML = NEED_META.map(n =>
     `<div class="need" id="need-${n.k}">
@@ -240,7 +264,7 @@ function refresh(){
     $('dSub').textContent = S && S.sp ? 'Keep tapping the shell' : 'Pick one to begin';
     $('mood').textContent = S && S.sp ? 'Something is moving in there.'
       : numWord(eggChoices().length) + ' eggs are waiting in the nest.';
-    $('bond').innerHTML = ''; $('badges').innerHTML = '';
+    $('bond').innerHTML = ''; delete $('bond').dataset.pips; $('badges').innerHTML = '';
     lamp.className = 'lamp rest';
     paintChrome();
     return;
@@ -251,7 +275,13 @@ function refresh(){
   const age = d < 1 ? Math.max(1, Math.round(d*24)) + 'h old' : Math.floor(d) + (Math.floor(d) === 1 ? ' day old' : ' days old');
   $('dSub').textContent = st.label + ' ' + sp.common + ' · ' + age;
   $('mood').innerHTML = S.name + ' <em>' + moodOf().line + '</em>';
-  $('bond').innerHTML = 'Bond ' + Array.from({length:5}, (_,i) => `<i class="pip${i < bondPips() ? ' on' : ''}"></i>`).join('');
+  const bondEl = $('bond');
+  const pips = bondPips();
+  if (bondEl.dataset.pips !== String(pips)){
+    bondEl.dataset.pips = String(pips);
+    bondEl.innerHTML = '<span>Bond</span>';
+    bondEl.appendChild(bondCanvas(pips));
+  }
   const tags = [];
   if (S.vet) tags.push(['warn','At their limit']);
   S.ills.forEach(i => tags.push(['warn', ILLS[i.id].name]));
@@ -268,14 +298,26 @@ function refresh(){
 let openPanel = null;
 /* the only sheets that mean anything before there is a hatched animal */
 const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble', 'dev'];
+/* The developer panel docks rather than covering the screen: on a wide window
+   it slides in at the right, on a narrow one it takes the bottom half. It
+   raises no scrim either way, so the game stays visible and clickable while a
+   sprite is being stepped through its stages — which is the entire point of
+   having it. */
+const DOCKED = ['dev'];
 function openSheet(which){
-  if (mode === 'game') return;
+  if (mode === 'game' && which !== 'dev') return;
   if (mode !== 'live' && !SHEETS_PRE_HATCH.includes(which)) return;
+  const dock = DOCKED.includes(which);
   openPanel = which;
   renderSheet(which);
-  $('sheet').classList.add('on'); $('scrim').classList.add('on');
+  $('sheet').classList.toggle('dock', dock);
+  $('sheet').classList.add('on');
+  $('scrim').classList.toggle('on', !dock);
 }
-function closeSheet(){ openPanel = null; $('sheet').classList.remove('on'); $('scrim').classList.remove('on'); }
+function closeSheet(){
+  openPanel = null;
+  $('sheet').classList.remove('on'); $('scrim').classList.remove('on');
+}
 
 function rowHTML(art, title, sub, right, attrs){
   const slot = art ? `<span class="art" data-art="${art}"></span>` : '';
@@ -552,6 +594,7 @@ const SHEETS = {
     html += `<p class="tiny">Growth stages are set by parking well-kept minutes on a gate
       (${GROWTH_GATES.join(', ')}), which is exactly how the simulation moves them.</p>`;
 
+    html += `<div class="chips" style="margin-top:12px"><button class="chip" data-dev="close">Close panel</button></div>`;
     b.innerHTML = html;
     b.querySelectorAll('[data-dev]').forEach(c => c.onclick = () => devAction(c.getAttribute('data-dev')));
   },
@@ -583,6 +626,7 @@ function devAction(a){
     case 'maxBond': return DEV.setBond(100);
     case 'zeroBond':return DEV.setBond(0);
     case 'sound':   return toggleSound();
+    case 'close':   return closeSheet();
     default:        if (DEV[a]) DEV[a]();
   }
 }
@@ -639,7 +683,7 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (mode === 'live'){
-    if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet(); return; }
+    if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet([mx, my]); return; }
     if (bondPips() >= 2 && !S.asleep && !S.vet){
       dino.tx = clamp(mx, 22, W-22);
       dino.until = performance.now() + 4000;
@@ -648,7 +692,10 @@ cv.addEventListener('pointerdown', e => {
 });
 cv.addEventListener('pointermove', e => {
   const p = canvasPos(e); holdPos = p;
-  if (mode === 'game' && game && game.kind === 'snack' && e.buttons) game.tx = p[0];
+  if (mode === 'game' && game && e.buttons){
+    if (game.kind === 'snack') game.tx = p[0];
+    if (game.kind === 'stomp') tapStomp(p[0], p[1]);
+  }
 });
 window.addEventListener('pointerup', () => { holding = false; });
 window.addEventListener('pointercancel', () => { holding = false; });
@@ -738,7 +785,7 @@ function frame(now){
   if (mode === 'game') stepGame(dt, now);
   stepParts(dt);
   if (holding && holdPos && mode === 'live' &&
-      holdPos[0] >= dinoBox[0]-4 && holdPos[0] <= dinoBox[2]+4 && holdPos[1] >= dinoBox[1]-4) pet();
+      holdPos[0] >= dinoBox[0]-4 && holdPos[0] <= dinoBox[2]+4 && holdPos[1] >= dinoBox[1]-4) pet(holdPos);
 
   if (G) drawScene(now);
   accum += dt;
