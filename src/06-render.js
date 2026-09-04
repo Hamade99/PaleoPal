@@ -168,8 +168,8 @@ function drawEgg(now){
    across the eyes rather than floating at a guessed offset */
 function drawGear(g, f, x, y, flip){
   const place = (id, anchor, scale) => {
-    if (!id || !HATS[id]) return;
-    const art = HATS[id], w = art.width * scale, hgt = art.height * scale;
+    if (!id || !PIX['hat.' + id]) return;
+    const art = hatArt(id), w = art.width * scale, hgt = art.height * scale;
     const ax = flip ? x + (f.ox - anchor[0]) : x - f.ox + anchor[0];
     const ay = y - f.oy + anchor[1];
     g.save(); g.translate(Math.round(ax), Math.round(ay));
@@ -178,8 +178,8 @@ function drawGear(g, f, x, y, flip){
     g.restore();
   };
   place(S.hat, f.hat, Math.max(.6, f.hs * 1.55));
-  if (S.face && HATS[S.face]){
-    const art = HATS[S.face], scale = Math.max(.5, f.eyeR * 3.6 / art.width);
+  if (S.face && PIX['hat.' + S.face]){
+    const art = hatArt(S.face), scale = Math.max(.5, f.eyeR * 3.6 / art.width);
     const w = art.width * scale, hgt = art.height * scale;
     const ax = flip ? x + (f.ox - f.eye[0]) : x - f.ox + f.eye[0];
     const ay = y - f.oy + f.eye[1];

@@ -22,52 +22,8 @@
    immediately. */
 const BAKE_W = 168, BAKE_H = 112, BAKE_G = 100, BAKE_CX = 84;
 
-/* Per-stage multipliers. Every feature that grows on its own schedule gets its
-   own column — merging any two of them has produced a bad sprite at least once.
-
-   A scale column and a set of ratios is not growth. With `s` doing most of the
-   work the juvenile, subadult and adult were one animal at three sizes with a
-   slightly smaller head each time, and the only stage that read as its own
-   thing was the hatchling. Growing up changes what an animal *has*, not only
-   how big the parts are, so four of these columns turn features on and off
-   rather than scaling them:
-
-   `muzzle` is snout DEPTH, and it is separate from `snout`, which is snout
-   length. A young tyrannosaur has a shallow, narrow muzzle in front of a large
-   braincase; the deep boxy skull is an adult feature and arrives late. Driving
-   both off one number gives a hatchling either an adult's slab of a face or a
-   pinched adult.
-
-   `bulk` is how deep the trunk and neck are for a given length. Juveniles are
-   slab-sided and leggy, adults are barrel-chested with a thick neck. It is the
-   difference you actually see across a room.
-
-   `torso` is trunk LENGTH. Young animals are short-bodied and big-headed; the
-   body catches up last.
-
-   `fuzz` is protofeather coverage. Juvenile tyrannosaurs are reconstructed
-   with a substantial coat that reduces with age, which is both well supported
-   and the single most visible thing that can change between two stages of the
-   same animal.
-
-   `frill` is separate from `horn` for the reason `snout` is separate from
-   `head`: a baby Triceratops already has a frill, deeply scalloped and
-   obvious, while its horns are barely stubs.
-
-   `hornBend` is the ontogenetic sequence Horner and Goodwin read off a series
-   of ten skulls: the postorbital horns start as straight stubs, curve
-   backward in juveniles, straighten out in subadults, then recurve forward in
-   adults. Negative is backward, positive forward. */
-const STAGE = [
-  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, muzzle:.62, neck:.44, limb:.68, tail:.54,
-    bulk:1.34, torso:.70, fuzz:1.00, horn:.14, frill:.50, hornBend: 0.00 },
-  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, muzzle:.74, neck:.68, limb:.83, tail:.76,
-    bulk:1.12, torso:.84, fuzz:.68,  horn:.48, frill:.70, hornBend:-1.00 },
-  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, muzzle:.89, neck:.87, limb:.93, tail:.90,
-    bulk:1.04, torso:.94, fuzz:.30,  horn:.80, frill:.86, hornBend:-0.15 },
-  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, muzzle:1.00, neck:1.00, limb:1.00, tail:1.00,
-    bulk:1.00, torso:1.00, fuzz:.06,  horn:1.00, frill:1.00, hornBend: 1.00 }
-];
+/* STAGE, the per-stage multipliers, is data and lives in 00-art.js with the
+   rest of what the editor can turn. */
 
 /* --------------------------- gait and limbs -------------------------------
    The foot follows a stance/swing path against the ground, and the leg is
@@ -201,31 +157,17 @@ function eyeAt(M, x, y, r, state){
 
 /* ------------------------------- T. rex ----------------------------------- */
 
-/* ------------------------------ hats -------------------------------------- */
-const HAT_ART = {
-  frond:  g => { g.fillStyle='#6f9c55'; g.fillRect(4,4,2,5); [[1,1],[3,0],[6,0],[8,1],[2,3],[7,3]].forEach(q=>g.fillRect(q[0],q[1],2,2)); },
-  cap:    g => { g.fillStyle='#b08a4a'; g.fillRect(2,1,6,4); g.fillStyle='#8a6a36'; g.fillRect(0,5,10,2); },
-  goggles:g => { g.fillStyle='#3a4d55'; g.fillRect(0,2,10,3); g.fillStyle='#9fd2e0'; g.fillRect(1,3,3,2); g.fillRect(6,3,3,2); },
-  cone:   g => { g.fillStyle='#d95f7f'; g.fillRect(4,0,2,2); g.fillRect(3,2,4,2); g.fillRect(2,4,6,2); g.fillStyle='#5fb0a5'; g.fillRect(1,6,8,2); },
-  hardhat:g => { g.fillStyle='#e0a92f'; g.fillRect(2,1,6,4); g.fillStyle='#c48c1c'; g.fillRect(0,5,10,2); g.fillRect(4,0,2,2); },
-  crown:  g => { g.fillStyle='#d9a83f'; g.fillRect(0,0,2,3); g.fillRect(4,0,2,3); g.fillRect(8,0,2,3); g.fillRect(0,3,10,3); g.fillStyle='#c04848'; g.fillRect(4,4,2,2); }
-};
-function hatCanvas(id){
-  const c = makeCv(12,11), g = readCtx(c);
-  g.save(); g.translate(1,1); HAT_ART[id](g); g.restore();
-  const d = g.getImageData(0,0,12,11), px = d.data, solid = new Uint8Array(12*11);
-  for (let i=0;i<12*11;i++){ if (px[i*4+3] >= 118){ px[i*4+3] = 255; solid[i] = 1; } else px[i*4+3] = 0; }
-  for (let y=0;y<11;y++) for (let x=0;x<12;x++){
-    const i = y*12+x; if (solid[i]) continue;
-    if ((x>0&&solid[i-1])||(x<11&&solid[i+1])||(y>0&&solid[i-12])||(y<10&&solid[i+12])){
-      px[i*4]=0x24; px[i*4+1]=0x1d; px[i*4+2]=0x13; px[i*4+3]=255;
-    }
-  }
-  g.putImageData(d,0,0);
-  return c;
-}
+/* ------------------------------ hats -------------------------------------
+   The art lives in PIX in 00-art.js and the outline pass lives in pixCanvas,
+   so this is now only the cache. It used to be six hand-written fillRect
+   functions and a private copy of the dilation loop. */
 const HATS = {};
-for (const k in HAT_ART) HATS[k] = hatCanvas(k);
+Object.defineProperty(HATS, 'get', { value:null });          // keep it a plain bag
+const HAT_IDS = Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
+function hatArt(id){
+  if (!HATS[id]) HATS[id] = pixCanvas('hat.' + id, '#241d13');
+  return HATS[id];
+}
 
 /* ---------------------------- frame baking -------------------------------- */
 /* Walk and idle are generated rather than typed out, because the only reason

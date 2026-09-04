@@ -25,20 +25,6 @@
      - the brow horns are straight stubs, curve backward in juveniles,
        straighten in subadults and recurve forward in adults (STAGE.hornBend)
    -------------------------------------------------------------------------- */
-const TRI_SPEC = { skin:'#a06635', belly:'#c8975e', crest:'#7d4a22', horn:'#efe6c8',
-                   /* The frill carries its own colour, pulled further from the
-                      body ramp than it was: on the flank colours the shield
-                      was separated from the neck by nothing but the outline,
-                      and a shield that does not read as a shield is most of
-                      this animal's silhouette thrown away. */
-                   shield:'#cfa068',
-                   /* The beak is its own material. On the horn ramp the
-                      rostral and predentary came out near-white, which put
-                      two blobs of bone on the front of the face with no edge
-                      between them and the horn sheaths above. Keratin, but
-                      duller and darker than a horn. */
-                   beak:'#b3925e',
-                   mouth:'#7e3a30', outline:'#26190f' };
 const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
 const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
 /* how far the rim scallops bite in, per growth stage: deltoid when young,
@@ -56,10 +42,11 @@ function drawTrike(M, P){
      hatchling built on the adult's proportions came out long and thin on
      stick legs — a scale model of an adult rather than a baby, which reads as
      underfed rather than young. Babies are short-bodied and round. */
-  const hipX = 26*tor, hipY = -41*lM - bob;
-  const shX = -16*tor, shY = -38*lM - bob;     // glenoid
-  const withY = hipY - 25*lM;                  // tall neural spines: a shoulder hump
-  const backY = hipY - 20*lM, bellyY = hipY + 14*lM*bk;
+  const T_ = TRI_TUNE, TL = T_.tailLen;
+  const hipX = T_.hipBack*tor, hipY = -T_.hipH*lM - bob;
+  const shX = -T_.shoulder*tor, shY = -(T_.hipH-3)*lM - bob;   // glenoid
+  const withY = hipY - T_.withersH*lM;         // tall neural spines: a shoulder hump
+  const backY = hipY - T_.backH*lM, bellyY = hipY + T_.bellyD*lM*bk;
   const T = d => hipX + d*tM;
 
   legStep(M.far, hipX-7, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
@@ -75,14 +62,14 @@ function drawTrike(M, P){
     [shX-2,  withY],                           // shoulder hump
     [8,      backY-1],                         // back
     [hipX+4, backY+2],                         // hips
-    [T(14),  hipY-17*lM*bk+sw*1.5],            // tail base, still deep
-    [T(30),  hipY-13*lM+sw*3],
-    [T(46),  hipY-8.5*lM+sw*5],
-    [T(62),  hipY-3*lM+sw*7],                  // tail tip
-    [T(60),  hipY-0.5*lM+sw*7],
-    [T(42),  hipY+2*lM+sw*4],
-    [T(22),  hipY+6*lM*bk+sw*1.5],
-    [T(5),   hipY+10*lM*bk],
+    [T(TL*14/62), hipY-17*lM*bk+sw*1.5],         // tail base, still deep
+    [T(TL*30/62), hipY-13*lM+sw*3],
+    [T(TL*46/62), hipY-8.5*lM+sw*5],
+    [T(TL),     hipY-3*lM+sw*7],               // tail tip
+    [T(TL*60/62), hipY-0.5*lM+sw*7],
+    [T(TL*42/62), hipY+2*lM+sw*4],
+    [T(TL*22/62), hipY+6*lM*bk+sw*1.5],
+    [T(TL*5/62), hipY+10*lM*bk],
     [hipX-6, bellyY],                          // belly
     [2,      bellyY+2*lM],
     [shX+3,  bellyY-1*lM],
@@ -94,10 +81,10 @@ function drawTrike(M, P){
      should — the boundary that has to read is the one behind the frill, and
      the frill has a material of its own for exactly that. */
   const nkX = shX - 7*nM, nkY = withY + 9*lM;
-  const hx = nkX - 20*nM - 9*hM*sM, hy = nkY + 7*lM + dr*5;   // the jaw joint
-  const sn = 22.5*hM*sM, hh = 10.5*hM;   // a shorter face than the first pass
+  const hx = nkX - T_.neckLen*nM - 9*hM*sM, hy = nkY + 7*lM + dr*5;   // the jaw joint
+  const sn = T_.headLen*hM*sM, hh = T_.headDepth*hM;
   tube(M.skin, [[shX-2, nkY-2*lM],[nkX-4, nkY+1*lM],[hx+14*hM, hy-hh*.10]],
-       [15*lM*bk, 13.5*lM*bk, 12*hM]);
+       [T_.neckThick*lM*bk, T_.neckThick*13.5/15*lM*bk, 12*hM]);
 
   /* Frill: a solid bone shield, anchored to the back of the skull roof and
      opening up and back over the neck. Its rim stands clear of the back line
@@ -108,8 +95,8 @@ function drawTrike(M, P){
      It rides STAGE.frill, not the horn column: a baby already has an obvious,
      deeply scalloped frill and almost no horns. */
   const fx = hx + 15*hM, fy = hy - hh*1.16;    // the base, on the skull roof
-  const fRx = 17.0*hM*fM, fRy = 22.0*hM*fM;
-  const fTilt = -0.24;                          // tipped back, but standing up
+  const fRx = T_.frillW*hM*fM, fRy = T_.frillH*hM*fM;
+  const fTilt = T_.frillTilt;                   // tipped back, but standing up
   const fc = Math.cos(fTilt), fs = Math.sin(fTilt);
   const rot = (px,py) => [fx + px*fc - py*fs, fy + px*fs + py*fc];
   const epi = EPI_DEPTH[P.stage];
@@ -224,7 +211,7 @@ function drawTrike(M, P){
 
      Width tracks the sheath as well as the skull. Scaling thickness on head
      bulk alone gave hatchlings two fat cones where they should have stubs. */
-  const hl = hh*(.50 + 1.85*hF);
+  const hl = hh*(.50 + T_.hornLen*hF);
   const hw = hM * (.40 + .60*hF);
   const browHorn = (dx, dy, len, w) => {
     const bx = ex + dx*hM, by = ey + dy;
@@ -261,10 +248,10 @@ function drawTrike(M, P){
     [shX+4,   hipY-6*lM,   17*lM],   // shoulder
     [10,      hipY-4*lM,   17*lM],
     [hipX+2,  hipY-3*lM,   16*lM],   // hips
-    [T(15),   hipY-7*lM,   10*lM],   // tail base
-    [T(32),   hipY-6*lM,    7*lM],
-    [T(48),   hipY-4*lM,    4.5*lM],
-    [T(62),   hipY-2*lM,    2.0*lM]  // tail tip
+    [T(TL*15/62), hipY-7*lM,   10*lM],   // tail base
+    [T(TL*32/62), hipY-6*lM,    7*lM],
+    [T(TL*48/62), hipY-4*lM,    4.5*lM],
+    [T(TL),     hipY-2*lM,    2.0*lM]  // tail tip
   ];
 
   // headgear sits on the crown of the frill, which the tilt moves forward as

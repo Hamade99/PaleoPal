@@ -7,6 +7,8 @@ that order is the only dependency graph there is.
 
 ```
 src/00-core.js          utilities, storage adapter, audio, path primitives
+src/00-art.js           art data: pixel sprites, growth columns, per-species
+                        proportions and colours, coats, habitat palettes
 src/01-colour.js        ramp generation, material layers, the lighting compositor
 src/02-sprite-engine.js growth stages, gait/IK, feet, hats, pose table, frame baking
 src/03-font.js          the 5x7 screen font and its text drawing
@@ -109,6 +111,8 @@ Otherwise:
 | The case: shell, bezel, keys | `src/style.css`, `index.html` |
 | A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
 | Checking any of the art | `tools/sheet.html` |
+| Changing any of the art | `tools/editor.html`, served over http |
+| A new editable sprite | an entry in `PIX`, and a marker if it is a new block |
 
 ## Habitats
 
@@ -141,6 +145,36 @@ of the gorge).
 Anything in a habitat that moves has to be in `live`, because the backdrop is
 baked once per biome and phase and then cached — the volcano's smoke sat still
 for the whole life of this project for exactly that reason.
+
+## The art data
+
+Everything that can be changed without changing behaviour lives in one file,
+`src/00-art.js`, and `tools/editor.html` is the thing that changes it.
+
+- **`PIX`** — every small sprite as a palette and one character per pixel: the
+  action icons, the meter glyphs, the case buttons, the headgear, the food, the
+  mess, the heart. All of it used to be hand-written `fillRect` calls in three
+  modules. The outline each icon and hat wears is *not* stored — it is a pass
+  over the finished grid in `pixCanvas`, so an edit cannot leave a sprite with a
+  half-drawn border.
+- **`STAGE`** — the growth columns.
+- **`REX_TUNE` / `TRI_TUNE` / `BRA_TUNE`** — per-species proportions in local
+  units at adult size. They were literals scattered through the control points
+  inside each draw function, which made "extend the tail" a job for someone
+  willing to read the whole function first.
+- **`REX_SPEC` / `TRI_SPEC` / `BRA_SPEC`**, **`SKINS`**, **`BIOME_ART`** — every
+  colour in the game that is not the case.
+
+Each declaration is wrapped in `/*<data:NAME>*/ … /*</data>*/`. The editor
+replaces the text between markers and leaves everything else, so the prose
+survives a save and the editor never has to patch a value out of the middle of a
+working source file. A no-op save is byte-idempotent and reloads to identical
+data; that is checked, not assumed.
+
+Anything that changes art has to call **`artChanged()`** afterwards. Five
+independent caches hold baked results — frames, materials, pixels, backdrops,
+sky palettes — and forgetting one is how an editor ends up showing an old sprite
+in a new palette.
 
 ## The case
 

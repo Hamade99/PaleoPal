@@ -2,8 +2,6 @@
    Part of Paleopal. Load order matters; see build.py. */
 
 /* ---------------------------- Brachiosaurus -------------------------------- */
-const BRA_SPEC = { skin:'#71958a', belly:'#a9ba8e', crest:'#88a894', horn:'#e2e3bc',
-                   mouth:'#4c3a35', outline:'#1b2422' };
 const BRA_FORE = { stride:.30, lift:.06, duty:.74, mt:.07, back:0,   bend:-1, thigh:false, foot:'hoof' };
 const BRA_HIND = { stride:.30, lift:.06, duty:.74, mt:.15, back:.30, bend:1,  thigh:true,  foot:'pad' };
 function drawBrachio(M, P){
@@ -20,32 +18,35 @@ function drawBrachio(M, P){
      silhouette everyone recognises. Held at 1.2 from hatching, every stage
      was the adult at a different size, which was the complaint. */
   const mature = P.stage / (STAGE.length - 1);          // 0 hatchling, 1 adult
-  const hindLen = 46*lM, foreLen = hindLen * (1.00 + 0.22*mature);
-  const shX = -14*tor, shY = -foreLen - bob, hipX = 30*tor, hipY = -hindLen - bob;
+  const T_ = BRA_TUNE, TL = T_.tailLen;
+  const hindLen = T_.hindH*lM, foreLen = hindLen * (1.00 + (T_.foreRatio-1)*mature);
+  const shX = -T_.shoulder*tor, shY = -foreLen - bob, hipX = T_.hipBack*tor, hipY = -hindLen - bob;
 
   legStep(M.far, shX-7,  shY+4, (P.legPhase+.25)%1, 14*lM, BRA_FORE);
   legStep(M.far, hipX-7, hipY+3,(P.legPhase+.5)%1,  14*lM, BRA_HIND);
 
   // short tail for a sauropod, carried clear of the ground
-  tube(M.skin, [[hipX,hipY],[hipX+22*tM,hipY+1+sw*3],[hipX+44*tM,hipY+3+sw*5],
-                [hipX+66*tM,hipY+6+sw*7],[hipX+86*tM,hipY+10+sw*9]],
+  tube(M.skin, [[hipX,hipY],[hipX+TL*22/86*tM,hipY+1+sw*3],[hipX+TL*44/86*tM,hipY+3+sw*5],
+                [hipX+TL*66/86*tM,hipY+6+sw*7],[hipX+TL*tM,hipY+10+sw*9]],
        [31*lM*bk, 22*lM*bk, 14*lM, 7*lM, 2.5*lM]);
   // the back slopes down from the shoulders to the hips
-  tube(M.skin, [[shX,shY],[8*tor,shY+8],[hipX,hipY]], [39*lM*bk, 44*lM*bk, 34*lM*bk]);
+  tube(M.skin, [[shX,shY],[8*tor,shY+8],[hipX,hipY]],
+       [T_.bodyD*39/44*lM*bk, T_.bodyD*lM*bk, T_.bodyD*34/44*lM*bk]);
   oval(M.skin, shX + 2, shY - 6*lM, 18*lM*bk, 12*lM*bk);    // shoulder hump
 
   // neck near sixty degrees, S-curved, drooping slightly at the head end
-  const nl = 58*nM;
+  const nl = T_.neckLen*nM;
   const n1 = [shX - 9,  shY - nl*.30];
   const n2 = [shX - 19, shY - nl*.63];
   const n3 = [shX - 23, shY - nl*.94 + dr*10];
   /* The whole neck thickens with `bulk`, the head end included. Left at its
      adult width under a hatchling's oversized skull, the neck came out as a
      stick with a head on the end of it. */
-  tube(M.head, [[shX-3, shY-9],n1,n2,n3], [26*lM*bk, 19*lM*bk, 15*lM*bk, 12.5*lM*bk]);
+  tube(M.head, [[shX-3, shY-9],n1,n2,n3],
+       [T_.neckThick*lM*bk, T_.neckThick*19/26*lM*bk, T_.neckThick*15/26*lM*bk, T_.neckThick*12.5/26*lM*bk]);
 
   const sM = st.snout;
-  const hx = n3[0] - 7*hM, hy = n3[1] - 4*hM, sn = 16*hM*sM, hh = 8*hM;
+  const hx = n3[0] - 7*hM, hy = n3[1] - 4*hM, sn = T_.headLen*hM*sM, hh = T_.headDepth*hM;
   // the muzzle is shallower than the braincase, and more so when young
   const fh = hh * (0.62 + 0.38*st.muzzle);
 
@@ -84,7 +85,7 @@ function drawBrachio(M, P){
      the horn column the other two species use for their ornament. It is the
      only thing this skull can say at ten pixels long besides the eye and the
      jaw line, so it is worth having it change. */
-  const crTop = 1.10 + 0.95*cr, crBack = 0.85 + 0.85*cr;
+  const crTop = 1.10 + (T_.crestH-1.10)*cr, crBack = 0.85 + 0.85*cr;
   blob(M.crest, [[hx+2*hM,hy-hh*1.0],[hx-sn*.16,hy-hh*crTop],
                  [hx-sn*.62,hy-hh*crBack],[hx-sn*.6,hy-hh*.85]]);
   /* Nares on the crest. As a filled block this read as a hole punched in a
@@ -110,10 +111,10 @@ function drawBrachio(M, P){
     [shX - 2, shY + 2,  19*lM],          // shoulder hump
     [8*tor,   shY + 8,  22*lM],          // deepest, over the ribs
     [hipX,    hipY,     17*lM],          // hips
-    [hipX + 22*tM, hipY + 1,  11*lM],    // tail
-    [hipX + 44*tM, hipY + 3,   7*lM],
-    [hipX + 66*tM, hipY + 6,   3.5*lM],
-    [hipX + 86*tM, hipY + 10,  1.5*lM]
+    [hipX + TL*22/86*tM, hipY + 1,  11*lM],    // tail
+    [hipX + TL*44/86*tM, hipY + 3,   7*lM],
+    [hipX + TL*66/86*tM, hipY + 6,   3.5*lM],
+    [hipX + TL*tM,     hipY + 10,  1.5*lM]
   ];
 
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],

@@ -916,6 +916,128 @@ same three hills. And the species files still share nothing.
 
 ---
 
+## Session 12 — an art editor, and the data behind it
+
+**Asked for.** A way to change the art without going through me — "if I want to
+change a part of the Brachiosaurus tail, or make the neck longer, there is no
+easy way for me to do this currently" — covering all of it: animals,
+backgrounds, food, shop items, buttons. Plus notes kept somewhere for the
+Android port and for what happens after an animal reaches adult.
+
+**The trade, stated plainly.** Moving to hand-drawn sprite sheets would give
+total control and cost the game most of its content: 624 baked frames come out
+of about 200 numbers per species, coats repaint any of them for free, and a
+fourth animal costs one file rather than several thousand images. The engine is
+not the limitation. What was missing was that the numbers were *inside* the
+code. So: keep the engine, extract the data, build the editor.
+
+### The pixel art
+
+Twenty-nine sprites — fourteen icons, six hats, seven food items, the mess and
+the heart — were a hundred and forty lines of hand-written `g.fillRect(3,4,2,1)`
+spread across three modules, changeable only by someone who could read them as a
+picture in their head. They are rows of characters in `PIX` now, editable by eye
+in a text editor and by hand in the editor.
+
+Converted by **extraction, not transcription**: a probe ran the old draw
+functions into a canvas, read the pixels back and emitted the palette and rows.
+Then the same probe rendered all twenty-nine both ways and compared them pixel
+for pixel against the committed build. Zero differences. Transcribing a hundred
+and forty `fillRect` calls by hand would have introduced errors that nobody
+would find for months.
+
+The outline every icon and hat wears is deliberately *not* stored. It is a pass
+over the finished grid in `pixCanvas`, so an edit cannot leave a sprite with a
+half-drawn border — and it deleted two private copies of the same dilation loop.
+The bond pips turned out to be a second hand-written copy of the heart the
+particles already use; they draw the same sprite twice now, once flat grey.
+
+### The proportions
+
+Each draw function had its skeleton as literals scattered through fifty lines of
+control points. They are `REX_TUNE`, `TRI_TUNE` and `BRA_TUNE` now — hip height,
+torso length, neck length, head length and depth, tail length, and whatever else
+that species has, in local units at adult size.
+
+Where a draw function needs two stations at a fixed ratio — the four points down
+a tail — they are written as exact fractions of the length (`TL*23/72`), not as
+rounded decimals. The first pass used `TL*.32`, which is 23.04, and **239 of 312
+frames moved**. A refactor that claims to be structural has to prove it: all 312
+frames are byte-identical to the committed build now, and that check ran after
+every step.
+
+### One file
+
+Everything the editor can change — `PIX`, `STAGE`, the three `TUNE` tables, the
+three `SPEC` colour sets, `SKINS`, and the habitat palettes as `BIOME_ART` — was
+consolidated into `src/00-art.js`, each declaration wrapped in
+`/*<data:NAME>*/ … /*</data>*/`.
+
+That is the whole reason for the consolidation. An editor that has to patch a
+value out of the middle of six working source files is an editor that will
+eventually corrupt one. This one replaces the text between markers and leaves
+everything else, so the prose survives a save.
+
+The markers themselves cost a mistake worth recording: they were placed by
+matching `^};$`, and the three `SPEC` declarations end mid-line
+(`outline:'#26190f' };`). The regex sailed past them and stacked four closing
+markers seventy lines further down. They are placed by a brace scanner that
+skips strings and comments now. Two comments that lived *inside* `TRI_SPEC` were
+lifted above it in the same pass, because the serialiser writes a plain object
+and a comment between the braces would not survive a save.
+
+### The editor
+
+`tools/editor.html`, five tabs:
+
+- **Pixels** — a paint grid over every `PIX` sprite, with its palette editable
+  and the result shown at 1x, 2x, 4x and outlined as the game draws it.
+- **Species** — a slider per proportion and a picker per material colour, over
+  a live strip of all four growth stages.
+- **Growth** — the `STAGE` table as a spreadsheet, with every species at every
+  stage underneath it.
+- **Coats** — colours and pattern per coat, on the animal wearing it.
+- **Habitats** — sky, ground and tint per biome, over all four sky phases baked.
+
+Every change mutates the live object, calls `artChanged()` and redraws. That one
+call drops five independent caches — frames, materials, pixels, backdrops, sky
+palettes — because a preview showing a stale bake is how an editor teaches you
+the wrong thing about your own edit.
+
+It runs from a local server rather than `file://`, for two reasons that are the
+same reason: it reads `00-art.js` in order to save it, and the browser will only
+hand out a writable file handle on a secure origin. `python -m http.server`.
+
+Two faults found by driving it headlessly. `const $` at the top of the editor's
+script collided with `00-core.js`'s, which is a redeclaration that kills the
+whole file before a line of it runs — and leaves no error anywhere, because the
+error handler was in the file that did not load. And the serialiser looked its
+tables up on `window`, which never works for a top-level `const` in a classic
+script: they go into the global lexical scope and never become window
+properties. Both are silent failures that look like nothing happening.
+
+**Proved, not assumed:** a save with nothing changed produces a file that
+reloads to identical data for all ten blocks, and rewriting the rewritten file
+is a fixed point.
+
+### Written down rather than built
+
+`docs/TODO.md` now holds the two long jobs. The **Android port**: the Capacitor
+wrap is a day, and the work that matters is the frame loop draining the battery,
+the back button, audio needing a gesture, notifications, and the case on a tall
+narrow screen — with a note to wrap it roughly and put it on a real phone before
+polishing anything. **Week two**: an animal reaches adult in about four hours
+and then the loop is four meters and a thirty-second game, with nothing for
+coins to do once the coats are bought. That is the biggest hole in the game and
+nothing about it is decided yet.
+
+**Not done.** The editor turns numbers; it does not yet let you drag a control
+point on the outline. That needs the species outlines themselves extracted to
+data, which is the same job again one level deeper, and is worth doing once the
+`TUNE` sliders have shown which numbers people actually reach for.
+
+---
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

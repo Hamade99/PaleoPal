@@ -16,114 +16,12 @@ const NEED_META = [
   { k:'hygiene', label:'Clean',   col:'#7fb2c9' },
   { k:'joy',     label:'Joy',     col:'#c96f86' }
 ];
-const ICON_ART = {
-  feed: g => {
-    g.fillStyle='#82382a'; g.fillRect(2,2,7,8);
-    g.fillStyle='#a04a34'; g.fillRect(2,2,6,7);
-    g.fillStyle='#c46a4c'; g.fillRect(3,3,3,2);
-    g.fillStyle='#d8d0b4'; g.fillRect(8,5,3,2); g.fillRect(10,3,2,2); g.fillRect(10,7,2,2);
-  },
-  play: g => {
-    for (let y=0;y<12;y++) for (let x=0;x<12;x++){
-      const dx=x-5.5, dy=y-5.5, d=Math.hypot(dx,dy);
-      if (d > 5.4) continue;
-      g.fillStyle = d > 4.3 ? '#2f6f6a' : (dx+dy < -3.2 ? '#a7dbd3' : '#5fb0a5');
-      g.fillRect(x,y,1,1);
-    }
-    g.fillStyle='#2f6f6a'; g.fillRect(1,5,10,1); g.fillRect(5,1,1,10);
-  },
-  wash: g => {
-    g.fillStyle='#4b7f99'; g.fillRect(4,1,3,2); g.fillRect(3,3,5,2); g.fillRect(2,5,7,4); g.fillRect(3,9,5,2);
-    g.fillStyle='#7fb2c9'; g.fillRect(4,2,2,2); g.fillRect(3,4,4,4); g.fillRect(4,8,3,2);
-    g.fillStyle='#d6ecf4'; g.fillRect(4,4,2,2);
-    g.fillStyle='#e8f4fa'; g.fillRect(10,2,1,1); g.fillRect(11,5,1,1); g.fillRect(9,7,1,1);
-  },
-  care: g => {
-    g.fillStyle='#8f3f26'; g.fillRect(1,3,4,1); g.fillRect(7,3,4,1); g.fillRect(0,4,12,4);
-    g.fillRect(1,8,10,1); g.fillRect(2,9,8,1); g.fillRect(3,10,6,1); g.fillRect(4,11,4,1);
-    g.fillStyle='#c2603c'; g.fillRect(1,4,10,3); g.fillRect(2,7,8,1); g.fillRect(3,8,6,1);
-    g.fillStyle='#f2ded0'; g.fillRect(5,4,2,5); g.fillRect(3,6,6,2);
-  },
-  shop: g => {
-    g.fillStyle='#5c4726'; g.fillRect(1,4,10,8);
-    g.fillStyle='#8a6a36'; g.fillRect(1,4,9,7);
-    g.fillStyle='#b08a4a'; g.fillRect(1,4,9,2);
-    g.fillStyle='#5c4726'; g.fillRect(3,1,1,3); g.fillRect(8,1,1,3); g.fillRect(4,0,4,1);
-    g.fillStyle='#d9a83f'; g.fillRect(5,7,2,2);
-  },
-  coin: g => {
-    g.fillStyle='#8a6a1e'; g.fillRect(2,1,8,10); g.fillRect(1,2,10,8);
-    g.fillStyle='#d9a83f'; g.fillRect(2,2,7,8); g.fillRect(3,1,5,10);
-    g.fillStyle='#f0d888'; g.fillRect(3,2,2,2);
-    g.fillStyle='#8a6a1e'; g.fillRect(5,3,2,6); g.fillRect(4,4,4,1); g.fillRect(4,7,4,1);
-  },
-  /* the meter strip: one glyph per need, the way the classic devices did it */
-  hunger: g => {
-    g.fillStyle='#d8d0b4'; g.fillRect(8,1,2,4); g.fillRect(7,1,1,2); g.fillRect(10,1,1,2);
-    g.fillStyle='#82382a'; g.fillRect(1,4,9,7); g.fillRect(2,3,7,1);
-    g.fillStyle='#a04a34'; g.fillRect(1,4,8,5);
-    g.fillStyle='#c46a4c'; g.fillRect(2,5,3,3);
-  },
-  energy: g => {
-    const bolt=[[6,0,3],[5,1,3],[4,2,3],[3,3,4],[2,4,7],[5,5,3],[4,6,3],[3,7,3],[2,8,3],[2,9,2]];
-    g.fillStyle='#8a6a1e'; for (const [x,y,w] of bolt) g.fillRect(x,y+1,w,1);
-    g.fillStyle='#d9c04a'; for (const [x,y,w] of bolt) g.fillRect(x,y,w,1);
-    g.fillStyle='#f4e79a'; g.fillRect(5,1,2,1); g.fillRect(4,2,2,1);
-  },
-  hygiene: g => {
-    const drop=[[5,0,2],[5,1,2],[4,2,4],[3,3,6],[3,4,6],[2,5,8],[2,6,8],[2,7,8],[3,8,6],[4,9,4]];
-    g.fillStyle='#4b7f99'; for (const [x,y,w] of drop) g.fillRect(x,y,w,1);
-    g.fillStyle='#7fb2c9'; g.fillRect(3,3,5,5); g.fillRect(4,2,3,1); g.fillRect(4,8,4,1);
-    g.fillStyle='#d6ecf4'; g.fillRect(4,4,2,2); g.fillRect(4,3,1,1);
-  },
-  joy: g => {
-    const heart=[[2,1,3],[7,1,3],[1,2,10],[1,3,10],[1,4,10],[2,5,8],[3,6,6],[4,7,4],[5,8,2]];
-    g.fillStyle='#8f3050'; for (const [x,y,w] of heart) g.fillRect(x,y,w,1);
-    g.fillStyle='#c96f86'; g.fillRect(2,2,8,2); g.fillRect(2,1,2,1); g.fillRect(7,1,2,1);
-    g.fillRect(2,4,7,1); g.fillRect(3,5,5,1); g.fillRect(4,6,3,1);
-    g.fillStyle='#f0a8b8'; g.fillRect(2,2,2,2);
-  },
-  /* the case buttons */
-  sound: g => {
-    g.fillStyle='#3a2408';
-    g.fillRect(0,4,2,4); g.fillRect(2,3,1,6); g.fillRect(3,2,1,8); g.fillRect(4,1,1,10);
-    g.fillStyle='#1d4a33';
-    g.fillRect(7,4,1,4); g.fillRect(9,2,1,8); g.fillRect(8,3,1,1); g.fillRect(8,8,1,1);
-    g.fillRect(10,1,1,1); g.fillRect(10,10,1,1);
-  },
-  mute: g => {
-    g.fillStyle='#3a2408';
-    g.fillRect(0,4,2,4); g.fillRect(2,3,1,6); g.fillRect(3,2,1,8); g.fillRect(4,1,1,10);
-    g.fillStyle='#c2603c';
-    for (let i=0;i<5;i++){ g.fillRect(7+i,3+i,1,1); g.fillRect(11-i,3+i,1,1); }
-  },
-  bone: g => {
-    g.fillStyle='#b8ad90';
-    g.fillRect(3,5,6,3); g.fillRect(1,3,3,3); g.fillRect(1,7,3,3); g.fillRect(8,3,3,3); g.fillRect(8,7,3,3);
-    g.fillStyle='#efe6cf';
-    g.fillRect(3,5,6,2); g.fillRect(1,3,3,2); g.fillRect(8,3,3,2); g.fillRect(1,7,2,2); g.fillRect(8,7,2,2);
-  },
-  nest: g => {
-    g.fillStyle='#6b5230'; g.fillRect(0,7,12,4); g.fillRect(1,6,10,1);
-    g.fillStyle='#8a6a3c'; g.fillRect(1,7,10,1); g.fillRect(0,9,12,1);
-    g.fillStyle='#efe3c4'; g.fillRect(3,3,3,4); g.fillRect(2,4,5,3);
-    g.fillStyle='#cfc3a4'; g.fillRect(7,4,3,3); g.fillRect(6,5,5,2);
-  }
-};
-function pixelIcon(id, w, h){
-  const c = makeCv(w,h), g = readCtx(c);
-  ICON_ART[id](g);
-  const d = g.getImageData(0,0,w,h), px = d.data, solid = new Uint8Array(w*h);
-  for (let i=0;i<w*h;i++){ if (px[i*4+3] >= 118){ px[i*4+3]=255; solid[i]=1; } else px[i*4+3]=0; }
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
-    const i=y*w+x; if (solid[i]) continue;
-    if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
-      px[i*4]=0x14; px[i*4+1]=0x1c; px[i*4+2]=0x1e; px[i*4+3]=255;
-    }
-  }
-  g.putImageData(d,0,0);
-  return c;
-}
+/* The icon art is in PIX in 00-art.js and the outline pass is in pixCanvas,
+   so what is left here is the call. It used to be fourteen hand-written
+   fillRect functions and a private copy of the dilation loop. The `w`/`h`
+   arguments are kept because two callers pass sizes; a stored sprite has its
+   own, and anything else is scaled by CSS. */
+function pixelIcon(id){ return pixCanvas('icon.' + id, '#141c1e'); }
 
 /* The bond row used to be five rotated CSS squares and the meters were CSS
    pills with rounded ends and a smooth gradient. Neither belonged next to a
@@ -134,15 +32,10 @@ const BOND_PIPS = 5, PIP_W = 9, PIP_H = 7;
 function bondCanvas(on){
   const c = makeCv(BOND_PIPS*PIP_W, PIP_H), g = readCtx(c);
   for (let i=0;i<BOND_PIPS;i++){
-    const x = i*PIP_W, lit = i < on;
-    g.fillStyle = lit ? '#8f2f46' : '#232e31';
-    g.fillRect(x+1,1,2,1); g.fillRect(x+4,1,2,1);
-    g.fillRect(x,2,7,2); g.fillRect(x+1,4,5,1); g.fillRect(x+2,5,3,1); g.fillRect(x+3,6,1,1);
-    if (lit){
-      g.fillStyle = '#e2697c';
-      g.fillRect(x+1,2,5,1); g.fillRect(x+2,3,3,1); g.fillRect(x+3,4,1,1);
-      g.fillStyle = '#f6b3c0'; g.fillRect(x+1,2,2,1);
-    }
+    /* One heart, drawn twice: in its own colours when the pip is earned and
+       flat grey when it is not. It used to be a second hand-written copy of
+       the same seven-by-six heart that the particles use. */
+    pixDraw(g, 'heart', i*PIP_W, 1, 1, i < on ? null : '#232e31');
   }
   c.style.cssText = 'width:' + (BOND_PIPS*PIP_W*2) + 'px;height:' + (PIP_H*2) +
                     'px;image-rendering:pixelated;display:block';
@@ -164,22 +57,22 @@ function buildChrome(){
     ['feed','Feed'],['play','Play'],['wash','Wash'],['care','Care'],['shop','Shop']
   ].map(([k,l]) => `<button class="act" id="act-${k}"><span class="ico" data-ico="${k}"></span>${l}</button>`).join('');
   document.querySelectorAll('[data-ico]').forEach(sl => {
-    const c = pixelIcon(sl.getAttribute('data-ico'), 12, 12);
+    const c = pixelIcon(sl.getAttribute('data-ico'));
     c.style.imageRendering = 'pixelated';
     sl.appendChild(c);
   });
   document.querySelectorAll('[data-nico]').forEach(sl => {
-    const c = pixelIcon(sl.getAttribute('data-nico'), 12, 12);
+    const c = pixelIcon(sl.getAttribute('data-nico'));
     c.style.imageRendering = 'pixelated';
     sl.appendChild(c);
   });
-  const coin = pixelIcon('coin', 12, 12);
+  const coin = pixelIcon('coin');
   coin.style.cssText = 'width:13px;height:13px;image-rendering:pixelated';
   $('coinArt').appendChild(coin);
-  const nest = pixelIcon('nest', 12, 12);
+  const nest = pixelIcon('nest');
   nest.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnNest').appendChild(nest);
-  const bone = pixelIcon('bone', 12, 12);
+  const bone = pixelIcon('bone');
   bone.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnDev').appendChild(bone);
   paintSound();
@@ -281,7 +174,7 @@ function paintSound(){
   if (on === soundShown) return;
   soundShown = on;
   if (soundIcon) soundIcon.remove();
-  soundIcon = pixelIcon(on ? 'sound' : 'mute', 12, 12);
+  soundIcon = pixelIcon(on ? 'sound' : 'mute');
   soundIcon.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   btn.appendChild(soundIcon);
   btn.classList.toggle('off', !on);
@@ -414,10 +307,10 @@ function mountArt(root){
   root.querySelectorAll('[data-art]').forEach(slot => {
     const id = slot.getAttribute('data-art');
     if (!id) return;
-    if (HATS[id]){
+    if (PIX['hat.' + id]){
       const c = makeCv(30,28), g = readCtx(c);
       g.imageSmoothingEnabled = false;
-      g.drawImage(HATS[id], 3, 2, 24, 22);
+      g.drawImage(hatArt(id), 3, 2, 24, 22);
       slot.appendChild(c);
     } else {
       const c = makeCv(30,30), g = readCtx(c);

@@ -54,69 +54,33 @@ const PHASE_MIX = {
 };
 const GROUND_KEYS = ['far','mid','tree','grass','dirt','water'];
 
-const BIOMES = {
+/* A habitat is its palette from BIOME_ART merged with its painters. The
+   palette is data the editor writes; the painters are code it cannot. */
+const BIOME_PAINT = {
   valley: {
-    id:'valley', name:'Fern valley', cost:0,
-    note:'Open ground under a live volcano. Where every animal starts.',
-    sky:{ night:['#0a1124','#28374f'], dawn:['#2c3f70','#e39a6c'],
-          day:['#4d9dc9','#c3e2d8'],   dusk:['#2b2854','#da834b'] },
-    ground:{ far:'#8fa79d', mid:'#6c8b6f', tree:'#3e5a44',
-             grass:'#78a051', dirt:'#a5825a', water:'#6fa6b8' },
-    tint:{ night:'rgba(16,24,54,.44)', dawn:'rgba(196,124,84,.13)',
-           day:'rgba(0,0,0,0)',        dusk:'rgba(96,62,116,.20)' },
-    landmark: drawVolcano, treeline: valleyTrees, floor: valleyFloor, live: drawPlume
+landmark: drawVolcano, treeline: valleyTrees, floor: valleyFloor, live: drawPlume
   },
   lagoon: {
-    id:'lagoon', name:'Salt lagoon', cost:130,
-    note:'A warm shallow sea behind a bar of pale sand. Sea stacks on the horizon.',
-    sky:{ night:['#08111f','#1e3448'], dawn:['#34497a','#f0a878'],
-          day:['#58a8d6','#d8ecec'],   dusk:['#2f2a58','#e0864c'] },
-    ground:{ far:'#b7c3c0', mid:'#7f9a92', tree:'#4a6a52',
-             grass:'#a8b47a', dirt:'#d6c69a', water:'#59a8c0' },
-    tint:{ night:'rgba(14,26,56,.42)', dawn:'rgba(212,140,88,.14)',
-           day:'rgba(0,0,0,0)',        dusk:'rgba(112,64,104,.20)' },
-    landmark: drawSeaStacks, treeline: lagoonTrees, floor: lagoonFloor, live: drawSurf,
+landmark: drawSeaStacks, treeline: lagoonTrees, floor: lagoonFloor, live: drawSurf,
     // a low bar of dune rather than a hill, so the water is not hidden
     nearRidge:{ base:127, col:'#c2b083', lit:'#dccca3', waves:[[.052,1.4,4],[.13,.6,2]] }
   },
   ashfall: {
-    id:'ashfall', name:'Ash flats', cost:170,
-    note:'The valley after the mountain woke. Dust in the air and nothing green left standing.',
-    sky:{ night:['#120e1c','#2e2634'], dawn:['#4a3c58','#e08a5c'],
-          day:['#7e8faa','#d3cdc4'],   dusk:['#3a2a44','#d46a3c'] },
-    ground:{ far:'#8b8496', mid:'#6a6472', tree:'#3a3640',
-             grass:'#6e6a63', dirt:'#8e857c', water:'#6a7078' },
-    tint:{ night:'rgba(20,16,34,.46)', dawn:'rgba(200,120,76,.15)',
-           day:'rgba(150,132,110,.10)', dusk:'rgba(120,64,60,.22)' },
-    landmark: drawAshVolcano, treeline: ashTrees, floor: ashFloor, live: drawAshfall
+landmark: drawAshVolcano, treeline: ashTrees, floor: ashFloor, live: drawAshfall
   },
   gorge: {
-    id:'gorge', name:'Fern gorge', cost:210,
-    note:'A cut in the plateau with a fall at the head of it. Wet, green and loud.',
-    sky:{ night:['#070e18','#1c2a34'], dawn:['#2e3f60','#dba888'],
-          day:['#4f93b0','#cfe4d6'],   dusk:['#262848','#c07a54'] },
-    ground:{ far:'#7d9285', mid:'#55705c', tree:'#2e4a38',
-             grass:'#5f8f4e', dirt:'#6f5c46', water:'#7fc0c4' },
-    tint:{ night:'rgba(12,22,44,.46)', dawn:'rgba(180,124,92,.13)',
-           day:'rgba(0,0,0,0)',        dusk:'rgba(84,58,104,.22)' },
-    landmark: drawFalls, treeline: gorgeTrees, floor: gorgeFloor, live: drawFallsSpray,
+landmark: drawFalls, treeline: gorgeTrees, floor: gorgeFloor, live: drawFallsSpray,
     /* The wall is the near side of the gorge, not something behind the hills:
        painted before the near ridge, the fall disappeared behind it half way
        down and its spray was drawn over the treeline in front. */
     landmarkFront: true
   },
   boreal: {
-    id:'boreal', name:'Polar dawn', cost:260,
-    note:'High-latitude forest under a glacier. Dinosaurs lived here, in the dark half of the year.',
-    sky:{ night:['#060c1a','#17253c'], dawn:['#2a3a68','#eab48c'],
-          day:['#6fa8d0','#e6eef2'],   dusk:['#26244e','#c98a6a'] },
-    ground:{ far:'#b9c6d6', mid:'#8ea0b2', tree:'#2d4444',
-             grass:'#cdd8e0', dirt:'#a9b6c2', water:'#6f9ec4' },
-    tint:{ night:'rgba(18,30,64,.42)', dawn:'rgba(214,150,104,.14)',
-           day:'rgba(0,0,0,0)',        dusk:'rgba(80,66,116,.22)' },
-    landmark: drawGlacier, treeline: borealTrees, floor: borealFloor, live: drawAurora
-  }
+landmark: drawGlacier, treeline: borealTrees, floor: borealFloor, live: drawAurora
+  },
 };
+const BIOMES = {};
+for (const k in BIOME_ART) BIOMES[k] = Object.assign({}, BIOME_ART[k], BIOME_PAINT[k]);
 const BIOME_IDS = Object.keys(BIOMES);
 const biomeId = () => (G && BIOMES[G.biome] ? G.biome : 'valley');
 
@@ -1310,16 +1274,8 @@ function stepParts(dt){
   parts = parts.filter(p => p.age < p.life);
 }
 /* Seven across rather than five, with a rim and a highlight. The old one was
-   a 5x5 blob that vanished against the animal. */
-function heartPx(g,x,y){
-  g.fillStyle = '#8f2f46';
-  g.fillRect(x+1,y-1,2,1); g.fillRect(x+4,y-1,2,1);
-  g.fillRect(x,y,7,3); g.fillRect(x+1,y+3,5,1); g.fillRect(x+2,y+4,3,1); g.fillRect(x+3,y+5,1,1);
-  g.fillStyle = '#e2697c';
-  g.fillRect(x+1,y,5,2); g.fillRect(x+2,y+2,3,1); g.fillRect(x+3,y+3,1,1);
-  g.fillStyle = '#f6b3c0';
-  g.fillRect(x+1,y,2,1); g.fillRect(x+1,y+1,1,1);
-}
+   a 5x5 blob that vanished against the animal. The art is in PIX now. */
+function heartPx(g,x,y){ pixDraw(g, 'heart', x, y, 1); }
 function drawParts(g){
   for (const p of parts){
     const x = Math.round(p.x), y = Math.round(p.y), fade = p.age/p.life;
@@ -1336,26 +1292,10 @@ function drawParts(g){
   }
 }
 
-/* --------------------------- props: food & mess ---------------------------- */
-/* `flat` paints every part of the item in one colour. Stamped four times a
-   pixel out in each direction under the real thing, that gives a food item
-   the same hard outline every animal in this game has — which is what a green
-   fern frond needs before it can be picked out against a green grass line.
-   A bounding rectangle will not do it: it comes out as a black plaque. */
-function drawItem(g, id, x, y, s, flat){
-  s = s || 1; g.save(); g.translate(x,y); g.scale(s,s);
-  const px = (c,a,b,w,h)=>{ g.fillStyle=flat||c; g.fillRect(a,b,w||1,h||1); };
-  if (id==='berry'){ px('#4e7a4a',2,-2,1,2); px('#8f2b36',0,0,5,4); px('#b83b45',0,0,4,3); px('#e08a92',1,1,1,1); }
-  if (id==='fish'){ px('#5b7c90',0,0,6,3); px('#7fa3b8',0,0,6,2); px('#c9dde6',1,1,2,1); px('#5b7c90',6,0,2,3); px('#1a140e',1,0,1,1); }
-  if (id==='fern'){ px('#3f6440',2,0,1,5); for(let i=0;i<3;i++){ px('#6f9c55',1,1+i,1,1); px('#8fb763',3,1+i,1,1);} px('#8fb763',0,2,1,1); px('#6f9c55',4,2,1,1); }
-  if (id==='cycad'){ px('#5a4a2a',2,3,2,2); px('#8a6b2c',1,0,4,4); px('#a8863c',1,0,3,3); px('#d0ae5c',2,1,1,1); }
-  if (id==='meat'){ px('#82382a',0,0,5,4); px('#a04a34',0,0,5,3); px('#c46a4c',1,1,2,1); px('#efe9d8',5,2,2,2); }
-  if (id==='cake'){ px('#b8823f',0,1,6,4); px('#d1a05e',0,1,6,3); px('#f0dcae',0,0,6,1); px('#b83b45',2,-1,2,2); }
-  if (id==='rock'){ px('#6e6a5e',0,0,6,4); px('#8b8578',0,0,5,3); px('#a8a294',3,0,2,1); }
-  g.restore();
-}
-function drawMess(g, x, y){
-  g.fillStyle='#513218'; g.fillRect(x-3,y-2,7,3);
-  g.fillStyle='#6b4322'; g.fillRect(x-3,y-2,6,2); g.fillRect(x-2,y-4,5,2); g.fillRect(x-1,y-6,3,2);
-  g.fillStyle='#8a5c33'; g.fillRect(x-1,y-5,2,1); g.fillRect(x-2,y-2,2,1);
-}
+/* --------------------------- props: food & mess ----------------------------
+   Both are entries in PIX. `flat` paints every pixel one colour, which is what
+   gives a food item the hard outline every animal in this game has — a green
+   fern frond on a green grass line is otherwise invisible, and a bounding
+   rectangle comes out as a black plaque instead of an outline. */
+function drawItem(g, id, x, y, s, flat){ pixDraw(g, 'item.' + id, x, y, s || 1, flat); }
+function drawMess(g, x, y){ pixDraw(g, 'mess', x, y, 1); }

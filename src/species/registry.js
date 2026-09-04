@@ -4,7 +4,7 @@
 /* --------------------------- species registry ------------------------------ */
 const SPECIES = {
   rex: {
-    id:'rex', draw:drawRex, spec:REX_SPEC, scale:.82, speed:15, strideBase:.46*46,
+    id:'rex', draw:drawRex, spec:REX_SPEC, tune:REX_TUNE, scale:.82, speed:15, strideBase:.46*46,
     name:'Tyrannosaurus rex', common:'T. rex', diet:'carnivore',
     likes:['fish','meat'], dislikes:['fern'],
     eggTint:'#7e9c54', lure:'eats meat',
@@ -23,7 +23,7 @@ const SPECIES = {
             'Down when young, bare when grown','Shallow snout and long legs as a juvenile']
   },
   trike: {
-    id:'trike', draw:drawTrike, spec:TRI_SPEC, scale:.86, speed:10, strideBase:.34*41,
+    id:'trike', draw:drawTrike, spec:TRI_SPEC, tune:TRI_TUNE, scale:.86, speed:10, strideBase:.34*41,
     name:'Triceratops horridus', common:'Triceratops', diet:'herbivore',
     likes:['fern','cycad'], dislikes:['fish'],
     eggTint:'#ab7040', lure:'eats ferns',
@@ -43,7 +43,7 @@ const SPECIES = {
             'Upright hind legs, elbows held out','Short-bodied and stocky as a hatchling']
   },
   brachio: {
-    id:'brachio', draw:drawBrachio, spec:BRA_SPEC, scale:.66, speed:5.5, strideBase:.30*46,
+    id:'brachio', draw:drawBrachio, spec:BRA_SPEC, tune:BRA_TUNE, scale:.66, speed:5.5, strideBase:.30*46,
     name:'Brachiosaurus altithorax', common:'Brachiosaurus', diet:'herbivore',
     likes:['berry','cycad'], dislikes:['meat'],
     eggTint:'#71958a', lure:'eats berries',
@@ -80,59 +80,6 @@ function eggChoices(){
   return ids.map((id, i) => ({ id, x: W/2 + (i - (n-1)/2) * gap, hit }));
 }
 
-/* --------------------------------- skins -----------------------------------
-   A skin swaps the three body ramps and paints an optional pattern onto the
-   mark layer. Patterns are deterministic so a coat does not crawl between
-   animation frames.
-   -------------------------------------------------------------------------- */
-const SKINS = {
-  rex: [
-    { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
-      skin:'#7e9c54', belly:'#b8bd80', crest:'#5b7940', mark:'#4a6634',
-      note:'The olive coat it hatched in.' },
-    { id:'ash',    name:'Ashfall',   cost:70,  pattern:'bands',
-      skin:'#6f7a72', belly:'#a9b0a2', crest:'#4a534d', mark:'#39413c',
-      note:'Cold grey, charcoal banding across the flank into tail rings.' },
-    { id:'ember',  name:'Ember',     cost:120, pattern:'patches',
-      skin:'#a8603a', belly:'#d69a5e', crest:'#7c4224', mark:'#71321a',
-      note:'Rust and scorch marks. Loud, and it knows it.' },
-    { id:'canopy', name:'Canopy',    cost:170, pattern:'speckle',
-      skin:'#4f7a4a', belly:'#9dbd7a', crest:'#395c37', mark:'#93b25c',
-      note:'Deep forest green flecked with light through leaves.' }
-  ],
-  trike: [
-    { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
-      skin:'#ab7040', belly:'#ca9b64', crest:'#8a5228', mark:'#7a4522',
-      note:'The tan coat it hatched in.' },
-    { id:'chalk',  name:'Chalk',     cost:70,  pattern:'spots',
-      skin:'#c3ab8c', belly:'#e6d8bc', crest:'#95805f', mark:'#8a7050',
-      note:'Bleached bone with dark rosettes.' },
-    { id:'ochre',  name:'Ochre',     cost:120, pattern:'bands',
-      skin:'#c26a30', belly:'#e8a75c', crest:'#8e4620', mark:'#6f2f18',
-      note:'A display animal. Banding follows the ribs and rings the tail.' },
-    { id:'basalt', name:'Basalt',    cost:170, pattern:'patches',
-      skin:'#5c6470', belly:'#98a1ad', crest:'#3f4650', mark:'#333944',
-      note:'Volcanic grey-blue with darker plates.' }
-  ],
-  brachio: [
-    { id:'wild',   name:'Wild type', cost:0,   pattern:'none',
-      skin:'#71958a', belly:'#a9ba8e', crest:'#88a894', mark:'#5c7f74',
-      note:'The sage coat it hatched in.' },
-    { id:'dune',   name:'Dune',      cost:70,  pattern:'patches',
-      skin:'#b9a173', belly:'#ded0a2', crest:'#c6b088', mark:'#8c7548',
-      note:'Sand and dry grass. Vanishes on the floodplain.' },
-    { id:'slate',  name:'Slate',     cost:120, pattern:'bands',
-      skin:'#6d7d92', belly:'#a9b6c4', crest:'#7f8fa2', mark:'#3f4b5c',
-      note:'Storm grey, shadow banding down the neck and out the tail.' },
-    { id:'fernwood',name:'Fernwood', cost:170, pattern:'spots',
-      skin:'#4e7a63', belly:'#9dba8e', crest:'#5f8a72', mark:'#8fb27c',
-      note:'Wet forest green dappled with pale rings.' }
-  ]
-};
-function skinOf(spId, skinId){
-  const list = SKINS[spId];
-  return list.find(k => k.id === skinId) || list[0];
-}
 /* ------------------------------ coat patterns ------------------------------
    A pattern used to be laid down as a field of shapes in fixed sprite-local
    coordinates: seventeen near-vertical tubes marching across the bake box

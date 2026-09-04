@@ -81,6 +81,13 @@ quarry could not be caught by anyone.
 - **No `localStorage` directly.** Go through `Store` in `00-core.js`.
 - **No image assets.** The case, the icons, the animals and the screen font
   are all drawn from code. Keep it that way.
+- **Art is data, in one file.** Anything that can change without changing
+  behaviour — pixel sprites, growth columns, proportions, every colour that is
+  not the case — belongs in `src/00-art.js` behind its `<data:NAME>` markers,
+  because that file is what `tools/editor.html` writes. Adding a hand-written
+  `fillRect` sprite somewhere else puts it out of the owner's reach. After
+  changing any of it, call `artChanged()`: five caches hold baked results and
+  forgetting one shows a stale sprite.
 - **The developer tools are a harness, not a cheat menu.** Anything added to
   `DEV` must write the same fields the simulation writes.
 

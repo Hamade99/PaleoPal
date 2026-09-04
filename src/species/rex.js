@@ -1,8 +1,6 @@
 /* Tyrannosaurus rex sprite
    Part of Paleopal. Load order matters; see build.py. */
 
-const REX_SPEC = { skin:'#7e9c54', belly:'#b8bd80', crest:'#5b7940', horn:'#e9dfba',
-                   mouth:'#8e4a45', outline:'#241d13' };
 const REX_GAIT = { stride:.46, lift:.17, duty:.56, mt:.22, back:.34, bend:1, thigh:false, foot:'bird' };
 function drawRex(M, P){
   const st = STAGE[P.stage];
@@ -16,18 +14,19 @@ function drawRex(M, P){
      between them are most of the difference between a leggy slab-sided
      juvenile and a barrel-chested adult. Before they existed the three older
      stages were one animal at three sizes. */
-  const hipX = 16,  hipY = -46*lM - bob;
-  const backY = hipY - 24*lM, withX = -18*tor, withY = hipY - 25*lM;
-  const bellyY = hipY + 9*lM*bk, throatY = hipY + 3*lM*bk;
-  const hx = withX - 26*nM - 4*hM, hy = withY - 10*nM - 2 + dr*9;
+  const T_ = REX_TUNE;
+  const hipX = 16,  hipY = -T_.hipH*lM - bob;
+  const backY = hipY - T_.backH*lM, withX = -T_.shoulder*tor, withY = hipY - T_.withersH*lM;
+  const bellyY = hipY + T_.bellyD*lM*bk, throatY = hipY + T_.bellyD/3*lM*bk;
+  const hx = withX - T_.neckLen*nM - 4*hM, hy = withY - T_.neckDrop*nM - 2 + dr*9;
   const sM = st.snout;
   /* Skull depth at the orbit, and at the muzzle. A young tyrannosaur carries a
      shallow snout in front of a large braincase; the deep boxy skull is an
      adult feature and arrives late. One depth for both gave a hatchling an
      adult's slab of a face at hatchling scale. */
-  const hh = 15.5*hM, fh = hh * (0.46 + 0.54*st.muzzle);
+  const hh = T_.headDepth*hM, fh = hh * (0.46 + 0.54*st.muzzle);
   const dep = u => hh + (fh - hh) * u;     // linear taper along the snout
-  const sn = 23*hM*sM;
+  const sn = T_.headLen*hM*sM;
   const T = d => hipX + d*tM;
 
   // far limb first, behind everything
@@ -36,18 +35,19 @@ function drawRex(M, P){
   legStep(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 14*lM, REX_GAIT);
 
   // one continuous mass from nape to tail tip: neck, ribcage, hips and tail
-  const topLine = [[hx+11, hy-hh*.35],[withX, withY],[0, backY-1],[hipX+7, backY+1],[T(23), hipY-18*lM+sw*2]];
+  const TL = T_.tailLen;
+  const topLine = [[hx+11, hy-hh*.35],[withX, withY],[0, backY-1],[hipX+7, backY+1],[T(TL*23/72), hipY-T_.tailBase*lM+sw*2]];
   blob(M.skin, [
     [hx+11, hy-hh*.35],                     // nape at the skull
     [withX, withY],                         // withers
     [0, backY-1],                           // back
     [hipX+7, backY+1],                      // over the hips
-    [T(23), hipY-18*lM*bk+sw*2],            // deep tail base
-    [T(48), hipY-13*lM+sw*4],
-    [T(72), hipY-7*lM+sw*6],                // tail tip
-    [T(70), hipY-4*lM+sw*6],
-    [T(43), hipY-1*lM+sw*4],
-    [T(17), hipY+4*lM*bk],
+    [T(TL*23/72), hipY-T_.tailBase*lM*bk+sw*2],   // deep tail base
+    [T(TL*48/72), hipY-13*lM+sw*4],
+    [T(TL),     hipY-7*lM+sw*6],                // tail tip
+    [T(TL*70/72), hipY-4*lM+sw*6],
+    [T(TL*43/72), hipY-1*lM+sw*4],
+    [T(TL*17/72), hipY+4*lM*bk],
     [hipX-6, bellyY],                       // belly
     [-8, bellyY-1],
     [withX-7*bk, throatY-2],                // chest and throat
@@ -184,12 +184,12 @@ function drawRex(M, P){
       const wob = Math.abs(Math.sin(i*2.39 + 1.1));
       // long enough to break the outline: a coat that stops at the back line
       // is a texture, and this has to read as a covering
-      const len = (1.8 + 5.2*fz) * lM * (0.40 + 0.60*wob) * (1 - t*.40);
+      const len = (1.8 + T_.fuzzLen*fz) * lM * (0.40 + 0.60*wob) * (1 - t*.40);
       oval(M.crest, q[0] + len*.40, q[1] - len*.30, 1.5*lM, len*.62);
     }
     // and a tuft at the nape, where a young theropod's coat is thickest
     for (let i=0;i<4;i++){
-      const len = (2.2 + 5.6*fz) * lM * (0.55 + 0.45*Math.abs(Math.sin(i*3.1)));
+      const len = (2.2 + T_.fuzzLen*5.6/5.2*fz) * lM * (0.55 + 0.45*Math.abs(Math.sin(i*3.1)));
       oval(M.crest, hx + 11 + i*2.4*lM, hy - hh*.36 - len*.30, 1.7*lM, len*.58);
     }
   }
@@ -203,8 +203,8 @@ function drawRex(M, P){
 
   // two-fingered hand, palm turned inward the way a theropod wrist actually sits
   const ax = withX + 9, ay = withY + 22*lM;
-  tube(M.limb, [[ax,ay],[ax-11*lM,ay+11*lM],[ax-20*lM,ay+7*lM]], [10*lM, 7.2*lM, 5.4*lM]);
-  toes(M.horn, ax-23*lM, ay+6*lM, 2, -1, Math.max(1.3, 2.3*lM));
+  tube(M.limb, [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]], [10*lM, 7.2*lM, 5.4*lM]);
+  toes(M.horn, ax-T_.armLen*23/11*lM, ay+6*lM, 2, -1, Math.max(1.3, 2.3*lM));
 
   // near limb: a heavy drumstick over the femur, then shank and bird foot
   blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM],[hipX+5*lM, hipY+18*lM],
@@ -226,9 +226,9 @@ function drawRex(M, P){
     [withX - 4, withY + 12*lM, 12*lM],   // withers
     [-4,        hipY - 7*lM,   16*lM],   // ribcage
     [hipX + 4,  hipY - 7*lM,   16*lM],   // hips
-    [T(24),     hipY - 9*lM,    9*lM],   // tail base
-    [T(48),     hipY - 7*lM,    5.5*lM],
-    [T(72),     hipY - 6*lM,    2.0*lM]  // tail tip
+    [T(TL*24/72), hipY - 9*lM,    9*lM],   // tail base
+    [T(TL*48/72), hipY - 7*lM,    5.5*lM],
+    [T(TL),     hipY - 6*lM,    2.0*lM]  // tail tip
   ];
 
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],

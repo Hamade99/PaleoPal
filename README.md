@@ -11,6 +11,19 @@ Open `index.html` in a browser. No server, no install, no build step needed for
 development. Open `tools/sheet.html` the same way to see every sprite at once,
 which is the fastest way to check a change to the art.
 
+## Edit the art
+
+```
+python -m http.server
+```
+
+then open `http://localhost:8000/tools/editor.html`. Pixel sprites, growth
+columns, species proportions, coats and habitat palettes, all with live
+previews, saved back to `src/00-art.js`. It needs a server rather than
+`file://` for two reasons: it reads that file to save it, and the browser will
+only hand out a writable file handle on a secure origin — localhost counts,
+`file://` does not.
+
 ## Build the shippable file
 
 ```
@@ -29,6 +42,8 @@ build.py            inlines everything into dist/
 dist/paleopal.html  the single-file build
 src/
   00-core.js          utilities, storage, audio, path primitives
+  00-art.js           all the art data: pixel sprites, growth, proportions,
+                      species and coat colours, habitat palettes
   01-colour.js        ramps, material layers, lighting compositor
   02-sprite-engine.js growth stages, gait, limbs, hats, frame baking
   03-font.js          the 5x7 screen font, drawn from a bit table
@@ -41,12 +56,16 @@ src/
   style.css
 tools/
   sheet.html          every sprite, every stage, every frame, on one page
+  editor.html         edit all of it, with live previews
+  edit-core.js        serialising the data back to src/00-art.js
+  edit-ui.js          the editor's five tabs
 docs/
   DEVLOG.md           what was decided and why, session by session
   ARCHITECTURE.md     how the pieces fit, and where to change what
   SPRITE-PIPELINE.md  how an animal becomes pixels
   PALEO-REFERENCES.md the anatomy the sprites are based on
   ROADMAP.md          open work
+  TODO.md             the Android port, the week-two problem, and a changelog
 ```
 
 Start with `docs/ARCHITECTURE.md`.
