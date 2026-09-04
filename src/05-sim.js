@@ -56,6 +56,12 @@ const GROWTH_GATES = [20, 90, 240];      // minutes of well-cared-for time
 /* sleep window, in local hours */
 const BED_HOUR = 21, WAKE_HOUR = 6;
 const ENERGY_AWAKE = 8.5, ENERGY_ASLEEP = 20;   // points per hour
+/* How long an animal woken by hand stays up before the night rule may put it
+   back under. Without it, waking a tired animal at night was undone by the
+   very next tick half a second later, which is what made sleep feel like a
+   state the player had no handle on at all: a starving, filthy animal could
+   not be fed or washed, and nothing you pressed changed that. */
+const WAKE_GRACE = 20 * MIN;
 
 let G = null, S = null;
 
@@ -66,7 +72,7 @@ function freshPet(){
     health:100, bond:6, vet:false,
     traits:{ appetite:0, tempo:0, social:0 },
     asleep:false, ills:[], treats:[], mess:[], log:[],
-    nightAwake:0, petBank:0, stageSeen:0, messTimer:0
+    nightAwake:0, petBank:0, stageSeen:0, messTimer:0, wokeAt:0
   };
 }
 function freshGame(){
@@ -202,8 +208,13 @@ function simulate(ms, online){
     }
   }
 
+  /* Bedtime. An animal woken by hand gets WAKE_GRACE before the night rule
+     may take it back, so there is time to feed, wash and play — which is the
+     only reason anyone wakes one. Running the tank right down still overrules
+     that: at six energy it drops wherever it stands, grace or no grace. */
   const sleepy = isNight();
-  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30))) setSleep(true, online);
+  const justWoken = Date.now() - (S.wokeAt || 0) < WAKE_GRACE;
+  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30 && !justWoken))) setSleep(true, online);
   if (asleep && !S.vet && n.energy >= 99) setSleep(false, online);
   if (asleep && !S.vet && !sleepy && n.energy > 72) setSleep(false, online);
 
@@ -289,8 +300,32 @@ function tuckIn(){
   setSleep(true, true);
   S.bond = clamp(S.bond + 1.5, 0, 100);
   S.nightAwake = 0;
-  closeSheet();
+  S.wokeAt = 0;
   say(S.name + ' curls up and goes out like a light.');
+  refresh();
+}
+/* The other half of the switch, and the one that was missing entirely: an
+   animal put itself to sleep and there was no way to get it back. It could be
+   starving, filthy and asleep at once, and every key that would have fixed
+   that refused because it was asleep.
+
+   Waking costs, because sleep is how energy comes back and the animal went
+   under for a reason. It loses a little of what it had banked and a little
+   trust, and at night it starts running up the late-hours count — the same
+   field a player who keeps their animal up past bedtime fills, and the one
+   that brings on a chill. The cost is a consequence of a decision, not a
+   die roll. */
+function wakeUp(){
+  if (!hatched()) return;
+  if (S.vet) return refuse(S.name + ' has not fallen asleep. It has collapsed, and needs a vet.');
+  if (!S.asleep) return refuse(S.name + ' is already awake.');
+  setSleep(false, true);
+  S.wokeAt = Date.now();
+  S.needs.energy = clamp(S.needs.energy - 4, 0, 100);
+  S.bond = clamp(S.bond - 2, 0, 100);
+  if (isNight()) S.nightAwake += .5;
+  logEvent(S.name + ' was woken early.');
+  say(S.name + ' blinks awake, and is not impressed.');
   refresh();
 }
 function treat(remedyId){

@@ -55,6 +55,15 @@ function closeScreen(){
   screen = null;
   paintChrome();
 }
+/* A key is a latch, not a one-way door. It stays pressed in while its screen
+   is up, so pressing it again is the obvious way to let it out — the close tab
+   in the corner of the screen was the only way back, and on a case with five
+   physical keys under the glass that is the last place anyone looks. Pressing
+   a different key still jumps straight to that screen. */
+function toggleScreen(which){
+  if (screen === which) return closeScreen();
+  openScreen(which);
+}
 const screenOpen = () => screen !== null;
 
 /* ------------------------------ chrome ------------------------------------
@@ -261,12 +270,55 @@ SCREENS.play = {
   }
 };
 
-/* -------------------------------- care ------------------------------------ */
+/* -------------------------------- care ------------------------------------
+   Care is everything about the animal's condition, and sleep is part of that.
+   `tuckIn()` had existed for sessions with nothing anywhere that called it,
+   and there was no way to wake an animal at all — so an animal that put
+   itself to bed hungry and filthy stayed hungry and filthy, because feeding
+   and washing both refuse while it is asleep, and nothing on the case
+   answered. Rest is the last row on this list now, next to the remedies,
+   with the rule written underneath it.
+   -------------------------------------------------------------------------- */
+
+/* The rest row's label, its price column and the sentence explaining it, all
+   from the one state, so the row and its caption cannot disagree. */
+function restRow(){
+  if (S.asleep) return {
+    id:'wake', label:'Wake ' + S.name, right:'costs trust', col:SC.rust,
+    note:'Sleep is how energy comes back. Waking early costs some of it, some '
+       + 'trust, and after dark it risks a chill.'
+  };
+  const tooAwake = S.needs.energy > 70;
+  return {
+    id:'bed', label:'Settle ' + S.name + ' down', right: tooAwake ? 'not tired' : 'free',
+    col: tooAwake ? SC.rust : SC.moss,
+    note: tooAwake
+      ? 'Too wide awake to settle. Below seventy energy it goes down willingly.'
+      : 'Goes down early and wakes rested. A night in bed clears the late-hours '
+      + 'count that brings on a chill.'
+  };
+}
+
+/* The line at the top of the screen, and the only place it is written. The
+   layout has to reserve room for exactly the lines the draw is going to put
+   there — with the row list starting at a fixed offset instead, the first
+   remedy was drawn straight over the sentence saying what was wrong. */
+function careStatus(){
+  if (S.ills.length) return S.ills.map(i => ILLS[i.id].symptom);
+  if (S.asleep) return [S.name + ' is asleep, and will not eat, wash or play until it wakes.'];
+  return ['Nothing to treat. ' + S.name + ' is well.'];
+}
+
 SCREENS.care = {
   layout(){
-    const lines = S.ills.reduce((n, i) => n + wrapText(ILLS[i.id].symptom, W - PAD*2).length, 0);
-    const top = BAR_H + (S.ills.length ? 5 + lines * 8 + 4 : 5);
-    return { rows: rowsLayout(S.vet ? ['vet'] : REMEDIES.map(r => r.id), top) };
+    const lines = careStatus().reduce((n, t) => n + wrapText(t, W - PAD*2).length, 0);
+    const top = BAR_H + 4 + lines * 8 + 3;
+    const ids = S.vet ? ['vet'] : REMEDIES.map(r => r.id).concat(['rest']);
+    /* Twelve rather than the default fifteen: rest makes five rows, and at
+       the default the caption under them ran into the action bar. Eleven is
+       one too few — a row is a seven-pixel line drawn four pixels down, so
+       below twelve the labels lose their last row of pixels to the border. */
+    return { rows: rowsLayout(ids, top, 12), ids };
   },
   draw(g, L){
     const frame = screenFrame(g, 'CARE');
@@ -280,37 +332,46 @@ SCREENS.care = {
       L.act = actionBar(g, G.coins >= 30 ? 'CALL' : 'NOT ENOUGH COINS', SC.moss, G.coins < 30);
       return;
     }
-    if (!S.ills.length){
-      textBlock(g, 'Nothing to treat. ' + S.name + ' is well.', PAD, y, W - PAD*2, SC.moss, 8);
-      textBlock(g, 'Illness has causes, not luck. Three treats in an hour upsets the stomach. '
-                 + 'A late night brings on a chill. A filthy pen invites mites. Joy at zero '
-                 + 'turns into the blues.', PAD, y + 14, W - PAD*2, SC.dim, 8);
-      petOnScreen(g, W/2, H - 12, 44);
-      L.act = null;
-      return;
-    }
-    S.ills.forEach(i => { y = textBlock(g, ILLS[i.id].symptom, PAD, y, W - PAD*2, SC.rust, 8); });
+    /* The state line: asleep before well, because a sleeping animal is why
+       someone opens this screen with nothing wrong with the animal. */
+    const col = S.ills.length ? SC.rust : S.asleep ? SC.dim : SC.moss;
+    careStatus().forEach(t => { y = textBlock(g, t, PAD, y, W - PAD*2, col, 8); });
+
+    const rest = restRow();
     REMEDIES.forEach((r, i) => listRow(g, L.rows.box(i), r.name,
       r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
-      { on: i === screenState.pick, rightCol: r.cost ? SC.gold : SC.moss }));
-    caption(g, L.rows.bottom + 3, '', '', null, REMEDIES[screenState.pick].note);
-    L.act = actionBar(g, 'TREAT', SC.moss);
+      { on: i === screenState.pick, dim: !S.ills.length,
+        rightCol: r.cost ? SC.gold : SC.moss }));
+    const ri = REMEDIES.length;
+    listRow(g, L.rows.box(ri), rest.label, rest.right,
+            { on: screenState.pick === ri, rightCol: rest.col });
+
+    const onRest = screenState.pick === ri;
+    caption(g, L.rows.bottom + 3, '', '', null,
+            onRest ? rest.note
+          : S.ills.length ? REMEDIES[screenState.pick].note
+          : 'Illness has causes, not luck. Treats upset the stomach, late '
+          + 'nights bring a chill, a filthy pen invites mites, and joy at '
+          + 'zero turns into the blues.');
+    L.act = onRest
+      ? actionBar(g, S.asleep ? 'WAKE' : 'SETTLE DOWN', rest.col, !S.asleep && S.needs.energy > 70)
+      : actionBar(g, 'TREAT', SC.moss, !S.ills.length);
   },
   tap(mx, my, L){
     if (hit(L.close, mx, my)) return closeScreen();
     if (!L.act) return;
     if (S.vet){ if (hit(L.act, mx, my)) vetVisit(); return; }
-    for (let i = 0; i < REMEDIES.length; i++)
+    for (let i = 0; i < L.ids.length; i++)
       if (hit(L.rows.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
-    if (hit(L.act, mx, my)){
-      const r = REMEDIES[screenState.pick];
-      if (r.id === 'company' && hasIll('blues')){
-        closeScreen();
-        say('Press and hold on ' + S.name + '. Eight times should do it.');
-        return;
-      }
-      treat(r.id);
+    if (!hit(L.act, mx, my)) return;
+    if (screenState.pick === REMEDIES.length) return S.asleep ? wakeUp() : tuckIn();
+    const r = REMEDIES[screenState.pick];
+    if (r.id === 'company' && hasIll('blues')){
+      closeScreen();
+      say('Press and hold on ' + S.name + '. Eight times should do it.');
+      return;
     }
+    treat(r.id);
   }
 };
 

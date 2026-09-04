@@ -105,45 +105,40 @@ body{
   background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
 }
 
-/* Osteoderms over the crown, cast rather than laid out: no two the same width,
-   the spacing uneven, and the tallest one left of centre. A mirrored row of
-   seven identical plates is the single most machine-made thing a case can do. */
-.scutes{position:absolute;left:50%;top:calc(var(--px)*-9);transform:translateX(-50%);
-  width:calc(var(--px)*56);height:calc(var(--px)*10);pointer-events:none}
-.scutes i{position:absolute;bottom:0;transform-origin:50% 100%;
+/* Osteoderms over the crown.
+
+   The shell's top edge is an ellipse — `border-radius: 50% / 20%` — whose
+   radii both depend on the rendered size of the case, so where the crown
+   actually is at a given x is not a number this file can know. Every plate
+   used to carry a hand-typed `bottom`, fitted by eye at one window size: the
+   arc was twice as steep as the real one, the row ran from 0 to 203 inside a
+   224-wide box so the whole ridge sat ten pixels left of the crown it was
+   supposed to be growing out of, and the outer plates floated off the shell.
+
+   The look stays here and the arithmetic goes to `fitCrown()` in 08-ui.js.
+   Each plate declares where it sits along the ridge and how big it is; the
+   function puts it on the real curve and turns it normal to the surface.
+   Nothing is mirrored and no two are the same width — a symmetrical row of
+   identical plates is the most machine-made thing a case can do. */
+.scutes{position:absolute;left:0;right:0;top:0;height:0;pointer-events:none}
+.scutes i{position:absolute;
+  left:calc(50% + var(--x));width:var(--w);height:var(--h);
+  margin-left:calc(var(--w) / -2);
+  transform-origin:50% 100%;
   background:var(--scute);
   border:2px solid var(--shell-edge);border-bottom:0;
-  border-radius:56% 56% 0 0 / 76% 76% 0 0;
+  border-radius:62% 62% 0 0 / 90% 90% 0 0;
   box-shadow:inset 0 2px 0 var(--shell-hi)}
-.scutes i:nth-child(1){left:0;    bottom:-21px;width:13px;height:15px;transform:rotate(-31deg)}
-.scutes i:nth-child(2){left:30px; bottom:-11px;width:16px;height:24px;transform:rotate(-20deg)}
-.scutes i:nth-child(3){left:64px; bottom:-2px; width:14px;height:27px;transform:rotate(-11deg)}
-.scutes i:nth-child(4){left:92px; bottom:1px;  width:19px;height:33px;transform:rotate(-3deg)}
-.scutes i:nth-child(5){left:126px;bottom:-1px; width:15px;height:26px;transform:rotate(7deg)}
-.scutes i:nth-child(6){left:157px;bottom:-12px;width:17px;height:21px;transform:rotate(18deg)}
-.scutes i:nth-child(7){left:191px;bottom:-22px;width:12px;height:14px;transform:rotate(30deg)}
-
-/* Two three-toed feet. Flat plastic with one hard edge and a keratin claw on
-   each toe — the claws have to break the silhouette or the foot reads as a
-   tab with dots painted on it. */
-.feet{position:absolute;left:0;right:0;bottom:calc(var(--px)*-3);
-  display:flex;justify-content:center;gap:calc(var(--px)*13);pointer-events:none}
-.feet i{position:relative;width:calc(var(--px)*24);height:calc(var(--px)*5);
-  border-radius:0 0 calc(var(--px)*2) calc(var(--px)*2);
-  background:var(--shell-lo);
-  border:2px solid var(--shell-edge);border-top:0}
-.feet b{position:absolute;width:calc(var(--px)*6);height:calc(var(--px)*5);
-  bottom:calc(var(--px)*-3);
-  border-radius:0 0 50% 50% / 0 0 72% 72%;
-  background:var(--shell-lo);
-  border:2px solid var(--shell-edge);border-top:0}
-.feet b:nth-child(1){left:1px}
-.feet b:nth-child(2){left:calc(var(--px)*8);width:calc(var(--px)*7);height:calc(var(--px)*6);
-  bottom:calc(var(--px)*-4)}
-.feet b:nth-child(3){right:1px}
-.feet b::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
-  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:0 0 50% 50%;
-  background:var(--bezel);box-shadow:0 0 0 1.5px var(--shell-edge)}
+/* every size a multiple of --px, no two the same, spacing uneven. Broad and
+   low rather than tall and narrow: at the first pass they were parallel-sided
+   and read as a row of thumbs standing on the case. */
+.scutes i:nth-child(1){--x:-104px; --w:12px; --h:8px}
+.scutes i:nth-child(2){--x:-76px;  --w:20px; --h:16px}
+.scutes i:nth-child(3){--x:-44px;  --w:16px; --h:16px}
+.scutes i:nth-child(4){--x:-16px;  --w:24px; --h:20px}   /* tallest, left of centre */
+.scutes i:nth-child(5){--x:12px;   --w:20px; --h:20px}
+.scutes i:nth-child(6){--x:48px;   --w:20px; --h:12px}
+.scutes i:nth-child(7){--x:88px;   --w:16px; --h:8px}
 
 /* ---------- faceplate ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;

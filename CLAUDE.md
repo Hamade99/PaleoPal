@@ -26,6 +26,13 @@ There is no test suite. After a change, open the page and confirm the console is
 clean; sprite changes need a visual check across all four growth stages, not
 just the adult.
 
+A minigame change needs playing, not reading. Drive it headless for full
+thirty-second rounds against a competent player and against a player who does
+nothing, for every species and at both ends of the growth range: if those two
+scores are close the game has no skill in it, and if the stages score the same
+then growth does not matter. That harness is what found that half of Bug hunt's
+quarry could not be caught by anyone.
+
 ## House rules
 
 - **No frameworks, no bundler.** Plain scripts concatenated in the order listed
@@ -36,7 +43,14 @@ just the adult.
   promise that the sprite draws that feature. Adding a claim means adding
   geometry.
 - **Illness has causes, not dice.** Every condition traces to a player action or
-  omission, and the Care sheet explains the cause.
+  omission, and the Care screen explains the cause. That applies to anything
+  new that can make an animal unwell: waking one after dark adds to
+  `nightAwake`, the same field a late night fills, rather than rolling for a
+  chill of its own.
+- **Every state the animal can be in has to be readable on the glass.** Ill and
+  asleep were the same picture for eight sessions — shut eyes and a droop —
+  and the only thing naming the difference was a badge above the screen. A new
+  state needs the sprite to differ *and* a mark, or it does not exist.
 - **Cuteness through proportion**, never by dropping a diagnostic feature.
   Bigger skull, bigger eye, shorter snout, rounder body.
 - **One grid, one edge, no symmetry.** Every size in the case is a multiple of
@@ -44,6 +58,11 @@ just the adult.
   highlight; nothing decorative is evenly spaced or mirrored. Stacking effects
   and spacing things perfectly is what made the first case look rendered
   rather than moulded.
+- **Anything that sits on the shell's curve is placed by `fitCrown()`,** not by
+  a typed offset. That curve is an ellipse whose radii are fractions of the
+  rendered width and height, so it moves with the viewport and CSS cannot
+  compute it. Hand-fitted offsets are how the crown ridge ended up ten pixels
+  left of the crown, on an arc twice as steep as the real one.
 - **The screen is the interface.** Menus are drawn inside the 224x168 canvas
   and opened by the five keys on the case; the case never changes while you
   play. Screen text uses the bitmap font in `03-font.js`, not the DOM. The

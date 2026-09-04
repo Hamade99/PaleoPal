@@ -18,13 +18,25 @@ this came from research during development rather than from memory.
   them that way round when the jaw opens, and none at all when it is shut.
 - Level spine with the tail as a counterweight.
 - A keratin row runs the neck and back — speculative but a common convention.
+- The skull is **deep and vaulted through the postorbital**, not flat-roofed.
+  The sprite domes the braincase over the orbit for that reason, and because a
+  large braincase over a large eye is also what reads as young.
+- The **maxillary margin is sinuous**, not level: high at the cheek, bowed down
+  through the tooth row, lifting again at the tip. Drawn as a straight line the
+  face read as a box with an eye on it.
 
 ## Triceratops horridus
 
 - Horn cores grew keratin sheaths with positive allometry, so **living horns
   were substantially longer than the bone**. The sprite scales them with age.
-- The frill is **solid bone**, ringed with epoccipitals. Those are drawn as
-  scallops in the frill outline, not as separate knobs.
+- The frill is **solid bone**, ringed with epoccipitals. Those are separate
+  ossifications that fuse to the margin with age, so the sprite draws them as
+  pale bone knobs on the rim as well as stepping the outline — a scalloped
+  edge alone is invisible at this size.
+- In side view the skull-and-frill unit is carried **forward of the shoulder**,
+  with a short thick neck under it, and about half the head's length is frill.
+  Built around a point in front of the withers instead, the shield sits in the
+  shoulder hump and reads as a lump of neck.
 - Skin impressions show large scales with scattered **low nubbins**, not the
   spines older reconstructions used.
 - A **jugal horn** juts down from each cheek, below the eye.
@@ -66,6 +78,22 @@ this came from research during development rather than from memory.
   forefoot prints are horseshoe-shaped. Brachiosaurids kept a short thumb claw.
 - **Pes**: broad and semi-plantigrade, three large claws on the inner digits,
   with a fleshy heel pad behind them recorded in some trackways.
+
+## Other animals and the landscape
+
+- **Compsognathid theropods** — small, gracile, fast, and known from the same
+  kinds of deposit as the animals here. They are the thieves in Forage. About a
+  metre long and mostly tail, which at sprite scale is a body three pixels deep
+  with a tail as long as the rest of it.
+- **Araucaria** were a dominant conifer of the Mesozoic, with a bare trunk and
+  a deep domed crown — a completely different silhouette from the tiered
+  conifer next to it, which is the reason for drawing one.
+- **Tree ferns** fill the storey beneath the canopy. Without them the band
+  between the treeline and the grass was open sky.
+- **Stratovolcanoes are concave**: steep at the summit, flaring at the foot,
+  and truncated at a crater rim rather than coming to a point. A straight-sided
+  triangle is a slag heap and a convex one is a butte. Old lava channels run
+  from the rim down the flanks, and gullies radiate down the ash slopes.
 
 ## Skin and colour
 

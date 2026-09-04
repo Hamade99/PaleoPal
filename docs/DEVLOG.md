@@ -488,6 +488,263 @@ animal, not after.
 
 ---
 
+## Session 10 — Owner's pass: the case, sleep, the Triceratops, the games
+
+**Owner's feedback**, in the order it arrived: the two three-toed feet under
+the case are weird and out of place; the spines on the crown are not aligned
+and not centred; sleep is opaque and there is no way to wake an animal;
+opening the Feed menu has no obvious way back out; the Brachiosaurus has its
+eyes shut all day and it turns out that means ill rather than asleep, which
+was not readable; the rex could be cuter and its face is a bit goofy; the
+Triceratops has odd proportions, does not read as a Triceratops, has too short
+a tail and a frill that looks like a hump on its neck; in Snack run the animal
+moonwalks when it moves right; Bug hunt does not work — ground bugs cannot be
+caught at all, and two of the three animals are herbivores; the River leap
+water sprite looks wrong and there are green specks scattered in the dirt; and
+the volcano looks like a dark hill with a red pool on it.
+
+### The case
+
+**The feet are gone.** They were added last session on the argument that toes
+have to break the silhouette to read as toes. They read as toes; the problem is
+that a Tamagotchi is a held object and the moment it grows feet it stops being
+one.
+
+**The crown ridge was never on the crown.** Every plate carried a hand-typed
+`bottom`, fitted by eye at one window size. Three things were wrong at once:
+the arc through them dropped 23px where the shell's own crown drops about 8 to
+17 depending on the viewport; the row spanned x 0 to 203 inside a 224-wide box,
+so the whole ridge sat ten pixels left of the thing it was growing out of; and
+none of the sizes were multiples of `--px`.
+
+The arc cannot be written in CSS. `border-radius: 50% 50% … / 20% 20% …` makes
+the top of the shell one ellipse with rx = width/2 and ry = 20% of the height,
+both of which move with the case, and the stylesheet has no square root and no
+way to read its own box. So the plates declare `--x`, `--w` and `--h` and
+`fitCrown()` in `08-ui.js` puts them on the real curve, tucked five pixels in
+so each is rooted, and rotated to the surface normal so they fan the way a
+dorsal ridge does. A `ResizeObserver` on `.shell` refits them, which covers a
+resize, the web font landing, and the screen being sized. They are also broader
+and lower than they were — parallel-sided at the first pass, they read as a row
+of thumbs standing on the case.
+
+### Sleep
+
+`tuckIn()` had been in `05-sim.js` for several sessions with nothing anywhere
+that called it, and there was no way to wake an animal at all. So an animal
+that put itself to bed hungry and filthy stayed hungry and filthy: `feed()`,
+`scrub()` and `startGame()` all refuse while it is asleep, and nothing on the
+case answered.
+
+Rest is the last row on the Care screen now, next to the remedies, with the
+rule written under it. `wakeUp()` costs a little energy and a little trust, and
+after dark it adds to `nightAwake`, which is the field that brings on a chill —
+the same one a player who keeps an animal up past bedtime fills. The cost is a
+consequence of a decision, which is the rule the whole illness model runs on.
+
+It also needed `WAKE_GRACE`. Waking an animal at night with low energy was
+undone by the next tick half a second later, because `simulate()` puts it back
+under at `isNight() && energy < 30`. A hand-woken animal now gets twenty
+minutes before that rule may reclaim it. Running the tank to six still
+overrules the grace: at that point it drops where it stands.
+
+### Ill is not asleep
+
+`POSES.sick` used `eye: 1`, the shut lid from `POSES.sleep`, and `anim.pick()`
+returns `sick` for as long as an illness lasts. So an ill animal sat with its
+eyes closed all day and looked exactly like a sleeping one, and the answer to
+"why will it not open its eyes" was a bellyache that nothing on the glass ever
+mentioned.
+
+- `eyeAt` gained state 3: open but sunk under a heavy lid. The white still
+  shows, which is the whole of the difference at this size.
+- The poses differ too. `sleep` is a deep slow breath on two frames; `sick` is
+  a shallow uneven one on four.
+- `stateMark` draws the reason above the animal's head: a bone plaque with a
+  red cross when ill, a Z when asleep. Illness wins, because an animal that is
+  ill *and* asleep still needs a remedy. The Zs also emit on a clock rather
+  than a two-percent chance per frame, which at 120Hz produced twice as many
+  as at 60 and either way could go seconds without one.
+
+### The keys latch
+
+A key stays pressed in while its screen is up, so pressing it again is the
+obvious way to let it out. It was not wired: the only way back was the close
+tab in the corner of the glass, which on a case with five physical keys under
+it is the last place anyone looks. `toggleScreen()` closes the screen its own
+key opened; a different key still jumps straight across.
+
+### The Tyrannosaurus
+
+Cuter, and the goofiness was three straight lines and a right angle: a flat
+roof from nape to muzzle, a ruler-straight oral margin under it, and a squared
+premaxilla at the end. Three curves replace them and none costs a claim in the
+dossier. The braincase vaults over the orbit and falls away behind it, which is
+both what a tyrannosaur skull does through the postorbital and what makes an
+animal read as young. The oral margin is sinuous — high at the cheek, bowed
+down through the tooth row, lifting at the tip — which is the shape the maxilla
+has and, read as a face, a slight smile. The muzzle keeps its square front but
+is shorter and deeper. The mandible carries a rounded chin instead of a flat
+slab, the eye is larger and set lower and further forward, and the brow over it
+is a rounded hood rather than a flat plate.
+
+### The Triceratops, rebuilt
+
+The frill was built around a point just in front of the withers, tipped back
+forty degrees, and the body outline was run forward to meet it. So its lower
+half was buried in the shoulder hump, its rim never cleared the back line, and
+the skull appeared to be extruded out of the front of a lump. In side view a
+ceratopsian is a head with an animal behind it.
+
+- The frill is anchored to the back of the skull now, and the skull is carried
+  forward of the shoulder. The body's nape stops at the base of the neck
+  instead of running into the frill, so the neck is a column with sky either
+  side of it.
+- The epoccipitals are drawn as pale bone knobs on the rim, not only as a step
+  in the outline. They are separate ossifications that fuse to the margin, so
+  they are the colour of the horns; a scalloped edge on its own is invisible at
+  this size. They shrink with age on the existing `EPI_DEPTH` schedule.
+- The skull is deep and boxy rather than a long thin wedge. About half of this
+  animal's head is frill, and giving the skull the other half made it a snout
+  on a stalk. The rostral is the tip of the upper beak now instead of a cream
+  mass across the whole muzzle, which had the face reading as a bird skull.
+- Tail out from 50 units to 62, deep at the base the whole way.
+- The shield colour is pulled further from the body ramp, and the eye is
+  larger. A ceratopsian orbit is small for its skull, but the skull is most of
+  the sprite, and a pinhole in it reads as blank rather than as an eye.
+
+### Snack run
+
+`flip` came from `tx < x`, which is inverted — the sprite is drawn facing −x,
+so flipping it is what points it right — and which the arrow keys never touched
+at all, because they drive `vx` and leave `tx` where it was. Together: the
+animal moonwalked to the right, and under keyboard control faced one way for
+the whole round. Facing comes off actual velocity now.
+
+### Bug hunt is gone; Forage replaces it
+
+Two faults, and only one was a bug.
+
+The bug: critters spawned in two bands, one in the air and one on the ground
+*below* the grass line, and catching one meant bringing the mouth anchor within
+eleven pixels in both axes. An adult's mouth sits about thirty pixels above the
+ground line, so nothing walking on the floor of the pen was reachable by any
+player at any skill — half the quarry in the game.
+
+The design fault, which mattered more: the quarry was insects, and two of the
+three animals are obligate herbivores.
+
+So the quarry is food, and which food comes from the species' own `likes` —
+ferns and cycad cones for the ceratopsian, berries and cones for the sauropod,
+river fish and carrion for the tyrannosaur. Everything sits on the ground line
+where the animal's own feet are, so reach is a horizontal distance and nothing
+can spawn somewhere unreachable by construction. What makes it a game rather
+than a queue is the compsognathids: they come in from the edges, go for
+whatever has been down longest, and are faster than any of the three animals
+you can raise. Every few seconds there is a choice between the close find and
+the one about to be taken.
+
+Playtested headless: thirty-second rounds for every species at the hatchling
+and adult stages, against a nearest-first player, an oldest-first player and a
+player who does nothing.
+
+| | idle | hatchling | adult |
+| --- | --- | --- | --- |
+| points | 2–7 | 19–33 | 35–43 |
+
+Doing nothing scores about a tenth of playing. Growth is worth about a third.
+For calibration the same harness scores Snack run at 47 and River leap at 25,
+which at their pay rates is 94 and 75 coins against Forage's 70–86. Which
+policy wins varies by species, which is the sign there is a decision in it.
+
+The finds needed help to be seen: the item is stamped four times in near-black
+a pixel out in each direction, giving it the same hard outline every animal
+here has. A green fern frond on a green grass line is otherwise invisible, and
+the item is the thing the player is aiming at. A bounding rectangle will not do
+it — that comes out as a black plaque.
+
+### River leap
+
+- **The water.** A cosine lens of flat blue starting a pixel under the grass
+  line, so it read as a dish resting on the dirt: nothing was cut, nothing had
+  a bank, and the hazard the game is named for looked like spilled paint. It is
+  a channel now — the grass stops at a lip, the earth under the lip is exposed,
+  the water sits down inside it in the sky phase's own water colour, and
+  ripples ride the surface with the track. Depth is what makes a hazard read as
+  something to jump.
+- **The green specks.** Fourteen one-pixel tufts scattered at random heights
+  across the whole dirt band. Grass grows in a mat, and a foreground is a band
+  along the bottom edge that the animal runs behind. It is one unbroken fringe
+  now, every blade a different height, scrolling fastest of the three layers —
+  which is the layer that sells the speed.
+- **The scrub** behind the runner was a rectangle with a wider rectangle across
+  it in a colour a third of the way to the sky, which read as broken masonry.
+  It is a clump of fronds off a stem, in a colour that stays on the vegetation
+  side of the palette.
+
+### The volcano
+
+A cone of one flat colour with a two-pixel orange bar across the top and a
+translucent rectangle standing over it. Four things make a volcano read and it
+had none of them.
+
+1. **A concave profile.** It used `H0 × (1 − t^1.55)`, whose slope is zero on
+   the axis and steepest at the base: flat on top with sheer sides, which is a
+   butte. Raising `(1 − t)` to a power above one gives the opposite and correct
+   shape — steep at the summit, flaring at the foot.
+2. **A truncated summit.** The crater is cut into the profile rather than
+   painted on afterwards, and it has to be cut deeper than the cone falls
+   across its own width or there is no notch at all. Painting a bowl under a
+   pointed apex, which was the first attempt, reads as a wok.
+3. **Two faces with a hard edge**, lit from the upper left like everything else
+   in this game, with gullies radiating down the flanks so the slope has a
+   direction.
+4. **A plume that moves.** The backdrop is baked per sky phase and redrawn
+   perhaps four times a day, so anything in it is a painting on a wall — the
+   old smoke had never moved in the history of the project. Fourteen puffs
+   share one rising cycle, widening and fading as they climb and leaning
+   downwind with height. By night the smoke is a dark body against the sky, lit
+   warm only at the vent, and the crater is the one warm light in the frame.
+
+Three false starts worth recording, all of them the same mistake — drawing a
+feature with geometry of its own instead of asking the mountain where it is.
+The plume was anchored on `VOLC.top`, the apex a pointed cone of this profile
+would reach, which the truncated summit never gets to: the smoke and the glow
+floated nine pixels above the mountain, the glow reading as two arcs bridging
+the summit. The lava pool bowed the wrong way and put its deepest colour
+against the lips, drawing an orange arch over the notch. And the lava runnels
+stepped a fixed distance sideways per row, so on a flank far steeper than that
+they walked straight off the silhouette and came out as guy-ropes staked into
+the sky. All three now read the profile: `volcHeight` for a height and
+`volcSpan` for a width.
+
+### The rest of the backdrop
+
+- A fourth and furthest ridge, nearly the colour of the haze it stands against.
+  Without one that close to the sky the range began at a hard edge and the
+  distance behind it read as painted card.
+- A river on the valley floor between the far range and the near one. One flat
+  band of sky colour lying down is the cheapest depth cue there is. It has to
+  be painted before the mountain, or it runs straight across its flank — which
+  it did, as a bright horizontal stripe.
+- Araucaria and tree ferns in the treeline. Eight identical conifers in two
+  clumps is a hedge. The araucaria took two attempts: a one-pixel trunk under a
+  shallow cap is a street lamp, and a crown widest a quarter of the way down is
+  a mushroom. Two thirds crown, one third trunk, widest where it meets the
+  trunk.
+- A live rank of grass along the ground line, leaning on a slow breeze. The
+  boundary the animal stands on was the one hard line in the scene that never
+  did anything.
+
+**Not done.** The species files still share nothing, which is still the thing
+to fix before a fourth animal. Forage's ceiling is the spawn rate rather than
+the player's skill, which is fine for thirty seconds and would not be for
+longer. At twenty-odd pixels the araucaria and the tree fern differ from a
+conifer by two or three pixels of crown; they read as variety rather than as
+species.
+
+---
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

@@ -150,6 +150,31 @@ baker converts them to trimmed-sprite pixel coordinates and adds `hs`, the head
 scale. Headgear and the feeding animation use these anchors rather than guessed
 offsets, which is why gear stays put across stages and animations.
 
+## 9. Eye states
+
+`eyeAt(M, x, y, r, state)` draws four eyes, and a pose picks one with its `eye`
+field:
+
+| state | eye | used by |
+| --- | --- | --- |
+| 0 | open: sclera, pupil, glint | everything by default |
+| 1 | shut: one soft lid line, not a filled shape | `sleep`, and a blink |
+| 2 | squinting, pleased | `cheer` |
+| 3 | half-lidded: open but sunk under a heavy lid | `sick` |
+
+State 3 exists because `sick` used to borrow state 1 from `sleep`. `anim.pick()`
+returns `sick` for as long as an illness lasts, so an ill animal sat with its
+eyes shut all day and looked exactly like a sleeping one — the answer to "why
+will it not open its eyes" was a bellyache, and nothing on the glass said so.
+The white still shows in state 3, which is the whole of the difference at this
+size. The poses differ too: `sleep` is a deep slow breath, `sick` is a shallow
+uneven one.
+
+The two states also carry a mark above the animal's head, drawn by `stateMark`
+in `06-render.js` rather than by the sprite: a bone plaque with a red cross
+when ill, a Z when asleep. Illness wins, because an animal that is ill *and*
+asleep still needs a remedy.
+
 ## Adding a species (numbering continues from above)
 
 1. Copy an existing file in `src/species/`.
@@ -172,7 +197,7 @@ rather than a single line.
 Every `checks` line in the registry is a promise that the sprite draws that
 feature. Do not add one without adding the geometry.
 
-## 9. What a frame costs
+## 10. What a frame costs
 
 Every pass in `composeSprite` is per-pixel over the bake box, so the box's area
 is the bake cost. Two things brought a cold bake from 8.7 ms to under 3 ms:

@@ -15,7 +15,7 @@ function drawRex(M, P){
   const bellyY = hipY + 9*lM, throatY = hipY + 3*lM;
   const hx = withX - 26*nM - 4*hM, hy = withY - 10*nM - 2 + dr*9;
   const sM = st.snout;
-  const sn = 25*hM*sM, hh = 14.5*hM;
+  const sn = 23*hM*sM, hh = 15.5*hM;      // shorter and deeper than it was
   const T = d => hipX + d*tM;
 
   // far limb first, behind everything
@@ -42,32 +42,62 @@ function drawRex(M, P){
     [hx+9, hy+hh*.58]
   ]);
 
-  /* Upper jaw, deep behind the eye. The premaxilla is squared off — a
-     near-vertical front edge rather than a rounded nub — which is the quickest
-     way to read tyrannosaur instead of generic theropod at this size. */
-  const lipY = hy + hh*.30;
-  blob(M.head, [[hx+13, hy-hh*.12],[hx+11, hy-hh*.96],[hx-sn*.30, hy-hh*1.04],
-                [hx-sn*.62, hy-hh*.86],[hx-sn*.86, hy-hh*.62],
-                // the front is carried on three near-vertical stations, so the
-                // curve through them stays flat instead of rounding the tip off
-                [hx-sn*.99, hy-hh*.44],[hx-sn*1.03, hy-hh*.16],[hx-sn*1.02, lipY-hh*.10],
-                [hx-sn*.94, lipY],[hx-sn*.45, lipY+hh*.05],[hx+13, hy+hh*.36]]);
+  /* Skull.
+
+     The first version made every horizontal line straight: a flat roof from
+     nape to muzzle, a ruler-straight oral margin under it, and a squared
+     premaxilla at the end. Three straight lines and a right angle is a box
+     with an eye on it, which is most of what made the face read as goofy.
+
+     Three curves replace them, and none of them costs an anatomical claim:
+
+       - the braincase domes over the orbit and falls away behind it. A
+         tyrannosaur skull is deep and vaulted through the postorbital, and a
+         big rounded braincase over a big eye is also the whole of what makes
+         an animal read as young.
+       - the oral margin is sinuous rather than level: high at the cheek,
+         bowed down through the tooth row, lifting again at the tip. That is
+         the shape the maxilla actually has, and read as a face it is a
+         slight smile.
+       - the muzzle keeps its squared-off front — a near-vertical premaxilla
+         is the quickest way to read tyrannosaur rather than generic theropod
+         at this size — but it is shorter and deeper than it was, so the head
+         is a head rather than a snout with a skull behind it. */
+  const lipBack = hy + hh*.26, lipMid = hy + hh*.44, lipTip = hy + hh*.30;
+  blob(M.head, [
+    [hx+14, hy-hh*.06],                     // occiput, meeting the nape
+    [hx+12, hy-hh*.90],
+    [hx+2,  hy-hh*1.18],                    // vaulted braincase, over the orbit
+    [hx-sn*.34, hy-hh*1.06],
+    [hx-sn*.66, hy-hh*.84],
+    [hx-sn*.88, hy-hh*.56],
+    // three near-vertical stations across the front, so the curve through
+    // them stays flat instead of rounding the premaxilla off
+    [hx-sn*1.00, hy-hh*.30],
+    [hx-sn*1.05, hy+hh*.02],
+    [hx-sn*1.02, lipTip-hh*.06],
+    [hx-sn*.92, lipTip],                    // the oral margin, and its curve
+    [hx-sn*.46, lipMid],
+    [hx+14, lipBack]
+  ]);
 
   /* Hinged mandible, on its own material. It was always drawn and always
      hinged, but it was painted onto `head`, and the compositor only draws an
      edge where two different materials meet — so the whole lower jaw merged
      into the skull and the animal had no mouth. It hangs below the upper
-     jaw's oral margin, and that boundary is the lip line.
+     jaw's oral margin, and that boundary is the lip line. The ventral profile
+     is what shows, so it carries a rounded chin rather than the flat slab it
+     had, which is the other half of the goofy face.
 
      −x is forward, so the jaw opens on a negative rotation. */
-  const hinge = [hx + 11, hy + hh*.16], jawA = -jaw * .34;
+  const hinge = [hx + 12, hy + hh*.18], jawA = -jaw * .34;
   M.jaw.save(); M.jaw.translate(hinge[0], hinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[2,-hh*.16],[-sn*.40,-hh*.20],[-sn*.92,hh*.02],
-               [-sn*.88,hh*.34],[-sn*.34,hh*.52],[2,hh*.44]]);
+  blob(M.jaw, [[2,-hh*.12],[-sn*.42,-hh*.10],[-sn*.90,hh*.06],
+               [-sn*.94,hh*.32],[-sn*.66,hh*.52],[-sn*.24,hh*.58],[2,hh*.46]]);
   M.jaw.restore();
   // pale chin, carried by the jaw rather than left floating under it
   M.belly.save(); M.belly.translate(hinge[0], hinge[1]); M.belly.rotate(jawA);
-  oval(M.belly, -sn*.52, hh*.38, sn*.22, hh*.09);
+  oval(M.belly, -sn*.54, hh*.42, sn*.24, hh*.10);
   M.belly.restore();
 
   const about = (p, a, o) => [o[0] + (p[0]-o[0])*Math.cos(a) - (p[1]-o[1])*Math.sin(a),
@@ -78,8 +108,8 @@ function drawRex(M, P){
        lining outside the head; drawing it through `blob` bowed the curves
        outward and swallowed the whole face. Straight edges, because the two
        margins it runs between are straight. */
-    const uTip = [hx - sn*.93, lipY - hh*.04];
-    const lTip = about([hx - sn*.86, hy + hh*.36], jawA, hinge);
+    const uTip = [hx - sn*.91, lipTip - hh*.02];
+    const lTip = about([hx - sn*.88, hy + hh*.30], jawA, hinge);
     const gape = [hinge, uTip, lTip];
     M.mouth.beginPath();
     M.mouth.moveTo(gape[0][0], gape[0][1]);
@@ -100,13 +130,17 @@ function drawRex(M, P){
     }
   } else {
     // shut: lips cover the teeth, so all that shows is the oral margin itself
-    tube(M.mouth, [[hx+9, hy+hh*.31],[hx-sn*.46, lipY+hh*.02],[hx-sn*.93, lipY-hh*.06]],
+    tube(M.mouth, [[hx+10, lipBack+hh*.02],[hx-sn*.46, lipMid],[hx-sn*.91, lipTip-hh*.02]],
          [Math.max(.9,1.5*hM), Math.max(.8,1.25*hM), Math.max(.6,.8*hM)]);
   }
 
-  const ex = hx - sn*.46, ey = hy - hh*.42;
-  // lacrimal ridge above the eye, and the keratin row along the neck and back
-  blob(M.crest, [[ex+7*hM, ey-hh*.32],[ex+1*hM, ey-hh*.66],[ex-7*hM, ey-hh*.5],[ex-6*hM, ey-hh*.26]]);
+  const ex = hx - sn*.40, ey = hy - hh*.34;
+  /* Brow over the orbit, and the keratin row along the neck and back. The
+     brow is a rounded hood rather than the flat plate it was — a straight bar
+     over a round eye reads as a scowl, and there is a lacrimal boss there in
+     any case. */
+  blob(M.crest, [[ex+7.5*hM, ey-hh*.30],[ex+2*hM, ey-hh*.74],[ex-6*hM, ey-hh*.60],
+                 [ex-7.5*hM, ey-hh*.30],[ex-4*hM, ey-hh*.22],[ex+3*hM, ey-hh*.24]]);
   for (let i=0;i<10;i++){
     const q = samplePath(topLine, .04 + i*.088);          // ride the actual back line
     oval(M.crest, q[0], q[1] + 1.6*lM, 2.3*lM, 1.4*lM);
@@ -124,8 +158,12 @@ function drawRex(M, P){
   const foot = legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT);
   toes(M.horn, foot[0]-9*lM, foot[1]-1, 3, -1, Math.max(1.2, 2.1*lM));
 
-  eyeAt(M, ex, ey, 3.5*hM, P.eye);
-  oval(M.mouth, hx - sn*.84, hy - hh*.34, Math.max(.8,1.2*hM), Math.max(.8,1.1*hM));
+  /* A larger eye set lower and further forward. Both eyes face forward, which
+     the dossier promises, and a low, large orbit under a domed braincase is
+     also the proportion that reads as young rather than as lizard. */
+  eyeAt(M, ex, ey, 4.0*hM, P.eye);
+  // naris: a slot well back from the tip, in the upper half of the muzzle
+  oval(M.mouth, hx - sn*.78, hy - hh*.26, Math.max(.9,1.5*hM), Math.max(.7,.9*hM));
 
   /* Centreline for the coat painter: nape to tail tip, carrying the body's
      half-depth at each station so a band knows how far to run. */
@@ -139,7 +177,7 @@ function drawRex(M, P){
     [T(72),     hipY - 6*lM,    2.0*lM]  // tail tip
   ];
 
-  return { eye:[ex,ey], eyeR:3.5*hM, mouth:[hx - sn*.82, hy + hh*.12],
-           hat:[hx - sn*.16, hy - hh*1.02], top: hy - hh, spine };
+  return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
+           hat:[hx - sn*.10, hy - hh*1.14], top: hy - hh*1.18, spine };
 }
 

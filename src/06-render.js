@@ -10,7 +10,7 @@ let dino = { x: W/2, dir: -1, tx: W/2, until: 0, walking:false, dig:0, digAt: 0,
 let dinoTop = GROUND - 40, dinoBox = [0,0,0,0];
 let egg = { cracks: 0, wob: 0 };
 let game = null, feedFX = null;
-let blinkAt = 0, blinking = false;
+let blinkAt = 0, blinking = false, zAt = 0;
 
 const anim = {
   name:'idle', frame:0, t:0, until:0,
@@ -115,9 +115,11 @@ function drawScene(now){
     }
   }
   drawSkyBody(ctx, phase, now);
+  drawPlume(ctx, phase, now);
   drawClouds(ctx, phase, dt);
   drawFlyers(ctx, dt, now);
   drawWater(ctx, phase, now);
+  drawGrassLine(ctx, phase, now);
   if (phase !== 'night') drawMotes(ctx, dt, phase);
 
   if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
@@ -226,19 +228,57 @@ function drawLive(now, dt){
   const mouth = [flip ? x + (f.ox - f.mouth[0]) : x - f.ox + f.mouth[0], y - f.oy + f.mouth[1]];
   drawFeed(ctx, mouth);
 
-  if (S.asleep && Math.random() < .02) emit('bubbleZ', x + 10*(flip?-1:1), dinoTop + 4, 1, {vy:-14, vx:4, life:1500});
+  /* Zs on a clock rather than a two-percent chance per frame: at 120Hz that
+     was twice as many as at 60, and either way it could go seconds without
+     one, which is a poor signal for the state it is the signal for. */
+  if (S.asleep && now > zAt){ zAt = now + 1100; emit('bubbleZ', x + 10*(flip?-1:1), dinoTop + 2, 1, {vy:-13, vx:3, life:2100}); }
   if (hasIll('chill') && Math.random() < .012){ emit('spark', x - 14*dino.dir, dinoTop + 8, 2, {col:'#cfe0e8'}); SFX.sneeze(); }
   if (hasIll('mites') && Math.random() < .02) emit('crumb', x + rnd(-10,10), dinoTop + 10, 1, {col:'#8a7350', vy:-6, g:40});
   if (dino.dig > 0){ ctx.fillStyle='#8f6f4c'; ctx.fillRect(x - 16*dino.dir, GROUND-2, 6, 2); }
 
   if (S.asleep){ ctx.fillStyle = 'rgba(14,16,44,.28)'; ctx.fillRect(0, 0, W, H); }
   drawParts(ctx);
+  stateMark(ctx, x, dinoTop, now);
+}
+
+/* An unwell animal and a sleeping one used to be told apart only by their
+   eyelids, and the sick pose kept the eyes shut for as long as the illness
+   lasted — so the answer to "why are its eyes closed all day" was a bellyache
+   nothing on the glass ever mentioned. The eyes differ now, and this puts the
+   reason above the animal's head in the one place the player is already
+   looking. Illness beats sleep, because a sick animal that is also asleep
+   still needs a remedy. */
+function stateMark(g, x, top, now){
+  const ill = S.vet || S.ills.length;
+  if (!ill && !S.asleep) return;
+  const bob = Math.round(Math.sin(now/620) * 1.5);
+  const px = Math.round(x) - 5, py = Math.round(top) - 15 + bob;
+  if (ill){
+    /* Eleven across, not nine. At nine the arms of the cross reached the
+       edge of the plaque and the whole mark read as a red square. */
+    g.fillStyle = '#231a16';                                  // hard edge, all round
+    g.fillRect(px, py, 11, 11);
+    g.fillStyle = '#f2e7cd';                                  // bone plaque
+    g.fillRect(px+1, py+1, 9, 9);
+    g.fillStyle = S.vet ? '#8f2f2a' : '#c2452f';              // the cross
+    g.fillRect(px+4, py+2, 3, 7); g.fillRect(px+2, py+4, 7, 3);
+    return;
+  }
+  // asleep: one steady Z over the head, with the drifting ones behind it
+  g.fillStyle = '#1b2038';
+  g.fillRect(px, py, 11, 11);
+  g.fillStyle = '#2b3358';
+  g.fillRect(px+1, py+1, 9, 9);
+  g.fillStyle = '#dfe4f6';
+  g.fillRect(px+2, py+2, 7, 2); g.fillRect(px+6, py+4, 2, 1);
+  g.fillRect(px+5, py+5, 2, 1); g.fillRect(px+4, py+6, 2, 1);
+  g.fillRect(px+2, py+7, 7, 2);
 }
 
 /* ============================== MINIGAMES ================================== */
 const GAMES = {
   snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:2 },
-  stomp: { name:'Bug hunt',   blurb:'Critters cross the pen. Tap to send your animal at them and it will do the rest.', pay:2 },
+  forage:{ name:'Forage',     blurb:'Food turns up around the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', pay:2 },
   leap:  { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:3 }
 };
 function startGame(kind){
@@ -247,9 +287,10 @@ function startGame(kind){
   if (S.needs.energy < 12) return refuse('Too tired to run around.');
   closeSheet();
   mode = 'game'; feedFX = null;
-  if (kind === 'snack') game = { kind, x:W/2, tx:W/2, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
-  if (kind === 'stomp') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
-                                 mouth:null, snap:0, bugs:[], score:0, missed:0, left:30, spawn:.6 };
+  if (kind === 'snack') game = { kind, x:W/2, tx:W/2, dir:-1, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
+  if (kind === 'forage') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
+                                  snap:0, finds:[], thief:null, thiefAt:rnd(3,6),
+                                  score:0, chain:0, missed:0, left:30, spawn:.4 };
   if (kind === 'leap')  game = { kind, obs:[], score:0, left:30, y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0 };
   say(GAMES[kind].blurb.split('.')[0] + '.');
   paintChrome();
@@ -272,12 +313,12 @@ function stepGame(dt, now){
   game.left -= dt/1000;
   if (game.left <= 0) return endGame();
   if (game.kind === 'snack') return stepSnack(dt, now);
-  if (game.kind === 'stomp') return stepStomp(dt, now);
+  if (game.kind === 'forage') return stepForage(dt, now);
   if (game.kind === 'leap')  return stepLeap(dt, now);
 }
 function drawGame(now, phase){
   if (game.kind === 'snack') drawSnack(now);
-  if (game.kind === 'stomp') drawStomp(now);
+  if (game.kind === 'forage') drawForage(now);
   if (game.kind === 'leap')  drawLeap(now);
   drawParts(ctx);
   ctx.fillStyle = 'rgba(16,22,24,.78)'; ctx.fillRect(0, 0, W, 9);
@@ -295,6 +336,13 @@ function stepSnack(dt, now){
   if (game.kL) vx -= 110; if (game.kR) vx += 110;
   if (!vx) vx = clamp((game.tx - game.x) * 7, -135, 135);
   if (now < game.stun) vx = 0;
+  /* Which way it is facing comes from which way it is actually moving. It used
+     to come from `tx < x`, which is inverted — the sprite is drawn facing −x,
+     so flipping it is what points it right — and which the arrow keys never
+     touched at all, because they drive `vx` and leave `tx` where it was. Both
+     together meant the animal moonwalked to the right and then kept facing
+     the wrong way for the rest of the round. */
+  if (vx) game.dir = vx > 0 ? 1 : -1;
   game.x = clamp(game.x + vx * dt/1000, 18, W-18);
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
@@ -317,7 +365,7 @@ function stepSnack(dt, now){
 function drawSnack(now){
   for (const it of game.items) drawItem(ctx, it.id, it.x - 3, it.y - 2, 1.5);
   const { f, sc } = gameSprite(now < game.stun ? 'sick' : 'walk', Math.floor(now/130), 44);
-  const flip = game.tx < game.x;
+  const flip = game.dir > 0;                    // the sprite faces −x unflipped
   ctx.save(); ctx.translate(Math.round(game.x), GROUND);
   if (flip) ctx.scale(-1,1);
   ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
@@ -325,48 +373,65 @@ function drawSnack(now){
   scoreTag('Caught ' + game.score + (game.combo >= 5 ? '  x2' : ''));
 }
 
-/* ------ bug hunt ------ */
-function drawBug(g, b, now){
-  const wig = Math.sin(now/90 + b.x) * 1;
-  if (b.type === 0){                            // millipede
-    g.fillStyle = '#4a3a24';
-    for (let i=0;i<5;i++) g.fillRect(b.x - i*3, b.y + (i%2?0:1) + wig, 3, 3);
-    g.fillStyle = '#6f5836'; g.fillRect(b.x, b.y + wig, 3, 2);
-    g.fillStyle = '#2a2118'; g.fillRect(b.x+3, b.y + wig, 1, 1);
-  } else {                                      // dragonfly
-    g.fillStyle = '#3a5c52'; g.fillRect(b.x - 6, b.y + wig, 9, 2);
-    g.fillStyle = '#8fc4b8'; g.fillRect(b.x - 1, b.y + wig, 3, 2);
-    const up = Math.sin(now/60) > 0;
-    g.fillStyle = 'rgba(200,230,235,.75)';
-    g.fillRect(b.x - 4, b.y - (up?3:-2) + wig, 6, 2);
-  }
-}
-/* ------ bug hunt ------
-   The animal used to stand at a fixed x doing nothing while the player picked
-   critters off the screen, which made the pet a spectator in its own minigame.
-   A tap is now a move order: the animal runs to where you pointed, and
-   anything that comes within snapping distance of its mouth gets eaten. The
-   walk cycle, the growth stage and the animal's own reach all matter, and the
-   sprite is doing the work instead of watching.
-   -------------------------------------------------------------------------- */
-const STOMP_H = 44;                            // drawn sprite height in the pen
+/* ------ forage ------
 
-function stompSprite(now){
+   This replaces Bug hunt, which had two faults and only one of them was a bug.
+
+   The bug: critters spawned in two bands, one in the air and one on the
+   ground *below* the grass line, and catching one meant bringing the animal's
+   mouth anchor within eleven pixels of it in both axes. An adult's mouth sits
+   around thirty pixels above the ground line, so nothing walking on the floor
+   of the pen was ever reachable — half the quarry in the game could not be
+   caught by any player at any skill.
+
+   The design fault, which mattered more: the quarry was insects, and two of
+   the three animals in this game are obligate herbivores. Nothing about
+   Triceratops or Brachiosaurus makes chasing dragonflies across a pen a thing
+   they would do, and no amount of fixing the hitbox was going to change that.
+
+   So the quarry is food, and which food comes from the species' own `likes` —
+   ferns and cycad cones for the ceratopsian, berries and cones for the
+   sauropod, river fish and carrion for the tyrannosaur. Everything sits ON
+   the ground line, where the animal's own feet are, so reach is a horizontal
+   distance and nothing can spawn somewhere unreachable by construction.
+
+   What makes it a game rather than a queue is the compsognathids. They come
+   in from the edges and go for whatever has been sitting longest, and they
+   are faster than any of the three animals you can raise. So it is not "walk
+   to each thing in turn": it is a choice, every few seconds, between the
+   close one and the one about to be stolen — and the walk cycle, the growth
+   stage and the animal's own speed all decide whether you make it.
+   -------------------------------------------------------------------------- */
+const FORAGE_H = 50;                           // drawn sprite height in the pen
+const FORAGE_LIFE = 4600;                      // how long a find sits before it spoils
+
+function forageSprite(now){
   const snapping = now < game.snap;
   const sp = SPECIES[S.sp], st = stageIdx();
-  if (snapping) return gameSprite('eat', Math.floor(now/150), STOMP_H);
-  if (!game.walking) return gameSprite('idle', Math.floor(now/700), STOMP_H);
+  if (snapping) return gameSprite('eat', Math.floor(now/150), FORAGE_H);
+  if (!game.walking) return gameSprite('idle', Math.floor(now/700), FORAGE_H);
   // one sprite stride to one stride of ground, the same rule the habitat uses
-  const probe = gameSprite('walk', 0, STOMP_H);
+  const probe = gameSprite('walk', 0, FORAGE_H);
   const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
   const frame = Math.floor((game.dist / probe.sc) / cycle * POSES.walk.length);
-  return gameSprite('walk', frame, STOMP_H);
+  return gameSprite('walk', frame, FORAGE_H);
 }
-function stepStomp(dt, now){
+
+/* Somewhere to put a new find: on the ground, inside the pen, and not on top
+   of one that is already there. */
+function forageSlot(){
+  for (let tries=0; tries<12; tries++){
+    const x = rnd(18, W-18);
+    if (game.finds.every(f => Math.abs(f.x - x) > 26)) return x;
+  }
+  return rnd(18, W-18);
+}
+
+function stepForage(dt, now){
   const sec = dt / 1000;
 
   // run toward the last place the player pointed
-  const speed = 52 + stageIdx() * 10;
+  const speed = 54 + stageIdx() * 11;
   const d = game.tx - game.x;
   if (Math.abs(d) > 1.5){
     const step = clamp(d, -speed*sec, speed*sec);
@@ -376,38 +441,130 @@ function stepStomp(dt, now){
     game.walking = true;
   } else game.walking = false;
 
+  // new finds
   game.spawn -= sec;
-  if (game.spawn <= 0){
-    game.spawn = rnd(.45, .85);
-    const type = Math.random() < .5 ? 0 : 1;
-    const dir = Math.random() < .5 ? 1 : -1;
-    game.bugs.push({ x: dir > 0 ? -8 : W+8, y: type ? rnd(GROUND-40, GROUND-16) : rnd(GROUND+2, H-8),
-                     vx: dir * rnd(24, 44) * (type ? 1.3 : 1), type });
+  if (game.spawn <= 0 && game.finds.length < 5){
+    game.spawn = rnd(.95, 1.55);
+    // what turns up is what this species eats, and nothing else
+    game.finds.push({ x: forageSlot(), id: pick(SPECIES[S.sp].likes), age: 0 });
   }
-  for (const b of game.bugs){
-    b.x += b.vx * sec;
-    if (b.x < -14 || b.x > W+14){ b.dead = true; game.missed++; }
+  for (const f of game.finds){
+    f.age += dt;
+    if (f.age > FORAGE_LIFE){ f.dead = true; game.missed++; game.chain = 0; }
   }
 
-  /* Snapping range around the mouth. drawStomp parks the mouth anchor on the
-     game each frame; one frame of lag is not visible and it saves baking the
-     frame twice. */
-  const m = game.mouth || [game.x, GROUND - STOMP_H*.6];
-  const reach = 11 + stageIdx() * 2.5;
-  for (const b of game.bugs){
-    if (b.dead) continue;
-    if (Math.abs(b.x - m[0]) < reach && Math.abs(b.y - m[1]) < reach * .95){
-      b.dead = true; game.score++; game.snap = now + 240;
-      SFX.chomp(); emit('spark', b.x, b.y, 5, {col:'#cfe0a8'});
-      emit('crumb', b.x, b.y, 3, {col:'#7d9c5a', vy:-14, g:110});
+  /* Thieves. One at a time, aimed at whatever has been down longest — the
+     thing the player is most likely to have written off, which is what makes
+     ignoring a find a decision rather than an oversight. */
+  game.thiefAt -= sec;
+  if (!game.thief && game.thiefAt <= 0 && game.finds.length){
+    const mark = game.finds.reduce((a, b) => (b.age > a.age ? b : a));
+    game.thief = { x: mark.x < W/2 ? -10 : W+10, mark, p:0, carry:false };
+  }
+  if (game.thief){
+    const t = game.thief;
+    t.p += dt;
+    const goal = t.carry ? (t.x < W/2 ? -14 : W+14) : t.mark.x;
+    const dir = goal > t.x ? 1 : -1;
+    t.x += dir * 74 * sec;
+    if (!t.carry && Math.abs(t.x - t.mark.x) < 3){
+      if (t.mark.dead){ game.thief = null; game.thiefAt = rnd(2.2, 4.2); }
+      else { t.mark.dead = true; t.carry = true; game.missed++; game.chain = 0; SFX.pop(); }
+    } else if (t.carry && (t.x < -12 || t.x > W+12)){
+      game.thief = null; game.thiefAt = rnd(2.2, 4.2);
     }
   }
-  game.bugs = game.bugs.filter(b => !b.dead);
-}
-function drawStomp(now){
-  for (const b of game.bugs) drawBug(ctx, b, now);
 
-  const { f, sc } = stompSprite(now);
+  /* Reach. A horizontal distance along the ground, because everything here is
+     on the ground — the old game measured to a mouth anchor thirty pixels up
+     and then spawned half its quarry on the floor. */
+  const reach = 12 + stageIdx() * 2;
+  for (const f of game.finds){
+    if (f.dead) continue;
+    if (Math.abs(f.x - game.x) < reach){
+      f.dead = true;
+      game.chain++;
+      game.score += game.chain >= 4 ? 2 : 1;
+      game.snap = now + 260;
+      if (game.thief && game.thief.mark === f && !game.thief.carry){
+        game.thief = null; game.thiefAt = rnd(2.2, 4.2);    // beaten to it
+      }
+      SFX.chomp();
+      emit('spark', f.x, GROUND - 4, 4, {col:'#cfe0a8'});
+      emit('crumb', f.x, GROUND - 4, 3, {col:'#7d9c5a', vy:-14, g:110});
+    }
+  }
+  game.finds = game.finds.filter(f => !f.dead);
+  if (game.thief && game.thief.mark.dead && !game.thief.carry){
+    game.thief = null; game.thiefAt = rnd(2.2, 4.2);
+  }
+}
+
+/* A find: a scrape of turned earth with the item standing on it, over a bar
+   that runs down as it spoils.
+
+   Both parts have to fight the habitat for attention. Drawn small and flat on
+   the grass line, among cycads and boulders and a watering hole, a fern frond
+   is one more piece of scenery — so the earth is a mound in a colour nothing
+   else in the pen uses, and the item stands clear above it at twice size.
+   The bar is the only information the game gives, so it is under every find
+   rather than only under the urgent one. */
+function drawFind(g, f, now){
+  const x = Math.round(f.x), u = clamp(f.age / FORAGE_LIFE, 0, 1);
+  // the mound
+  g.fillStyle = '#6b4a2a';
+  g.fillRect(x-6, GROUND-1, 13, 4);
+  g.fillRect(x-4, GROUND-3, 9, 2);
+  g.fillStyle = '#8a6438';
+  g.fillRect(x-4, GROUND-3, 9, 1);
+  g.fillStyle = '#3a2716';
+  g.fillRect(x-6, GROUND+2, 13, 1);
+  /* The find itself, standing clear of the grass and bobbing once it starts
+     to go over. It is drawn four more times underneath in near-black, one
+     pixel out in each direction, which gives it the same hard outline every
+     animal in this game has — a green fern frond on a green grass line is
+     otherwise invisible, and the item is the thing the player is aiming at. */
+  const bob = u > .70 ? Math.round(Math.sin(now/90)) : 0;
+  const ix = x - 4 + bob, iy = GROUND - 12;   // standing on the mound, not over it
+  for (const d of [[-1,0],[1,0],[0,-1],[0,1]])
+    drawItem(g, f.id, ix + d[0], iy + d[1], 1.6, '#1c160e');
+  drawItem(g, f.id, ix, iy, 1.6);
+  // freshness
+  const w = Math.max(1, Math.round(13 * (1 - u)));
+  g.fillStyle = '#101a18'; g.fillRect(x - 8, GROUND + 4, 17, 5);
+  g.fillStyle = '#2b3a3f'; g.fillRect(x - 7, GROUND + 5, 15, 3);
+  g.fillStyle = u > .70 ? '#e2704a' : u > .45 ? '#e8bd4e' : '#8cc46a';
+  g.fillRect(x - 7 + (13 - w), GROUND + 5, w + 2, 3);
+}
+
+/* Compsognathus: a metre of animal and mostly tail, which at this size is a
+   body three pixels deep, a neck and a tail as long as the rest of it. It is
+   painted light with a hard dark edge, because the one thing it must not do
+   is disappear into the treeline it walks out of. */
+function drawThief(g, t){
+  const x = Math.round(t.x), y = GROUND - 8, run = Math.sin(t.p/70) > 0;
+  const face = t.x < W/2 ? 1 : -1;                           // it faces where it is going
+  g.fillStyle = '#241d13';                                   // the hard edge, drawn under
+  g.fillRect(x - 6, y + 1, 11, 6);
+  g.fillRect(x + face*3 - 1, y - 1, 5, 5);
+  g.fillStyle = '#c9a355';
+  g.fillRect(x - 4, y + 2, 8, 4);                            // body
+  g.fillRect(x + face*3, y, 3, 3);                           // head
+  g.fillStyle = '#e6cf94';
+  g.fillRect(x - 4, y + 2, 8, 1);
+  g.fillStyle = '#8a6c34';
+  for (let i=0;i<6;i++) g.fillRect(x - 5 - face*i*2, y + 3 + (i>3?1:0), 2, 1);   // tail
+  g.fillStyle = '#c9a355';
+  g.fillRect(x - 2, y + 6, 2, run ? 3 : 2);                  // legs
+  g.fillRect(x + 2, y + 6, 2, run ? 2 : 3);
+  g.fillStyle = '#241d13'; g.fillRect(x + face*4, y + 1, 1, 1);
+  if (t.carry){ g.fillStyle = '#cfe0a8'; g.fillRect(x + face*5, y + 3, 3, 3); }
+}
+
+function drawForage(now){
+  for (const f of game.finds) drawFind(ctx, f, now);
+
+  const { f, sc } = forageSprite(now);
   const flip = game.dir > 0;
   const x = Math.round(game.x);
   ctx.fillStyle = 'rgba(16,26,24,.32)';
@@ -417,9 +574,7 @@ function drawStomp(now){
   ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
   ctx.restore();
 
-  // hand the mouth position to the next step, in canvas units
-  game.mouth = [ x + (flip ? 1 : -1) * (f.ox - f.mouth[0]) * sc,
-                 GROUND - (f.oy - f.mouth[1]) * sc ];
+  if (game.thief) drawThief(ctx, game.thief);
 
   // a marker where the animal has been told to go, so the order reads
   if (game.walking){
@@ -427,14 +582,15 @@ function drawStomp(now){
     ctx.fillStyle = 'rgba(207,224,168,.5)';
     ctx.fillRect(tx-3, GROUND+3, 7, 1); ctx.fillRect(tx, GROUND+1, 1, 5);
   }
-  scoreTag('Caught ' + game.score);
+  scoreTag('Found ' + game.score + (game.chain >= 4 ? '  x2' : ''));
 }
-function tapStomp(mx, my){
-  // tapping a critter aims at the critter; tapping the pen aims at the pen
-  let best = null, bd = 26;
-  for (const b of game.bugs){
-    const d = Math.hypot(b.x - mx, (b.y - my) * .7);
-    if (d < bd){ bd = d; best = b; }
+
+function tapForage(mx, my){
+  // tapping a find aims at the find; tapping the pen aims at the pen
+  let best = null, bd = 30;
+  for (const f of game.finds){
+    const d = Math.abs(f.x - mx) + Math.abs(GROUND - 6 - my) * .35;
+    if (d < bd){ bd = d; best = f; }
   }
   game.tx = clamp(best ? best.x : mx, 12, W - 12);
 }
@@ -454,7 +610,7 @@ function tapStomp(mx, my){
 const LEAP_OBS = {
   log:   { half:12, clear:14 },
   rock:  { half:9,  clear:18 },
-  water: { half:17, clear:8  }
+  water: { half:20, clear:8  }
 };
 const LEAP_KINDS = ['log','rock','water','log','rock'];
 
@@ -493,22 +649,31 @@ function leapJump(){
 }
 
 /* The track, overdrawn so the habitat props do not sit still behind a running
-   animal. Three scroll rates: scrub, ground, tufts. */
+   animal. Three scroll rates: scrub, ground, fringe. */
 function drawLeapGround(){
   const S_ = SKY_SPECS[skyPhase(new Date())];
   const grass = S_.grass, grassLit = mixHex(S_.grass, S_.low, .40);
   const grassDark = mixHex(S_.grass, '#000000', .34);
   const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.26), d2 = mixHex(S_.dirt, S_.low,.22);
-  const scrub = mixHex(S_.tree, S_.low, .14), scrubLit = mixHex(S_.tree, S_.low, .34);
+  const scrub = mixHex(S_.tree, '#000000', .18), scrubLit = mixHex(S_.tree, S_.low, .30);
 
-  // scrub on the far side of the track, drifting past slowly
+  /* Scrub on the far side of the track. As a rectangle with a wider rectangle
+     across it, in a colour a third of the way to the sky, this read as broken
+     masonry — the whole strip looked like a ruin the animal was running past.
+     It is built as a clump of fronds off a short stem now, in a colour that
+     stays on the vegetation side of the palette. */
   for (let i=0;i<10;i++){
-    const x = ((((i*47.3) - game.run*.42) % (W+70)) + W+70) % (W+70) - 35;
-    const h = 6 + (i % 4) * 4, w = 5 + (i % 3) * 3;
+    const x = Math.round(((((i*47.3) - game.run*.42) % (W+70)) + W+70) % (W+70) - 35);
+    const h = 7 + (i % 4) * 4, spread = 4 + (i % 3) * 2;
     ctx.fillStyle = scrub;
-    ctx.fillRect(x|0, GROUND-1-h, w, h);
-    ctx.fillRect((x|0)-2, Math.round(GROUND-1-h*.55), w+4, Math.round(h*.55));
-    ctx.fillStyle = scrubLit; ctx.fillRect(x|0, GROUND-1-h, w, 1);
+    ctx.fillRect(x, GROUND-1-h, 1, h);                       // stem
+    for (let k=-spread;k<=spread;k++){                       // fronds arching off it
+      const t = Math.abs(k)/spread;
+      const top = Math.round(GROUND-1-h + t*t*h*.62);
+      ctx.fillRect(x+k, top, 1, Math.round(h*.42*(1-t*.5)));
+    }
+    ctx.fillStyle = scrubLit;
+    ctx.fillRect(x-1, GROUND-1-h, 2, 2);
   }
 
   // the track itself
@@ -527,15 +692,29 @@ function drawLeapGround(){
     if (i % 3 === 0){ ctx.fillStyle = d2; ctx.fillRect(x|0, y-1, 1, 1); }
   }
 }
+/* The near fringe.
+
+   This used to be fourteen one-pixel tufts scattered at random heights across
+   the whole dirt band, which is not what a foreground is: they read as green
+   specks sprinkled over bare earth, drifting past for no reason. Grass grows
+   in a continuous mat, and a foreground is a band along the bottom edge that
+   the animal runs behind. It is one unbroken fringe rooted off the bottom of
+   the screen now, every blade a different height, scrolling fastest of the
+   three layers — which is the layer that actually sells the speed. */
 function drawLeapTufts(){
   const S_ = SKY_SPECS[skyPhase(new Date())];
-  const near = mixHex(S_.grass, '#000000', .42);
-  for (let i=0;i<14;i++){
-    const x = ((((i*21.1) - game.run*1.45) % (W+34)) + W+34) % (W+34) - 17;
-    const y = H - 3 - (i % 3) * 5, h = 4 + (i % 3) * 2;
+  const near = mixHex(S_.grass, '#000000', .52);
+  const nearLit = mixHex(S_.grass, '#000000', .34);
+  for (let x=0;x<W;x++){
+    const wx = x + game.run*1.45;
+    // three offset waves, so no two blades next to each other are the same
+    const h = 4 + Math.round(3.2*Math.abs(Math.sin(wx*.9))
+                           + 2.6*Math.abs(Math.sin(wx*.31 + 1.7))
+                           + 1.4*Math.abs(Math.sin(wx*2.3 + .4)));
     ctx.fillStyle = near;
-    ctx.fillRect(x|0, y-h, 1, h);
-    ctx.fillRect((x|0)-1, y-h+1, 1, h-2); ctx.fillRect((x|0)+1, y-h+1, 1, h-2);
+    ctx.fillRect(x, H - h, 1, h);
+    ctx.fillStyle = nearLit;
+    ctx.fillRect(x, H - h, 1, 1);
   }
 }
 /* Obstacles are built column by column so they have a silhouette. Drawn as
@@ -549,17 +728,44 @@ function drawObstacle(g, o){
   const x = Math.round(o.x), base = GROUND + 2;   // bedded into the grass
 
   if (o.kind === 'water'){
-    for (let i=-17;i<=17;i++){
-      const t = Math.abs(i)/17;
-      const dep = Math.round(Math.cos(t * Math.PI/2) * 7) + 1;
-      g.fillStyle = '#241d16'; g.fillRect(x+i, GROUND, 1, 1);          // cut bank
-      g.fillStyle = '#24384a'; g.fillRect(x+i, GROUND+1, 1, dep+2);
-      g.fillStyle = '#3f6b80'; g.fillRect(x+i, GROUND+1, 1, dep);
-      g.fillStyle = '#6fa6b8'; g.fillRect(x+i, GROUND+1, 1, 1);
+    /* A stream cut through the track, not a puddle laid on top of it.
+
+       The old one was a cosine lens of flat blue starting a pixel under the
+       grass line, so it read as a blue dish resting on the dirt — nothing was
+       cut, nothing had a bank, and the thing the game is named for looked
+       like spilled paint. It is a channel now: the grass stops at a lip on
+       each side, the earth under the lip is exposed and darker, the water
+       sits down inside it, and the far wall is in shadow. Depth is what makes
+       a hazard read as something to jump rather than something to step in. */
+    const S_ = SKY_SPECS[skyPhase(new Date())];
+    const soil = mixHex(S_.dirt, '#000000', .52);            // the cut bank
+    const deep = mixHex(S_.water, '#000000', .34);
+    const body = S_.water;
+    const lit  = mixHex(S_.water, S_.low, .50);
+    const HW = 21;
+    for (let i=-HW;i<=HW;i++){
+      const t = Math.abs(i)/HW;
+      const lip = Math.round(Math.pow(t, 4) * 4);            // steep banks, flat bed
+      const top = GROUND - 1 + lip;
+      const dep = Math.round((1 - Math.pow(t, 4)) * 8) + 2;
+      g.fillStyle = soil; g.fillRect(x+i, top, 1, 2);        // exposed earth at the lip
+      g.fillStyle = deep; g.fillRect(x+i, top+2, 1, dep);    // the channel
+      g.fillStyle = body; g.fillRect(x+i, top+2, 1, Math.max(1, dep-3));
+      g.fillStyle = lit;  g.fillRect(x+i, top+2, 1, 1);      // the surface, catching sky
     }
-    g.fillStyle = '#a8d4de';                                            // surface glints
-    g.fillRect(x-10, GROUND+3, 5, 1); g.fillRect(x+3, GROUND+5, 6, 1);
-    g.fillRect(x-3, GROUND+7, 3, 1);  g.fillRect(x+9, GROUND+2, 3, 1);
+    // ripples riding the surface, sliding with the track
+    g.fillStyle = mixHex(S_.water, '#ffffff', .55);
+    for (let k=0;k<3;k++){
+      const off = ((game.run*.6 + k*15) % 30) - 15;
+      const rx = Math.round(x + off), t = Math.abs(off)/HW;
+      if (t >= 1) continue;
+      const top = GROUND - 1 + Math.round(Math.pow(t, 4) * 4);
+      g.fillRect(rx - 2, top + 3 + (k % 2), 5, 1);
+    }
+    // grass overhanging both lips, so the cut has an edge rather than a border
+    g.fillStyle = mixHex(S_.grass, '#000000', .30);
+    g.fillRect(x-HW-1, GROUND-2, 3, 3); g.fillRect(x-HW-3, GROUND-1, 2, 2);
+    g.fillRect(x+HW-1, GROUND-2, 3, 3); g.fillRect(x+HW+1, GROUND-1, 2, 2);
     return;
   }
 

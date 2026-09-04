@@ -52,11 +52,18 @@ Nothing here is started. Ordered roughly by value.
 
 ## Known rough edges
 
-- The volcano reads as a cone but is partly hidden by the ridge in front of it.
-- `drawStomp` places the animal at a fixed x; on a very small phone it crowds
-  the left edge.
+- The volcano's foot is hidden by the ridge in front of it. That is deliberate
+  — it is what puts it behind the range rather than in the pen — but it does
+  mean the ash apron at its base is never seen.
 - The screen font has no descenders. In a seven-row cell with the x-height on
   rows two to six there is nowhere for one to go, so `g`, `p`, `q` and `y` ride
   high. Legible, but it is the first thing anyone will notice.
-- River leap and Snack run do not scale to the animal's growth stage. Bug hunt
-  now does — running speed and snapping reach both come off `stageIdx()`.
+- River leap and Snack run do not scale to the animal's growth stage. Forage
+  does — running speed and reach both come off `stageIdx()`, and the playtest
+  numbers separate a hatchling from an adult by about a third.
+- Forage tops out at whatever the spawn rate allows: an adult driven well
+  clears nearly every find, so the ceiling is the game's, not the player's.
+  Fine for thirty seconds; it would need a ramp to carry a longer round.
+- Araucaria and tree fern silhouettes are in the treeline now, but at
+  twenty-odd pixels tall the difference between them and a conifer is two or
+  three pixels of crown. They read as variety rather than as species.

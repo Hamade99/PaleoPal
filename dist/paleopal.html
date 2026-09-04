@@ -116,45 +116,40 @@ body{
   background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
 }
 
-/* Osteoderms over the crown, cast rather than laid out: no two the same width,
-   the spacing uneven, and the tallest one left of centre. A mirrored row of
-   seven identical plates is the single most machine-made thing a case can do. */
-.scutes{position:absolute;left:50%;top:calc(var(--px)*-9);transform:translateX(-50%);
-  width:calc(var(--px)*56);height:calc(var(--px)*10);pointer-events:none}
-.scutes i{position:absolute;bottom:0;transform-origin:50% 100%;
+/* Osteoderms over the crown.
+
+   The shell's top edge is an ellipse — `border-radius: 50% / 20%` — whose
+   radii both depend on the rendered size of the case, so where the crown
+   actually is at a given x is not a number this file can know. Every plate
+   used to carry a hand-typed `bottom`, fitted by eye at one window size: the
+   arc was twice as steep as the real one, the row ran from 0 to 203 inside a
+   224-wide box so the whole ridge sat ten pixels left of the crown it was
+   supposed to be growing out of, and the outer plates floated off the shell.
+
+   The look stays here and the arithmetic goes to `fitCrown()` in 08-ui.js.
+   Each plate declares where it sits along the ridge and how big it is; the
+   function puts it on the real curve and turns it normal to the surface.
+   Nothing is mirrored and no two are the same width — a symmetrical row of
+   identical plates is the most machine-made thing a case can do. */
+.scutes{position:absolute;left:0;right:0;top:0;height:0;pointer-events:none}
+.scutes i{position:absolute;
+  left:calc(50% + var(--x));width:var(--w);height:var(--h);
+  margin-left:calc(var(--w) / -2);
+  transform-origin:50% 100%;
   background:var(--scute);
   border:2px solid var(--shell-edge);border-bottom:0;
-  border-radius:56% 56% 0 0 / 76% 76% 0 0;
+  border-radius:62% 62% 0 0 / 90% 90% 0 0;
   box-shadow:inset 0 2px 0 var(--shell-hi)}
-.scutes i:nth-child(1){left:0;    bottom:-21px;width:13px;height:15px;transform:rotate(-31deg)}
-.scutes i:nth-child(2){left:30px; bottom:-11px;width:16px;height:24px;transform:rotate(-20deg)}
-.scutes i:nth-child(3){left:64px; bottom:-2px; width:14px;height:27px;transform:rotate(-11deg)}
-.scutes i:nth-child(4){left:92px; bottom:1px;  width:19px;height:33px;transform:rotate(-3deg)}
-.scutes i:nth-child(5){left:126px;bottom:-1px; width:15px;height:26px;transform:rotate(7deg)}
-.scutes i:nth-child(6){left:157px;bottom:-12px;width:17px;height:21px;transform:rotate(18deg)}
-.scutes i:nth-child(7){left:191px;bottom:-22px;width:12px;height:14px;transform:rotate(30deg)}
-
-/* Two three-toed feet. Flat plastic with one hard edge and a keratin claw on
-   each toe — the claws have to break the silhouette or the foot reads as a
-   tab with dots painted on it. */
-.feet{position:absolute;left:0;right:0;bottom:calc(var(--px)*-3);
-  display:flex;justify-content:center;gap:calc(var(--px)*13);pointer-events:none}
-.feet i{position:relative;width:calc(var(--px)*24);height:calc(var(--px)*5);
-  border-radius:0 0 calc(var(--px)*2) calc(var(--px)*2);
-  background:var(--shell-lo);
-  border:2px solid var(--shell-edge);border-top:0}
-.feet b{position:absolute;width:calc(var(--px)*6);height:calc(var(--px)*5);
-  bottom:calc(var(--px)*-3);
-  border-radius:0 0 50% 50% / 0 0 72% 72%;
-  background:var(--shell-lo);
-  border:2px solid var(--shell-edge);border-top:0}
-.feet b:nth-child(1){left:1px}
-.feet b:nth-child(2){left:calc(var(--px)*8);width:calc(var(--px)*7);height:calc(var(--px)*6);
-  bottom:calc(var(--px)*-4)}
-.feet b:nth-child(3){right:1px}
-.feet b::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
-  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:0 0 50% 50%;
-  background:var(--bezel);box-shadow:0 0 0 1.5px var(--shell-edge)}
+/* every size a multiple of --px, no two the same, spacing uneven. Broad and
+   low rather than tall and narrow: at the first pass they were parallel-sided
+   and read as a row of thumbs standing on the case. */
+.scutes i:nth-child(1){--x:-104px; --w:12px; --h:8px}
+.scutes i:nth-child(2){--x:-76px;  --w:20px; --h:16px}
+.scutes i:nth-child(3){--x:-44px;  --w:16px; --h:16px}
+.scutes i:nth-child(4){--x:-16px;  --w:24px; --h:20px}   /* tallest, left of centre */
+.scutes i:nth-child(5){--x:12px;   --w:20px; --h:20px}
+.scutes i:nth-child(6){--x:48px;   --w:20px; --h:12px}
+.scutes i:nth-child(7){--x:88px;   --w:16px; --h:8px}
 
 /* ---------- faceplate ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
@@ -444,10 +439,9 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
        physical keys along the bottom. Everything is CSS; the project has no
        image assets and this does not change that. -->
   <div class="shell">
+    <!-- The crown ridge. fitCrown() in 08-ui.js sits each plate on the shell's
+         own top curve; see the note there for why that cannot be done in CSS. -->
     <div class="scutes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="feet" aria-hidden="true">
-      <i><b></b><b></b><b></b></i><i><b></b><b></b><b></b></i>
-    </div>
 
     <div class="shellhead">
       <div class="brand">PALEO<span>PAL</span><i class="rivet"></i></div>
@@ -1042,6 +1036,19 @@ function eyeAt(M, x, y, r, state){
     tube(M.pupil, [[x-r*1.3,y+r*.34],[x,y-r*.40],[x+r*1.3,y+r*.34]], [r*.24,r*.32,r*.24]);
     return;
   }
+  if (state === 3){
+    /* Half-lidded: ill, but awake. The sick pose used to borrow the shut lid
+       from sleep, so an animal that needed a remedy and an animal that needed
+       leaving alone were the same picture — and since `sick` overrides idle
+       for as long as the illness lasts, a poorly animal simply had its eyes
+       closed all day. The eye is open here, only sunk and hooded: the white
+       still shows, which is the whole difference at this size. */
+    oval(M.sclera, x, y + r*.28, r*1.04, r*.74);
+    oval(M.pupil,  x - r*.10, y + r*.36, r*.60, r*.60);
+    oval(M.glint,  x - r*.42, y + r*.10, r*.24, r*.22);
+    tube(M.pupil, [[x-r*1.32,y-r*.22],[x,y-r*.02],[x+r*1.26,y-r*.28]], [r*.22,r*.30,r*.22]);
+    return;
+  }
   oval(M.sclera, x, y, r*1.1, r*1.24);
   oval(M.pupil,  x - r*.12, y + r*.14, r*.66, r*.86);
   oval(M.glint,  x - r*.46, y - r*.44, r*.3, r*.3);
@@ -1101,9 +1108,21 @@ const POSES = {
            tail: .48*Math.sin(TAU*p + Math.PI/4)
          })),
   eat:   [ {body:0, legPhase:0, jaw:1, droop:.7, tail:.3}, {body:0, legPhase:0, jaw:.12, droop:.7, tail:-.1} ],
-  sleep: [ {body:-2.5, legPhase:0, droop:1.5, tail:.1, eye:1} ],
+  /* Asleep is deep and slow and the eyes are shut. Ill is shallow, uneven and
+     the eyes are open but hooded. The two used to share a lid and a droop,
+     which is why an ill animal read as a sleeping one. */
+  sleep: poseCycle(2, p => ({
+           body: -2.5 + .40*(1 - Math.cos(TAU*p)),
+           legPhase: 0, droop: 1.5, tail: .1, eye: 1
+         })),
   cheer: [ {body:5, legPhase:.5, jaw:.8, tail:.9, eye:2}, {body:0, legPhase:0, jaw:.35, tail:-.7, eye:2} ],
-  sick:  [ {body:-1.5, legPhase:0, droop:1.1, tail:-.1, eye:1}, {body:-2.4, legPhase:0, droop:1.2, tail:0, eye:1} ]
+  sick:  poseCycle(4, p => ({
+           body: -1.5 + .55*Math.sin(TAU*p),
+           legPhase: 0,
+           droop: 1.05 + .20*Math.cos(TAU*p),
+           tail: -.12 + .08*Math.sin(TAU*p),
+           eye: 3
+         }))
 };
 const matCache = new Map();
 function matsFor(spId, skinId){
@@ -1325,7 +1344,7 @@ function drawRex(M, P){
   const bellyY = hipY + 9*lM, throatY = hipY + 3*lM;
   const hx = withX - 26*nM - 4*hM, hy = withY - 10*nM - 2 + dr*9;
   const sM = st.snout;
-  const sn = 25*hM*sM, hh = 14.5*hM;
+  const sn = 23*hM*sM, hh = 15.5*hM;      // shorter and deeper than it was
   const T = d => hipX + d*tM;
 
   // far limb first, behind everything
@@ -1352,32 +1371,62 @@ function drawRex(M, P){
     [hx+9, hy+hh*.58]
   ]);
 
-  /* Upper jaw, deep behind the eye. The premaxilla is squared off — a
-     near-vertical front edge rather than a rounded nub — which is the quickest
-     way to read tyrannosaur instead of generic theropod at this size. */
-  const lipY = hy + hh*.30;
-  blob(M.head, [[hx+13, hy-hh*.12],[hx+11, hy-hh*.96],[hx-sn*.30, hy-hh*1.04],
-                [hx-sn*.62, hy-hh*.86],[hx-sn*.86, hy-hh*.62],
-                // the front is carried on three near-vertical stations, so the
-                // curve through them stays flat instead of rounding the tip off
-                [hx-sn*.99, hy-hh*.44],[hx-sn*1.03, hy-hh*.16],[hx-sn*1.02, lipY-hh*.10],
-                [hx-sn*.94, lipY],[hx-sn*.45, lipY+hh*.05],[hx+13, hy+hh*.36]]);
+  /* Skull.
+
+     The first version made every horizontal line straight: a flat roof from
+     nape to muzzle, a ruler-straight oral margin under it, and a squared
+     premaxilla at the end. Three straight lines and a right angle is a box
+     with an eye on it, which is most of what made the face read as goofy.
+
+     Three curves replace them, and none of them costs an anatomical claim:
+
+       - the braincase domes over the orbit and falls away behind it. A
+         tyrannosaur skull is deep and vaulted through the postorbital, and a
+         big rounded braincase over a big eye is also the whole of what makes
+         an animal read as young.
+       - the oral margin is sinuous rather than level: high at the cheek,
+         bowed down through the tooth row, lifting again at the tip. That is
+         the shape the maxilla actually has, and read as a face it is a
+         slight smile.
+       - the muzzle keeps its squared-off front — a near-vertical premaxilla
+         is the quickest way to read tyrannosaur rather than generic theropod
+         at this size — but it is shorter and deeper than it was, so the head
+         is a head rather than a snout with a skull behind it. */
+  const lipBack = hy + hh*.26, lipMid = hy + hh*.44, lipTip = hy + hh*.30;
+  blob(M.head, [
+    [hx+14, hy-hh*.06],                     // occiput, meeting the nape
+    [hx+12, hy-hh*.90],
+    [hx+2,  hy-hh*1.18],                    // vaulted braincase, over the orbit
+    [hx-sn*.34, hy-hh*1.06],
+    [hx-sn*.66, hy-hh*.84],
+    [hx-sn*.88, hy-hh*.56],
+    // three near-vertical stations across the front, so the curve through
+    // them stays flat instead of rounding the premaxilla off
+    [hx-sn*1.00, hy-hh*.30],
+    [hx-sn*1.05, hy+hh*.02],
+    [hx-sn*1.02, lipTip-hh*.06],
+    [hx-sn*.92, lipTip],                    // the oral margin, and its curve
+    [hx-sn*.46, lipMid],
+    [hx+14, lipBack]
+  ]);
 
   /* Hinged mandible, on its own material. It was always drawn and always
      hinged, but it was painted onto `head`, and the compositor only draws an
      edge where two different materials meet — so the whole lower jaw merged
      into the skull and the animal had no mouth. It hangs below the upper
-     jaw's oral margin, and that boundary is the lip line.
+     jaw's oral margin, and that boundary is the lip line. The ventral profile
+     is what shows, so it carries a rounded chin rather than the flat slab it
+     had, which is the other half of the goofy face.
 
      −x is forward, so the jaw opens on a negative rotation. */
-  const hinge = [hx + 11, hy + hh*.16], jawA = -jaw * .34;
+  const hinge = [hx + 12, hy + hh*.18], jawA = -jaw * .34;
   M.jaw.save(); M.jaw.translate(hinge[0], hinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[2,-hh*.16],[-sn*.40,-hh*.20],[-sn*.92,hh*.02],
-               [-sn*.88,hh*.34],[-sn*.34,hh*.52],[2,hh*.44]]);
+  blob(M.jaw, [[2,-hh*.12],[-sn*.42,-hh*.10],[-sn*.90,hh*.06],
+               [-sn*.94,hh*.32],[-sn*.66,hh*.52],[-sn*.24,hh*.58],[2,hh*.46]]);
   M.jaw.restore();
   // pale chin, carried by the jaw rather than left floating under it
   M.belly.save(); M.belly.translate(hinge[0], hinge[1]); M.belly.rotate(jawA);
-  oval(M.belly, -sn*.52, hh*.38, sn*.22, hh*.09);
+  oval(M.belly, -sn*.54, hh*.42, sn*.24, hh*.10);
   M.belly.restore();
 
   const about = (p, a, o) => [o[0] + (p[0]-o[0])*Math.cos(a) - (p[1]-o[1])*Math.sin(a),
@@ -1388,8 +1437,8 @@ function drawRex(M, P){
        lining outside the head; drawing it through `blob` bowed the curves
        outward and swallowed the whole face. Straight edges, because the two
        margins it runs between are straight. */
-    const uTip = [hx - sn*.93, lipY - hh*.04];
-    const lTip = about([hx - sn*.86, hy + hh*.36], jawA, hinge);
+    const uTip = [hx - sn*.91, lipTip - hh*.02];
+    const lTip = about([hx - sn*.88, hy + hh*.30], jawA, hinge);
     const gape = [hinge, uTip, lTip];
     M.mouth.beginPath();
     M.mouth.moveTo(gape[0][0], gape[0][1]);
@@ -1410,13 +1459,17 @@ function drawRex(M, P){
     }
   } else {
     // shut: lips cover the teeth, so all that shows is the oral margin itself
-    tube(M.mouth, [[hx+9, hy+hh*.31],[hx-sn*.46, lipY+hh*.02],[hx-sn*.93, lipY-hh*.06]],
+    tube(M.mouth, [[hx+10, lipBack+hh*.02],[hx-sn*.46, lipMid],[hx-sn*.91, lipTip-hh*.02]],
          [Math.max(.9,1.5*hM), Math.max(.8,1.25*hM), Math.max(.6,.8*hM)]);
   }
 
-  const ex = hx - sn*.46, ey = hy - hh*.42;
-  // lacrimal ridge above the eye, and the keratin row along the neck and back
-  blob(M.crest, [[ex+7*hM, ey-hh*.32],[ex+1*hM, ey-hh*.66],[ex-7*hM, ey-hh*.5],[ex-6*hM, ey-hh*.26]]);
+  const ex = hx - sn*.40, ey = hy - hh*.34;
+  /* Brow over the orbit, and the keratin row along the neck and back. The
+     brow is a rounded hood rather than the flat plate it was — a straight bar
+     over a round eye reads as a scowl, and there is a lacrimal boss there in
+     any case. */
+  blob(M.crest, [[ex+7.5*hM, ey-hh*.30],[ex+2*hM, ey-hh*.74],[ex-6*hM, ey-hh*.60],
+                 [ex-7.5*hM, ey-hh*.30],[ex-4*hM, ey-hh*.22],[ex+3*hM, ey-hh*.24]]);
   for (let i=0;i<10;i++){
     const q = samplePath(topLine, .04 + i*.088);          // ride the actual back line
     oval(M.crest, q[0], q[1] + 1.6*lM, 2.3*lM, 1.4*lM);
@@ -1434,8 +1487,12 @@ function drawRex(M, P){
   const foot = legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT);
   toes(M.horn, foot[0]-9*lM, foot[1]-1, 3, -1, Math.max(1.2, 2.1*lM));
 
-  eyeAt(M, ex, ey, 3.5*hM, P.eye);
-  oval(M.mouth, hx - sn*.84, hy - hh*.34, Math.max(.8,1.2*hM), Math.max(.8,1.1*hM));
+  /* A larger eye set lower and further forward. Both eyes face forward, which
+     the dossier promises, and a low, large orbit under a domed braincase is
+     also the proportion that reads as young rather than as lizard. */
+  eyeAt(M, ex, ey, 4.0*hM, P.eye);
+  // naris: a slot well back from the tip, in the upper half of the muzzle
+  oval(M.mouth, hx - sn*.78, hy - hh*.26, Math.max(.9,1.5*hM), Math.max(.7,.9*hM));
 
   /* Centreline for the coat painter: nape to tail tip, carrying the body's
      half-depth at each station so a band knows how far to run. */
@@ -1449,8 +1506,8 @@ function drawRex(M, P){
     [T(72),     hipY - 6*lM,    2.0*lM]  // tail tip
   ];
 
-  return { eye:[ex,ey], eyeR:3.5*hM, mouth:[hx - sn*.82, hy + hh*.12],
-           hat:[hx - sn*.16, hy - hh*1.02], top: hy - hh, spine };
+  return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
+           hat:[hx - sn*.10, hy - hh*1.14], top: hy - hh*1.18, spine };
 }
 
 
@@ -1458,24 +1515,36 @@ function drawRex(M, P){
    Part of Paleopal. Load order matters; see build.py.
 
    Proportions follow the modern skeletals: a deep barrel torso, a tail about
-   one and a quarter times the length of the torso and deep at its base, and a
-   skull that is large but not half the animal. The earlier version had a tail
-   shorter than the torso, which read as a stub.
+   one and a half times the length of the torso and deep at its base, and a
+   skull-and-frill unit carried forward of the shoulder rather than sitting on
+   top of it.
+
+   That last point is the whole of this rewrite. The frill used to be built
+   around a point just in front of the withers, tipped back forty degrees, and
+   the body outline was run forward to meet it — so its lower half was buried
+   in the shoulder hump, its rim never cleared the back line, and the skull
+   appeared to be extruded out of the front of a lump. In side view a
+   ceratopsian is a head with an animal behind it: the shield stands clear
+   against the sky, there is a short thick neck under it, and the shoulder
+   starts behind that. The frill is anchored to the back of the skull now, the
+   skull is carried forward of the shoulder, and the body's nape stops short
+   so that neck is something you can see.
 
    Growth follows Horner and Goodwin's series of ten skulls:
      - the frill is present and deeply scalloped from the start, and lengthens
        with positive allometry (STAGE.frill)
      - the epoccipitals along the rim start as deep deltoid scallops and
        flatten to low spindles that fuse into the margin (EPI_DEPTH)
-     - the brow horns are straight stubs, then curve backward, then straighten,
-       then recurve forward (STAGE.hornBend)
+     - the brow horns are straight stubs, curve backward in juveniles,
+       straighten in subadults and recurve forward in adults (STAGE.hornBend)
    -------------------------------------------------------------------------- */
-const TRI_SPEC = { skin:'#ab7040', belly:'#ca9b64', crest:'#8a5228', horn:'#efe6c8',
-                   /* the frill carries its own colour. On the body ramp it was
-                      separated from the neck by nothing but the outline, and a
-                      shield that does not read as a shield is most of this
-                      animal's silhouette thrown away. */
-                   shield:'#c09155',
+const TRI_SPEC = { skin:'#a06635', belly:'#c8975e', crest:'#7d4a22', horn:'#efe6c8',
+                   /* The frill carries its own colour, pulled further from the
+                      body ramp than it was: on the flank colours the shield
+                      was separated from the neck by nothing but the outline,
+                      and a shield that does not read as a shield is most of
+                      this animal's silhouette thrown away. */
+                   shield:'#cfa068',
                    mouth:'#7e3a30', outline:'#26190f' };
 const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
 const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
@@ -1490,7 +1559,7 @@ function drawTrike(M, P){
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
 
   const hipX = 26, hipY = -41*lM - bob;
-  const shX = -16, shY = -38*lM - bob;         // torso 42 long, was 36
+  const shX = -16, shY = -38*lM - bob;         // glenoid
   const withY = hipY - 25*lM;                  // tall neural spines: a shoulder hump
   const backY = hipY - 20*lM, bellyY = hipY + 14*lM;
   const T = d => hipX + d*tM;
@@ -1498,47 +1567,56 @@ function drawTrike(M, P){
   legStep(M.far, hipX-7, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
   legStep(M.far, shX-7,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE);
 
-  /* One closed mass: nape, ribcage, hips and tail. The tail leaves the hips
-     nearly as deep as the pelvis and tapers the whole way out, which is what
-     stops it reading as a stub bolted on the back. */
+  /* One closed mass: nape, ribcage, hips and tail. The nape stops at the base
+     of the neck instead of running forward into the frill, so the neck is a
+     column with sky either side of it rather than a filled wedge. The tail
+     leaves the hips nearly as deep as the pelvis and tapers the whole way
+     out, which is what stops it reading as a stub bolted on the back. */
   blob(M.skin, [
-    [shX-12, withY+7*lM],                      // nape, meeting the frill
-    [shX-1,  withY],                           // shoulder hump
+    [shX-9,  withY+8*lM],                      // base of the neck
+    [shX-2,  withY],                           // shoulder hump
     [8,      backY-1],                         // back
     [hipX+4, backY+2],                         // hips
-    [T(12),  hipY-17*lM+sw*1.5],               // tail base, still deep
-    [T(26),  hipY-13*lM+sw*3],
-    [T(39),  hipY-8.5*lM+sw*5],
-    [T(50),  hipY-4*lM+sw*7],                  // tail tip
-    [T(48),  hipY-1.5*lM+sw*7],
-    [T(34),  hipY+1*lM+sw*4],
-    [T(18),  hipY+5*lM+sw*1.5],
+    [T(14),  hipY-17*lM+sw*1.5],               // tail base, still deep
+    [T(30),  hipY-13*lM+sw*3],
+    [T(46),  hipY-8.5*lM+sw*5],
+    [T(62),  hipY-3*lM+sw*7],                  // tail tip
+    [T(60),  hipY-0.5*lM+sw*7],
+    [T(42),  hipY+2*lM+sw*4],
+    [T(22),  hipY+6*lM+sw*1.5],
     [T(5),   hipY+10*lM],
     [hipX-6, bellyY],                          // belly
     [2,      bellyY+2*lM],
     [shX+3,  bellyY-1*lM],
-    [shX-10, hipY+2*lM]                        // throat
+    [shX-8,  hipY+2*lM]                        // throat
   ]);
 
-  /* Frill: a solid bone shield, tipped back off the skull roof.
+  /* The neck: short, thick and near horizontal, carrying the head forward of
+     the shoulder. Drawn on `skin`, so it merges with the body the way a neck
+     should — the boundary that has to read is the one behind the frill, and
+     the frill has a material of its own for exactly that. */
+  const nkX = shX - 7*nM, nkY = withY + 9*lM;
+  const hx = nkX - 20*nM - 9*hM*sM, hy = nkY + 7*lM + dr*5;   // the jaw joint
+  const sn = 24*hM*sM, hh = 10.5*hM;
+  tube(M.skin, [[shX-2, nkY-2*lM],[nkX-4, nkY+1*lM],[hx+14*hM, hy-hh*.10]],
+       [15*lM, 13.5*lM, 12*hM]);
 
-     The previous version drew it as an upright ellipse centred near the
-     withers, which meant its lower-back half was buried in the shoulder hump
-     and the whole thing read as a lump of neck rather than a shield. It is
-     now built in its own tilted frame and carried high enough that the rim
-     stands clear of the body outline the whole way round — that separation is
-     the entire silhouette of the animal.
+  /* Frill: a solid bone shield, anchored to the back of the skull roof and
+     opening up and back over the neck. Its rim stands clear of the back line
+     the whole way round — that separation is the entire silhouette of the
+     animal, and burying it in the shoulder is what made the old one read as a
+     hump of neck.
 
      It rides STAGE.frill, not the horn column: a baby already has an obvious,
      deeply scalloped frill and almost no horns. */
-  const fx = shX - 14*nM - 3, fy = hipY - 24*lM - 8*nM + dr*4;
-  const fRx = 16.0*hM*fM, fRy = 22.0*hM*fM;
-  const fTilt = -0.40;                          // tipped back off the skull roof
+  const fx = hx + 15*hM, fy = hy - hh*1.16;    // the base, on the skull roof
+  const fRx = 17.0*hM*fM, fRy = 22.0*hM*fM;
+  const fTilt = -0.24;                          // tipped back, but standing up
   const fc = Math.cos(fTilt), fs = Math.sin(fTilt);
   const rot = (px,py) => [fx + px*fc - py*fs, fy + px*fs + py*fc];
   const epi = EPI_DEPTH[P.stage];
   const rim = [];
-  const A0 = Math.PI*1.04, A1 = Math.PI*2.16;   // front-top, over the crown, down the back
+  const A0 = Math.PI*1.10, A1 = Math.PI*2.02;   // front edge, over the crown, down the back
   /* The epoccipitals scallop the rim itself. Sixteen of them came out as a
      one-pixel sawtooth that read as fur; an adult shows five or six knobs in
      side profile, so the rim is stepped at that count instead. */
@@ -1548,51 +1626,71 @@ function drawTrike(M, P){
     const r = (i % 2) ? 1.0 : (1 - epi);
     rim.push(rot(Math.cos(a)*fRx*r, Math.sin(a)*fRy*r));
   }
-  rim.push(rot(fRx*.30, fRy*.86));              // bottom margin, tucking toward the jaw
-  rim.push(rot(-fRx*.62, fRy*.66));             // front-bottom, where the skull joins
+  rim.push(rot(fRx*.74, fRy*.34));              // rear-bottom corner, clear of the neck
+  rim.push(rot(fRx*.10, fRy*.44));              // bottom margin, behind the cheek
+  rim.push(rot(-fRx*.72, fRy*.30));             // front-bottom, where the skull joins
   blob(M.shield, rim);
+  /* The epoccipitals as bone, not only as a step in the outline. They are
+     separate ossifications that fuse to the margin, so they are the colour of
+     the horns rather than of the shield, and at this size a scalloped edge on
+     its own is invisible — a row of pale knobs is what makes the rim read as
+     a rim. They shrink with age on the same schedule as the scallops. */
+  for (let i=1;i<EPI_N;i+=2){
+    const a = A0 + (A1-A0)*i/EPI_N;
+    const q = rot(Math.cos(a)*fRx, Math.sin(a)*fRy);
+    oval(M.horn, q[0], q[1], (1.1 + epi*7)*hM*fM, (1.0 + epi*5.5)*hM*fM);
+  }
 
-  /* Skull: long, low, and carried well forward and below the frill base. The
-     cranium now stops at the oral margin instead of running down to the chin,
-     because the mandible has to live somewhere. */
-  const hx = fx - 17*hM*sM - 6, hy = fy + 13*hM, sn = 21*hM*sM, hh = 10.0*hM;
-  const lipY = hy + hh*.40;
-  blob(M.head, [[hx+19*hM, hy-hh*1.05],[hx-sn*.42, hy-hh*1.16],[hx-sn*.90, hy-hh*.58],
-                [hx-sn*1.00, hy-hh*.04],[hx-sn*.88, lipY-hh*.04],
-                [hx-sn*.40, lipY+hh*.04],[hx+19*hM, hy+hh*.9]]);
+  /* Skull: deep, boxy, and carried forward and below the frill base. It stops
+     at the oral margin, because the mandible has to live somewhere. The old
+     one was a long thin wedge — about half of this animal's head is frill,
+     and giving the skull the other half made it a snout on a stalk. */
+  const lipY = hy + hh*.38;
+  blob(M.head, [
+    [hx+15*hM,   hy-hh*1.02],                   // back of the skull roof
+    [hx+2*hM,    hy-hh*1.20],                   // roof over the orbit
+    [hx-sn*.32,  hy-hh*1.08],
+    [hx-sn*.66,  hy-hh*.84],                    // sloping to the beak
+    [hx-sn*.90,  hy-hh*.46],
+    [hx-sn*1.00, hy-hh*.06],
+    [hx-sn*.88,  lipY-hh*.02],                  // oral margin
+    [hx-sn*.38,  lipY+hh*.06],
+    [hx+4*hM,    hy+hh*.86],                    // deep cheek, down to the jugal
+    [hx+16*hM,   hy+hh*.36]
+  ]);
 
   /* Jaw. A ceratopsian bites with two beaks — the rostral above, the
      predentary below — and the gap between them is the mouth. The old sprite
      drew one cream mass across the whole snout, which read as a bald face and
      left the eat animation with nothing to move. */
-  const jHinge = [hx + 7*hM, hy + hh*.42], jawA = -jaw*.26;
+  const jHinge = [hx + 8*hM, hy + hh*.44], jawA = -jaw*.26;
   M.jaw.save(); M.jaw.translate(jHinge[0], jHinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[3,-hh*.04],[-sn*.38,-hh*.10],[-sn*.80,hh*.08],
-               [-sn*.74,hh*.44],[-sn*.26,hh*.56],[4,hh*.44]]);
+  blob(M.jaw, [[4,-hh*.06],[-sn*.36,-hh*.12],[-sn*.78,hh*.06],
+               [-sn*.72,hh*.42],[-sn*.24,hh*.56],[5,hh*.44]]);
   M.jaw.restore();
 
   // rostral: a parrot hook, not a rounded snout cap
-  blob(M.horn, [[hx-sn*.82, hy-hh*.44],[hx-sn*1.18, hy-hh*.04],[hx-sn*1.26, hy+hh*.28],
-                [hx-sn*1.04, hy+hh*.44],[hx-sn*.78, lipY-hh*.06]]);
+  blob(M.horn, [[hx-sn*.92, hy-hh*.40],[hx-sn*1.16, hy-hh*.04],[hx-sn*1.22, hy+hh*.24],
+                [hx-sn*1.04, hy+hh*.42],[hx-sn*.88, lipY-hh*.04]]);
   // predentary, riding the jaw so it opens with it
   M.horn.save(); M.horn.translate(jHinge[0], jHinge[1]); M.horn.rotate(jawA);
-  blob(M.horn, [[-sn*.58, hh*.02],[-sn*.90, hh*.14],[-sn*.84, hh*.46],[-sn*.54, hh*.44]]);
+  blob(M.horn, [[-sn*.56, hh*.00],[-sn*.88, hh*.12],[-sn*.82, hh*.44],[-sn*.52, hh*.42]]);
   M.horn.restore();
 
   if (jaw > .06){
-    const uTip = [hx - sn*.86, lipY - hh*.06];
-    const lTip = [jHinge[0] + (-sn*.80)*Math.cos(jawA) - (hh*.06)*Math.sin(jawA),
-                  jHinge[1] + (-sn*.80)*Math.sin(jawA) + (hh*.06)*Math.cos(jawA)];
+    const uTip = [hx - sn*.86, lipY - hh*.04];
+    const lTip = [jHinge[0] + (-sn*.78)*Math.cos(jawA) - (hh*.06)*Math.sin(jawA),
+                  jHinge[1] + (-sn*.78)*Math.sin(jawA) + (hh*.06)*Math.cos(jawA)];
     M.mouth.beginPath();
     M.mouth.moveTo(jHinge[0], jHinge[1]);
     M.mouth.lineTo(uTip[0], uTip[1]);
     M.mouth.lineTo(lTip[0], lTip[1]);
     M.mouth.closePath(); M.mouth.fill();
   } else {
-    tube(M.mouth, [[hx+5*hM, hy+hh*.42],[hx-sn*.42, lipY+hh*.03],[hx-sn*.80, lipY-hh*.04]],
+    tube(M.mouth, [[hx+6*hM, lipY+hh*.06],[hx-sn*.38, lipY+hh*.04],[hx-sn*.80, lipY-hh*.04]],
          [Math.max(.9,1.4*hM), Math.max(.8,1.2*hM), Math.max(.6,.9*hM)]);
   }
-  const ex = hx - sn*.36, ey = hy - hh*.30;
+  const ex = hx - sn*.30, ey = hy - hh*.34;
 
   /* Brow horns. The keratin sheath ran well past the bone core, so an adult's
      are long; the curvature is the ontogenetic sequence — straight stubs, then
@@ -1600,22 +1698,26 @@ function drawTrike(M, P){
      bows against the tip, which is what makes a recurve read as a recurve
      rather than as a bent stick.
 
+     They spring from above the orbit, which is where a postorbital horn is,
+     and they are rooted low enough on the skull to read as growing out of the
+     face rather than off the front of the frill.
+
      Width tracks the sheath as well as the skull. Scaling thickness on head
      bulk alone gave hatchlings two fat cones where they should have stubs. */
-  const hl = hh*(.45 + 1.70*hF);
+  const hl = hh*(.50 + 1.85*hF);
   const hw = hM * (.40 + .60*hF);
   const browHorn = (dx, dy, len, w) => {
     const bx = ex + dx*hM, by = ey + dy;
-    const tip = [bx - len*(.30 + .55*bend), by - len*.86];
-    const mid = [(bx + tip[0])/2 + len*.20*bend, (by + tip[1])/2 + len*.05];
+    const tip = [bx - len*(.34 + .58*bend), by - len*.82];
+    const mid = [(bx + tip[0])/2 + len*.20*bend, (by + tip[1])/2 + len*.06];
     tube(M.horn, [[bx,by], mid, tip], [w*hw, w*.52*hw, w*.12*hw]);
   };
-  browHorn( 4, -hh*.54, hl,     9.4);
-  browHorn(-4, -hh*.64, hl*.90, 7.6);
+  browHorn( 5, -hh*.52, hl,     9.6);
+  browHorn(-4, -hh*.62, hl*.88, 7.8);
   // nasal horn: small in T. horridus, and small at every age
-  tube(M.horn, [[hx-sn*.74, hy-hh*.28],[hx-sn*.88, hy-hh*(.45+.5*hF)]], [4.0*hM, 1.2*hM]);
+  tube(M.horn, [[hx-sn*.72, hy-hh*.30],[hx-sn*.86, hy-hh*(.50+.5*hF)]], [4.0*hM, 1.2*hM]);
   // jugal horn: a short cheek point aimed down and back, not a hanging tusk
-  blob(M.horn, [[hx-sn*.18, hy+hh*.62],[hx-sn*.44, hy+hh*.56],[hx-sn*.24, hy+hh*1.06]]);
+  blob(M.horn, [[hx-sn*.06, hy+hh*.66],[hx-sn*.32, hy+hh*.60],[hx-sn*.10, hy+hh*1.14]]);
 
   // low nubbin feature scales over the flank and tail base
   for (const q of [[-2,-11],[10,-14],[22,-12],[15,-6],[32,-9],[2,-5],[41,-7]])
@@ -1626,26 +1728,25 @@ function drawTrike(M, P){
   legStep(M.limb, hipX+2, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
   legStep(M.limb, shX+4, shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
 
-  eyeAt(M, ex, ey, 2.7*hM, P.eye);
-  oval(M.mouth, hx - sn*.76, hy - hh*.20, Math.max(.8,1.2*hM), Math.max(.8,1*hM));
+  eyeAt(M, ex, ey, 3.4*hM, P.eye);
 
   /* Centreline for the coat painter: nape to tail tip, with the body's
      half-depth at each station so a band knows how far to run. */
   const spine = [
-    [shX-8,   withY+9*lM,   9*lM],   // nape
+    [shX-6,   withY+11*lM,  8*lM],   // base of the neck
     [shX+4,   hipY-6*lM,   17*lM],   // shoulder
     [10,      hipY-4*lM,   17*lM],
     [hipX+2,  hipY-3*lM,   16*lM],   // hips
-    [T(13),   hipY-7*lM,   10*lM],   // tail base
-    [T(27),   hipY-6*lM,    7*lM],
-    [T(40),   hipY-4*lM,    4.5*lM],
-    [T(50),   hipY-3*lM,    2.0*lM]  // tail tip
+    [T(15),   hipY-7*lM,   10*lM],   // tail base
+    [T(32),   hipY-6*lM,    7*lM],
+    [T(48),   hipY-4*lM,    4.5*lM],
+    [T(62),   hipY-2*lM,    2.0*lM]  // tail tip
   ];
 
-  // headgear sits on the crown of the frill, which the tilt moved forward as
+  // headgear sits on the crown of the frill, which the tilt moves forward as
   // well as up — the old anchor was still using the untilted top of the arc
-  const crown = rot(0, -fRy*.90);
-  return { eye:[ex,ey], eyeR:2.7*hM, mouth:[hx - sn*1.15, hy + hh*.25],
+  const crown = rot(fRx*.10, -fRy*.96);
+  return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
            hat:crown, top: crown[1], spine };
 }
 
@@ -2086,6 +2187,176 @@ function conifer(g, x, base, h, body, litc){
   }
 }
 
+/* Araucaria: a straight bare trunk carrying a deep domed crown, the
+   monkey-puzzle silhouette that says Mesozoic on sight. It is a completely
+   different shape from a conifer, which is the point of having it — a skyline
+   of one shape repeated is a hedge.
+
+   The first attempt gave it a one-pixel trunk under a crown four pixels deep,
+   which is a street lamp. The crown has to be a mass with depth to it, and
+   the trunk has to be thick enough to hold it up. */
+function araucaria(g, x, base, h, body, litc){
+  /* Two thirds crown, one third trunk. At the first proportions — a long thin
+     trunk under a shallow cap — twenty-five pixels of tree came out as a
+     street lamp. */
+  const crownH = Math.round(h*.72), trunkH = h - crownH + 3;
+  g.fillStyle = mixHex(body, '#000000', .34);
+  g.fillRect(x, base - trunkH, 3, trunkH);
+  const maxW = Math.round(h*.62);
+  for (let r=0;r<crownH;r++){
+    const u = r/Math.max(1, crownH-1);                 // 0 at the top of the crown
+    // deep dome: wide through the middle, tucked at the top, ragged underneath
+    const wd = Math.max(3, Math.round(maxW * Math.sin(Math.pow(u, .78) * Math.PI * .5)));
+    const jag = (r % 3 === 2) ? 1 : 0;                 // the whorls break the edge
+    g.fillStyle = body;
+    g.fillRect(x + 1 - (wd>>1) - jag, base - h + r, wd + jag*2, 1);
+    if (u < .34){ g.fillStyle = litc; g.fillRect(x + 2 - (wd>>1), base - h + r, Math.max(1, wd-3), 1); }
+  }
+}
+/* Tree fern: a fibrous trunk under a full rosette. Fills the storey between
+   the treeline and the grass, which was open sky. */
+function treeFern(g, x, base, h, body, litc){
+  const trunk = Math.round(h*.52);
+  g.fillStyle = mixHex(body, '#000000', .35);
+  g.fillRect(x, base - trunk, 2, trunk);
+  const crown = base - trunk;
+  for (let a=0;a<7;a++){
+    const ang = .18 + a*.46, len = h*(.62 - Math.abs(a-3)*.05);
+    const dir = a < 3 ? -1 : a > 3 ? 1 : 0;
+    for (let t=1;t<=7;t++){
+      const u = t/7;
+      const px2 = Math.round(x + dir*Math.cos(ang)*len*u);
+      const py  = Math.round(crown - Math.sin(ang)*len*u + u*u*3);
+      const lf  = Math.max(1, Math.round(lerp(2.4, 1, u)));
+      g.fillStyle = (t & 1) ? body : mixHex(body, '#000000', .22);
+      g.fillRect(px2, py - lf, 2, lf*2);
+    }
+  }
+  g.fillStyle = litc; g.fillRect(x - 1, crown - 2, 4, 2);
+}
+
+/* --------------------------------- volcano ---------------------------------
+   The old one was a cone of one flat colour with a two-pixel orange bar laid
+   across the top and a translucent rectangle standing over it: a dark hill
+   with a small red pool on it, which is exactly what it looked like.
+
+   Four things make a volcano read, and it had none of them:
+
+     1. A CONCAVE PROFILE. A straight-sided triangle is a slag heap. A
+        stratovolcano is steep at the summit and flares out at the base, and
+        that curve is most of the silhouette.
+     2. A TRUNCATED SUMMIT WITH A CRATER. It does not come to a point; it
+        stops at a rim with a notch bitten out of it, and the two sides of
+        the notch are different heights.
+     3. TWO FACES WITH A HARD EDGE. Light from the upper left, the same as
+        everything else in this game, so the left flank is lit and the right
+        is in shade with one crisp ridge between them. Flat fill made it a
+        cardboard cutout.
+     4. STRUCTURE ON THE FLANKS. Radiating gullies and a couple of old lava
+        runnels running down from the rim, so the slope has a direction.
+
+   The plume is not baked with the cone. Smoke that never moves is scenery
+   painted on a wall; it is drawn per frame in drawPlume, along with the
+   crater glow, which is brightest at night. */
+const VOLC = { x:172, half:66, top:20, base:GROUND - 4 };
+
+/* Where the flank stands at horizontal distance |dx| from the axis, as a
+   height above the base.
+
+   The profile has to be CONCAVE — steep at the summit, flaring at the foot.
+   The first attempt used H0 * (1 - t^1.55), whose slope is zero on the axis
+   and steepest at the base: that is a butte, flat on top with sheer sides,
+   and it is what the cone looked like. Raising (1 - t) to a power above one
+   gives the opposite and correct shape.
+
+   The crater is cut into the profile rather than painted on afterwards, and
+   it has to be cut deeper than the cone falls across its own width or there
+   is no notch at all, only a slightly rounder summit. */
+const CRATER_T = 0.20, CRATER_D = 6;
+/* The inverse: how wide the cone is at a given screen row. A runnel drawn as
+   a straight diagonal walks off the silhouette within a few pixels, because
+   the flank near the summit is far steeper than any fixed step — the two of
+   them came out as guy-ropes staked into the sky. Asking the profile where
+   the edge is keeps them on the mountain. */
+function volcSpan(y){
+  const H0 = VOLC.base - VOLC.top, h = VOLC.base - y;
+  if (h <= 0) return VOLC.half;
+  if (h >= H0) return 0;
+  return (1 - Math.pow(h / H0, 1/1.85)) * VOLC.half;
+}
+function volcHeight(t){
+  const H0 = VOLC.base - VOLC.top;
+  if (t >= CRATER_T) return H0 * Math.pow(1 - t, 1.85);
+  const lip = H0 * Math.pow(1 - CRATER_T, 1.85);
+  const u = t / CRATER_T;                       // 1 at the lip, 0 on the axis
+  return lip - (1 - u*u) * CRATER_D;
+}
+function drawVolcano(g, S_){
+  const { x:px, half, base } = VOLC;
+  const rock     = mixHex(S_.far, '#000000', .36);
+  const rockLit  = mixHex(S_.far, S_.low,    .26);
+  const rockShd  = mixHex(S_.far, '#000000', .60);
+  const ridgeCol = mixHex(S_.far, '#000000', .72);
+  const ashLit   = mixHex(S_.far, S_.low,    .44);
+
+  for (let i=-half;i<=half;i++){
+    const t = Math.abs(i)/half;
+    const y = Math.round(base - volcHeight(t));
+    const lit = i < -2;                                   // light from the upper left
+    g.fillStyle = lit ? rock : rockShd;
+    g.fillRect(px+i, y, 1, base - y + 2);
+    g.fillStyle = lit ? rockLit : ridgeCol;               // the crisp top edge
+    g.fillRect(px+i, y, 1, 1);
+    /* Gullies: radiating streaks that get further apart down the slope, so
+       the flank has a direction instead of being a flat field. */
+    if (Math.sin(i*1.7) > .78){
+      g.fillStyle = lit ? mixHex(S_.far, S_.low, .34) : mixHex(S_.far, '#000000', .52);
+      g.fillRect(px+i, y+3, 1, Math.round((base - y) * .42));
+    }
+  }
+
+  /* The crater floor, three rows deep inside the notch the profile already
+     cuts. The left lip is left a pixel lower than the right: a crater that is
+     symmetrical is a funnel. */
+  const rimY = Math.round(base - volcHeight(0));
+  const cw = Math.round(half*CRATER_T);
+  for (let i=-cw+1;i<cw;i++){
+    const y = Math.round(base - volcHeight(Math.abs(i)/half));
+    g.fillStyle = mixHex(S_.far, '#000000', .66);
+    g.fillRect(px+i, y, 1, 3);
+  }
+  /* No hand-drawn lips. Two bars laid across the summit read as girders on a
+     mesa; the notch in the profile is the crater, and one pixel of catch
+     light on the windward lip is all it needs. */
+  g.fillStyle = rockLit;  g.fillRect(px-cw-2, Math.round(base - volcHeight(CRATER_T)) - 1, 2, 1);
+
+  /* Two old lava runnels down the lit flank, cold and dark. The live glow in
+     them belongs to drawPlume, because at night it pulses. */
+  /* Two old lava channels down the flanks. They hold a fixed fraction of the
+     way out from the axis and drift by a fraction of a pixel a row: given a
+     wobble of any size they swing across a cone that widens this fast and
+     come out as lightning bolts painted on the mountain. */
+  const runnel = mixHex(S_.far, '#000000', .58);
+  const lipY = Math.round(base - volcHeight(CRATER_T));
+  for (const dir of [-1, 1]){
+    const seat = dir < 0 ? 0.40 : 0.52;
+    for (let k=0;k<38;k++){
+      const y = lipY + 2 + k;
+      if (y > base - 2) break;
+      const rx = px + dir * volcSpan(y) * (seat + 0.05*Math.sin(k*.22));
+      g.fillStyle = runnel;
+      g.fillRect(Math.round(rx), y, 1, 1);
+    }
+  }
+  // an apron of old ash at the foot, spreading wider than the cone
+  g.fillStyle = mixHex(S_.far, '#000000', .18);
+  for (let i=-half-9;i<=half+9;i++){
+    const t = Math.abs(i)/(half+9);
+    const h = Math.round((1 - t*t) * 4);
+    if (h > 0) g.fillRect(px+i, base - h + 2, 1, h);
+  }
+}
+
 function boulder(g, x, base, w, h, col, lit, shd){
   for (let i=0;i<h;i++){
     const t = i/h, wd = Math.round(w * (0.55 + 0.45*Math.sin((1-t)*Math.PI*0.5)));
@@ -2140,33 +2411,45 @@ function bakeBg(phase){
   }
   g.fillStyle = S_.low; g.fillRect(0, horizon, W, GROUND - horizon + 2);
 
-  // three depth planes, each flatter and lighter than the one in front
+  /* Four depth planes now, each flatter and lighter than the one in front.
+     The furthest is nearly the colour of the sky it stands against: without a
+     plane that close to the haze, the range began abruptly at a hard edge and
+     the distance behind it read as painted card. */
+  ridge(g, { base:66, col: mixHex(S_.far, S_.low, .86), lit: mixHex(S_.far, S_.low, .92),
+             waves:[[.013,1.9,15],[.037,.8,7],[.006,3.1,9]] });
   ridge(g, { base:74, col: mixHex(S_.far, S_.low, .68), lit: mixHex(S_.far, S_.low, .78),
              waves:[[.019,.3,13],[.044,2.6,6]] });
   ridge(g, { base:84, col: mixHex(S_.far, S_.low, .42), lit: mixHex(S_.far, S_.low, .62),
              waves:[[.031,1.1,11],[.071,.4,5],[.013,2.2,7]] });
-  // volcano on the far plane
-  (function(){
-    const px = 168, top = 52, half = 26;
-    for (let x=px-half;x<=px+half;x++){
-      const t = Math.abs(x-px)/half;
-      let y = Math.round(top + Math.pow(t,1.3)*40 + 4);
-      if (t < .26) y += 3 - Math.round(t*8);
-      g.fillStyle = mixHex(S_.far, '#000000', .22); g.fillRect(x, y, 1, GROUND-y+2);
-      g.fillStyle = x < px ? mixHex(S_.far,S_.low,.4) : mixHex(S_.far,'#000000',.42);
-      g.fillRect(x, y, 1, 1);
-    }
-    g.fillStyle = '#c4562f'; g.fillRect(px-6, top+6, 12, 2);
-    g.fillStyle = '#e8a44a'; g.fillRect(px-4, top+6, 6, 1);
-    g.fillStyle = 'rgba(210,150,120,.20)'; g.fillRect(px-3, top-8, 6, 12); g.fillRect(px-1, top-15, 4, 8);
-  })();
+  /* A river out on the valley floor, between the far range and the near one.
+     One flat band of sky colour lying down is the cheapest depth cue there
+     is: everything above it is read as far away because the water proves
+     there is ground between here and there. */
+  const riv = mixHex(S_.water, S_.low, .62);
+  for (let x=0;x<W;x++){
+    const top = 92 + Math.round(Math.sin(x*.021 + 1.4)*2.5 + Math.sin(x*.055)*1.2);
+    const dep = 3 + Math.round(Math.sin(x*.03 + 2.2)*1.4);
+    g.fillStyle = riv; g.fillRect(x, top, 1, dep);
+    g.fillStyle = mixHex(S_.water, '#ffffff', .30); g.fillRect(x, top, 1, 1);
+  }
+  drawVolcano(g, S_);
   ridge(g, { base:100, col: mixHex(S_.mid, S_.low, .2), lit: mixHex(S_.mid, S_.low, .45),
              waves:[[.048,3.4,8],[.11,1.7,3]] });
 
-  // treeline sitting on the middle plane
+  /* Treeline on the middle plane. Eight identical conifers in two clumps was
+     a hedge; a Late Cretaceous skyline has araucaria with domed crowns on
+     bare trunks and tree ferns under them, and three silhouettes instead of
+     one is most of what turns a hedge into a wood. */
   const treeBody = mixHex(S_.tree, S_.low, .18), treeLit = mixHex(S_.tree, S_.low, .38);
+  const farBody  = mixHex(S_.tree, S_.low, .32), farLit  = mixHex(S_.tree, S_.low, .46);
+  [[52,15],[62,11],[150,13],[162,17],[172,12],[100,10]]
+    .forEach(t => conifer(g, t[0], GROUND-4, t[1], farBody, farLit));   // back rank, hazed
   [[14,26],[26,19],[38,23],[196,24],[208,17],[184,20],[120,15],[132,21]]
     .forEach(t => conifer(g, t[0], GROUND-2, t[1], treeBody, treeLit));
+  [[8,26],[46,21],[142,23],[216,19]]
+    .forEach(t => araucaria(g, t[0], GROUND-2, t[1], treeBody, treeLit));
+  [[33,12],[128,10],[203,11],[70,9]]
+    .forEach(t => treeFern(g, t[0], GROUND-1, t[1], treeBody, treeLit));
 
   // ground: lit grass edge, then dithered dirt
   const grassLit = mixHex(S_.grass, S_.low, .40), grassDark = mixHex(S_.grass, '#000000', .32);
@@ -2264,6 +2547,123 @@ function drawFlyers(g, dt, now){
   if (up){ g.fillRect(x-5, y-2, 4, 1); g.fillRect(x+2, y-2, 4, 1); }
   else   { g.fillRect(x-5, y+2, 4, 1); g.fillRect(x+2, y+2, 4, 1); }
 }
+/* The plume, and the light in the crater.
+
+   Neither is baked with the cone. A backdrop is cached per sky phase and
+   redrawn perhaps four times a day, so anything baked into it is a painting
+   on a wall — the old smoke was a translucent rectangle that had never moved
+   in the history of the game. Smoke is the one thing on a volcano that is
+   always moving, and it is most of what says the mountain is alive.
+
+   Eight puffs share one rising cycle, each a third of a turn behind the last.
+   A puff widens and fades as it climbs and leans downwind with height, which
+   is wind shear and is why a real plume bends. */
+const PLUME_N = 14, PLUME_MS = 5600;
+function drawPlume(g, phase, now){
+  /* The vent, not the apex. VOLC.top is where a pointed cone of this profile
+     would come to a point, and the summit is truncated well below it — using
+     it here drew the smoke, the lava and the runnel glow in clear sky above
+     the mountain, with the glow reading as two arcs bridging the summit. */
+  const px = VOLC.x, rimY = Math.round(VOLC.base - volcHeight(0));
+  const night = phase === 'night';
+
+  /* The crater. At night it is the only warm light in the scene, so it
+     carries a slow pulse; by day it is mostly washed out and reads as heat
+     rather than as fire. */
+  const pulse = .72 + .28*Math.sin(now/1450) + .08*Math.sin(now/430);
+  const glow = night ? .95 : phase === 'day' ? .34 : .62;
+  const cw = Math.round(VOLC.half*CRATER_T);
+  /* The haze over the vent stays inside the notch. Spread wide enough to
+     stand against the sky it read as a pale arch bridging the summit. */
+  g.fillStyle = 'rgba(226,104,44,' + (0.16*glow*pulse).toFixed(3) + ')';
+  g.beginPath(); g.ellipse(px, rimY + 4, cw + 1, 5, 0, 0, 7); g.fill();
+  /* The lava lies on the crater floor, which means asking the profile where
+     the floor is rather than inventing a second curve for it — the first
+     version bowed the pool the wrong way and put the deepest lava against
+     the lips, which drew an orange arch over the notch. */
+  for (let i=-cw+2;i<=cw-2;i++){
+    const t = Math.abs(i)/cw;
+    const y = Math.round(VOLC.base - volcHeight(Math.abs(i)/VOLC.half));
+    g.fillStyle = 'rgba(206,66,28,' + (0.92*glow).toFixed(3) + ')';
+    g.fillRect(px+i, y, 1, 2);
+    if (t < .66){
+      g.fillStyle = 'rgba(240,150,54,' + (0.92*glow*pulse).toFixed(3) + ')';
+      g.fillRect(px+i, y, 1, 1);
+    }
+    if (t < .30){
+      g.fillStyle = 'rgba(252,226,150,' + (0.88*glow*pulse).toFixed(3) + ')';
+      g.fillRect(px+i, y, 1, 1);
+    }
+  }
+
+  // the runnels, lit from inside the mountain
+  /* The upper reach of each channel, lit from inside the mountain. Barely
+     there by day; at night it is the only other warm thing in the frame. */
+  g.fillStyle = 'rgba(200,74,30,' + ((night ? .70 : .30)*glow*pulse).toFixed(3) + ')';
+  const lipY = Math.round(VOLC.base - volcHeight(CRATER_T));
+  for (const dir of [-1, 1]){
+    const seat = dir < 0 ? 0.40 : 0.52;
+    for (let k=0;k<12;k++){
+      const y = lipY + 2 + k;
+      const rx = px + dir * volcSpan(y) * (seat + 0.05*Math.sin(k*.22));
+      g.fillRect(Math.round(rx), y, 1, 1);
+    }
+  }
+
+  // the column
+  for (let i=0;i<PLUME_N;i++){
+    const u = ((now/PLUME_MS + i/PLUME_N) % 1);
+    const y = rimY + 1 - u * (rimY + 3);                  // vent to the top of the sky
+    const r = 3 + u*u*13;
+    const drift = u*u*22 + Math.sin(now/2200 + i)*2.5;    // leaning downwind as it climbs
+    /* Fourteen thin puffs rather than eight fat ones. At eight the alpha had
+       to be high enough that each ellipse showed its own rim, and a column of
+       visible rims is a string of bubbles, not smoke. */
+    const a = (1 - u) * (night ? .20 : .30);
+    if (a <= .02) continue;
+    // by night smoke is a dark body against the sky, lit warm only at the vent
+    const col = night ? (u < .22 ? 'rgba(150,104,78,' : 'rgba(28,34,56,')
+                      : 'rgba(206,200,196,';
+    g.fillStyle = col + a.toFixed(3) + ')';
+    g.beginPath(); g.ellipse(px + drift, y, r, r*.78, 0, 0, 7); g.fill();
+    if (u < .35 && !night){                                // hot, dark core at the vent
+      g.fillStyle = 'rgba(96,80,72,' + (a*.8).toFixed(3) + ')';
+      g.beginPath(); g.ellipse(px + drift*.6, y + 1, r*.55, r*.45, 0, 0, 7); g.fill();
+    }
+  }
+
+  // embers, only when they would be visible
+  if (night || phase === 'dusk'){
+    for (let i=0;i<5;i++){
+      const u = ((now/2600 + i*.2) % 1);
+      const y = rimY + 1 - u*26;
+      const x = px + Math.sin(now/700 + i*2.1) * (2 + u*7) + u*u*6;
+      g.fillStyle = 'rgba(246,164,72,' + ((1-u)*.85).toFixed(3) + ')';
+      g.fillRect(x|0, y|0, 1, 1);
+    }
+  }
+}
+
+/* A live rank of grass along the ground line, leaning on a slow breeze. The
+   baked backdrop cannot move, so the boundary the animal stands on was the
+   one hard line in the scene that never did anything. */
+const BLADES = Array.from({length:34}, (_, i) => ({
+  x: 3 + i*6.6 + (i%3)*1.7, h: 4 + (i%4)*2, p: (i*1.7) % 6.3
+}));
+function drawGrassLine(g, phase, now){
+  const S_ = SKY_SPECS[phase];
+  const col = mixHex(S_.grass, '#000000', .20), lit = mixHex(S_.grass, S_.low, .34);
+  for (const b of BLADES){
+    const lean = Math.sin(now/1600 + b.p) * 1.6 + Math.sin(now/430 + b.p*2) * .4;
+    const x = b.x | 0;
+    for (let k=0;k<b.h;k++){
+      const t = k/b.h;
+      g.fillStyle = k === b.h-1 ? lit : col;
+      g.fillRect(Math.round(x + lean*t*t), GROUND - 1 - k, 1, 1);
+    }
+  }
+}
+
 function drawMotes(g, dt, phase){
   g.fillStyle = phase === 'night' ? 'rgba(190,205,235,.30)' : 'rgba(255,248,208,.45)';
   for (const m of MOTES){
@@ -2342,16 +2742,25 @@ function drawParts(g){
     if (p.type==='heart'){ heartPx(g,x,y); }
     else if (p.type==='spark'){ g.fillStyle = p.col||'#fff6d8'; g.fillRect(x,y,2,2); g.fillStyle='#ffffff'; g.fillRect(x,y,1,1); }
     else if (p.type==='crumb'){ g.fillStyle = p.col||'#9b7a52'; g.fillRect(x,y,1,1); }
-    else if (p.type==='bubbleZ'){ g.fillStyle='#dfe4f6'; g.fillRect(x,y,2,2); g.fillRect(x+2,y-2,2,2); }
+    else if (p.type==='bubbleZ'){                       // an actual Z, not two squares
+      g.fillStyle = fade < .6 ? '#dfe4f6' : '#9aa6c4';
+      g.fillRect(x,y,5,1); g.fillRect(x+3,y+1,1,1); g.fillRect(x+2,y+2,1,1);
+      g.fillRect(x+1,y+3,1,1); g.fillRect(x,y+4,5,1);
+    }
     else if (p.type==='stink'){ g.fillStyle = fade<.5?'#7d9c5a':'#5d7a44'; g.fillRect(x,y,2,2); }
     else if (p.type==='note'){ g.fillStyle='#e8dcbf'; g.fillRect(x,y,2,4); g.fillRect(x+2,y-1,2,2); }
   }
 }
 
 /* --------------------------- props: food & mess ---------------------------- */
-function drawItem(g, id, x, y, s){
+/* `flat` paints every part of the item in one colour. Stamped four times a
+   pixel out in each direction under the real thing, that gives a food item
+   the same hard outline every animal in this game has — which is what a green
+   fern frond needs before it can be picked out against a green grass line.
+   A bounding rectangle will not do it: it comes out as a black plaque. */
+function drawItem(g, id, x, y, s, flat){
   s = s || 1; g.save(); g.translate(x,y); g.scale(s,s);
-  const px = (c,a,b,w,h)=>{ g.fillStyle=c; g.fillRect(a,b,w||1,h||1); };
+  const px = (c,a,b,w,h)=>{ g.fillStyle=flat||c; g.fillRect(a,b,w||1,h||1); };
   if (id==='berry'){ px('#4e7a4a',2,-2,1,2); px('#8f2b36',0,0,5,4); px('#b83b45',0,0,4,3); px('#e08a92',1,1,1,1); }
   if (id==='fish'){ px('#5b7c90',0,0,6,3); px('#7fa3b8',0,0,6,2); px('#c9dde6',1,1,2,1); px('#5b7c90',6,0,2,3); px('#1a140e',1,0,1,1); }
   if (id==='fern'){ px('#3f6440',2,0,1,5); for(let i=0;i<3;i++){ px('#6f9c55',1,1+i,1,1); px('#8fb763',3,1+i,1,1);} px('#8fb763',0,2,1,1); px('#6f9c55',4,2,1,1); }
@@ -2425,6 +2834,12 @@ const GROWTH_GATES = [20, 90, 240];      // minutes of well-cared-for time
 /* sleep window, in local hours */
 const BED_HOUR = 21, WAKE_HOUR = 6;
 const ENERGY_AWAKE = 8.5, ENERGY_ASLEEP = 20;   // points per hour
+/* How long an animal woken by hand stays up before the night rule may put it
+   back under. Without it, waking a tired animal at night was undone by the
+   very next tick half a second later, which is what made sleep feel like a
+   state the player had no handle on at all: a starving, filthy animal could
+   not be fed or washed, and nothing you pressed changed that. */
+const WAKE_GRACE = 20 * MIN;
 
 let G = null, S = null;
 
@@ -2435,7 +2850,7 @@ function freshPet(){
     health:100, bond:6, vet:false,
     traits:{ appetite:0, tempo:0, social:0 },
     asleep:false, ills:[], treats:[], mess:[], log:[],
-    nightAwake:0, petBank:0, stageSeen:0, messTimer:0
+    nightAwake:0, petBank:0, stageSeen:0, messTimer:0, wokeAt:0
   };
 }
 function freshGame(){
@@ -2571,8 +2986,13 @@ function simulate(ms, online){
     }
   }
 
+  /* Bedtime. An animal woken by hand gets WAKE_GRACE before the night rule
+     may take it back, so there is time to feed, wash and play — which is the
+     only reason anyone wakes one. Running the tank right down still overrules
+     that: at six energy it drops wherever it stands, grace or no grace. */
   const sleepy = isNight();
-  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30))) setSleep(true, online);
+  const justWoken = Date.now() - (S.wokeAt || 0) < WAKE_GRACE;
+  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30 && !justWoken))) setSleep(true, online);
   if (asleep && !S.vet && n.energy >= 99) setSleep(false, online);
   if (asleep && !S.vet && !sleepy && n.energy > 72) setSleep(false, online);
 
@@ -2658,8 +3078,32 @@ function tuckIn(){
   setSleep(true, true);
   S.bond = clamp(S.bond + 1.5, 0, 100);
   S.nightAwake = 0;
-  closeSheet();
+  S.wokeAt = 0;
   say(S.name + ' curls up and goes out like a light.');
+  refresh();
+}
+/* The other half of the switch, and the one that was missing entirely: an
+   animal put itself to sleep and there was no way to get it back. It could be
+   starving, filthy and asleep at once, and every key that would have fixed
+   that refused because it was asleep.
+
+   Waking costs, because sleep is how energy comes back and the animal went
+   under for a reason. It loses a little of what it had banked and a little
+   trust, and at night it starts running up the late-hours count — the same
+   field a player who keeps their animal up past bedtime fills, and the one
+   that brings on a chill. The cost is a consequence of a decision, not a
+   die roll. */
+function wakeUp(){
+  if (!hatched()) return;
+  if (S.vet) return refuse(S.name + ' has not fallen asleep. It has collapsed, and needs a vet.');
+  if (!S.asleep) return refuse(S.name + ' is already awake.');
+  setSleep(false, true);
+  S.wokeAt = Date.now();
+  S.needs.energy = clamp(S.needs.energy - 4, 0, 100);
+  S.bond = clamp(S.bond - 2, 0, 100);
+  if (isNight()) S.nightAwake += .5;
+  logEvent(S.name + ' was woken early.');
+  say(S.name + ' blinks awake, and is not impressed.');
   refresh();
 }
 function treat(remedyId){
@@ -2867,7 +3311,7 @@ let dino = { x: W/2, dir: -1, tx: W/2, until: 0, walking:false, dig:0, digAt: 0,
 let dinoTop = GROUND - 40, dinoBox = [0,0,0,0];
 let egg = { cracks: 0, wob: 0 };
 let game = null, feedFX = null;
-let blinkAt = 0, blinking = false;
+let blinkAt = 0, blinking = false, zAt = 0;
 
 const anim = {
   name:'idle', frame:0, t:0, until:0,
@@ -2972,9 +3416,11 @@ function drawScene(now){
     }
   }
   drawSkyBody(ctx, phase, now);
+  drawPlume(ctx, phase, now);
   drawClouds(ctx, phase, dt);
   drawFlyers(ctx, dt, now);
   drawWater(ctx, phase, now);
+  drawGrassLine(ctx, phase, now);
   if (phase !== 'night') drawMotes(ctx, dt, phase);
 
   if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
@@ -3083,19 +3529,57 @@ function drawLive(now, dt){
   const mouth = [flip ? x + (f.ox - f.mouth[0]) : x - f.ox + f.mouth[0], y - f.oy + f.mouth[1]];
   drawFeed(ctx, mouth);
 
-  if (S.asleep && Math.random() < .02) emit('bubbleZ', x + 10*(flip?-1:1), dinoTop + 4, 1, {vy:-14, vx:4, life:1500});
+  /* Zs on a clock rather than a two-percent chance per frame: at 120Hz that
+     was twice as many as at 60, and either way it could go seconds without
+     one, which is a poor signal for the state it is the signal for. */
+  if (S.asleep && now > zAt){ zAt = now + 1100; emit('bubbleZ', x + 10*(flip?-1:1), dinoTop + 2, 1, {vy:-13, vx:3, life:2100}); }
   if (hasIll('chill') && Math.random() < .012){ emit('spark', x - 14*dino.dir, dinoTop + 8, 2, {col:'#cfe0e8'}); SFX.sneeze(); }
   if (hasIll('mites') && Math.random() < .02) emit('crumb', x + rnd(-10,10), dinoTop + 10, 1, {col:'#8a7350', vy:-6, g:40});
   if (dino.dig > 0){ ctx.fillStyle='#8f6f4c'; ctx.fillRect(x - 16*dino.dir, GROUND-2, 6, 2); }
 
   if (S.asleep){ ctx.fillStyle = 'rgba(14,16,44,.28)'; ctx.fillRect(0, 0, W, H); }
   drawParts(ctx);
+  stateMark(ctx, x, dinoTop, now);
+}
+
+/* An unwell animal and a sleeping one used to be told apart only by their
+   eyelids, and the sick pose kept the eyes shut for as long as the illness
+   lasted — so the answer to "why are its eyes closed all day" was a bellyache
+   nothing on the glass ever mentioned. The eyes differ now, and this puts the
+   reason above the animal's head in the one place the player is already
+   looking. Illness beats sleep, because a sick animal that is also asleep
+   still needs a remedy. */
+function stateMark(g, x, top, now){
+  const ill = S.vet || S.ills.length;
+  if (!ill && !S.asleep) return;
+  const bob = Math.round(Math.sin(now/620) * 1.5);
+  const px = Math.round(x) - 5, py = Math.round(top) - 15 + bob;
+  if (ill){
+    /* Eleven across, not nine. At nine the arms of the cross reached the
+       edge of the plaque and the whole mark read as a red square. */
+    g.fillStyle = '#231a16';                                  // hard edge, all round
+    g.fillRect(px, py, 11, 11);
+    g.fillStyle = '#f2e7cd';                                  // bone plaque
+    g.fillRect(px+1, py+1, 9, 9);
+    g.fillStyle = S.vet ? '#8f2f2a' : '#c2452f';              // the cross
+    g.fillRect(px+4, py+2, 3, 7); g.fillRect(px+2, py+4, 7, 3);
+    return;
+  }
+  // asleep: one steady Z over the head, with the drifting ones behind it
+  g.fillStyle = '#1b2038';
+  g.fillRect(px, py, 11, 11);
+  g.fillStyle = '#2b3358';
+  g.fillRect(px+1, py+1, 9, 9);
+  g.fillStyle = '#dfe4f6';
+  g.fillRect(px+2, py+2, 7, 2); g.fillRect(px+6, py+4, 2, 1);
+  g.fillRect(px+5, py+5, 2, 1); g.fillRect(px+4, py+6, 2, 1);
+  g.fillRect(px+2, py+7, 7, 2);
 }
 
 /* ============================== MINIGAMES ================================== */
 const GAMES = {
   snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:2 },
-  stomp: { name:'Bug hunt',   blurb:'Critters cross the pen. Tap to send your animal at them and it will do the rest.', pay:2 },
+  forage:{ name:'Forage',     blurb:'Food turns up around the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', pay:2 },
   leap:  { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:3 }
 };
 function startGame(kind){
@@ -3104,9 +3588,10 @@ function startGame(kind){
   if (S.needs.energy < 12) return refuse('Too tired to run around.');
   closeSheet();
   mode = 'game'; feedFX = null;
-  if (kind === 'snack') game = { kind, x:W/2, tx:W/2, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
-  if (kind === 'stomp') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
-                                 mouth:null, snap:0, bugs:[], score:0, missed:0, left:30, spawn:.6 };
+  if (kind === 'snack') game = { kind, x:W/2, tx:W/2, dir:-1, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
+  if (kind === 'forage') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
+                                  snap:0, finds:[], thief:null, thiefAt:rnd(3,6),
+                                  score:0, chain:0, missed:0, left:30, spawn:.4 };
   if (kind === 'leap')  game = { kind, obs:[], score:0, left:30, y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0 };
   say(GAMES[kind].blurb.split('.')[0] + '.');
   paintChrome();
@@ -3129,12 +3614,12 @@ function stepGame(dt, now){
   game.left -= dt/1000;
   if (game.left <= 0) return endGame();
   if (game.kind === 'snack') return stepSnack(dt, now);
-  if (game.kind === 'stomp') return stepStomp(dt, now);
+  if (game.kind === 'forage') return stepForage(dt, now);
   if (game.kind === 'leap')  return stepLeap(dt, now);
 }
 function drawGame(now, phase){
   if (game.kind === 'snack') drawSnack(now);
-  if (game.kind === 'stomp') drawStomp(now);
+  if (game.kind === 'forage') drawForage(now);
   if (game.kind === 'leap')  drawLeap(now);
   drawParts(ctx);
   ctx.fillStyle = 'rgba(16,22,24,.78)'; ctx.fillRect(0, 0, W, 9);
@@ -3152,6 +3637,13 @@ function stepSnack(dt, now){
   if (game.kL) vx -= 110; if (game.kR) vx += 110;
   if (!vx) vx = clamp((game.tx - game.x) * 7, -135, 135);
   if (now < game.stun) vx = 0;
+  /* Which way it is facing comes from which way it is actually moving. It used
+     to come from `tx < x`, which is inverted — the sprite is drawn facing −x,
+     so flipping it is what points it right — and which the arrow keys never
+     touched at all, because they drive `vx` and leave `tx` where it was. Both
+     together meant the animal moonwalked to the right and then kept facing
+     the wrong way for the rest of the round. */
+  if (vx) game.dir = vx > 0 ? 1 : -1;
   game.x = clamp(game.x + vx * dt/1000, 18, W-18);
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
@@ -3174,7 +3666,7 @@ function stepSnack(dt, now){
 function drawSnack(now){
   for (const it of game.items) drawItem(ctx, it.id, it.x - 3, it.y - 2, 1.5);
   const { f, sc } = gameSprite(now < game.stun ? 'sick' : 'walk', Math.floor(now/130), 44);
-  const flip = game.tx < game.x;
+  const flip = game.dir > 0;                    // the sprite faces −x unflipped
   ctx.save(); ctx.translate(Math.round(game.x), GROUND);
   if (flip) ctx.scale(-1,1);
   ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
@@ -3182,48 +3674,65 @@ function drawSnack(now){
   scoreTag('Caught ' + game.score + (game.combo >= 5 ? '  x2' : ''));
 }
 
-/* ------ bug hunt ------ */
-function drawBug(g, b, now){
-  const wig = Math.sin(now/90 + b.x) * 1;
-  if (b.type === 0){                            // millipede
-    g.fillStyle = '#4a3a24';
-    for (let i=0;i<5;i++) g.fillRect(b.x - i*3, b.y + (i%2?0:1) + wig, 3, 3);
-    g.fillStyle = '#6f5836'; g.fillRect(b.x, b.y + wig, 3, 2);
-    g.fillStyle = '#2a2118'; g.fillRect(b.x+3, b.y + wig, 1, 1);
-  } else {                                      // dragonfly
-    g.fillStyle = '#3a5c52'; g.fillRect(b.x - 6, b.y + wig, 9, 2);
-    g.fillStyle = '#8fc4b8'; g.fillRect(b.x - 1, b.y + wig, 3, 2);
-    const up = Math.sin(now/60) > 0;
-    g.fillStyle = 'rgba(200,230,235,.75)';
-    g.fillRect(b.x - 4, b.y - (up?3:-2) + wig, 6, 2);
-  }
-}
-/* ------ bug hunt ------
-   The animal used to stand at a fixed x doing nothing while the player picked
-   critters off the screen, which made the pet a spectator in its own minigame.
-   A tap is now a move order: the animal runs to where you pointed, and
-   anything that comes within snapping distance of its mouth gets eaten. The
-   walk cycle, the growth stage and the animal's own reach all matter, and the
-   sprite is doing the work instead of watching.
-   -------------------------------------------------------------------------- */
-const STOMP_H = 44;                            // drawn sprite height in the pen
+/* ------ forage ------
 
-function stompSprite(now){
+   This replaces Bug hunt, which had two faults and only one of them was a bug.
+
+   The bug: critters spawned in two bands, one in the air and one on the
+   ground *below* the grass line, and catching one meant bringing the animal's
+   mouth anchor within eleven pixels of it in both axes. An adult's mouth sits
+   around thirty pixels above the ground line, so nothing walking on the floor
+   of the pen was ever reachable — half the quarry in the game could not be
+   caught by any player at any skill.
+
+   The design fault, which mattered more: the quarry was insects, and two of
+   the three animals in this game are obligate herbivores. Nothing about
+   Triceratops or Brachiosaurus makes chasing dragonflies across a pen a thing
+   they would do, and no amount of fixing the hitbox was going to change that.
+
+   So the quarry is food, and which food comes from the species' own `likes` —
+   ferns and cycad cones for the ceratopsian, berries and cones for the
+   sauropod, river fish and carrion for the tyrannosaur. Everything sits ON
+   the ground line, where the animal's own feet are, so reach is a horizontal
+   distance and nothing can spawn somewhere unreachable by construction.
+
+   What makes it a game rather than a queue is the compsognathids. They come
+   in from the edges and go for whatever has been sitting longest, and they
+   are faster than any of the three animals you can raise. So it is not "walk
+   to each thing in turn": it is a choice, every few seconds, between the
+   close one and the one about to be stolen — and the walk cycle, the growth
+   stage and the animal's own speed all decide whether you make it.
+   -------------------------------------------------------------------------- */
+const FORAGE_H = 50;                           // drawn sprite height in the pen
+const FORAGE_LIFE = 4600;                      // how long a find sits before it spoils
+
+function forageSprite(now){
   const snapping = now < game.snap;
   const sp = SPECIES[S.sp], st = stageIdx();
-  if (snapping) return gameSprite('eat', Math.floor(now/150), STOMP_H);
-  if (!game.walking) return gameSprite('idle', Math.floor(now/700), STOMP_H);
+  if (snapping) return gameSprite('eat', Math.floor(now/150), FORAGE_H);
+  if (!game.walking) return gameSprite('idle', Math.floor(now/700), FORAGE_H);
   // one sprite stride to one stride of ground, the same rule the habitat uses
-  const probe = gameSprite('walk', 0, STOMP_H);
+  const probe = gameSprite('walk', 0, FORAGE_H);
   const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
   const frame = Math.floor((game.dist / probe.sc) / cycle * POSES.walk.length);
-  return gameSprite('walk', frame, STOMP_H);
+  return gameSprite('walk', frame, FORAGE_H);
 }
-function stepStomp(dt, now){
+
+/* Somewhere to put a new find: on the ground, inside the pen, and not on top
+   of one that is already there. */
+function forageSlot(){
+  for (let tries=0; tries<12; tries++){
+    const x = rnd(18, W-18);
+    if (game.finds.every(f => Math.abs(f.x - x) > 26)) return x;
+  }
+  return rnd(18, W-18);
+}
+
+function stepForage(dt, now){
   const sec = dt / 1000;
 
   // run toward the last place the player pointed
-  const speed = 52 + stageIdx() * 10;
+  const speed = 54 + stageIdx() * 11;
   const d = game.tx - game.x;
   if (Math.abs(d) > 1.5){
     const step = clamp(d, -speed*sec, speed*sec);
@@ -3233,38 +3742,130 @@ function stepStomp(dt, now){
     game.walking = true;
   } else game.walking = false;
 
+  // new finds
   game.spawn -= sec;
-  if (game.spawn <= 0){
-    game.spawn = rnd(.45, .85);
-    const type = Math.random() < .5 ? 0 : 1;
-    const dir = Math.random() < .5 ? 1 : -1;
-    game.bugs.push({ x: dir > 0 ? -8 : W+8, y: type ? rnd(GROUND-40, GROUND-16) : rnd(GROUND+2, H-8),
-                     vx: dir * rnd(24, 44) * (type ? 1.3 : 1), type });
+  if (game.spawn <= 0 && game.finds.length < 5){
+    game.spawn = rnd(.95, 1.55);
+    // what turns up is what this species eats, and nothing else
+    game.finds.push({ x: forageSlot(), id: pick(SPECIES[S.sp].likes), age: 0 });
   }
-  for (const b of game.bugs){
-    b.x += b.vx * sec;
-    if (b.x < -14 || b.x > W+14){ b.dead = true; game.missed++; }
+  for (const f of game.finds){
+    f.age += dt;
+    if (f.age > FORAGE_LIFE){ f.dead = true; game.missed++; game.chain = 0; }
   }
 
-  /* Snapping range around the mouth. drawStomp parks the mouth anchor on the
-     game each frame; one frame of lag is not visible and it saves baking the
-     frame twice. */
-  const m = game.mouth || [game.x, GROUND - STOMP_H*.6];
-  const reach = 11 + stageIdx() * 2.5;
-  for (const b of game.bugs){
-    if (b.dead) continue;
-    if (Math.abs(b.x - m[0]) < reach && Math.abs(b.y - m[1]) < reach * .95){
-      b.dead = true; game.score++; game.snap = now + 240;
-      SFX.chomp(); emit('spark', b.x, b.y, 5, {col:'#cfe0a8'});
-      emit('crumb', b.x, b.y, 3, {col:'#7d9c5a', vy:-14, g:110});
+  /* Thieves. One at a time, aimed at whatever has been down longest — the
+     thing the player is most likely to have written off, which is what makes
+     ignoring a find a decision rather than an oversight. */
+  game.thiefAt -= sec;
+  if (!game.thief && game.thiefAt <= 0 && game.finds.length){
+    const mark = game.finds.reduce((a, b) => (b.age > a.age ? b : a));
+    game.thief = { x: mark.x < W/2 ? -10 : W+10, mark, p:0, carry:false };
+  }
+  if (game.thief){
+    const t = game.thief;
+    t.p += dt;
+    const goal = t.carry ? (t.x < W/2 ? -14 : W+14) : t.mark.x;
+    const dir = goal > t.x ? 1 : -1;
+    t.x += dir * 74 * sec;
+    if (!t.carry && Math.abs(t.x - t.mark.x) < 3){
+      if (t.mark.dead){ game.thief = null; game.thiefAt = rnd(2.2, 4.2); }
+      else { t.mark.dead = true; t.carry = true; game.missed++; game.chain = 0; SFX.pop(); }
+    } else if (t.carry && (t.x < -12 || t.x > W+12)){
+      game.thief = null; game.thiefAt = rnd(2.2, 4.2);
     }
   }
-  game.bugs = game.bugs.filter(b => !b.dead);
-}
-function drawStomp(now){
-  for (const b of game.bugs) drawBug(ctx, b, now);
 
-  const { f, sc } = stompSprite(now);
+  /* Reach. A horizontal distance along the ground, because everything here is
+     on the ground — the old game measured to a mouth anchor thirty pixels up
+     and then spawned half its quarry on the floor. */
+  const reach = 12 + stageIdx() * 2;
+  for (const f of game.finds){
+    if (f.dead) continue;
+    if (Math.abs(f.x - game.x) < reach){
+      f.dead = true;
+      game.chain++;
+      game.score += game.chain >= 4 ? 2 : 1;
+      game.snap = now + 260;
+      if (game.thief && game.thief.mark === f && !game.thief.carry){
+        game.thief = null; game.thiefAt = rnd(2.2, 4.2);    // beaten to it
+      }
+      SFX.chomp();
+      emit('spark', f.x, GROUND - 4, 4, {col:'#cfe0a8'});
+      emit('crumb', f.x, GROUND - 4, 3, {col:'#7d9c5a', vy:-14, g:110});
+    }
+  }
+  game.finds = game.finds.filter(f => !f.dead);
+  if (game.thief && game.thief.mark.dead && !game.thief.carry){
+    game.thief = null; game.thiefAt = rnd(2.2, 4.2);
+  }
+}
+
+/* A find: a scrape of turned earth with the item standing on it, over a bar
+   that runs down as it spoils.
+
+   Both parts have to fight the habitat for attention. Drawn small and flat on
+   the grass line, among cycads and boulders and a watering hole, a fern frond
+   is one more piece of scenery — so the earth is a mound in a colour nothing
+   else in the pen uses, and the item stands clear above it at twice size.
+   The bar is the only information the game gives, so it is under every find
+   rather than only under the urgent one. */
+function drawFind(g, f, now){
+  const x = Math.round(f.x), u = clamp(f.age / FORAGE_LIFE, 0, 1);
+  // the mound
+  g.fillStyle = '#6b4a2a';
+  g.fillRect(x-6, GROUND-1, 13, 4);
+  g.fillRect(x-4, GROUND-3, 9, 2);
+  g.fillStyle = '#8a6438';
+  g.fillRect(x-4, GROUND-3, 9, 1);
+  g.fillStyle = '#3a2716';
+  g.fillRect(x-6, GROUND+2, 13, 1);
+  /* The find itself, standing clear of the grass and bobbing once it starts
+     to go over. It is drawn four more times underneath in near-black, one
+     pixel out in each direction, which gives it the same hard outline every
+     animal in this game has — a green fern frond on a green grass line is
+     otherwise invisible, and the item is the thing the player is aiming at. */
+  const bob = u > .70 ? Math.round(Math.sin(now/90)) : 0;
+  const ix = x - 4 + bob, iy = GROUND - 12;   // standing on the mound, not over it
+  for (const d of [[-1,0],[1,0],[0,-1],[0,1]])
+    drawItem(g, f.id, ix + d[0], iy + d[1], 1.6, '#1c160e');
+  drawItem(g, f.id, ix, iy, 1.6);
+  // freshness
+  const w = Math.max(1, Math.round(13 * (1 - u)));
+  g.fillStyle = '#101a18'; g.fillRect(x - 8, GROUND + 4, 17, 5);
+  g.fillStyle = '#2b3a3f'; g.fillRect(x - 7, GROUND + 5, 15, 3);
+  g.fillStyle = u > .70 ? '#e2704a' : u > .45 ? '#e8bd4e' : '#8cc46a';
+  g.fillRect(x - 7 + (13 - w), GROUND + 5, w + 2, 3);
+}
+
+/* Compsognathus: a metre of animal and mostly tail, which at this size is a
+   body three pixels deep, a neck and a tail as long as the rest of it. It is
+   painted light with a hard dark edge, because the one thing it must not do
+   is disappear into the treeline it walks out of. */
+function drawThief(g, t){
+  const x = Math.round(t.x), y = GROUND - 8, run = Math.sin(t.p/70) > 0;
+  const face = t.x < W/2 ? 1 : -1;                           // it faces where it is going
+  g.fillStyle = '#241d13';                                   // the hard edge, drawn under
+  g.fillRect(x - 6, y + 1, 11, 6);
+  g.fillRect(x + face*3 - 1, y - 1, 5, 5);
+  g.fillStyle = '#c9a355';
+  g.fillRect(x - 4, y + 2, 8, 4);                            // body
+  g.fillRect(x + face*3, y, 3, 3);                           // head
+  g.fillStyle = '#e6cf94';
+  g.fillRect(x - 4, y + 2, 8, 1);
+  g.fillStyle = '#8a6c34';
+  for (let i=0;i<6;i++) g.fillRect(x - 5 - face*i*2, y + 3 + (i>3?1:0), 2, 1);   // tail
+  g.fillStyle = '#c9a355';
+  g.fillRect(x - 2, y + 6, 2, run ? 3 : 2);                  // legs
+  g.fillRect(x + 2, y + 6, 2, run ? 2 : 3);
+  g.fillStyle = '#241d13'; g.fillRect(x + face*4, y + 1, 1, 1);
+  if (t.carry){ g.fillStyle = '#cfe0a8'; g.fillRect(x + face*5, y + 3, 3, 3); }
+}
+
+function drawForage(now){
+  for (const f of game.finds) drawFind(ctx, f, now);
+
+  const { f, sc } = forageSprite(now);
   const flip = game.dir > 0;
   const x = Math.round(game.x);
   ctx.fillStyle = 'rgba(16,26,24,.32)';
@@ -3274,9 +3875,7 @@ function drawStomp(now){
   ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
   ctx.restore();
 
-  // hand the mouth position to the next step, in canvas units
-  game.mouth = [ x + (flip ? 1 : -1) * (f.ox - f.mouth[0]) * sc,
-                 GROUND - (f.oy - f.mouth[1]) * sc ];
+  if (game.thief) drawThief(ctx, game.thief);
 
   // a marker where the animal has been told to go, so the order reads
   if (game.walking){
@@ -3284,14 +3883,15 @@ function drawStomp(now){
     ctx.fillStyle = 'rgba(207,224,168,.5)';
     ctx.fillRect(tx-3, GROUND+3, 7, 1); ctx.fillRect(tx, GROUND+1, 1, 5);
   }
-  scoreTag('Caught ' + game.score);
+  scoreTag('Found ' + game.score + (game.chain >= 4 ? '  x2' : ''));
 }
-function tapStomp(mx, my){
-  // tapping a critter aims at the critter; tapping the pen aims at the pen
-  let best = null, bd = 26;
-  for (const b of game.bugs){
-    const d = Math.hypot(b.x - mx, (b.y - my) * .7);
-    if (d < bd){ bd = d; best = b; }
+
+function tapForage(mx, my){
+  // tapping a find aims at the find; tapping the pen aims at the pen
+  let best = null, bd = 30;
+  for (const f of game.finds){
+    const d = Math.abs(f.x - mx) + Math.abs(GROUND - 6 - my) * .35;
+    if (d < bd){ bd = d; best = f; }
   }
   game.tx = clamp(best ? best.x : mx, 12, W - 12);
 }
@@ -3311,7 +3911,7 @@ function tapStomp(mx, my){
 const LEAP_OBS = {
   log:   { half:12, clear:14 },
   rock:  { half:9,  clear:18 },
-  water: { half:17, clear:8  }
+  water: { half:20, clear:8  }
 };
 const LEAP_KINDS = ['log','rock','water','log','rock'];
 
@@ -3350,22 +3950,31 @@ function leapJump(){
 }
 
 /* The track, overdrawn so the habitat props do not sit still behind a running
-   animal. Three scroll rates: scrub, ground, tufts. */
+   animal. Three scroll rates: scrub, ground, fringe. */
 function drawLeapGround(){
   const S_ = SKY_SPECS[skyPhase(new Date())];
   const grass = S_.grass, grassLit = mixHex(S_.grass, S_.low, .40);
   const grassDark = mixHex(S_.grass, '#000000', .34);
   const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.26), d2 = mixHex(S_.dirt, S_.low,.22);
-  const scrub = mixHex(S_.tree, S_.low, .14), scrubLit = mixHex(S_.tree, S_.low, .34);
+  const scrub = mixHex(S_.tree, '#000000', .18), scrubLit = mixHex(S_.tree, S_.low, .30);
 
-  // scrub on the far side of the track, drifting past slowly
+  /* Scrub on the far side of the track. As a rectangle with a wider rectangle
+     across it, in a colour a third of the way to the sky, this read as broken
+     masonry — the whole strip looked like a ruin the animal was running past.
+     It is built as a clump of fronds off a short stem now, in a colour that
+     stays on the vegetation side of the palette. */
   for (let i=0;i<10;i++){
-    const x = ((((i*47.3) - game.run*.42) % (W+70)) + W+70) % (W+70) - 35;
-    const h = 6 + (i % 4) * 4, w = 5 + (i % 3) * 3;
+    const x = Math.round(((((i*47.3) - game.run*.42) % (W+70)) + W+70) % (W+70) - 35);
+    const h = 7 + (i % 4) * 4, spread = 4 + (i % 3) * 2;
     ctx.fillStyle = scrub;
-    ctx.fillRect(x|0, GROUND-1-h, w, h);
-    ctx.fillRect((x|0)-2, Math.round(GROUND-1-h*.55), w+4, Math.round(h*.55));
-    ctx.fillStyle = scrubLit; ctx.fillRect(x|0, GROUND-1-h, w, 1);
+    ctx.fillRect(x, GROUND-1-h, 1, h);                       // stem
+    for (let k=-spread;k<=spread;k++){                       // fronds arching off it
+      const t = Math.abs(k)/spread;
+      const top = Math.round(GROUND-1-h + t*t*h*.62);
+      ctx.fillRect(x+k, top, 1, Math.round(h*.42*(1-t*.5)));
+    }
+    ctx.fillStyle = scrubLit;
+    ctx.fillRect(x-1, GROUND-1-h, 2, 2);
   }
 
   // the track itself
@@ -3384,15 +3993,29 @@ function drawLeapGround(){
     if (i % 3 === 0){ ctx.fillStyle = d2; ctx.fillRect(x|0, y-1, 1, 1); }
   }
 }
+/* The near fringe.
+
+   This used to be fourteen one-pixel tufts scattered at random heights across
+   the whole dirt band, which is not what a foreground is: they read as green
+   specks sprinkled over bare earth, drifting past for no reason. Grass grows
+   in a continuous mat, and a foreground is a band along the bottom edge that
+   the animal runs behind. It is one unbroken fringe rooted off the bottom of
+   the screen now, every blade a different height, scrolling fastest of the
+   three layers — which is the layer that actually sells the speed. */
 function drawLeapTufts(){
   const S_ = SKY_SPECS[skyPhase(new Date())];
-  const near = mixHex(S_.grass, '#000000', .42);
-  for (let i=0;i<14;i++){
-    const x = ((((i*21.1) - game.run*1.45) % (W+34)) + W+34) % (W+34) - 17;
-    const y = H - 3 - (i % 3) * 5, h = 4 + (i % 3) * 2;
+  const near = mixHex(S_.grass, '#000000', .52);
+  const nearLit = mixHex(S_.grass, '#000000', .34);
+  for (let x=0;x<W;x++){
+    const wx = x + game.run*1.45;
+    // three offset waves, so no two blades next to each other are the same
+    const h = 4 + Math.round(3.2*Math.abs(Math.sin(wx*.9))
+                           + 2.6*Math.abs(Math.sin(wx*.31 + 1.7))
+                           + 1.4*Math.abs(Math.sin(wx*2.3 + .4)));
     ctx.fillStyle = near;
-    ctx.fillRect(x|0, y-h, 1, h);
-    ctx.fillRect((x|0)-1, y-h+1, 1, h-2); ctx.fillRect((x|0)+1, y-h+1, 1, h-2);
+    ctx.fillRect(x, H - h, 1, h);
+    ctx.fillStyle = nearLit;
+    ctx.fillRect(x, H - h, 1, 1);
   }
 }
 /* Obstacles are built column by column so they have a silhouette. Drawn as
@@ -3406,17 +4029,44 @@ function drawObstacle(g, o){
   const x = Math.round(o.x), base = GROUND + 2;   // bedded into the grass
 
   if (o.kind === 'water'){
-    for (let i=-17;i<=17;i++){
-      const t = Math.abs(i)/17;
-      const dep = Math.round(Math.cos(t * Math.PI/2) * 7) + 1;
-      g.fillStyle = '#241d16'; g.fillRect(x+i, GROUND, 1, 1);          // cut bank
-      g.fillStyle = '#24384a'; g.fillRect(x+i, GROUND+1, 1, dep+2);
-      g.fillStyle = '#3f6b80'; g.fillRect(x+i, GROUND+1, 1, dep);
-      g.fillStyle = '#6fa6b8'; g.fillRect(x+i, GROUND+1, 1, 1);
+    /* A stream cut through the track, not a puddle laid on top of it.
+
+       The old one was a cosine lens of flat blue starting a pixel under the
+       grass line, so it read as a blue dish resting on the dirt — nothing was
+       cut, nothing had a bank, and the thing the game is named for looked
+       like spilled paint. It is a channel now: the grass stops at a lip on
+       each side, the earth under the lip is exposed and darker, the water
+       sits down inside it, and the far wall is in shadow. Depth is what makes
+       a hazard read as something to jump rather than something to step in. */
+    const S_ = SKY_SPECS[skyPhase(new Date())];
+    const soil = mixHex(S_.dirt, '#000000', .52);            // the cut bank
+    const deep = mixHex(S_.water, '#000000', .34);
+    const body = S_.water;
+    const lit  = mixHex(S_.water, S_.low, .50);
+    const HW = 21;
+    for (let i=-HW;i<=HW;i++){
+      const t = Math.abs(i)/HW;
+      const lip = Math.round(Math.pow(t, 4) * 4);            // steep banks, flat bed
+      const top = GROUND - 1 + lip;
+      const dep = Math.round((1 - Math.pow(t, 4)) * 8) + 2;
+      g.fillStyle = soil; g.fillRect(x+i, top, 1, 2);        // exposed earth at the lip
+      g.fillStyle = deep; g.fillRect(x+i, top+2, 1, dep);    // the channel
+      g.fillStyle = body; g.fillRect(x+i, top+2, 1, Math.max(1, dep-3));
+      g.fillStyle = lit;  g.fillRect(x+i, top+2, 1, 1);      // the surface, catching sky
     }
-    g.fillStyle = '#a8d4de';                                            // surface glints
-    g.fillRect(x-10, GROUND+3, 5, 1); g.fillRect(x+3, GROUND+5, 6, 1);
-    g.fillRect(x-3, GROUND+7, 3, 1);  g.fillRect(x+9, GROUND+2, 3, 1);
+    // ripples riding the surface, sliding with the track
+    g.fillStyle = mixHex(S_.water, '#ffffff', .55);
+    for (let k=0;k<3;k++){
+      const off = ((game.run*.6 + k*15) % 30) - 15;
+      const rx = Math.round(x + off), t = Math.abs(off)/HW;
+      if (t >= 1) continue;
+      const top = GROUND - 1 + Math.round(Math.pow(t, 4) * 4);
+      g.fillRect(rx - 2, top + 3 + (k % 2), 5, 1);
+    }
+    // grass overhanging both lips, so the cut has an edge rather than a border
+    g.fillStyle = mixHex(S_.grass, '#000000', .30);
+    g.fillRect(x-HW-1, GROUND-2, 3, 3); g.fillRect(x-HW-3, GROUND-1, 2, 2);
+    g.fillRect(x+HW-1, GROUND-2, 3, 3); g.fillRect(x+HW+1, GROUND-1, 2, 2);
     return;
   }
 
@@ -3542,6 +4192,15 @@ function closeScreen(){
   if (!screen) return;
   screen = null;
   paintChrome();
+}
+/* A key is a latch, not a one-way door. It stays pressed in while its screen
+   is up, so pressing it again is the obvious way to let it out — the close tab
+   in the corner of the screen was the only way back, and on a case with five
+   physical keys under the glass that is the last place anyone looks. Pressing
+   a different key still jumps straight to that screen. */
+function toggleScreen(which){
+  if (screen === which) return closeScreen();
+  openScreen(which);
 }
 const screenOpen = () => screen !== null;
 
@@ -3749,12 +4408,55 @@ SCREENS.play = {
   }
 };
 
-/* -------------------------------- care ------------------------------------ */
+/* -------------------------------- care ------------------------------------
+   Care is everything about the animal's condition, and sleep is part of that.
+   `tuckIn()` had existed for sessions with nothing anywhere that called it,
+   and there was no way to wake an animal at all — so an animal that put
+   itself to bed hungry and filthy stayed hungry and filthy, because feeding
+   and washing both refuse while it is asleep, and nothing on the case
+   answered. Rest is the last row on this list now, next to the remedies,
+   with the rule written underneath it.
+   -------------------------------------------------------------------------- */
+
+/* The rest row's label, its price column and the sentence explaining it, all
+   from the one state, so the row and its caption cannot disagree. */
+function restRow(){
+  if (S.asleep) return {
+    id:'wake', label:'Wake ' + S.name, right:'costs trust', col:SC.rust,
+    note:'Sleep is how energy comes back. Waking early costs some of it, some '
+       + 'trust, and after dark it risks a chill.'
+  };
+  const tooAwake = S.needs.energy > 70;
+  return {
+    id:'bed', label:'Settle ' + S.name + ' down', right: tooAwake ? 'not tired' : 'free',
+    col: tooAwake ? SC.rust : SC.moss,
+    note: tooAwake
+      ? 'Too wide awake to settle. Below seventy energy it goes down willingly.'
+      : 'Goes down early and wakes rested. A night in bed clears the late-hours '
+      + 'count that brings on a chill.'
+  };
+}
+
+/* The line at the top of the screen, and the only place it is written. The
+   layout has to reserve room for exactly the lines the draw is going to put
+   there — with the row list starting at a fixed offset instead, the first
+   remedy was drawn straight over the sentence saying what was wrong. */
+function careStatus(){
+  if (S.ills.length) return S.ills.map(i => ILLS[i.id].symptom);
+  if (S.asleep) return [S.name + ' is asleep, and will not eat, wash or play until it wakes.'];
+  return ['Nothing to treat. ' + S.name + ' is well.'];
+}
+
 SCREENS.care = {
   layout(){
-    const lines = S.ills.reduce((n, i) => n + wrapText(ILLS[i.id].symptom, W - PAD*2).length, 0);
-    const top = BAR_H + (S.ills.length ? 5 + lines * 8 + 4 : 5);
-    return { rows: rowsLayout(S.vet ? ['vet'] : REMEDIES.map(r => r.id), top) };
+    const lines = careStatus().reduce((n, t) => n + wrapText(t, W - PAD*2).length, 0);
+    const top = BAR_H + 4 + lines * 8 + 3;
+    const ids = S.vet ? ['vet'] : REMEDIES.map(r => r.id).concat(['rest']);
+    /* Twelve rather than the default fifteen: rest makes five rows, and at
+       the default the caption under them ran into the action bar. Eleven is
+       one too few — a row is a seven-pixel line drawn four pixels down, so
+       below twelve the labels lose their last row of pixels to the border. */
+    return { rows: rowsLayout(ids, top, 12), ids };
   },
   draw(g, L){
     const frame = screenFrame(g, 'CARE');
@@ -3768,37 +4470,46 @@ SCREENS.care = {
       L.act = actionBar(g, G.coins >= 30 ? 'CALL' : 'NOT ENOUGH COINS', SC.moss, G.coins < 30);
       return;
     }
-    if (!S.ills.length){
-      textBlock(g, 'Nothing to treat. ' + S.name + ' is well.', PAD, y, W - PAD*2, SC.moss, 8);
-      textBlock(g, 'Illness has causes, not luck. Three treats in an hour upsets the stomach. '
-                 + 'A late night brings on a chill. A filthy pen invites mites. Joy at zero '
-                 + 'turns into the blues.', PAD, y + 14, W - PAD*2, SC.dim, 8);
-      petOnScreen(g, W/2, H - 12, 44);
-      L.act = null;
-      return;
-    }
-    S.ills.forEach(i => { y = textBlock(g, ILLS[i.id].symptom, PAD, y, W - PAD*2, SC.rust, 8); });
+    /* The state line: asleep before well, because a sleeping animal is why
+       someone opens this screen with nothing wrong with the animal. */
+    const col = S.ills.length ? SC.rust : S.asleep ? SC.dim : SC.moss;
+    careStatus().forEach(t => { y = textBlock(g, t, PAD, y, W - PAD*2, col, 8); });
+
+    const rest = restRow();
     REMEDIES.forEach((r, i) => listRow(g, L.rows.box(i), r.name,
       r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
-      { on: i === screenState.pick, rightCol: r.cost ? SC.gold : SC.moss }));
-    caption(g, L.rows.bottom + 3, '', '', null, REMEDIES[screenState.pick].note);
-    L.act = actionBar(g, 'TREAT', SC.moss);
+      { on: i === screenState.pick, dim: !S.ills.length,
+        rightCol: r.cost ? SC.gold : SC.moss }));
+    const ri = REMEDIES.length;
+    listRow(g, L.rows.box(ri), rest.label, rest.right,
+            { on: screenState.pick === ri, rightCol: rest.col });
+
+    const onRest = screenState.pick === ri;
+    caption(g, L.rows.bottom + 3, '', '', null,
+            onRest ? rest.note
+          : S.ills.length ? REMEDIES[screenState.pick].note
+          : 'Illness has causes, not luck. Treats upset the stomach, late '
+          + 'nights bring a chill, a filthy pen invites mites, and joy at '
+          + 'zero turns into the blues.');
+    L.act = onRest
+      ? actionBar(g, S.asleep ? 'WAKE' : 'SETTLE DOWN', rest.col, !S.asleep && S.needs.energy > 70)
+      : actionBar(g, 'TREAT', SC.moss, !S.ills.length);
   },
   tap(mx, my, L){
     if (hit(L.close, mx, my)) return closeScreen();
     if (!L.act) return;
     if (S.vet){ if (hit(L.act, mx, my)) vetVisit(); return; }
-    for (let i = 0; i < REMEDIES.length; i++)
+    for (let i = 0; i < L.ids.length; i++)
       if (hit(L.rows.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
-    if (hit(L.act, mx, my)){
-      const r = REMEDIES[screenState.pick];
-      if (r.id === 'company' && hasIll('blues')){
-        closeScreen();
-        say('Press and hold on ' + S.name + '. Eight times should do it.');
-        return;
-      }
-      treat(r.id);
+    if (!hit(L.act, mx, my)) return;
+    if (screenState.pick === REMEDIES.length) return S.asleep ? wakeUp() : tuckIn();
+    const r = REMEDIES[screenState.pick];
+    if (r.id === 'company' && hasIll('blues')){
+      closeScreen();
+      say('Press and hold on ' + S.name + '. Eight times should do it.');
+      return;
     }
+    treat(r.id);
   }
 };
 
@@ -4122,14 +4833,15 @@ function buildChrome(){
   bone.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnDev').appendChild(bone);
   paintSound();
-  /* The keys are direct jumps into screens on the glass. Wash is the one
-     action with nothing to choose, so its key does the thing. */
-  $('act-feed').onclick = () => openScreen('feed');
-  $('act-play').onclick = () => openScreen('play');
+  /* The keys latch: one press opens the screen, the same press again closes
+     it, and any other key jumps straight across. Wash is the one action with
+     nothing to choose, so its key does the thing. */
+  $('act-feed').onclick = () => toggleScreen('feed');
+  $('act-play').onclick = () => toggleScreen('play');
   $('act-wash').onclick = () => { closeScreen(); scrub(); };
-  $('act-care').onclick = () => openScreen('care');
-  $('act-shop').onclick = () => openScreen('shop');
-  $('btnNest').onclick = () => openScreen('nest');
+  $('act-care').onclick = () => toggleScreen('care');
+  $('act-shop').onclick = () => toggleScreen('shop');
+  $('btnNest').onclick = () => toggleScreen('nest');
   $('btnDossier').onclick = () => openSheet('dossier');
   $('btnSound').onclick = toggleSound;
   $('btnDev').onclick = () => openSheet('dev');
@@ -4154,10 +4866,54 @@ function fitScreen(){
   for (const k of LCD_STEPS) if (W * k <= avail) best = W * k;
   document.documentElement.style.setProperty('--lcd-w', best + 'px');
 }
+/* The crown ridge.
+
+   `border-radius: 50% 50% ... / 20% 20% ...` makes the top of the shell one
+   ellipse arc running the full width, with rx = width/2 and ry = 20% of the
+   height. Both move with the case, so a plate's height above the base line at
+   a given x is not something style.css can express — it has no square root and
+   no way to read its own box. Hand-fitted offsets are what put the old ridge
+   ten pixels to the left of the crown and gave it an arc twice as steep as the
+   shell's.
+
+   So the plates declare --x, --w and --h in the stylesheet and this puts them
+   on the real curve: base tucked TUCK px inside the shell so each one is
+   rooted rather than balanced on the edge, and rotated to the surface normal
+   so they fan the way a dorsal ridge does instead of all leaning one way. */
+const CROWN_TUCK = 5;
+function fitCrown(){
+  const shell = document.querySelector('.shell');
+  const row = document.querySelector('.scutes');
+  if (!shell || !row) return;
+  const rx = shell.offsetWidth / 2, ry = shell.offsetHeight * 0.20;
+  if (!rx || !ry) return;
+  for (const el of row.children){
+    const cs = getComputedStyle(el);
+    const x = parseFloat(cs.getPropertyValue('--x')) || 0;
+    const h = parseFloat(cs.getPropertyValue('--h')) || 0;
+    const u = clamp(x / rx, -.999, .999);
+    const c = Math.sqrt(1 - u*u);
+    const drop = ry * (1 - c);                    // how far the crown has fallen at x
+    const slope = ry * u / (rx * c);              // d(drop)/dx, so the surface normal
+    el.style.top = Math.round(drop + CROWN_TUCK - h) + 'px';
+    el.style.transform = 'rotate(' + (Math.atan(slope) * 180 / Math.PI).toFixed(2) + 'deg)';
+  }
+}
+
+/* The ridge is measured off the shell, so it has to be refitted whenever the
+   shell changes size — a resize, but also the web font landing and the screen
+   being sized, both of which move the height after boot. Watching the box
+   catches all three; the plates are absolutely positioned inside a zero-height
+   container, so refitting them cannot itself resize the shell. */
+if (window.ResizeObserver){
+  const shell = document.querySelector('.shell');
+  if (shell) new ResizeObserver(fitCrown).observe(shell);
+}
+
 let fitTimer = 0;
 window.addEventListener('resize', () => {
   clearTimeout(fitTimer);
-  fitTimer = setTimeout(fitScreen, 120);
+  fitTimer = setTimeout(() => { fitScreen(); fitCrown(); }, 120);
 });
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It
@@ -4535,7 +5291,7 @@ cv.addEventListener('pointerdown', e => {
   }
   if (mode === 'game'){
     if (game.kind === 'snack') game.tx = mx;
-    if (game.kind === 'stomp') tapStomp(mx, my);
+    if (game.kind === 'forage') tapForage(mx, my);
     if (game.kind === 'leap')  leapJump();
     return;
   }
@@ -4558,7 +5314,7 @@ cv.addEventListener('pointermove', e => {
   const p = canvasPos(e); holdPos = p;
   if (mode === 'game' && game && e.buttons){
     if (game.kind === 'snack') game.tx = p[0];
-    if (game.kind === 'stomp') tapStomp(p[0], p[1]);
+    if (game.kind === 'forage') tapForage(p[0], p[1]);
   }
 });
 window.addEventListener('pointerup', () => { holding = false; });
@@ -4667,6 +5423,7 @@ function frame(now){
 async function boot(){
   buildChrome();
   fitScreen();
+  fitCrown();
   G = freshGame();
   const loaded = loadSave(await Store.get(SAVE_KEY));
   if (loaded.game){

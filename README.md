@@ -30,12 +30,12 @@ dist/paleopal.html  the single-file build
 src/
   00-core.js          utilities, storage, audio, path primitives
   01-colour.js        ramps, material layers, lighting compositor
-  02-sprite-engine.js growth stages, gait, feet, hats, frame baking
+  02-sprite-engine.js growth stages, gait, limbs, hats, frame baking
   03-font.js          the 5x7 screen font, drawn from a bit table
   species/            one file per animal, plus the registry
   04-world.js         backdrop, parallax, particles, props
   05-sim.js           needs, illness, bond, the nest, actions
-  06-render.js        behaviour, draw loop, feeding, minigames
+  06-render.js        behaviour, draw loop, feeding, the three minigames
   07-screens.js       the menus, drawn inside the screen
   08-ui.js            case chrome, prose panels, input, save/load, main loop
   style.css

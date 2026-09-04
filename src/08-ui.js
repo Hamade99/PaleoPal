@@ -183,14 +183,15 @@ function buildChrome(){
   bone.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnDev').appendChild(bone);
   paintSound();
-  /* The keys are direct jumps into screens on the glass. Wash is the one
-     action with nothing to choose, so its key does the thing. */
-  $('act-feed').onclick = () => openScreen('feed');
-  $('act-play').onclick = () => openScreen('play');
+  /* The keys latch: one press opens the screen, the same press again closes
+     it, and any other key jumps straight across. Wash is the one action with
+     nothing to choose, so its key does the thing. */
+  $('act-feed').onclick = () => toggleScreen('feed');
+  $('act-play').onclick = () => toggleScreen('play');
   $('act-wash').onclick = () => { closeScreen(); scrub(); };
-  $('act-care').onclick = () => openScreen('care');
-  $('act-shop').onclick = () => openScreen('shop');
-  $('btnNest').onclick = () => openScreen('nest');
+  $('act-care').onclick = () => toggleScreen('care');
+  $('act-shop').onclick = () => toggleScreen('shop');
+  $('btnNest').onclick = () => toggleScreen('nest');
   $('btnDossier').onclick = () => openSheet('dossier');
   $('btnSound').onclick = toggleSound;
   $('btnDev').onclick = () => openSheet('dev');
@@ -215,10 +216,54 @@ function fitScreen(){
   for (const k of LCD_STEPS) if (W * k <= avail) best = W * k;
   document.documentElement.style.setProperty('--lcd-w', best + 'px');
 }
+/* The crown ridge.
+
+   `border-radius: 50% 50% ... / 20% 20% ...` makes the top of the shell one
+   ellipse arc running the full width, with rx = width/2 and ry = 20% of the
+   height. Both move with the case, so a plate's height above the base line at
+   a given x is not something style.css can express — it has no square root and
+   no way to read its own box. Hand-fitted offsets are what put the old ridge
+   ten pixels to the left of the crown and gave it an arc twice as steep as the
+   shell's.
+
+   So the plates declare --x, --w and --h in the stylesheet and this puts them
+   on the real curve: base tucked TUCK px inside the shell so each one is
+   rooted rather than balanced on the edge, and rotated to the surface normal
+   so they fan the way a dorsal ridge does instead of all leaning one way. */
+const CROWN_TUCK = 5;
+function fitCrown(){
+  const shell = document.querySelector('.shell');
+  const row = document.querySelector('.scutes');
+  if (!shell || !row) return;
+  const rx = shell.offsetWidth / 2, ry = shell.offsetHeight * 0.20;
+  if (!rx || !ry) return;
+  for (const el of row.children){
+    const cs = getComputedStyle(el);
+    const x = parseFloat(cs.getPropertyValue('--x')) || 0;
+    const h = parseFloat(cs.getPropertyValue('--h')) || 0;
+    const u = clamp(x / rx, -.999, .999);
+    const c = Math.sqrt(1 - u*u);
+    const drop = ry * (1 - c);                    // how far the crown has fallen at x
+    const slope = ry * u / (rx * c);              // d(drop)/dx, so the surface normal
+    el.style.top = Math.round(drop + CROWN_TUCK - h) + 'px';
+    el.style.transform = 'rotate(' + (Math.atan(slope) * 180 / Math.PI).toFixed(2) + 'deg)';
+  }
+}
+
+/* The ridge is measured off the shell, so it has to be refitted whenever the
+   shell changes size — a resize, but also the web font landing and the screen
+   being sized, both of which move the height after boot. Watching the box
+   catches all three; the plates are absolutely positioned inside a zero-height
+   container, so refitting them cannot itself resize the shell. */
+if (window.ResizeObserver){
+  const shell = document.querySelector('.shell');
+  if (shell) new ResizeObserver(fitCrown).observe(shell);
+}
+
 let fitTimer = 0;
 window.addEventListener('resize', () => {
   clearTimeout(fitTimer);
-  fitTimer = setTimeout(fitScreen, 120);
+  fitTimer = setTimeout(() => { fitScreen(); fitCrown(); }, 120);
 });
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It
@@ -596,7 +641,7 @@ cv.addEventListener('pointerdown', e => {
   }
   if (mode === 'game'){
     if (game.kind === 'snack') game.tx = mx;
-    if (game.kind === 'stomp') tapStomp(mx, my);
+    if (game.kind === 'forage') tapForage(mx, my);
     if (game.kind === 'leap')  leapJump();
     return;
   }
@@ -619,7 +664,7 @@ cv.addEventListener('pointermove', e => {
   const p = canvasPos(e); holdPos = p;
   if (mode === 'game' && game && e.buttons){
     if (game.kind === 'snack') game.tx = p[0];
-    if (game.kind === 'stomp') tapStomp(p[0], p[1]);
+    if (game.kind === 'forage') tapForage(p[0], p[1]);
   }
 });
 window.addEventListener('pointerup', () => { holding = false; });
@@ -728,6 +773,7 @@ function frame(now){
 async function boot(){
   buildChrome();
   fitScreen();
+  fitCrown();
   G = freshGame();
   const loaded = loadSave(await Store.get(SAVE_KEY));
   if (loaded.game){

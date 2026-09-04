@@ -143,6 +143,19 @@ function eyeAt(M, x, y, r, state){
     tube(M.pupil, [[x-r*1.3,y+r*.34],[x,y-r*.40],[x+r*1.3,y+r*.34]], [r*.24,r*.32,r*.24]);
     return;
   }
+  if (state === 3){
+    /* Half-lidded: ill, but awake. The sick pose used to borrow the shut lid
+       from sleep, so an animal that needed a remedy and an animal that needed
+       leaving alone were the same picture — and since `sick` overrides idle
+       for as long as the illness lasts, a poorly animal simply had its eyes
+       closed all day. The eye is open here, only sunk and hooded: the white
+       still shows, which is the whole difference at this size. */
+    oval(M.sclera, x, y + r*.28, r*1.04, r*.74);
+    oval(M.pupil,  x - r*.10, y + r*.36, r*.60, r*.60);
+    oval(M.glint,  x - r*.42, y + r*.10, r*.24, r*.22);
+    tube(M.pupil, [[x-r*1.32,y-r*.22],[x,y-r*.02],[x+r*1.26,y-r*.28]], [r*.22,r*.30,r*.22]);
+    return;
+  }
   oval(M.sclera, x, y, r*1.1, r*1.24);
   oval(M.pupil,  x - r*.12, y + r*.14, r*.66, r*.86);
   oval(M.glint,  x - r*.46, y - r*.44, r*.3, r*.3);
@@ -202,9 +215,21 @@ const POSES = {
            tail: .48*Math.sin(TAU*p + Math.PI/4)
          })),
   eat:   [ {body:0, legPhase:0, jaw:1, droop:.7, tail:.3}, {body:0, legPhase:0, jaw:.12, droop:.7, tail:-.1} ],
-  sleep: [ {body:-2.5, legPhase:0, droop:1.5, tail:.1, eye:1} ],
+  /* Asleep is deep and slow and the eyes are shut. Ill is shallow, uneven and
+     the eyes are open but hooded. The two used to share a lid and a droop,
+     which is why an ill animal read as a sleeping one. */
+  sleep: poseCycle(2, p => ({
+           body: -2.5 + .40*(1 - Math.cos(TAU*p)),
+           legPhase: 0, droop: 1.5, tail: .1, eye: 1
+         })),
   cheer: [ {body:5, legPhase:.5, jaw:.8, tail:.9, eye:2}, {body:0, legPhase:0, jaw:.35, tail:-.7, eye:2} ],
-  sick:  [ {body:-1.5, legPhase:0, droop:1.1, tail:-.1, eye:1}, {body:-2.4, legPhase:0, droop:1.2, tail:0, eye:1} ]
+  sick:  poseCycle(4, p => ({
+           body: -1.5 + .55*Math.sin(TAU*p),
+           legPhase: 0,
+           droop: 1.05 + .20*Math.cos(TAU*p),
+           tail: -.12 + .08*Math.sin(TAU*p),
+           eye: 3
+         }))
 };
 const matCache = new Map();
 function matsFor(spId, skinId){

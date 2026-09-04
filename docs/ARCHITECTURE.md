@@ -78,9 +78,12 @@ Otherwise:
 
 1. baked backdrop for the current sky phase (cached per phase)
 2. stars, sun or moon on a clock-driven arc, parallax clouds, pterosaur, pond
-3. mode content — egg choice, hatching, habitat, or a minigame
-4. foreground cycads the animal walks behind
-5. a time-of-day tint
+3. the volcano's plume and crater glow, and a rank of grass on the ground
+   line — the three things in the backdrop that move, and therefore the three
+   that cannot be baked into it
+4. mode content — egg choice, hatching, habitat, or a minigame
+5. foreground cycads the animal walks behind
+6. a time-of-day tint
 
 ## Where to change what
 
@@ -99,6 +102,8 @@ Otherwise:
 | A new prose panel | a key in `SHEETS` in `src/08-ui.js`, nothing else |
 | The screen font | `src/03-font.js` |
 | Colours, layout, buttons | `src/style.css` |
+| The crown ridge's plates | `--x/--w/--h` in `src/style.css`; the arc in `fitCrown()` |
+| The volcano and its plume | `drawVolcano` (baked) and `drawPlume` (live), `src/04-world.js` |
 | The case: shell, bezel, keys | `src/style.css`, `index.html` |
 | A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
 | Checking any of the art | `tools/sheet.html` |
@@ -106,10 +111,20 @@ Otherwise:
 ## The case
 
 Everything the player sees sits inside one moulded shell — a speckled
-dinosaur egg with a bone bezel, a recessed screen and five physical keys. It is
-entirely CSS: the speckles are a tiled set of radial gradients reused through
-the `--speckles` custom property, and the mouldings are layered `inset`
+dinosaur egg with a bone bezel, a recessed screen and five physical keys. The
+look is all CSS: the speckles are a tiled set of radial gradients reused
+through the `--speckles` custom property, and the mouldings are layered `inset`
 shadows. The project ships no image assets and the case did not change that.
+
+Two pieces of it are sized from JavaScript, and both for the same reason — the
+stylesheet cannot read its own box. `fitScreen()` sets `--lcd-w` to a whole or
+half multiple of 224 so the canvas grid lands on the case grid. `fitCrown()`
+puts each plate of the crown ridge on the shell's real top curve: that curve is
+an ellipse whose radii are a fraction of the rendered width and height, so
+where the crown is at a given x is not a constant. The plates declare `--x`,
+`--w` and `--h` in `style.css` and the function supplies the arc. A
+`ResizeObserver` on `.shell` refits them, which covers a resize, the web font
+landing, and the screen being sized.
 
 `index.html` carries the structure (`.shell` → `.bezel` → `.screen` → `.lcd`)
 and `style.css` carries the look. No element id changed when the case went in,
