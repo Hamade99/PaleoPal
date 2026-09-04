@@ -83,6 +83,11 @@ this came from research during development rather than from memory.
 - A **hump of tall neural spines** over the shoulders anchored the neck muscles.
 - Nasal chambers formed a **crest on the roof** of a very small skull.
 - Short tail for a sauropod, held clear of the ground.
+- **Ontogeny.** The forelimb-longer-than-hindlimb condition and the very long
+  neck are both ADULT traits and they arrive together. Sauropod growth series
+  give hatchlings a build much closer to square: short thick neck, large head,
+  level back. The nasal arch grows with the animal too. Held at adult
+  proportions from hatching, every stage is the adult at a different size.
 - **Manus**: metacarpals in fully vertical columns, digits so reduced they would
   not have been visible in life; the whole hand is a hoof, which is why sauropod
   forefoot prints are horseshoe-shaped. Brachiosaurids kept a short thumb claw.

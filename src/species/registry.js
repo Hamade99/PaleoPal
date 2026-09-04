@@ -53,10 +53,12 @@ const SPECIES = {
       'The neck was probably held near sixty degrees with a slight S-curve, not straight up like a mast.',
       'A hump of tall vertebral spines over the shoulders anchored the neck muscles.',
       'Its nasal chambers formed a crest on the roof of a very small skull.',
-      'The tail is short for a sauropod, and one big thumb claw sits on each forefoot.'
+      'The tail is short for a sauropod, and one big thumb claw sits on each forefoot.',
+      'The long neck and the sloping back are both adult traits. A hatchling is short-necked, big-headed and almost level.'
     ],
     checks:['Forelimbs longer than hindlimbs','Back sloping down to the hips','Shoulder hump at the neck base',
-            'S-curved neck near sixty degrees','Nasal crest on the skull','Thumb claw on each forefoot']
+            'S-curved neck near sixty degrees','Nasal crest on the skull','Thumb claw on each forefoot',
+            'Level-backed and short-necked as a hatchling','Nasal arch growing with age']
   }
 };
 

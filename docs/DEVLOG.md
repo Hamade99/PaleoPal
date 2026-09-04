@@ -897,8 +897,19 @@ thicker animal, not a coat.
 The Brachiosaurus reads none of the four columns. It was the one the owner was
 happy with, and a column only exists where a species asks for it.
 
-**Not done.** The Brachiosaurus therefore still has four stages of one animal,
-which is now the obvious next thing. All five habitats share one ridge profile
+**Since.** The Brachiosaurus was brought in line the same way. Its growth is
+the clearest of the three, because the two things everyone recognises about a
+brachiosaur — the very long neck and the back sloping down from the shoulders
+— are both adult traits and they arrive together. The forelimb-to-hindlimb
+ratio is 1.00 at hatching and 1.22 at adult, so a baby is a level-backed,
+short-necked, big-headed thing and only the adult is the silhouette on the
+poster. It also reads `bulk`, `torso` and `muzzle`, and the nasal arch grows
+on the horn column the other two use for ornament — at ten pixels of skull the
+crest, the eye and the jaw line are the only three things that can say
+anything, so it is worth one of them changing. No `fuzz`: sauropods are the
+one group here with no filament evidence.
+
+**Not done.** All five habitats share one ridge profile
 and one ground line — the palettes, landmarks and dressing carry the
 difference, and at a glance they do, but the skyline behind all five is the
 same three hills. And the species files still share nothing.

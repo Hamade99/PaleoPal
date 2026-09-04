@@ -68,9 +68,9 @@ Nothing here is started. Ordered roughly by value.
 - Araucaria and tree fern silhouettes are in the treeline now, but at
   twenty-odd pixels tall the difference between them and a conifer is two or
   three pixels of crown. They read as variety rather than as species.
-- The Brachiosaurus does not use the `bulk`, `torso`, `muzzle` or `fuzz`
-  columns, so its four stages are still one animal at four sizes. It was left
-  alone deliberately this pass; it is the obvious next thing.
+- The Brachiosaurus does not use `fuzz` — sauropods are the one group here with
+  no filament evidence — but it now reads `bulk`, `torso`, `muzzle` and `horn`
+  like the other two.
 - Every habitat shares one ridge profile and one ground line. The palettes,
   landmarks and dressing carry the difference, and at a glance they do, but
   the skyline behind all five is the same three hills.

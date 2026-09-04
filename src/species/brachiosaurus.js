@@ -9,10 +9,19 @@ const BRA_HIND = { stride:.30, lift:.06, duty:.74, mt:.15, back:.30, bend:1,  th
 function drawBrachio(M, P){
   const st = STAGE[P.stage];
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
+  const bk = st.bulk, tor = st.torso, cr = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
-  // forelimbs about 1.2 times the hindlimbs: the trait the animal is named for
-  const foreLen = 56*lM, hindLen = 46*lM;
-  const shX = -14, shY = -foreLen - bob, hipX = 30, hipY = -hindLen - bob;
+
+  /* The forelimbs run about 1.2 times the hindlimbs — the trait the animal is
+     named for, and the reason the back slopes. It is an ADULT trait. Sauropod
+     growth series have hatchlings built much closer to square, with the
+     disproportion and the long neck arriving together, so a baby is a
+     level-backed, short-necked, big-headed thing and only the adult is the
+     silhouette everyone recognises. Held at 1.2 from hatching, every stage
+     was the adult at a different size, which was the complaint. */
+  const mature = P.stage / (STAGE.length - 1);          // 0 hatchling, 1 adult
+  const hindLen = 46*lM, foreLen = hindLen * (1.00 + 0.22*mature);
+  const shX = -14*tor, shY = -foreLen - bob, hipX = 30*tor, hipY = -hindLen - bob;
 
   legStep(M.far, shX-7,  shY+4, (P.legPhase+.25)%1, 14*lM, BRA_FORE);
   legStep(M.far, hipX-7, hipY+3,(P.legPhase+.5)%1,  14*lM, BRA_HIND);
@@ -20,28 +29,33 @@ function drawBrachio(M, P){
   // short tail for a sauropod, carried clear of the ground
   tube(M.skin, [[hipX,hipY],[hipX+22*tM,hipY+1+sw*3],[hipX+44*tM,hipY+3+sw*5],
                 [hipX+66*tM,hipY+6+sw*7],[hipX+86*tM,hipY+10+sw*9]],
-       [31*lM, 22*lM, 14*lM, 7*lM, 2.5*lM]);
+       [31*lM*bk, 22*lM*bk, 14*lM, 7*lM, 2.5*lM]);
   // the back slopes down from the shoulders to the hips
-  tube(M.skin, [[shX,shY],[8,shY+8],[hipX,hipY]], [39*lM, 44*lM, 34*lM]);
-  oval(M.skin, shX + 2, shY - 6*lM, 18*lM, 12*lM);          // shoulder hump
+  tube(M.skin, [[shX,shY],[8*tor,shY+8],[hipX,hipY]], [39*lM*bk, 44*lM*bk, 34*lM*bk]);
+  oval(M.skin, shX + 2, shY - 6*lM, 18*lM*bk, 12*lM*bk);    // shoulder hump
 
   // neck near sixty degrees, S-curved, drooping slightly at the head end
   const nl = 58*nM;
   const n1 = [shX - 9,  shY - nl*.30];
   const n2 = [shX - 19, shY - nl*.63];
   const n3 = [shX - 23, shY - nl*.94 + dr*10];
-  tube(M.head, [[shX-3, shY-9],n1,n2,n3], [26*lM, 18*lM, 13*lM, 11*lM]);
+  /* The whole neck thickens with `bulk`, the head end included. Left at its
+     adult width under a hatchling's oversized skull, the neck came out as a
+     stick with a head on the end of it. */
+  tube(M.head, [[shX-3, shY-9],n1,n2,n3], [26*lM*bk, 19*lM*bk, 15*lM*bk, 12.5*lM*bk]);
 
   const sM = st.snout;
   const hx = n3[0] - 7*hM, hy = n3[1] - 4*hM, sn = 16*hM*sM, hh = 8*hM;
+  // the muzzle is shallower than the braincase, and more so when young
+  const fh = hh * (0.62 + 0.38*st.muzzle);
 
   /* The skull is about ten pixels long, so only three things can read on it:
      the crest silhouette, the eye, and the jaw line. It had two. The muzzle is
      squared off in front, where the spatulate teeth sat, rather than rounded
      to a lump. */
   const lipY = hy + hh*.34;
-  blob(M.head, [[hx+10*hM,hy-hh*.8],[hx-sn*.35,hy-hh*1.15],[hx-sn*.94,hy-hh*.52],
-                [hx-sn*1.04,hy-hh*.06],[hx-sn*.98,lipY-hh*.06],
+  blob(M.head, [[hx+10*hM,hy-hh*.8],[hx-sn*.35,hy-hh*1.15],[hx-sn*.94,hy-fh*.52],
+                [hx-sn*1.04,hy-fh*.06],[hx-sn*.98,lipY-fh*.06],
                 [hx-sn*.30,lipY+hh*.06],[hx+10*hM,hy+hh*.72]]);
 
   /* Mandible. The sauropod jaw line is long and close to straight, running
@@ -65,12 +79,18 @@ function drawBrachio(M, P){
          [Math.max(.9,1.3*hM), Math.max(.8,1.1*hM), Math.max(.6,.8*hM)]);
   }
 
-  // tall nasal chamber sitting on the roof of a very small skull
-  blob(M.crest, [[hx+2*hM,hy-hh*1.0],[hx-sn*.16,hy-hh*2.05],[hx-sn*.62,hy-hh*1.8],[hx-sn*.6,hy-hh*.85]]);
+  /* The nasal chamber on the roof of a very small skull, and it grows. On a
+     hatchling it is a low swelling; the tall arch is an adult's, so it rides
+     the horn column the other two species use for their ornament. It is the
+     only thing this skull can say at ten pixels long besides the eye and the
+     jaw line, so it is worth having it change. */
+  const crTop = 1.10 + 0.95*cr, crBack = 0.85 + 0.85*cr;
+  blob(M.crest, [[hx+2*hM,hy-hh*1.0],[hx-sn*.16,hy-hh*crTop],
+                 [hx-sn*.62,hy-hh*crBack],[hx-sn*.6,hy-hh*.85]]);
   /* Nares on the crest. As a filled block this read as a hole punched in a
      tuft of hair; a notch bitten out of the crest's front edge reads as a
      nostril. */
-  oval(M.mouth, hx - sn*.54, hy - hh*1.62, Math.max(.7,.9*hM), Math.max(.6,.7*hM));
+  oval(M.mouth, hx - sn*.54, hy - hh*(crTop*.79), Math.max(.7,.9*hM), Math.max(.6,.7*hM));
 
   // the ventral countershading is painted from the spine by paintBelly
 
@@ -88,7 +108,7 @@ function drawBrachio(M, P){
     [n2[0], n2[1],      10*lM],
     [n1[0], n1[1],      13*lM],
     [shX - 2, shY + 2,  19*lM],          // shoulder hump
-    [8,       shY + 8,  22*lM],          // deepest, over the ribs
+    [8*tor,   shY + 8,  22*lM],          // deepest, over the ribs
     [hipX,    hipY,     17*lM],          // hips
     [hipX + 22*tM, hipY + 1,  11*lM],    // tail
     [hipX + 44*tM, hipY + 3,   7*lM],
@@ -97,6 +117,6 @@ function drawBrachio(M, P){
   ];
 
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
-           hat:[hx - sn*.3, hy - hh*2.05], top: hy - hh*2.05, spine };
+           hat:[hx - sn*.3, hy - hh*crTop], top: hy - hh*crTop, spine };
 }
 
