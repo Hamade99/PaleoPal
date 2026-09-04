@@ -190,45 +190,108 @@ window.addEventListener('mouseup', () => painting = 0);
 $('pixGrid').addEventListener('contextmenu', e => e.preventDefault());
 REDRAW.pix = pixRedraw;
 
+const STAGE_COLS = ['s','head','snout','muzzle','neck','limb','tail','bulk','torso','fuzz','horn','frill','hornBend'];
+
 /* ---- tab: species -------------------------------------------------------- */
-let spId = 'rex';
+let spId = 'rex', spStage = -1;          // -1 is the base, 0..3 a growth stage
 /* A sensible range for a slider is a property of the number, not of the
    editor: a tail length wants 0 to twice its default, a ratio wants a tight
    band around 1. Anything unlisted gets half to double what it is now. */
 const TUNE_RANGE = { foreRatio:[0.8, 1.6, .01], frillTilt:[-1.2, .4, .01], hornLen:[0, 4, .05],
-                     crestH:[1, 4, .05], fuzzLen:[0, 14, .1] };
+                     crestH:[1, 4, .05], fuzzLen:[0, 14, .1], epi:[0, .5, .01],
+                     hornBend:[-2, 2, .05] };
+const STAGE_RANGE = [0, 2.2, .01];       // every STAGE column is a multiplier
 function rangeFor(key, v){
   if (TUNE_RANGE[key]) return TUNE_RANGE[key];
+  if (STAGE_COLS.includes(key)) return STAGE_RANGE;
   const step = Math.abs(v) < 3 ? .1 : .5;
   return [Math.min(0, v * 2), Math.max(1, Math.abs(v) * 2), step];
 }
-function speciesStrip(host, id, anim){
+function speciesStrip(host, id, mark){
   host.innerHTML = '';
   for (let st = 0; st < STAGE.length; st++){
-    const f = frameOf(id, st, anim || 'idle', 0, false, 'wild');
-    host.appendChild(shot(f.cv, 2, STAGE[st].key));
+    const f = frameOf(id, st, 'idle', 0, false, 'wild');
+    const cell = shot(f.cv, 2, STAGE[st].key);
+    if (st === mark) cell.style.outline = '2px solid var(--moss)';
+    host.appendChild(cell);
   }
 }
+
+/* One row of the proportions panel.
+
+   At the base it edits the species' own TUNE table. At a stage it edits that
+   stage's override row, and shows what the value would be if there were no
+   override — a number you cannot see the inherited value of is a number you
+   cannot safely change. Pinned rows are marked and can be cleared back to
+   inherited, because an override that only ever accumulates is a fork. */
+function tuneRow(host, key, inherited){
+  const row = mk('label');
+  const pinned = spStage >= 0 && key in SPECIES_STAGE[spId][spStage];
+  const name = mk('span', pinned ? 'pin' : '', key);
+  row.appendChild(name);
+  const value = () => pinned ? SPECIES_STAGE[spId][spStage][key] : inherited;
+  const [lo, hi, step] = rangeFor(key, inherited);
+  const r = mk('input'); r.type = 'range'; r.min = lo; r.max = hi; r.step = step; r.value = value();
+  const n = mk('input'); n.type = 'number'; n.step = step; n.value = value();
+  const push = v => {
+    // the base writes the species' own table; a stage writes its override row
+    if (spStage < 0) SPECIES[spId].tune[key] = +v;
+    else SPECIES_STAGE[spId][spStage][key] = +v;
+    r.value = v; n.value = v; changed(); spRedraw();
+  };
+  r.oninput = () => push(r.value);
+  n.oninput = () => push(n.value);
+  row.appendChild(r); row.appendChild(n);
+  if (spStage >= 0){
+    if (pinned){
+      const x = mk('button', 'clear', '×');
+      x.title = 'back to ' + inherited;
+      x.onclick = () => { delete SPECIES_STAGE[spId][spStage][key]; changed(); spRedraw(); };
+      row.appendChild(x);
+    } else {
+      const inh = mk('span', 'inh', 'inherited');
+      inh.style.cssText = 'min-width:0;font-size:11px;opacity:.6';
+      row.appendChild(inh);
+    }
+  }
+  host.appendChild(row);
+}
+
 function spRedraw(){
   pickList($('spList'), Object.keys(SPECIES), () => spId, id => { spId = id; spRedraw(); },
            id => SPECIES[id].common);
-  const sp = SPECIES[spId], tune = sp.tune, spec = sp.spec;
+  // which stage the panel is editing: the base, or one of the four
+  const sel = $('spStage'); sel.innerHTML = '';
+  [['-1','All stages (base)']].concat(STAGE.map((s,i) => [String(i), 'Only ' + s.key]))
+    .forEach(([v,l]) => { const o = mk('option', null, l); o.value = v;
+                          if (+v === spStage) o.selected = true; sel.appendChild(o); });
+  sel.onchange = () => { spStage = +sel.value; spRedraw(); };
+
+  const sp = SPECIES[spId];
+  /* At a stage the panel shows the growth columns too, because "the trike's
+     frill at hatchling" is a growth column and is exactly the kind of thing
+     this tab exists for. At the base they belong on the Growth tab, where
+     they are shared by every species. */
   const t = $('spTune'); t.innerHTML = '';
-  for (const k in tune){
-    const [lo, hi, step] = rangeFor(k, tune[k]);
-    slider(t, k, () => tune[k], v => tune[k] = v, lo, hi, step);
+  if (spStage >= 0){
+    const h = mk('div'); h.style.cssText = 'color:var(--dim);font-size:11px;margin:2px 0 6px';
+    h.textContent = 'Growth columns';
+    t.appendChild(h);
+    STAGE_COLS.forEach(k => tuneRow(t, k, STAGE[spStage][k]));
+    const h2 = mk('div'); h2.style.cssText = 'color:var(--dim);font-size:11px;margin:10px 0 6px';
+    h2.textContent = 'Proportions';
+    t.appendChild(h2);
   }
+  for (const k in sp.tune) tuneRow(t, k, sp.tune[k]);
+
   const c = $('spCols'); c.innerHTML = '';
-  for (const k in spec){
-    if (k === 'beak' && !spec.beak) continue;
-    colourRow(c, k, () => spec[k], v => spec[k] = v);
-  }
-  speciesStrip($('spPreview'), spId);
+  for (const k in sp.spec) colourRow(c, k, () => sp.spec[k], v => sp.spec[k] = v);
+  speciesStrip($('spPreview'), spId, spStage);
 }
 REDRAW.species = spRedraw;
 
 /* ---- tab: growth --------------------------------------------------------- */
-const STAGE_COLS = ['s','head','snout','muzzle','neck','limb','tail','bulk','torso','fuzz','horn','frill','hornBend'];
+
 function stRedraw(){
   const t = $('stTable'); t.innerHTML = '';
   const grid = mk('div', 'grid4');

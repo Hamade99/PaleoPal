@@ -5,7 +5,7 @@
 const BRA_FORE = { stride:.30, lift:.06, duty:.74, mt:.07, back:0,   bend:-1, thigh:false, foot:'hoof' };
 const BRA_HIND = { stride:.30, lift:.06, duty:.74, mt:.15, back:.30, bend:1,  thigh:true,  foot:'pad' };
 function drawBrachio(M, P){
-  const st = STAGE[P.stage];
+  const A = artFor('brachio', P.stage), st = A.st;
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const bk = st.bulk, tor = st.torso, cr = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
@@ -18,7 +18,7 @@ function drawBrachio(M, P){
      silhouette everyone recognises. Held at 1.2 from hatching, every stage
      was the adult at a different size, which was the complaint. */
   const mature = P.stage / (STAGE.length - 1);          // 0 hatchling, 1 adult
-  const T_ = BRA_TUNE, TL = T_.tailLen;
+  const T_ = A.tune, TL = T_.tailLen;
   const hindLen = T_.hindH*lM, foreLen = hindLen * (1.00 + (T_.foreRatio-1)*mature);
   const shX = -T_.shoulder*tor, shY = -foreLen - bob, hipX = T_.hipBack*tor, hipY = -hindLen - bob;
 

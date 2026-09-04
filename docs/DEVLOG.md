@@ -1031,6 +1031,43 @@ and then the loop is four meters and a thirty-second game, with nothing for
 coins to do once the coats are bought. That is the biggest hole in the game and
 nothing about it is decided yet.
 
+### Per species, per stage
+
+**Asked for straight after:** the same changes, applicable to one species at
+one growth stage.
+
+That is a third layer, and the gap it fills is real. `STAGE` says what every
+animal does with age. A species' `TUNE` table says what that animal is at adult
+size. Between them they cover "all tyrannosaurs have a shallow muzzle when
+young" and "this tyrannosaur has a long tail". Neither covers "this species, at
+this age, is not like either" — which, looking at the three animals here, is
+most of what growth actually is.
+
+`SPECIES_STAGE` is one row per stage per species. Any key in a row **replaces**
+the value it names, whether that is a `STAGE` column or a `TUNE` key; an absent
+key is inherited. Replacement rather than a multiplier, because several of these
+values are legitimately zero or negative — `hornBend` is 0 on a hatchling and
+−1 on a juvenile, and no multiplier moves either of those.
+
+Every draw function resolves through `artFor(species, stage)` now instead of
+reading `STAGE` and its `TUNE` table directly.
+
+The mechanism paid for itself immediately: `EPI_DEPTH`, the Triceratops'
+per-stage epoccipital depth, was a hand-kept four-element array sitting beside
+the growth system because it had nowhere to belong. It is `epi` in `TRI_TUNE`
+with three overrides in `SPECIES_STAGE.trike`, which is what it always was.
+
+In the editor the Species tab gained a stage selector. At the base it edits the
+species' own proportions as before. At a stage it shows the growth columns as
+well — "the trike's frill at hatchling" is a growth column, and is exactly the
+kind of thing this is for — with every row displaying its inherited value until
+you pin it. Pinned rows are marked and carry a × back to inherited, because an
+override that only ever accumulates is a fork.
+
+Checked by pinning `frillW` on the Triceratops hatchling and re-hashing all
+twelve species-and-stage combinations: exactly one moved. Clearing it put every
+one of them back.
+
 **Not done.** The editor turns numbers; it does not yet let you drag a control
 point on the outline. That needs the species outlines themselves extracted to
 data, which is the same job again one level deeper, and is worth doing once the

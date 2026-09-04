@@ -57,6 +57,11 @@ quarry could not be caught by anyone.
   column and a set of ratios gives four sizes of one animal. `muzzle`, `bulk`,
   `torso` and `fuzz` in `STAGE` are for features that arrive or go; use them,
   and add another column rather than overloading one that exists.
+- **Three layers, and pick the right one.** `STAGE` is what every animal does
+  with age. A species' `TUNE` table is what that animal is at adult size.
+  `SPECIES_STAGE` is where one species at one age departs from both — put a
+  per-species per-stage number there rather than in a table of its own, and
+  read all three through `artFor()`.
 - **Nothing fractured is drawn with a sine.** Thresholding `sin(x)` to place
   gullies, joints, crevasses or scallops gives an evenly spaced row, and the
   eye reads evenly spaced as manufactured — it has produced a barcode on the

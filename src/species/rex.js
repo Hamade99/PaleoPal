@@ -3,7 +3,7 @@
 
 const REX_GAIT = { stride:.46, lift:.17, duty:.56, mt:.22, back:.34, bend:1, thigh:false, foot:'bird' };
 function drawRex(M, P){
-  const st = STAGE[P.stage];
+  const A = artFor('rex', P.stage), st = A.st, T_ = A.tune;
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const bk = st.bulk, tor = st.torso, fz = st.fuzz, bs = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
@@ -14,7 +14,6 @@ function drawRex(M, P){
      between them are most of the difference between a leggy slab-sided
      juvenile and a barrel-chested adult. Before they existed the three older
      stages were one animal at three sizes. */
-  const T_ = REX_TUNE;
   const hipX = 16,  hipY = -T_.hipH*lM - bob;
   const backY = hipY - T_.backH*lM, withX = -T_.shoulder*tor, withY = hipY - T_.withersH*lM;
   const bellyY = hipY + T_.bellyD*lM*bk, throatY = hipY + T_.bellyD/3*lM*bk;

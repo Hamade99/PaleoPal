@@ -527,7 +527,9 @@ const TRI_TUNE = {
   frillH:22,      // and top to bottom
   frillTilt:-0.24,
   hornLen:1.85,   // brow horn, as a multiple of skull depth
-  tailLen:62
+  tailLen:62,
+  epi:.08         // how far the rim scallops bite in. Deeper when young — see
+                  // SPECIES_STAGE below, which is where that lives now
 };
 /*</data>*/
 /*<data:BRA_TUNE>*/
@@ -631,6 +633,32 @@ function skinOf(spId, skinId){
   return list.find(k => k.id === skinId) || list[0];
 }
 
+/* ---------------------- per species, per stage -----------------------------
+   STAGE is the growth curve every animal shares, and each species' TUNE table
+   is its proportions at adult size. Between them they cover "all tyrannosaurs
+   have a shallow muzzle when young" and "this tyrannosaur has a long tail".
+   Neither covers "this species, at this age, departs from both" — which is
+   most of what growth actually is once you look closely at an animal.
+
+   So: one row per stage per species, and any key in it REPLACES the value it
+   names, whether that is a STAGE column or a TUNE key. A key that is absent is
+   inherited. Replacement rather than a multiplier, because several of these
+   values are legitimately zero or negative — `hornBend` is 0 on a hatchling
+   and -1 on a juvenile, and no multiplier can move either of those.
+
+   The Triceratops rows below are the epoccipital depths that used to be a
+   table of their own: the rim scallops are deep deltoid knobs on a hatchling
+   and low spindles fused into the margin on an adult, which is exactly a
+   per-species per-stage value and had no home before this.
+   -------------------------------------------------------------------------- */
+/*<data:SPECIES_STAGE>*/
+const SPECIES_STAGE = {
+  rex:     [ {}, {}, {}, {} ],
+  trike:   [ { epi:.22 }, { epi:.17 }, { epi:.12 }, {} ],
+  brachio: [ {}, {}, {}, {} ]
+};
+/*</data>*/
+
 /* ------------------------------- habitats ---------------------------------
    The palette half of each habitat. The painters that go with them —
    landmark, treeline, floor, and whatever moves — are code and stay in
@@ -695,6 +723,29 @@ const BIOME_ART = {
   },
 };
 /*</data>*/
+
+/* The growth row and the proportions a species draws with at a given stage,
+   with its own overrides folded in. Every draw function starts here rather
+   than reading STAGE and its TUNE table directly.
+
+   Cached, because it is called once per bake and a bake happens for every
+   frame of every animation — and dropped by artChanged(), like everything
+   else the game has worked out in advance. */
+const stageCache = new Map();
+function artFor(spId, stage){
+  const key = spId + '|' + stage;
+  if (stageCache.has(key)) return stageCache.get(key);
+  const st = Object.assign({}, STAGE[stage]);
+  const tune = Object.assign({}, (SPECIES[spId] && SPECIES[spId].tune) || {});
+  const adj = (SPECIES_STAGE[spId] || [])[stage] || {};
+  for (const k in adj){
+    if (k in st) st[k] = adj[k];
+    else tune[k] = adj[k];
+  }
+  const out = { st, tune };
+  stageCache.set(key, out);
+  return out;
+}
 
 /* ---------------------------- drawing from PIX ----------------------------
    Three ways a stored sprite is used, and none of them wants the others'
@@ -765,4 +816,5 @@ function artChanged(){
   if (typeof warmQueue  !== 'undefined') warmQueue.length = 0;
   if (typeof bgCache    !== 'undefined') bgCache.clear();
   if (typeof skyCache   !== 'undefined') skyCache.clear();
+  stageCache.clear();
 }

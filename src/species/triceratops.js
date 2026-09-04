@@ -21,18 +21,15 @@
      - the frill is present and deeply scalloped from the start, and lengthens
        with positive allometry (STAGE.frill)
      - the epoccipitals along the rim start as deep deltoid scallops and
-       flatten to low spindles that fuse into the margin (EPI_DEPTH)
+       flatten to low spindles that fuse into the margin (`epi`, per stage
+       in SPECIES_STAGE)
      - the brow horns are straight stubs, curve backward in juveniles,
        straighten in subadults and recurve forward in adults (STAGE.hornBend)
    -------------------------------------------------------------------------- */
 const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
 const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
-/* how far the rim scallops bite in, per growth stage: deltoid when young,
-   low spindles fused to the margin when adult */
-const EPI_DEPTH = [.22, .17, .12, .08];
-
 function drawTrike(M, P){
-  const st = STAGE[P.stage];
+  const A = artFor('trike', P.stage), st = A.st;
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const hF = st.horn, sM = st.snout, fM = st.frill, bend = st.hornBend;
   const bk = st.bulk, tor = st.torso;
@@ -42,7 +39,7 @@ function drawTrike(M, P){
      hatchling built on the adult's proportions came out long and thin on
      stick legs — a scale model of an adult rather than a baby, which reads as
      underfed rather than young. Babies are short-bodied and round. */
-  const T_ = TRI_TUNE, TL = T_.tailLen;
+  const T_ = A.tune, TL = T_.tailLen;
   const hipX = T_.hipBack*tor, hipY = -T_.hipH*lM - bob;
   const shX = -T_.shoulder*tor, shY = -(T_.hipH-3)*lM - bob;   // glenoid
   const withY = hipY - T_.withersH*lM;         // tall neural spines: a shoulder hump
@@ -99,7 +96,7 @@ function drawTrike(M, P){
   const fTilt = T_.frillTilt;                   // tipped back, but standing up
   const fc = Math.cos(fTilt), fs = Math.sin(fTilt);
   const rot = (px,py) => [fx + px*fc - py*fs, fy + px*fs + py*fc];
-  const epi = EPI_DEPTH[P.stage];
+  const epi = T_.epi;
   const rim = [];
   const A0 = Math.PI*1.10, A1 = Math.PI*2.02;   // front edge, over the crown, down the back
   /* The epoccipitals scallop the rim itself. Sixteen of them came out as a

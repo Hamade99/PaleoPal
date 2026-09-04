@@ -157,7 +157,14 @@ Everything that can be changed without changing behaviour lives in one file,
   modules. The outline each icon and hat wears is *not* stored — it is a pass
   over the finished grid in `pixCanvas`, so an edit cannot leave a sprite with a
   half-drawn border.
-- **`STAGE`** — the growth columns.
+- **`STAGE`** — the growth columns, shared by every species.
+- **`SPECIES_STAGE`** — one row per stage per species, for where a species at
+  a given age departs from both the shared growth curve and its own adult
+  proportions. Any key in a row *replaces* the value it names, whether that is
+  a `STAGE` column or a `TUNE` key; an absent key is inherited. Replacement and
+  not a multiplier, because several of these values are legitimately zero or
+  negative — `hornBend` is 0 on a hatchling and −1 on a juvenile, and no
+  multiplier moves either.
 - **`REX_TUNE` / `TRI_TUNE` / `BRA_TUNE`** — per-species proportions in local
   units at adult size. They were literals scattered through the control points
   inside each draw function, which made "extend the tail" a job for someone
@@ -170,6 +177,10 @@ replaces the text between markers and leaves everything else, so the prose
 survives a save and the editor never has to patch a value out of the middle of a
 working source file. A no-op save is byte-idempotent and reloads to identical
 data; that is checked, not assumed.
+
+Every draw function starts by resolving through **`artFor(species, stage)`**,
+which merges those three layers — the shared growth row, the species' own
+proportions, and its per-stage overrides — and caches the result.
 
 Anything that changes art has to call **`artChanged()`** afterwards. Five
 independent caches hold baked results — frames, materials, pixels, backdrops,

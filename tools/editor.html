@@ -46,6 +46,11 @@
   .hint{color:var(--dim);font-size:12px;margin:0 0 10px;max-width:70ch;line-height:1.5}
   .grid4{display:grid;grid-template-columns:repeat(5,auto);gap:4px 10px;align-items:center}
   .grid4 span{color:var(--dim);font-size:12px}
+  .pin{color:var(--gold)}
+  b.pin{font-weight:normal}
+  button.clear{background:none;border:1px solid var(--line);color:var(--rust);
+               cursor:pointer;font:inherit;padding:0 6px;line-height:18px}
+  select{background:#0e1417;color:var(--bone);border:1px solid var(--line);font:inherit;padding:3px}
   #err{color:var(--rust);padding:0 14px;white-space:pre-wrap}
 </style>
 </head>
@@ -83,9 +88,15 @@
 
 <main id="tab-species">
   <p class="hint">Proportions in local units at adult size; the growth columns
-  multiply them. Colours are the material ramps the lighting pass works from.</p>
+  multiply them. Colours are the material ramps the lighting pass works from.
+  <br>Pick a single stage to change one species at one age without touching the
+  others — a row you edit there is <b class="pin">pinned</b> for that stage
+  only, and × puts it back to inherited.</p>
   <div class="cols">
-    <div class="card list" id="spList"></div>
+    <div class="card">
+      <div class="list" id="spList" style="max-height:none"></div>
+      <select id="spStage" style="margin-top:8px;width:100%"></select>
+    </div>
     <div class="card"><h2>Proportions</h2><div id="spTune"></div></div>
     <div class="card"><h2>Colours</h2><div id="spCols"></div></div>
     <div class="card"><h2>Every stage</h2><div class="strip" id="spPreview"></div></div>

@@ -123,8 +123,29 @@ same lesson the coat painter learned in section 7. Thirty-seven filaments over
 a hatchling's short back overlap into a solid band, which is a thicker animal,
 not a coat.
 
-The Brachiosaurus reads none of these. Its four stages were the ones the owner
-was happy with, and a column only exists where a species asks for it.
+All three species read all four, and each also has proportions of its own in a
+`TUNE` table — hip height, torso length, neck length, head length and depth,
+tail length and the rest, in local units at adult size.
+
+### Three layers, resolved once
+
+A draw function does not read `STAGE` or its `TUNE` table directly. It asks
+`artFor(species, stage)`, which merges:
+
+1. **`STAGE[stage]`** — the growth curve every animal shares.
+2. **the species' `TUNE`** — its proportions at adult size.
+3. **`SPECIES_STAGE[species][stage]`** — where that species at that age departs
+   from either. Any key present replaces the value it names, `STAGE` column or
+   `TUNE` key alike; an absent key is inherited.
+
+The first two cover "all tyrannosaurs have a shallow muzzle when young" and
+"this tyrannosaur has a long tail". Neither covers "this species, at this age,
+is not like either" — which is most of what growth turns out to be once you
+look closely at one animal. The Triceratops' epoccipital depth lives in the
+third layer and used to be a hand-kept table of its own with nowhere to belong.
+
+`tools/editor.html` edits all three: pick a species and a stage, and every row
+shows its inherited value until you pin one.
 
 ## 6. Countershading
 

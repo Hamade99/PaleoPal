@@ -119,7 +119,9 @@ hand-written `fillRect` calls to editable pixel data. Per-species proportions
 hoisted out of the draw functions into `TUNE` tables. Everything editable —
 pixels, growth columns, proportions, species colours, coats, habitat palettes —
 consolidated into `src/00-art.js` behind markers, and `tools/editor.html` built
-to edit all of it with live previews and save it back.
+to edit all of it with live previews and save it back. Then a third layer,
+`SPECIES_STAGE`, so a change can be applied to one species at one growth stage
+without touching the others.
 
 **Session 11 (later) — the Brachiosaurus growth series.** The long neck and the
 sloping back are adult traits and arrive together; a hatchling is level-backed,
