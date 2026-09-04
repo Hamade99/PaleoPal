@@ -86,6 +86,12 @@ quarry could not be caught by anyone.
 - **No `localStorage` directly.** Go through `Store` in `00-core.js`.
 - **No image assets.** The case, the icons, the animals and the screen font
   are all drawn from code. Keep it that way.
+- **An editor control must not rebuild itself while it is being used.**
+  Dragging a slider fires `input` on every pixel of travel; rebuilding the
+  panel there removes the element under the pointer and the drag dies after one
+  step, while the number still updates — so it looks like the slider is broken
+  rather than the code. `tools/edit-ui.js` keeps `BUILD` and `PAINT` apart:
+  moving a control paints, only choosing a different thing to edit builds.
 - **Art is data, in one file.** Anything that can change without changing
   behaviour — pixel sprites, growth columns, proportions, every colour that is
   not the case — belongs in `src/00-art.js` behind its `<data:NAME>` markers,

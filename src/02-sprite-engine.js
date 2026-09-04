@@ -17,10 +17,42 @@
    canvas. Measured across every species, stage and animation, the union of
    what is actually touched is 154x95, and this is that plus a margin.
 
-   Anything that makes an animal appreciably bigger — a longer-necked species,
-   a taller stage — has to grow this. tools/sheet.html shows the clipping
-   immediately. */
-const BAKE_W = 168, BAKE_H = 112, BAKE_G = 100, BAKE_CX = 84;
+   It is a starting size rather than a limit now: a bake that touches the edge
+   of the box grows it and runs again. See growBake below. */
+let BAKE_W = 168, BAKE_H = 112, BAKE_G = 100, BAKE_CX = 84;
+
+/* …and it grows if it has to.
+
+   Every one of those numbers was fitted to the animals as they were, which was
+   fine while the proportions only changed when someone edited a draw function.
+   With the proportions on sliders they change all the time, and the first thing
+   anyone does is make the tail longer — at which point the tip ran off the box
+   and was cut square, silently, because a bake has no way of complaining.
+
+   So a bake checks whether it touched the edge of its own box, and if it did,
+   the box grows and everything re-bakes. It costs a couple of wasted bakes the
+   first time a sprite outgrows the box and nothing after that. The cap is there
+   because bake cost is the box's area, and an animal that needs more than this
+   has something wrong with it rather than something long about it. */
+const BAKE_MAX_W = 360, BAKE_MAX_H = 260;
+function growBake(){
+  if (BAKE_W >= BAKE_MAX_W && BAKE_H >= BAKE_MAX_H) return false;
+  if (BAKE_W < BAKE_MAX_W){ BAKE_W += 32; BAKE_CX += 16; }   // half each side
+  if (BAKE_H < BAKE_MAX_H){ BAKE_H += 24; BAKE_G  += 24; }   // all of it above
+  frameCache.clear();                     // every cached frame was baked smaller
+  return true;
+}
+/* Anything drawn against the border was cut off by it. The compositor leaves a
+   two-pixel margin for the outline dilation, so a lit pixel on the boundary is
+   not a near miss. */
+function touchedEdge(cv){
+  const g = readCtx(cv), w = cv.width, h = cv.height;
+  const d = g.getImageData(0, 0, w, h).data;
+  const hot = i => d[i*4+3] > 8;
+  for (let x=0;x<w;x++) if (hot(x) || hot((h-1)*w + x)) return true;
+  for (let y=0;y<h;y++) if (hot(y*w) || hot(y*w + w-1)) return true;
+  return false;
+}
 
 /* STAGE, the per-stage multipliers, is data and lives in 00-art.js with the
    rest of what the editor can turn. */
@@ -241,7 +273,21 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
     return hit;
   }
 
-  const sp = SPECIES[spId], st = STAGE[stage], k = st.s * sp.scale;
+  /* Retry at a larger box if this bake ran off the edge of it. Six is well
+     past the cap; the loop ends when growBake() says there is no more room. */
+  let out = null;
+  for (let attempt = 0; attempt < 6; attempt++){
+    out = bakeOnce(spId, stage, pose, eye, skinId);
+    if (!out.clipped || !growBake()) break;
+  }
+  delete out.clipped;
+  frameCache.set(key, out);
+  while (frameCache.size > FRAME_CACHE_MAX) frameCache.delete(frameCache.keys().next().value);
+  return out;
+}
+
+function bakeOnce(spId, stage, pose, eye, skinId){
+  const sp = SPECIES[spId], A = artFor(spId, stage), st = A.st, k = st.s * sp.scale;
   const canvases = [], M = {};
   for (const name of LAYERS){
     const c = makeCv(BAKE_W, BAKE_H), g = readCtx(c);
@@ -260,15 +306,13 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   const composed = composeSprite(canvases, matsFor(spId, skinId), BAKE_W, BAKE_H);
   const t = trim(composed);
   const conv = a => [BAKE_CX + a[0]*k - t.ox, BAKE_G + a[1]*k - t.oy];
-  const out = {
+  return {
     cv: t.cv, w: t.w, h: t.h,
     ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
     eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
-    eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head
+    eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head,
+    clipped: touchedEdge(composed)
   };
-  frameCache.set(key, out);
-  while (frameCache.size > FRAME_CACHE_MAX) frameCache.delete(frameCache.keys().next().value);
-  return out;
 }
 
 /* Bake ahead. A cold bake is a few milliseconds and every pose is one, so a

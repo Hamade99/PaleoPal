@@ -1068,6 +1068,34 @@ Checked by pinning `frillW` on the Triceratops hatchling and re-hashing all
 twelve species-and-stage combinations: exactly one moved. Clearing it put every
 one of them back.
 
+### Two faults in the editor, reported and fixed
+
+**The sliders looked broken.** The number moved and the slider did not. Every
+`input` event called the tab's redraw, which rebuilt the whole panel — removing
+the very element the pointer was dragging and replacing it with a fresh one.
+The drag died after a single step; the number still updated, because that first
+event had landed. So the symptom pointed at the slider and the cause was the
+redraw.
+
+`BUILD` and `PAINT` are separate now. Moving a control paints the previews and
+leaves the controls alone; only choosing a different thing to edit builds them.
+The one case that genuinely changes a control mid-drag — the first edit at a
+stage, which turns an inherited row into a pinned one — applies that decoration
+to the row in place instead.
+
+**The tail was being cut off.** Wind the rex's `tailLen` far enough and the tip
+ran off the bake box and was clipped square. `BAKE_W` and the rest were fitted
+to the animals as they stood, which was fine while proportions only changed
+when someone edited a draw function; on sliders they change all the time, and a
+bake has no way of complaining about its own box.
+
+A bake checks whether it touched the edge of its box now, and if it did, the
+box grows and everything re-bakes. Winding the rex's tail from 72 to 140 takes
+the box from 168×112 to 296×208 and the tip survives; the brachiosaur's neck at
+120 does the same vertically. It costs a couple of wasted bakes the first time
+a sprite outgrows the box and nothing after that, and the box starts small
+again on reload.
+
 **Not done.** The editor turns numbers; it does not yet let you drag a control
 point on the outline. That needs the species outlines themselves extracted to
 data, which is the same job again one level deeper, and is worth doing once the

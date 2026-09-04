@@ -17,14 +17,26 @@ window.addEventListener('error', e => {
   $('err').textContent = e.message + '\n' + (e.error && e.error.stack || '');
 });
 
-/* ---- tabs ---------------------------------------------------------------- */
+/* ---- tabs ----------------------------------------------------------------
+   Two kinds of redraw, and keeping them apart is the whole of why the sliders
+   work.
+
+   BUILD constructs a tab's controls. PAINT redraws only its previews. Dragging
+   a slider fires `input` on every pixel of travel, and the first version called
+   BUILD each time — which removes the very element the pointer is dragging and
+   replaces it with a fresh one. The drag dies after a single step, the number
+   still updates because the event landed, and the slider looks broken.
+
+   So: moving a control PAINTS. Only choosing a different thing to edit, or
+   changing what controls there should be, BUILDS.
+   -------------------------------------------------------------------------- */
 let tab = 'pix';
-const REDRAW = {};
+const BUILD = {}, PAINT = {};
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main').forEach(m => m.classList.toggle('on', m.id === 'tab-' + tab));
-  if (REDRAW[tab]) REDRAW[tab]();
+  if (BUILD[tab]) BUILD[tab]();
 });
 
 function note(text, bad){
@@ -37,12 +49,17 @@ $('save').onclick = async () => {
   catch (e){ note(e.message, true); }
 };
 
-/* Any change to the data invalidates something the game has baked. One call,
-   then every visible preview is rebuilt — a preview showing a stale bake is
-   how an editor teaches you the wrong thing about your own edit. */
+/* A value moved. Drop what the game has baked and repaint the previews — a
+   preview showing a stale bake is how an editor teaches you the wrong thing
+   about your own edit — but leave the controls where they are. */
 function changed(){
   artChanged();
-  for (const k in REDRAW) if (k === tab) REDRAW[k]();
+  if (PAINT[tab]) PAINT[tab]();
+}
+/* The set of controls itself has to change. */
+function rebuild(){
+  artChanged();
+  if (BUILD[tab]) BUILD[tab]();
 }
 
 /* ---- shared widgets ------------------------------------------------------ */
@@ -115,9 +132,9 @@ function pickList(host, ids, current, onPick, labelOf){
 let pixId = Object.keys(PIX)[0], pixPen = 0, painting = 0;
 const PIX_Z = 22;
 
-function pixRedraw(){
+function pixBuild(){
   const p = PIX[pixId];
-  pickList($('pixList'), Object.keys(PIX), () => pixId, id => { pixId = id; pixPen = 0; pixRedraw(); });
+  pickList($('pixList'), Object.keys(PIX), () => pixId, id => { pixId = id; pixPen = 0; pixBuild(); });
 
   // the palette, as chips: the selected one is what the left button paints
   const pal = $('pixPal'); pal.innerHTML = '';
@@ -125,17 +142,36 @@ function pixRedraw(){
     const chip = mk('div', 'chip' + (i === pixPen ? ' on' : ''));
     chip.style.background = c;
     chip.title = c;
-    chip.onclick = () => { pixPen = i; pixRedraw(); };
+    chip.onclick = () => {                       // in place: no rebuild needed
+      pixPen = i;
+      [...pal.children].forEach((el2, k) => el2.classList.toggle('on', k === i));
+    };
     pal.appendChild(chip);
   });
   const add = mk('div', 'chip', '+');
   add.style.cssText += ';display:flex;align-items:center;justify-content:center;color:#8fa39a';
-  add.onclick = () => { p.pal.push('#ffffff'); pixPen = p.pal.length - 1; changed(); pixRedraw(); };
+  add.onclick = () => { p.pal.push('#ffffff'); pixPen = p.pal.length - 1; rebuild(); };
   pal.appendChild(add);
 
-  // the grid
+  // palette entries and the sprite's own size. A colour picker repaints; it
+  // also has to recolour its own chip, which the rebuild used to do for it.
+  const sw = $('pixSwatches'); sw.innerHTML = '';
+  p.pal.forEach((c, i) => colourRow(sw, PIX_CH[i], () => p.pal[i],
+    v => { p.pal[i] = v; pal.children[i].style.background = v; }));
+  const size = mk('div'); size.style.marginTop = '8px';
+  slider(size, 'width', () => p.w, v => pixResize(p, v, p.h), 4, 32, 1);
+  slider(size, 'height', () => p.h, v => pixResize(p, p.w, v), 4, 32, 1);
+  sw.appendChild(size);
+
+  pixPaint();
+}
+
+function pixPaint(){
+  const p = PIX[pixId];
   const cv = $('pixGrid');
-  cv.width = p.w * PIX_Z; cv.height = p.h * PIX_Z;
+  if (cv.width !== p.w * PIX_Z || cv.height !== p.h * PIX_Z){
+    cv.width = p.w * PIX_Z; cv.height = p.h * PIX_Z;
+  }
   const g = cv.getContext('2d');
   g.fillStyle = '#101a1c'; g.fillRect(0, 0, cv.width, cv.height);
   for (let y=0;y<p.h;y++) for (let x=0;x<p.w;x++){
@@ -159,20 +195,13 @@ function pixRedraw(){
   pixDraw(readCtx(bare), pixId, p.ox||0, p.oy||0, 1);
   [1,2,4].forEach(z => pv.appendChild(shot(bare, z, z + 'x')));
   if (outline) pv.appendChild(shot(pixCanvas(pixId, outline), 4, 'outlined'));
-
-  // palette entries, editable, plus the sprite's own size
-  const sw = $('pixSwatches'); sw.innerHTML = '';
-  p.pal.forEach((c, i) => colourRow(sw, PIX_CH[i], () => p.pal[i], v => { p.pal[i] = v; pixRedraw(); }));
-  const size = mk('div'); size.style.marginTop = '8px';
-  slider(size, 'width', () => p.w, v => { pixResize(p, v, p.h); pixRedraw(); }, 4, 24, 1);
-  slider(size, 'height', () => p.h, v => { pixResize(p, p.w, v); pixRedraw(); }, 4, 24, 1);
-  sw.appendChild(size);
 }
+
 function pixResize(p, w, h){
   p.rows = Array.from({length:h}, (_, y) => ((p.rows[y] || '').padEnd(w)).slice(0, w));
   p.w = w; p.h = h;
 }
-function pixPaint(ev, erase){
+function pixAt(ev, erase){
   const p = PIX[pixId], r = $('pixGrid').getBoundingClientRect();
   const x = Math.floor((ev.clientX - r.left) / PIX_Z), y = Math.floor((ev.clientY - r.top) / PIX_Z);
   if (x < 0 || y < 0 || x >= p.w || y >= p.h) return;
@@ -180,15 +209,16 @@ function pixPaint(ev, erase){
   const ch = erase ? ' ' : PIX_CH[pixPen];
   if (row[x] === ch) return;
   p.rows[y] = row.slice(0, x) + ch + row.slice(x + 1);
-  changed(); pixRedraw();
+  changed();
 }
 $('pixGrid').addEventListener('mousedown', e => {
-  e.preventDefault(); painting = e.button === 2 ? 2 : 1; pixPaint(e, painting === 2);
+  e.preventDefault(); painting = e.button === 2 ? 2 : 1; pixAt(e, painting === 2);
 });
-$('pixGrid').addEventListener('mousemove', e => { if (painting) pixPaint(e, painting === 2); });
+$('pixGrid').addEventListener('mousemove', e => { if (painting) pixAt(e, painting === 2); });
 window.addEventListener('mouseup', () => painting = 0);
 $('pixGrid').addEventListener('contextmenu', e => e.preventDefault());
-REDRAW.pix = pixRedraw;
+BUILD.pix = pixBuild;
+PAINT.pix = pixPaint;
 
 const STAGE_COLS = ['s','head','snout','muzzle','neck','limb','tail','bulk','torso','fuzz','horn','frill','hornBend'];
 
@@ -220,110 +250,130 @@ function speciesStrip(host, id, mark){
 /* One row of the proportions panel.
 
    At the base it edits the species' own TUNE table. At a stage it edits that
-   stage's override row, and shows what the value would be if there were no
-   override — a number you cannot see the inherited value of is a number you
-   cannot safely change. Pinned rows are marked and can be cleared back to
-   inherited, because an override that only ever accumulates is a fork. */
+   stage's override row and shows what the value would be without one — a
+   number whose inherited value you cannot see is a number you cannot safely
+   change. Pinned rows are marked and can be cleared back to inherited, because
+   an override that only ever accumulates is a fork rather than an adjustment.
+
+   The first edit at a stage turns an inherited row into a pinned one, and that
+   decoration is applied to this row in place. Rebuilding the panel to show it
+   would replace the slider under the pointer and end the drag. */
 function tuneRow(host, key, inherited){
   const row = mk('label');
-  const pinned = spStage >= 0 && key in SPECIES_STAGE[spId][spStage];
-  const name = mk('span', pinned ? 'pin' : '', key);
+  const overrides = spStage >= 0 ? SPECIES_STAGE[spId][spStage] : null;
+  const name = mk('span', overrides && key in overrides ? 'pin' : '', key);
   row.appendChild(name);
-  const value = () => pinned ? SPECIES_STAGE[spId][spStage][key] : inherited;
+  const start = overrides && key in overrides ? overrides[key] : inherited;
   const [lo, hi, step] = rangeFor(key, inherited);
-  const r = mk('input'); r.type = 'range'; r.min = lo; r.max = hi; r.step = step; r.value = value();
-  const n = mk('input'); n.type = 'number'; n.step = step; n.value = value();
+  const r = mk('input'); r.type = 'range'; r.min = lo; r.max = hi; r.step = step; r.value = start;
+  const n = mk('input'); n.type = 'number'; n.step = step; n.value = start;
+  const tail = mk('span');                          // holds × or "inherited"
+  tail.style.cssText = 'min-width:0;font-size:11px';
+
+  const clearBtn = () => {
+    const x = mk('button', 'clear', '×');
+    x.title = 'back to ' + inherited;
+    x.onclick = ev => { ev.preventDefault(); delete overrides[key]; rebuild(); };
+    return x;
+  };
+  const markPinned = () => {
+    name.className = 'pin';
+    tail.innerHTML = ''; tail.appendChild(clearBtn());
+  };
+  if (overrides){
+    if (key in overrides) markPinned();
+    else { tail.textContent = 'inherited'; tail.style.opacity = '.6'; }
+  }
+
   const push = v => {
-    // the base writes the species' own table; a stage writes its override row
     if (spStage < 0) SPECIES[spId].tune[key] = +v;
-    else SPECIES_STAGE[spId][spStage][key] = +v;
-    r.value = v; n.value = v; changed(); spRedraw();
+    else {
+      const fresh = !(key in overrides);
+      overrides[key] = +v;
+      if (fresh) markPinned();
+    }
+    r.value = v; n.value = v;
+    changed();
   };
   r.oninput = () => push(r.value);
   n.oninput = () => push(n.value);
   row.appendChild(r); row.appendChild(n);
-  if (spStage >= 0){
-    if (pinned){
-      const x = mk('button', 'clear', '×');
-      x.title = 'back to ' + inherited;
-      x.onclick = () => { delete SPECIES_STAGE[spId][spStage][key]; changed(); spRedraw(); };
-      row.appendChild(x);
-    } else {
-      const inh = mk('span', 'inh', 'inherited');
-      inh.style.cssText = 'min-width:0;font-size:11px;opacity:.6';
-      row.appendChild(inh);
-    }
-  }
+  if (overrides) row.appendChild(tail);
   host.appendChild(row);
 }
 
-function spRedraw(){
-  pickList($('spList'), Object.keys(SPECIES), () => spId, id => { spId = id; spRedraw(); },
+function spBuild(){
+  pickList($('spList'), Object.keys(SPECIES), () => spId, id => { spId = id; spBuild(); },
            id => SPECIES[id].common);
   // which stage the panel is editing: the base, or one of the four
   const sel = $('spStage'); sel.innerHTML = '';
   [['-1','All stages (base)']].concat(STAGE.map((s,i) => [String(i), 'Only ' + s.key]))
     .forEach(([v,l]) => { const o = mk('option', null, l); o.value = v;
                           if (+v === spStage) o.selected = true; sel.appendChild(o); });
-  sel.onchange = () => { spStage = +sel.value; spRedraw(); };
+  sel.onchange = () => { spStage = +sel.value; spBuild(); };
 
   const sp = SPECIES[spId];
-  /* At a stage the panel shows the growth columns too, because "the trike's
-     frill at hatchling" is a growth column and is exactly the kind of thing
-     this tab exists for. At the base they belong on the Growth tab, where
-     they are shared by every species. */
   const t = $('spTune'); t.innerHTML = '';
+  /* At a stage the panel shows the growth columns too, because "the trike's
+     frill at hatchling" is a growth column and is exactly what this is for. At
+     the base they belong on the Growth tab, where every species shares them. */
   if (spStage >= 0){
-    const h = mk('div'); h.style.cssText = 'color:var(--dim);font-size:11px;margin:2px 0 6px';
-    h.textContent = 'Growth columns';
-    t.appendChild(h);
+    t.appendChild(heading('Growth columns'));
     STAGE_COLS.forEach(k => tuneRow(t, k, STAGE[spStage][k]));
-    const h2 = mk('div'); h2.style.cssText = 'color:var(--dim);font-size:11px;margin:10px 0 6px';
-    h2.textContent = 'Proportions';
-    t.appendChild(h2);
+    t.appendChild(heading('Proportions', true));
   }
   for (const k in sp.tune) tuneRow(t, k, sp.tune[k]);
 
   const c = $('spCols'); c.innerHTML = '';
   for (const k in sp.spec) colourRow(c, k, () => sp.spec[k], v => sp.spec[k] = v);
-  speciesStrip($('spPreview'), spId, spStage);
+  spPaint();
 }
-REDRAW.species = spRedraw;
+function heading(text, gap){
+  const h = mk('div', null, text);
+  h.style.cssText = 'color:var(--dim);font-size:11px;margin:' + (gap ? '10px' : '2px') + ' 0 6px';
+  return h;
+}
+function spPaint(){ speciesStrip($('spPreview'), spId, spStage); }
+BUILD.species = spBuild;
+PAINT.species = spPaint;
 
 /* ---- tab: growth --------------------------------------------------------- */
-
-function stRedraw(){
+function stBuild(){
   const t = $('stTable'); t.innerHTML = '';
   const grid = mk('div', 'grid4');
   grid.style.gridTemplateColumns = 'auto repeat(' + STAGE.length + ', auto)';
   grid.appendChild(mk('span', null, ''));
-  STAGE.forEach(s => grid.appendChild(mk('span', null, s.key)));
+  STAGE.forEach(s2 => grid.appendChild(mk('span', null, s2.key)));
   STAGE_COLS.forEach(col => {
     grid.appendChild(mk('span', null, col));
-    STAGE.forEach(s => {
-      const n = mk('input'); n.type = 'number'; n.step = '.01'; n.value = s[col];
+    STAGE.forEach(s2 => {
+      const n = mk('input'); n.type = 'number'; n.step = '.01'; n.value = s2[col];
       n.style.width = '62px';
-      n.oninput = () => { s[col] = +n.value; changed(); };
+      n.oninput = () => { s2[col] = +n.value; changed(); };
       grid.appendChild(n);
     });
   });
   t.appendChild(grid);
+  stPaint();
+}
+function stPaint(){
   const pv = $('stPreview'); pv.innerHTML = '';
   for (const id in SPECIES){
-    const h = mk('h2', null, SPECIES[id].common);
+    pv.appendChild(mk('h2', null, SPECIES[id].common));
     const strip = mk('div', 'strip');
-    pv.appendChild(h); pv.appendChild(strip);
+    pv.appendChild(strip);
     speciesStrip(strip, id);
   }
 }
-REDRAW.stages = stRedraw;
+BUILD.stages = stBuild;
+PAINT.stages = stPaint;
 
 /* ---- tab: coats ---------------------------------------------------------- */
 let coatKey = 'rex|wild';
-function coatRedraw(){
+function coatBuild(){
   const keys = [];
   for (const sp in SKINS) for (const k of SKINS[sp]) keys.push(sp + '|' + k.id);
-  pickList($('coatList'), keys, () => coatKey, k => { coatKey = k; coatRedraw(); },
+  pickList($('coatList'), keys, () => coatKey, k => { coatKey = k; coatBuild(); },
            k => { const [sp, id] = k.split('|');
                   return SPECIES[sp].common + ' · ' + SKINS[sp].find(x => x.id === id).name; });
   const [sp, id] = coatKey.split('|');
@@ -336,24 +386,28 @@ function coatRedraw(){
   const pat = mk('label');
   pat.appendChild(mk('span', null, 'pattern'));
   const sel = mk('select');
-  ['none','bands','spots','speckle','patches'].forEach(p => {
-    const o = mk('option', null, p); o.value = p; if (coat.pattern === p) o.selected = true;
+  ['none','bands','spots','speckle','patches'].forEach(pn => {
+    const o = mk('option', null, pn); o.value = pn; if (coat.pattern === pn) o.selected = true;
     sel.appendChild(o);
   });
   sel.onchange = () => { coat.pattern = sel.value; changed(); };
   pat.appendChild(sel); c.appendChild(pat);
-
+  coatPaint();
+}
+function coatPaint(){
+  const [sp, id] = coatKey.split('|');
   const pv = $('coatPreview'); pv.innerHTML = '';
   [1,3].forEach(st => pv.appendChild(shot(frameOf(sp, st, 'idle', 0, false, id).cv, 2, STAGE[st].key)));
   pv.appendChild(shot(frameOf(sp, 3, 'walk', 4, false, id).cv, 2, 'walk'));
 }
-REDRAW.coats = coatRedraw;
+BUILD.coats = coatBuild;
+PAINT.coats = coatPaint;
 
 /* ---- tab: habitats ------------------------------------------------------- */
 let bioId = 'valley';
 const PHASES = ['dawn','day','dusk','night'];
-function bioRedraw(){
-  pickList($('bioList'), Object.keys(BIOME_ART), () => bioId, id => { bioId = id; bioRedraw(); },
+function bioBuild(){
+  pickList($('bioList'), Object.keys(BIOME_ART), () => bioId, id => { bioId = id; bioBuild(); },
            id => BIOME_ART[id].name);
   const B = BIOME_ART[bioId];
   const sky = $('bioSky'); sky.innerHTML = '';
@@ -365,13 +419,16 @@ function bioRedraw(){
   for (const k in B.ground) colourRow(gr, k, () => B.ground[k], v => B.ground[k] = v);
   const ti = $('bioTint'); ti.innerHTML = '';
   PHASES.forEach(ph => rgbaRow(ti, ph, () => B.tint[ph], v => B.tint[ph] = v));
-
+  bioPaint();
+}
+function bioPaint(){
   const pv = $('bioPreview'); pv.innerHTML = '';
   PHASES.forEach(ph => pv.appendChild(shot(bakeBg(ph, bioId), 1, ph)));
 }
-REDRAW.habitat = bioRedraw;
+BUILD.habitat = bioBuild;
+PAINT.habitat = bioPaint;
 
 /* ---- go ------------------------------------------------------------------ */
-pixRedraw();
+pixBuild();
 loadTemplate().then(() => note('Ready. Edits are live; Save writes src/00-art.js.'))
   .catch(e => note(e.message + ' — serve the folder over http, not file://', true));

@@ -247,6 +247,23 @@ rather than a single line.
 Every `checks` line in the registry is a promise that the sprite draws that
 feature. Do not add one without adding the geometry.
 
+## The bake box grows
+
+`BAKE_W`, `BAKE_H`, `BAKE_G` and `BAKE_CX` are a starting size, not a limit. A
+bake checks whether it touched the edge of its own box, and if it did, the box
+grows and everything re-bakes.
+
+Those numbers were fitted to the animals as they stood, which was fine while
+proportions only changed when someone edited a draw function. On sliders they
+change constantly, and the first thing anyone does is wind the tail out — at
+which point the tip used to run off the box and be cut square, silently,
+because a bake has no way of complaining.
+
+The box never shrinks back within a session, because bake cost is its area and
+oscillating is worse than being slightly generous; it starts small again on
+reload. `BAKE_MAX_W`/`BAKE_MAX_H` cap it, on the grounds that an animal needing
+more than that has something wrong with it rather than something long about it.
+
 ## 10. What a frame costs
 
 Every pass in `composeSprite` is per-pixel over the bake box, so the box's area
