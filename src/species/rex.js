@@ -42,19 +42,66 @@ function drawRex(M, P){
     [hx+9, hy+hh*.58]
   ]);
 
-  // skull: deep behind the eye, tapering to a blunt muzzle
-  blob(M.head, [[hx+13, hy-hh*.12],[hx+11, hy-hh*.96],[hx-sn*.34, hy-hh*1.03],
-                [hx-sn*.86, hy-hh*.72],[hx-sn*1.0, hy-hh*.08],[hx-sn*.92, hy+hh*.24],
-                [hx-sn*.45, hy+hh*.32],[hx+13, hy+hh*.36]]);
-  // hinged lower jaw. Lips cover the teeth, so a shut mouth shows none of them
-  M.head.save(); M.head.translate(hx+10, hy+hh*.14); M.head.rotate(jaw*.44);
-  blob(M.head, [[3,-hh*.28],[-sn*.38,-hh*.3],[-sn*.94,-hh*.04],[-sn*.88,hh*.3],[-sn*.34,hh*.46],[3,hh*.4]]);
-  M.head.restore();
+  /* Upper jaw, deep behind the eye. The premaxilla is squared off — a
+     near-vertical front edge rather than a rounded nub — which is the quickest
+     way to read tyrannosaur instead of generic theropod at this size. */
+  const lipY = hy + hh*.30;
+  blob(M.head, [[hx+13, hy-hh*.12],[hx+11, hy-hh*.96],[hx-sn*.30, hy-hh*1.04],
+                [hx-sn*.62, hy-hh*.86],[hx-sn*.86, hy-hh*.62],
+                // the front is carried on three near-vertical stations, so the
+                // curve through them stays flat instead of rounding the tip off
+                [hx-sn*.99, hy-hh*.44],[hx-sn*1.03, hy-hh*.16],[hx-sn*1.02, lipY-hh*.10],
+                [hx-sn*.94, lipY],[hx-sn*.45, lipY+hh*.05],[hx+13, hy+hh*.36]]);
+
+  /* Hinged mandible, on its own material. It was always drawn and always
+     hinged, but it was painted onto `head`, and the compositor only draws an
+     edge where two different materials meet — so the whole lower jaw merged
+     into the skull and the animal had no mouth. It hangs below the upper
+     jaw's oral margin, and that boundary is the lip line.
+
+     −x is forward, so the jaw opens on a negative rotation. */
+  const hinge = [hx + 11, hy + hh*.16], jawA = -jaw * .34;
+  M.jaw.save(); M.jaw.translate(hinge[0], hinge[1]); M.jaw.rotate(jawA);
+  blob(M.jaw, [[2,-hh*.16],[-sn*.40,-hh*.20],[-sn*.92,hh*.02],
+               [-sn*.88,hh*.34],[-sn*.34,hh*.52],[2,hh*.44]]);
+  M.jaw.restore();
+  // pale chin, carried by the jaw rather than left floating under it
+  M.belly.save(); M.belly.translate(hinge[0], hinge[1]); M.belly.rotate(jawA);
+  oval(M.belly, -sn*.52, hh*.38, sn*.22, hh*.09);
+  M.belly.restore();
+
+  const about = (p, a, o) => [o[0] + (p[0]-o[0])*Math.cos(a) - (p[1]-o[1])*Math.sin(a),
+                              o[1] + (p[0]-o[0])*Math.sin(a) + (p[1]-o[1])*Math.cos(a)];
   if (jaw > .06){
-    M.mouth.save(); M.mouth.translate(hx+10, hy+hh*.14); M.mouth.rotate(jaw*.44);
-    blob(M.mouth, [[0,-hh*.2],[-sn*.38,-hh*.22],[-sn*.8,-hh*.02],[-sn*.76,hh*.18],[-sn*.28,hh*.26],[0,hh*.22]]);
-    M.mouth.restore();
-    for (let i=0;i<4;i++) oval(M.horn, hx - sn*.2 - i*sn*.17, hy + hh*.14, Math.max(.8,1.2*hM), Math.max(1.1,2*hM));
+    /* The gape is the wedge between the two oral margins, anchored at the
+       hinge. Drawing it as a slab carried around by the mandible put mouth
+       lining outside the head; drawing it through `blob` bowed the curves
+       outward and swallowed the whole face. Straight edges, because the two
+       margins it runs between are straight. */
+    const uTip = [hx - sn*.93, lipY - hh*.04];
+    const lTip = about([hx - sn*.86, hy + hh*.36], jawA, hinge);
+    const gape = [hinge, uTip, lTip];
+    M.mouth.beginPath();
+    M.mouth.moveTo(gape[0][0], gape[0][1]);
+    for (let i=1;i<gape.length;i++) M.mouth.lineTo(gape[i][0], gape[i][1]);
+    M.mouth.closePath(); M.mouth.fill();
+    /* Teeth. The large ones are maxillary; the dentary shows tips only, which
+       is both what the animal had and what reads at this size. */
+    const tw = Math.max(.9, 1.25*hM);
+    for (let i=0;i<5;i++){
+      const u = .18 + i*.17;
+      oval(M.horn, lerp(hinge[0],uTip[0],u), lerp(hinge[1],uTip[1],u) + hh*.10,
+           tw, Math.max(1.3, (2.4 - i*.22)*hM));
+    }
+    for (let i=0;i<4;i++){
+      const u = .26 + i*.18;
+      oval(M.horn, lerp(hinge[0],lTip[0],u), lerp(hinge[1],lTip[1],u) - hh*.08,
+           tw*.8, Math.max(1.0, 1.5*hM));
+    }
+  } else {
+    // shut: lips cover the teeth, so all that shows is the oral margin itself
+    tube(M.mouth, [[hx+9, hy+hh*.31],[hx-sn*.46, lipY+hh*.02],[hx-sn*.93, lipY-hh*.06]],
+         [Math.max(.9,1.5*hM), Math.max(.8,1.25*hM), Math.max(.6,.8*hM)]);
   }
 
   const ex = hx - sn*.46, ey = hy - hh*.42;
@@ -64,8 +111,7 @@ function drawRex(M, P){
     const q = samplePath(topLine, .04 + i*.088);          // ride the actual back line
     oval(M.crest, q[0], q[1] + 1.6*lM, 2.3*lM, 1.4*lM);
   }
-  oval(M.belly, -6, bellyY - 2*lM, 17*lM, 4*lM);
-  oval(M.belly, hx - sn*.3, hy + hh*.26, sn*.3, hh*.16);
+  // the ventral countershading is painted from the spine by paintBelly
 
   // two-fingered hand, palm turned inward the way a theropod wrist actually sits
   const ax = withX + 9, ay = withY + 22*lM;

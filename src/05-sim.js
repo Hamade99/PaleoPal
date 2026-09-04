@@ -233,7 +233,7 @@ function feed(id){
   if (hasIll('bellyache')) return refuse(S.name + ' turns away from it. Settle the stomach first.');
   if (S.needs.hunger > 94) return refuse(S.name + ' is full.');
   G.coins -= f.cost;
-  closeSheet();
+  closeScreen();                                  // back to the habitat to watch it land
   tossFood(id);                                   // the food arcs in; effects land on the bite
   refreshLight();
 }

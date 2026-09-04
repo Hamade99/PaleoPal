@@ -1,336 +1,425 @@
 /* ==========================================================================
    PALEOPAL — the case
    The game lives inside one moulded, speckled dinosaur egg: a shell, a bone
-   bezel, a recessed screen and physical keys. All of it is CSS. The project
-   ships no image assets and this file does not add any; the speckles are
-   tiled radial gradients and the mouldings are layered insets.
+   bezel, a recessed screen and five keys. All of it is CSS. The project ships
+   no image assets and this file does not add any.
+
+   Three rules hold the look together, and they are the whole difference
+   between a designed object and a rendered one:
+
+   1. ONE GRID. Every size, pad, radius and offset is a whole number of --px.
+      The screen is 224 device pixels wide and snaps to a whole or half
+      multiple of that, so the case and the world it contains share a grid.
+
+   2. ONE SURFACE, ONE EDGE. Each material is a flat fill with a single hard
+      edge and at most one highlight line. The first pass had gradients,
+      inset highlights, drop shadows, a glare sheet and a page vignette all
+      running at once at similar strength, which is what makes a thing read as
+      rendered rather than moulded.
+
+   3. NOTHING PERFECTLY SYMMETRICAL. Moulded plastic has a seam, a gate mark
+      and a maker's stamp, and its decoration is cast, not laid out. The
+      osteoderms are irregular, the brand sits off centre against the seam,
+      and the four screws are not four of the same screw.
    ========================================================================== */
 :root{
-  /* screen side — the canvas art is tuned to these, so they do not move */
-  --bg:#0e1417; --deep:#141d21; --panel:#1b262a; --line:#2b3a3f;
-  --bone:#e9e1cb; --dim:#93a29c; --ink:#101a18;
-  --moss:#7ea55f; --ochre:#d9a441; --rust:#c2603c; --sky:#7fb2c9;
+  /* the grid. Everything in the case is a multiple of this. */
+  --px:4px;
+  --lcd-w:448px;                     /* set by JS to a whole or half multiple of 224 */
 
-  /* shell side — warm sandstone plastic, jungle-green keys */
-  --shell-hi:#e3c07a; --shell:#c19243; --shell-mid:#a67a31;
-  --shell-lo:#7d5620; --shell-edge:#4e3209;
-  --scute:#9a6d28; --scute-hi:#d8ab5c;
-  --speck-a:rgba(84,49,12,.50); --speck-b:rgba(126,84,32,.40);
-  --bezel-hi:#f6efdc; --bezel:#ddd1b1; --bezel-lo:#a4936d; --bezel-edge:#6b5d3f;
-  --key:#316d4b; --key-hi:#4a936a; --key-lo:#1a4530; --key-edge:#0e2a1c;
+  /* Screen side. The canvas art is tuned to these, so they do not move. */
+  --bg:#0e1417; --deep:#141d21; --panel:#1b262a; --line:#2b3a3f;
+  --bone:#e9e1cb; --dim:#8fa39a; --ink:#101a18;
+  --moss:#8cb765; --ochre:#e0ac48; --rust:#cf6a44; --sky:#7fb2c9;
+
+  /* Case side. Two families and no more: a warm sandstone plastic for the
+     shell and a cool grey-green for everything that is not the shell. The
+     first pass ran one saturated amber through the shell, the wallet, the
+     buttons and the bezel, so nothing had anything to sit against. */
+  --shell:#c08f43;                   /* the moulding */
+  --shell-hi:#dcb060;                /* the one highlight line, top edges */
+  --shell-lo:#8d6527;                /* the one shade, bottom edges */
+  --shell-edge:#42290a;              /* the hard outline, used everywhere */
+  --scute:#a9782f;
+  --bezel:#d8ccac;                   /* bone */
+  --bezel-lo:#a08e69;
+  --bezel-edge:#5d5138;
+  --key:#2f6b49;                     /* jungle green, the one accent */
+  --key-hi:#448a60;
+  --key-lo:#1b432e;
+  --key-edge:#0c2419;
+  --stamp:rgba(52,32,6,.55);         /* moulded lettering */
+
   --safe:env(safe-area-inset-bottom,0px);
 
-  /* one speckle field, reused wherever the shell plastic shows */
+  /* Cast-in speckle. Irregular on purpose: an even field of dots reads as
+     noise, a cast one reads as material. */
   --speckles:
-    radial-gradient(1.7px 1.7px at 17px 23px,var(--speck-a) 98%,transparent),
-    radial-gradient(1.2px 1.2px at 61px 70px,var(--speck-a) 98%,transparent),
-    radial-gradient(2.3px 2.3px at 40px 11px,var(--speck-b) 98%,transparent),
-    radial-gradient(1.4px 1.4px at 88px 47px,var(--speck-a) 98%,transparent),
-    radial-gradient(2.0px 2.0px at 12px 96px,var(--speck-b) 98%,transparent),
-    radial-gradient(1.1px 1.1px at 71px 33px,var(--speck-a) 98%,transparent),
-    radial-gradient(1.8px 1.8px at 34px 58px,var(--speck-b) 98%,transparent);
+    radial-gradient(2px 2px at 17px 23px,rgba(74,44,10,.55) 98%,transparent),
+    radial-gradient(1px 1px at 61px 70px,rgba(74,44,10,.45) 98%,transparent),
+    radial-gradient(3px 3px at 40px 11px,rgba(120,80,30,.40) 98%,transparent),
+    radial-gradient(1px 1px at 88px 47px,rgba(74,44,10,.50) 98%,transparent),
+    radial-gradient(2px 2px at 12px 96px,rgba(120,80,30,.38) 98%,transparent),
+    radial-gradient(1px 1px at 71px 33px,rgba(74,44,10,.42) 98%,transparent),
+    radial-gradient(2px 2px at 34px 58px,rgba(120,80,30,.44) 98%,transparent);
   --speckle-size:97px 97px,97px 97px,131px 131px,131px 131px,73px 73px,73px 73px,113px 113px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  background:
-    radial-gradient(90% 55% at 50% 108%,rgba(126,165,95,.10),transparent 70%),
-    radial-gradient(120% 80% at 50% 0%,#241a10 0%,#0d0906 65%);
+  /* One flat ground. The radial vignette was doing the work a photograph does,
+     not the work a background does. */
+  background:#1a1208;
   color:var(--bone);
-  font-family:Inter,system-ui,sans-serif;
+  font-family:'Pixelify Sans',ui-monospace,monospace;
   display:flex;align-items:flex-start;justify-content:center;
   overscroll-behavior:none;
 }
-/* the crest stands 38px proud of the shell and the feet 12px below it, so
-   the padding here is what stops either being clipped on a short viewport */
-#app{width:100%;max-width:440px;margin:auto 0;padding:42px 10px calc(24px + var(--safe));position:relative}
+#app{width:100%;max-width:520px;margin:auto 0;
+  padding:calc(var(--px)*10) calc(var(--px)*3) calc(var(--px)*7 + var(--safe));position:relative}
 
 /* ---------- the shell ---------- */
-/* Rounder than the first pass, which was closer to a phone than to an egg:
-   the crown is a proper dome and the base is a full round instead of a
-   softened rectangle. A row of osteoderms runs over the top and two clawed
-   feet carry it, so the case reads as an animal rather than as a gadget. */
 .shell{
-  position:relative;padding:54px 19px 44px;
-  border-radius:50% 50% 46% 46% / 22% 22% 17% 17%;
-  background-image:var(--speckles),
-    radial-gradient(130% 62% at 50% -6%,var(--shell-hi) 0%,var(--shell) 40%,var(--shell-mid) 68%,var(--shell-lo) 100%);
+  position:relative;
+  padding:calc(var(--px)*13) calc(var(--px)*5) calc(var(--px)*10);
+  border-radius:50% 50% 44% 44% / 20% 20% 15% 15%;
+  background-image:var(--speckles),linear-gradient(var(--shell) 0 100%);
   background-size:var(--speckle-size),100% 100%;
   border:2px solid var(--shell-edge);
+  /* one highlight along the crown, one shade along the base, one shadow under
+     the whole thing. Nothing else. */
   box-shadow:
-    inset 0 3px 0 rgba(255,236,196,.55),
-    inset 0 -6px 14px rgba(60,34,4,.5),
-    inset 0 0 0 6px rgba(255,225,170,.10),
-    0 12px 0 #3d2708, 0 20px 34px rgba(0,0,0,.6);
+    inset 0 3px 0 var(--shell-hi),
+    inset 0 -5px 0 var(--shell-lo),
+    0 calc(var(--px)*2) 0 #33200a;
 }
-/* Osteoderms over the crown. They follow the dome rather than sitting in a
-   straight line, which is the difference between a dorsal crest and a zip
-   fastener: each plate is placed on the arc and rotated to stand normal to
-   it. The keychain tab that used to live here is gone — it was the last
-   piece of the case still shaped like a Tamagotchi. */
-.scutes{position:absolute;left:50%;top:-38px;transform:translateX(-50%);
-  width:219px;height:42px;pointer-events:none}
-.scutes i{position:absolute;bottom:0;width:15px;transform-origin:50% 100%;
-  background:linear-gradient(var(--scute-hi),var(--scute) 62%,var(--shell-lo));
-  border:2px solid var(--shell-edge);border-bottom:0;
-  border-radius:58% 58% 0 0 / 78% 78% 0 0;
-  box-shadow:inset 0 1px 0 rgba(255,246,220,.65)}
-.scutes i:nth-child(1){left:0;   bottom:-20px;height:17px;transform:rotate(-28deg)}
-.scutes i:nth-child(2){left:33px;bottom:-10px;height:23px;transform:rotate(-19deg)}
-.scutes i:nth-child(3){left:66px;bottom:-3px; height:28px;transform:rotate(-9deg)}
-.scutes i:nth-child(4){left:98px;bottom:0;    height:32px;width:19px}
-.scutes i:nth-child(5){left:134px;bottom:-3px;height:28px;transform:rotate(9deg)}
-.scutes i:nth-child(6){left:167px;bottom:-10px;height:23px;transform:rotate(19deg)}
-.scutes i:nth-child(7){left:200px;bottom:-20px;height:17px;transform:rotate(28deg)}
+/* the mould seam, and the gate mark it runs to */
+.shell::before{
+  content:"";position:absolute;left:50%;top:calc(var(--px)*-1);bottom:calc(var(--px)*-1);
+  width:1px;background:rgba(66,41,10,.30);pointer-events:none;
+  transform:translateX(calc(var(--px)*9));
+}
+.shell::after{
+  content:"";position:absolute;right:calc(var(--px)*7);bottom:calc(var(--px)*3);
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
+}
 
-/* Two three-toed feet the case stands on. The toes are real elements rather
-   than pale circles painted inside a tab, because they have to break the
-   silhouette to read as toes — outlined the same way the shell is, with a
-   keratin claw on each. */
-.feet{position:absolute;left:0;right:0;bottom:-12px;
-  display:flex;justify-content:center;gap:54px;pointer-events:none}
-.feet i{position:relative;width:96px;height:22px;
-  border-radius:0 0 10px 10px;
-  background:linear-gradient(var(--shell-mid) 30%,var(--shell-lo));
+/* Osteoderms over the crown, cast rather than laid out: no two the same width,
+   the spacing uneven, and the tallest one left of centre. A mirrored row of
+   seven identical plates is the single most machine-made thing a case can do. */
+.scutes{position:absolute;left:50%;top:calc(var(--px)*-9);transform:translateX(-50%);
+  width:calc(var(--px)*56);height:calc(var(--px)*10);pointer-events:none}
+.scutes i{position:absolute;bottom:0;transform-origin:50% 100%;
+  background:var(--scute);
+  border:2px solid var(--shell-edge);border-bottom:0;
+  border-radius:56% 56% 0 0 / 76% 76% 0 0;
+  box-shadow:inset 0 2px 0 var(--shell-hi)}
+.scutes i:nth-child(1){left:0;    bottom:-21px;width:13px;height:15px;transform:rotate(-31deg)}
+.scutes i:nth-child(2){left:30px; bottom:-11px;width:16px;height:24px;transform:rotate(-20deg)}
+.scutes i:nth-child(3){left:64px; bottom:-2px; width:14px;height:27px;transform:rotate(-11deg)}
+.scutes i:nth-child(4){left:92px; bottom:1px;  width:19px;height:33px;transform:rotate(-3deg)}
+.scutes i:nth-child(5){left:126px;bottom:-1px; width:15px;height:26px;transform:rotate(7deg)}
+.scutes i:nth-child(6){left:157px;bottom:-12px;width:17px;height:21px;transform:rotate(18deg)}
+.scutes i:nth-child(7){left:191px;bottom:-22px;width:12px;height:14px;transform:rotate(30deg)}
+
+/* Two three-toed feet. Flat plastic with one hard edge and a keratin claw on
+   each toe — the claws have to break the silhouette or the foot reads as a
+   tab with dots painted on it. */
+.feet{position:absolute;left:0;right:0;bottom:calc(var(--px)*-3);
+  display:flex;justify-content:center;gap:calc(var(--px)*13);pointer-events:none}
+.feet i{position:relative;width:calc(var(--px)*24);height:calc(var(--px)*5);
+  border-radius:0 0 calc(var(--px)*2) calc(var(--px)*2);
+  background:var(--shell-lo);
   border:2px solid var(--shell-edge);border-top:0}
-.feet b{position:absolute;width:26px;height:21px;bottom:-14px;
-  border-radius:0 0 52% 52% / 0 0 74% 74%;
-  background:linear-gradient(var(--shell-lo),var(--shell-mid));
-  border:2px solid var(--shell-edge);border-top:0;
-  box-shadow:0 3px 0 rgba(30,18,3,.45)}
+.feet b{position:absolute;width:calc(var(--px)*6);height:calc(var(--px)*5);
+  bottom:calc(var(--px)*-3);
+  border-radius:0 0 50% 50% / 0 0 72% 72%;
+  background:var(--shell-lo);
+  border:2px solid var(--shell-edge);border-top:0}
 .feet b:nth-child(1){left:1px}
-.feet b:nth-child(2){left:33px;width:30px;height:25px;bottom:-18px}
+.feet b:nth-child(2){left:calc(var(--px)*8);width:calc(var(--px)*7);height:calc(var(--px)*6);
+  bottom:calc(var(--px)*-4)}
 .feet b:nth-child(3){right:1px}
 .feet b::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
-  width:9px;height:8px;border-radius:0 0 50% 50%;
-  background:var(--bezel-hi);box-shadow:0 0 0 1.5px var(--shell-edge)}
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:0 0 50% 50%;
+  background:var(--bezel);box-shadow:0 0 0 1.5px var(--shell-edge)}
 
-/* ---------- faceplate head ---------- */
-.shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:0 6px;margin-bottom:12px}
+/* ---------- faceplate ---------- */
+.shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:calc(var(--px)*2);padding:0 calc(var(--px)*2);margin-bottom:calc(var(--px)*3)}
+/* the brand is moulded lettering, and it sits against the seam rather than in
+   the middle of the shell */
 .brand{
   flex:0 0 100%;text-align:center;position:relative;
-  font-family:'Pixelify Sans',monospace;font-weight:700;font-size:20px;letter-spacing:2px;
-  color:#3a2408;text-shadow:0 1px 0 rgba(255,236,196,.6);
+  font-weight:700;font-size:calc(var(--px)*5);letter-spacing:2px;
+  color:var(--stamp);text-shadow:0 1px 0 rgba(255,236,196,.45);
+  padding-left:calc(var(--px)*9);
 }
-.brand span{color:#1d4a33}
-.brand .rivet{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
-  width:46px;height:3px;border-radius:2px;background:rgba(87,54,9,.35);box-shadow:0 1px 0 rgba(255,236,196,.45)}
-.tools{display:flex;align-items:center;gap:7px;margin-top:9px}
+.brand span{color:#22503a}
+.brand .rivet{position:absolute;left:50%;bottom:calc(var(--px)*-2);
+  transform:translateX(calc(-50% + var(--px)*4.5));
+  width:calc(var(--px)*11);height:2px;background:rgba(66,41,10,.30);
+  box-shadow:0 1px 0 rgba(255,236,196,.35)}
+.tools{display:flex;align-items:center;gap:calc(var(--px)*2);margin-top:calc(var(--px)*2)}
 .wallet{
-  display:flex;align-items:center;gap:6px;font-family:'Pixelify Sans';font-size:17px;color:var(--ochre);
-  background:linear-gradient(#20292c,#151d20);border:2px solid var(--shell-edge);border-radius:9px;
-  padding:4px 10px 3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 3px 0 rgba(61,39,8,.85)
+  display:flex;align-items:center;gap:calc(var(--px)*1.5);
+  font-size:calc(var(--px)*4);color:var(--ochre);
+  background:#141d21;border:2px solid var(--shell-edge);
+  border-radius:calc(var(--px)*2);
+  padding:calc(var(--px)*1) calc(var(--px)*2.5) calc(var(--px)*0.75);
+  box-shadow:inset 0 2px 0 #0a1013
 }
 #coinArt{display:flex}
+
+/* Small keys on the faceplate. Same moulding as the big ones underneath, so
+   there is one button in this design rather than three. */
 .iconbtn{
-  background:linear-gradient(var(--shell-hi),var(--shell-mid));
-  border:2px solid var(--shell-edge);color:#3a2408;
-  width:36px;height:36px;border-radius:10px;cursor:pointer;
-  font-size:15px;font-family:'Pixelify Sans';display:grid;place-items:center;
-  box-shadow:inset 0 1px 0 rgba(255,242,214,.7),0 4px 0 rgba(61,39,8,.9)
+  background:var(--shell);
+  border:2px solid var(--shell-edge);color:var(--stamp);
+  width:calc(var(--px)*9);height:calc(var(--px)*9);
+  border-radius:calc(var(--px)*2);cursor:pointer;
+  font-size:calc(var(--px)*4);font-family:inherit;display:grid;place-items:center;
+  box-shadow:inset 0 2px 0 var(--shell-hi),inset 0 -2px 0 var(--shell-lo),
+             0 calc(var(--px)*1) 0 var(--shell-edge)
 }
-.iconbtn:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,242,214,.7)}
-.iconbtn:hover{background:linear-gradient(#f0cb87,var(--shell))}
-/* muted reads as a dimmed key, not a dead one */
-.iconbtn.off{filter:saturate(.4) brightness(.88)}
-.iconbtn.dev{background:linear-gradient(var(--key-hi),var(--key));border-color:var(--key-edge);
-  box-shadow:inset 0 1px 0 rgba(190,240,210,.45),0 4px 0 var(--key-edge)}
-.iconbtn.dev:hover{background:linear-gradient(#5aa87a,var(--key-hi))}
-.iconbtn.dev:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(190,240,210,.45)}
+.iconbtn:hover{background:var(--shell-hi)}
+.iconbtn:active,.iconbtn.down{transform:translateY(calc(var(--px)*1));
+  box-shadow:inset 0 2px 0 var(--shell-lo)}
+.iconbtn.off{filter:saturate(.35) brightness(.85)}
+.iconbtn.dev{background:var(--key);border-color:var(--key-edge);color:#dff0e4;
+  box-shadow:inset 0 2px 0 var(--key-hi),inset 0 -2px 0 var(--key-lo),
+             0 calc(var(--px)*1) 0 var(--key-edge)}
+.iconbtn.dev:hover{background:var(--key-hi)}
 #btnNest{position:relative}
-#nestCount{position:absolute;right:-4px;top:-5px;min-width:16px;height:16px;border-radius:9px;
-  background:var(--rust);color:#fff;font-family:'Pixelify Sans';font-size:10px;line-height:15px;
-  text-align:center;font-style:normal;border:1.5px solid var(--shell-edge)}
+#nestCount{position:absolute;right:calc(var(--px)*-1);top:calc(var(--px)*-1);
+  min-width:calc(var(--px)*4);height:calc(var(--px)*4);border-radius:calc(var(--px)*2);
+  background:var(--rust);color:#fff;font-size:calc(var(--px)*2.5);
+  line-height:calc(var(--px)*3.5);text-align:center;font-style:normal;
+  border:1.5px solid var(--shell-edge)}
 #nestCount:empty{display:none}
 
-/* ---------- bone bezel around the screen ---------- */
+/* ---------- bone bezel ---------- */
 .bezel{
-  position:relative;border-radius:22px;padding:11px;
-  background:linear-gradient(160deg,var(--bezel-hi),var(--bezel) 45%,var(--bezel-lo));
+  position:relative;border-radius:calc(var(--px)*5);padding:calc(var(--px)*3);
+  background:var(--bezel);
   border:2px solid var(--bezel-edge);
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.8),inset 0 -3px 6px rgba(88,74,46,.45),
-             0 5px 0 rgba(61,39,8,.55),0 0 0 3px rgba(87,54,9,.35)
+  box-shadow:inset 0 2px 0 #f2ead2,inset 0 -3px 0 var(--bezel-lo),
+             0 calc(var(--px)*1) 0 rgba(66,41,10,.5)
 }
-.screw{position:absolute;width:7px;height:7px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#efe6cd,#8d7d5a);
-  box-shadow:inset 0 0 0 1px rgba(80,66,38,.7),0 1px 0 rgba(255,255,255,.5)}
-.screw::after{content:"";position:absolute;left:1px;top:3px;width:5px;height:1px;background:rgba(70,58,32,.8)}
-.screw.tl{left:5px;top:5px}.screw.tr{right:5px;top:5px}
-.screw.bl{left:5px;bottom:5px}.screw.br{right:5px;bottom:5px}
+/* Four fixings, not four of the same screw: two slotted, one cross, one plug.
+   Nobody reads them individually and everybody reads the difference. */
+.screw{position:absolute;width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:#b9aa85;box-shadow:inset 0 0 0 1px rgba(80,66,38,.7)}
+.screw::after{content:"";position:absolute;left:1px;top:calc(50% - .5px);
+  width:calc(100% - 2px);height:1px;background:rgba(70,58,32,.85)}
+.screw.tr::before{content:"";position:absolute;top:1px;left:calc(50% - .5px);
+  width:1px;height:calc(100% - 2px);background:rgba(70,58,32,.85)}
+.screw.br::after{display:none}
+.screw.tl{left:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.tr{right:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.bl{left:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
+.screw.br{right:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
 
 .screen{
-  border-radius:14px;padding:10px 10px 11px;
-  background:linear-gradient(#131c20,var(--bg));
-  border:1px solid #05090a;
-  box-shadow:inset 0 3px 10px rgba(0,0,0,.85),inset 0 0 0 1px rgba(126,165,95,.10)
+  border-radius:calc(var(--px)*3);padding:calc(var(--px)*2.5);
+  background:var(--bg);
+  border:2px solid #05090a;
+  box-shadow:inset 0 2px 0 #05090a
 }
 
 /* ---------- identity ---------- */
-.ident{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:9px}
-.dname{font-family:'Pixelify Sans';font-size:22px;line-height:1;cursor:pointer;border-bottom:1px dashed transparent;color:var(--bone)}
+.ident{display:flex;align-items:baseline;gap:calc(var(--px)*2);flex-wrap:wrap;
+  margin-bottom:calc(var(--px)*2)}
+.dname{font-size:calc(var(--px)*5);line-height:1;cursor:pointer;
+  border-bottom:1px dashed transparent;color:var(--bone)}
 .dname:hover{border-bottom-color:var(--line)}
-.dsub{font-size:12.5px;color:var(--dim)}
-#nameEdit{font:inherit;font-family:'Pixelify Sans';font-size:22px;background:var(--panel);color:var(--bone);
-  border:1px solid var(--line);border-radius:6px;padding:1px 6px;width:150px}
+.dsub{font-size:calc(var(--px)*3);color:var(--dim)}
+#nameEdit{font:inherit;font-size:calc(var(--px)*5);background:var(--panel);color:var(--bone);
+  border:1px solid var(--line);border-radius:calc(var(--px)*1);
+  padding:1px calc(var(--px)*1.5);width:calc(var(--px)*38)}
 
-/* ---------- needs: the classic icon strip, one chunky meter each ---------- */
-.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
-.need{background:#141d21;border:1px solid var(--line);border-radius:4px;
-  padding:5px 6px 6px;display:flex;flex-direction:column;gap:4px}
-.need .cap{display:flex;align-items:center;gap:4px;min-height:14px}
-.need .cap canvas{image-rendering:pixelated;width:14px;height:14px;flex:0 0 14px}
-.need b{font-weight:600;font-size:10px;color:var(--dim);letter-spacing:.2px;text-transform:uppercase}
-/* Ten hard cells behind a black grid, square corners, a lit top row and a
-   shaded bottom one — the same read as the meters the canvas would draw. The
-   rounded gradient pill it replaced belonged to a different application. */
-.track{position:relative;height:11px;background:#05090a;border:1px solid #000;overflow:hidden}
-.fill{height:100%;width:50%;transition:width .45s linear,background .4s;
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.26),inset 0 -2px 0 rgba(0,0,0,.34)}
+/* ---------- needs: the classic icon strip ---------- */
+.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:calc(var(--px)*1.5);
+  margin-bottom:calc(var(--px)*2.5)}
+.need{background:var(--deep);border:1px solid var(--line);
+  padding:calc(var(--px)*1.25) calc(var(--px)*1.5) calc(var(--px)*1.5);
+  display:flex;flex-direction:column;gap:calc(var(--px)*1)}
+.need .cap{display:flex;align-items:center;gap:calc(var(--px)*1);min-height:calc(var(--px)*3.5)}
+.need .cap canvas{image-rendering:pixelated;width:calc(var(--px)*3);height:calc(var(--px)*3);
+  flex:0 0 calc(var(--px)*3)}
+.need b{font-weight:500;font-size:calc(var(--px)*2.5);color:var(--dim);letter-spacing:.5px}
+/* ten hard cells behind a black grid, square corners */
+.track{position:relative;height:calc(var(--px)*2.5);background:#05090a;border:1px solid #000;
+  overflow:hidden}
+.fill{height:100%;width:50%;transition:width .45s linear,background .4s}
 .seg{position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#05090a calc(10% - 2px) 10%)}
 .need.low b{color:var(--rust)}
-.need.low{border-color:#6d3527;animation:lowpulse 1.6s ease-in-out infinite}
-@keyframes lowpulse{50%{box-shadow:0 0 8px rgba(194,96,60,.35)}}
+.need.low{border-color:#6d3527}
 
-/* ---------- stage: the glass over the world ---------- */
-.stage{position:relative}
-.lcd{position:relative;border-radius:7px;overflow:hidden;
-  box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(126,165,95,.16),inset 0 0 0 1px #000}
-canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:pointer}
-.glare{position:absolute;inset:0;pointer-events:none;border-radius:7px;
-  background:linear-gradient(147deg,rgba(255,255,255,.10) 0 22%,rgba(255,255,255,0) 46%)}
-.lamp{position:absolute;right:4px;bottom:-7px;width:6px;height:6px;border-radius:50%;
-  background:var(--moss);box-shadow:0 0 6px rgba(126,165,95,.95)}
-.lamp.rest{background:var(--sky);box-shadow:0 0 6px rgba(127,178,201,.85)}
-.lamp.bad{background:var(--rust);box-shadow:0 0 7px rgba(194,96,60,.95)}
+/* ---------- the glass ---------- */
+.stage{position:relative;display:flex;flex-direction:column;align-items:center}
+/* The screen is 224 device pixels across and only ever shown at a whole or
+   half multiple of that, set by fitScreen(). At an arbitrary fraction the
+   pixel grid of the world came out uneven against the grid of the case, which
+   is visible on everything with a one-pixel line in it. */
+.lcd{position:relative;width:var(--lcd-w);max-width:100%;
+  box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(140,183,101,.14)}
+canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
+  touch-action:none;cursor:pointer}
+.lamp{position:absolute;right:0;bottom:calc(var(--px)*-2.5);
+  width:calc(var(--px)*1.5);height:calc(var(--px)*1.5);border-radius:50%;background:var(--moss)}
+.lamp.rest{background:var(--sky)}
+.lamp.bad{background:var(--rust)}
 
 .bubble{
-  position:absolute;left:50%;top:34px;transform:translate(-50%,-6px);
-  background:var(--bone);color:var(--ink);font-size:12.5px;font-weight:500;
-  padding:6px 10px;border-radius:9px;max-width:86%;text-align:center;
-  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;line-height:1.25;
-  box-shadow:0 4px 0 rgba(0,0,0,.4);z-index:2
+  position:absolute;left:50%;top:calc(var(--px)*8);transform:translate(-50%,-4px);
+  background:var(--bone);color:var(--ink);font-size:calc(var(--px)*3);
+  padding:calc(var(--px)*1.5) calc(var(--px)*2.5);max-width:86%;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;line-height:1.3;
+  border:2px solid var(--ink);z-index:2
 }
 .bubble.on{opacity:1;transform:translate(-50%,0)}
-.picks span{position:absolute;bottom:14px;transform:translateX(-50%);text-align:center;
-  font-size:10.5px;color:#b9c4bd;line-height:1.35;white-space:nowrap;
-  background:rgba(10,18,16,.82);border:1px solid rgba(90,116,104,.55);border-radius:6px;padding:3px 7px}
-.picks b{display:block;font-size:11.5px;color:var(--bone);font-weight:600;font-family:'Pixelify Sans';letter-spacing:.3px}
-/* badges ride the top of the screen, clear of the foreground cycads */
-.badge{position:absolute;left:5px;top:5px;right:5px;display:flex;gap:4px;flex-wrap:wrap}
-.tag{background:rgba(10,18,16,.86);border:1px solid #3a4d45;color:var(--bone);font-size:10px;
-  padding:2px 6px;border-radius:20px;display:flex;align-items:center;gap:4px;line-height:1.4}
-.tag.warn{border-color:#8a4130;color:#f5c3ad;background:rgba(48,17,9,.86)}
-.dot{width:5px;height:5px;border-radius:50%;background:var(--moss)}
+.picks span{position:absolute;bottom:calc(var(--px)*3.5);transform:translateX(-50%);
+  text-align:center;font-size:calc(var(--px)*2.75);color:#b9c4bd;line-height:1.35;
+  white-space:nowrap;background:rgba(10,18,16,.85);border:1px solid rgba(90,116,104,.55);
+  padding:calc(var(--px)*0.75) calc(var(--px)*1.75)}
+.picks b{display:block;font-size:calc(var(--px)*3);color:var(--bone);letter-spacing:.3px}
+.badge{position:absolute;left:calc(var(--px)*1);top:calc(var(--px)*1);right:calc(var(--px)*1);
+  display:flex;gap:calc(var(--px)*1);flex-wrap:wrap}
+.tag{background:rgba(10,18,16,.88);border:1px solid #3a4d45;color:var(--bone);
+  font-size:calc(var(--px)*2.5);padding:1px calc(var(--px)*1.5);
+  display:flex;align-items:center;gap:calc(var(--px)*1);line-height:1.5}
+.tag.warn{border-color:#8a4130;color:#f5c3ad;background:rgba(48,17,9,.88)}
+.dot{width:calc(var(--px)*1.25);height:calc(var(--px)*1.25);border-radius:50%;background:var(--moss)}
 .tag.warn .dot{background:var(--rust)}
 
 /* ---------- mood strip ---------- */
-.moodrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:11px 2px 1px}
-.mood{font-size:13px;color:var(--bone);line-height:1.35}
+.moodrow{display:flex;align-items:center;justify-content:space-between;
+  gap:calc(var(--px)*2.5);margin:calc(var(--px)*2.5) 0 0}
+.mood{font-size:calc(var(--px)*3.25);color:var(--bone);line-height:1.35}
 .mood em{font-style:normal;color:var(--dim)}
-.bondwrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);flex:0 0 auto}
+.bondwrap{display:flex;align-items:center;gap:calc(var(--px)*1.5);font-size:calc(var(--px)*2.75);
+  color:var(--dim);flex:0 0 auto}
 .bondwrap canvas{image-rendering:pixelated}
 
-/* ---------- physical keys ---------- */
-.keys{padding-top:14px}
-.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+/* ---------- the five keys ---------- */
+.keys{padding-top:calc(var(--px)*4)}
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*2)}
 .act{
-  background:linear-gradient(var(--key-hi),var(--key) 46%,var(--key-lo));
-  border:2px solid var(--key-edge);color:#eaf6ee;
-  border-radius:14px;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  font-family:'Pixelify Sans';font-size:12px;letter-spacing:.4px;cursor:pointer;position:relative;padding:6px 2px;
-  box-shadow:inset 0 2px 0 rgba(198,246,214,.45),inset 0 -3px 6px rgba(0,0,0,.35),0 5px 0 var(--key-edge),0 7px 8px rgba(40,24,4,.45)
+  background:var(--key);
+  border:2px solid var(--key-edge);color:#dff0e4;
+  border-radius:calc(var(--px)*3);min-height:calc(var(--px)*16);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(var(--px)*1);
+  font-family:inherit;font-size:calc(var(--px)*3);letter-spacing:.4px;cursor:pointer;
+  position:relative;padding:calc(var(--px)*1.5) calc(var(--px)*0.5);
+  box-shadow:inset 0 3px 0 var(--key-hi),inset 0 -3px 0 var(--key-lo),
+             0 calc(var(--px)*1.5) 0 var(--key-edge)
 }
-.act:hover{background:linear-gradient(#57a678,var(--key-hi) 46%,var(--key))}
-.act:active{transform:translateY(5px);box-shadow:inset 0 2px 0 rgba(198,246,214,.45),inset 0 -3px 6px rgba(0,0,0,.35)}
-.act .ico{display:flex;height:26px;align-items:center}
-.act .ico canvas{width:26px;height:26px}
-.act[disabled]{opacity:.34;cursor:default;box-shadow:0 5px 0 var(--key-edge);transform:none;filter:grayscale(.5)}
-.act .nub{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;
-  background:var(--rust);border:1px solid #40140a;box-shadow:0 0 6px rgba(194,96,60,.95)}
+.act:hover{background:var(--key-hi)}
+/* A key that opened a screen stays pressed, the way a latching key does. */
+.act:active,.act.down{transform:translateY(calc(var(--px)*1.5));
+  box-shadow:inset 0 3px 0 var(--key-lo)}
+.act .ico{display:flex;height:calc(var(--px)*6);align-items:center}
+.act .ico canvas{width:calc(var(--px)*6);height:calc(var(--px)*6);image-rendering:pixelated}
+.act[disabled]{opacity:.35;cursor:default;transform:none;filter:grayscale(.5);
+  box-shadow:0 calc(var(--px)*1.5) 0 var(--key-edge)}
+.act .nub{position:absolute;top:calc(var(--px)*1);right:calc(var(--px)*1.5);
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:var(--rust);border:1px solid #40140a}
 
-/* moulded nameplate and speaker slots at the foot of the case */
-.plate{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px;
-  font-family:'Pixelify Sans';font-size:11px;letter-spacing:2.4px;color:rgba(52,32,6,.85);
-  text-shadow:0 1px 0 rgba(255,240,204,.65)}
-.grille{width:34px;height:9px;border-radius:5px;
-  background:repeating-linear-gradient(90deg,rgba(87,54,9,.34) 0 2px,transparent 2px 5px);
-  box-shadow:0 1px 0 rgba(255,236,196,.45)}
+/* moulded nameplate and speaker slots */
+.plate{display:flex;align-items:center;justify-content:center;gap:calc(var(--px)*2);
+  margin-top:calc(var(--px)*4);
+  font-size:calc(var(--px)*2.75);letter-spacing:2.4px;color:var(--stamp);
+  text-shadow:0 1px 0 rgba(255,240,204,.5)}
+.grille{width:calc(var(--px)*8);height:calc(var(--px)*2);
+  background:repeating-linear-gradient(90deg,rgba(66,41,10,.34) 0 2px,transparent 2px 5px);
+  box-shadow:0 1px 0 rgba(255,236,196,.4)}
 
-/* ---------- sheets ---------- */
-.scrim{position:fixed;inset:0;background:rgba(10,6,2,.72);opacity:0;pointer-events:none;transition:opacity .2s;z-index:5}
+/* ---------- the panels that stayed in the DOM ----------
+   Only the dossier, the developer harness and the two notices. Everything a
+   player does to the animal happens on the glass; these are for reading. */
+.scrim{position:fixed;inset:0;background:rgba(10,6,2,.75);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:5}
 .scrim.on{opacity:1;pointer-events:auto}
 .sheet{
   position:fixed;left:50%;bottom:0;transform:translate(-50%,102%);
-  width:100%;max-width:440px;background:var(--deep);
+  width:100%;max-width:520px;background:var(--deep);
   border:2px solid var(--bezel-edge);border-bottom:0;
-  border-radius:20px 20px 0 0;padding:14px 14px calc(18px + var(--safe));z-index:6;
-  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:84vh;overflow-y:auto;
-  box-shadow:0 -8px 30px rgba(0,0,0,.6)
+  border-radius:calc(var(--px)*4) calc(var(--px)*4) 0 0;
+  padding:calc(var(--px)*3) calc(var(--px)*3) calc(var(--px)*4 + var(--safe));z-index:6;
+  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:84vh;overflow-y:auto
 }
 .sheet.on{transform:translate(-50%,0)}
-
-/* Docked: the developer panel never covers the game. Wide windows get a rail
-   on the right, narrow ones the bottom half, and neither raises a scrim. */
 .sheet.dock{max-height:52vh}
 @media (min-width:860px){
   .sheet.dock{
-    left:auto;right:0;top:0;bottom:0;width:360px;max-width:38vw;max-height:100vh;
-    transform:translateX(104%);border-radius:16px 0 0 16px;border:2px solid var(--bezel-edge);border-right:0;
-    padding-top:18px
+    left:auto;right:0;top:0;bottom:0;width:calc(var(--px)*90);max-width:38vw;
+    max-height:100vh;transform:translateX(104%);
+    border-radius:calc(var(--px)*4) 0 0 calc(var(--px)*4);
+    border:2px solid var(--bezel-edge);border-right:0;padding-top:calc(var(--px)*4)
   }
   .sheet.dock.on{transform:translateX(0)}
   .sheet.dock .grip{display:none}
 }
-.sheet h2{font-family:'Pixelify Sans';font-size:19px;font-weight:700;margin-bottom:2px;color:var(--bone)}
-.sheet p.lede{font-size:12.5px;color:var(--dim);margin-bottom:12px;line-height:1.45}
-.grip{width:44px;height:5px;border-radius:3px;background:var(--bezel-lo);margin:0 auto 12px}
+.sheet h2{font-size:calc(var(--px)*5);font-weight:700;margin-bottom:2px;color:var(--bone)}
+.sheet p.lede{font-size:calc(var(--px)*3.25);color:var(--dim);margin-bottom:calc(var(--px)*3);
+  line-height:1.5}
+.grip{width:calc(var(--px)*11);height:calc(var(--px)*1.25);background:var(--bezel-lo);
+  margin:0 auto calc(var(--px)*3)}
 .row{
-  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
-  background:linear-gradient(var(--panel),#172125);border:1px solid var(--line);color:var(--bone);
-  border-radius:12px;padding:10px 12px;margin-bottom:7px;cursor:pointer;font:inherit;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 3px 0 #0b1214
+  display:flex;align-items:center;gap:calc(var(--px)*3);width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--line);color:var(--bone);
+  border-radius:calc(var(--px)*2);padding:calc(var(--px)*2.5) calc(var(--px)*3);
+  margin-bottom:calc(var(--px)*1.75);cursor:pointer;font:inherit;
+  box-shadow:0 calc(var(--px)*0.75) 0 #0b1214
 }
 .row:hover{border-color:#3d5158}
-.row:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.row:active{transform:translateY(calc(var(--px)*0.75));box-shadow:none}
 .row[disabled]{opacity:.4;cursor:default;box-shadow:none;transform:none}
-.row .art{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;overflow:hidden}
+.row .art{width:calc(var(--px)*7);height:calc(var(--px)*7);flex:0 0 calc(var(--px)*7);
+  display:grid;place-items:center;overflow:hidden}
 .row .art canvas{image-rendering:pixelated}
 .row .t{flex:1;min-width:0}
-.row .t b{display:block;font-size:13.5px;font-weight:600}
-.row .t small{display:block;font-size:11.5px;color:var(--dim);margin-top:1px;line-height:1.35}
-.row .px{font-family:'Pixelify Sans';font-size:15px;color:var(--ochre);flex:0 0 auto}
+.row .t b{display:block;font-size:calc(var(--px)*3.5);font-weight:600}
+.row .t small{display:block;font-size:calc(var(--px)*3);color:var(--dim);margin-top:1px;
+  line-height:1.4}
+.row .px{font-size:calc(var(--px)*4);color:var(--ochre);flex:0 0 auto}
 .row .px.own{color:var(--moss)}
-.row.pet.here{border-color:var(--moss);box-shadow:0 3px 0 #0b1214,inset 0 0 0 1px rgba(126,165,95,.4)}
 
-/* chips: a compact row of one-tap switches, used by the developer sheet */
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
-.chip{font:inherit;font-family:'Pixelify Sans';font-size:12.5px;letter-spacing:.3px;cursor:pointer;
-  background:linear-gradient(var(--panel),#172125);border:1px solid var(--line);color:var(--bone);
-  border-radius:9px;padding:7px 11px;box-shadow:0 3px 0 #0b1214}
+.chips{display:flex;flex-wrap:wrap;gap:calc(var(--px)*1.5);margin:0 0 calc(var(--px)*2.5)}
+.chip{font:inherit;font-size:calc(var(--px)*3.25);letter-spacing:.3px;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);color:var(--bone);
+  border-radius:calc(var(--px)*2);padding:calc(var(--px)*1.75) calc(var(--px)*2.75);
+  box-shadow:0 calc(var(--px)*0.75) 0 #0b1214}
 .chip:hover{border-color:#3d5158}
-.chip:active{transform:translateY(3px);box-shadow:none}
-.chip.on{background:linear-gradient(var(--key-hi),var(--key));border-color:var(--key-edge);color:#eaf6ee}
+.chip:active{transform:translateY(calc(var(--px)*0.75));box-shadow:none}
+.chip.on{background:var(--key);border-color:var(--key-edge);color:#dff0e4}
 .chip.warn{color:#f0b7a3;border-color:#7a3a2b}
 
-.log{font-size:12.5px;line-height:1.5;color:var(--bone);border-left:2px solid var(--line);padding:2px 0 2px 10px;margin-bottom:9px}
-.log time{display:block;font-size:10.5px;color:var(--dim);margin-bottom:1px}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-.stat b{display:block;font-size:10.5px;color:var(--dim);font-weight:500}
-.stat span{font-family:'Pixelify Sans';font-size:15px}
-.note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:4px}
-.trait{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:20px;
-  padding:3px 9px;font-size:11.5px;margin:0 5px 5px 0}
-.hr{height:1px;background:var(--line);margin:12px 0}
-.gamebar{display:flex;justify-content:space-between;font-family:'Pixelify Sans';font-size:15px;padding:0 2px 8px}
-.tiny{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.5}
+.log{font-size:calc(var(--px)*3.25);line-height:1.6;color:var(--bone);
+  border-left:2px solid var(--line);padding:2px 0 2px calc(var(--px)*2.5);
+  margin-bottom:calc(var(--px)*2.25)}
+.log time{display:block;font-size:calc(var(--px)*2.75);color:var(--dim);margin-bottom:1px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--px)*2);
+  margin-bottom:calc(var(--px)*3)}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--px)*2);
+  padding:calc(var(--px)*2) calc(var(--px)*2.5)}
+.stat b{display:block;font-size:calc(var(--px)*2.75);color:var(--dim);font-weight:500}
+.stat span{font-size:calc(var(--px)*4)}
+.note{font-size:calc(var(--px)*3);color:var(--dim);line-height:1.6;margin-top:calc(var(--px)*1)}
+.trait{display:inline-block;background:var(--panel);border:1px solid var(--line);
+  border-radius:calc(var(--px)*5);padding:calc(var(--px)*0.75) calc(var(--px)*2.25);
+  font-size:calc(var(--px)*3);margin:0 calc(var(--px)*1.25) calc(var(--px)*1.25) 0}
+.hr{height:1px;background:var(--line);margin:calc(var(--px)*3) 0}
+.tiny{font-size:calc(var(--px)*2.75);color:var(--dim);text-align:center;
+  margin-top:calc(var(--px)*2.5);line-height:1.6}
 button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 
-@media (max-width:360px){
-  .shell{padding:44px 12px 40px}
-  .act{min-height:58px;font-size:11px}
-  .iconbtn{width:33px;height:33px}
+@media (max-width:400px){
+  :root{--px:3.4px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

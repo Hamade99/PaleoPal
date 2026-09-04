@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Paleopal sprite sheet</title>
+<style>
+  body{margin:0;background:#141d21;color:#e9e1cb;font:13px ui-monospace,Consolas,monospace}
+  header{position:sticky;top:0;z-index:2;background:#0e1417;border-bottom:1px solid #2b3a3f;padding:10px 14px;
+         display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  label{display:flex;gap:5px;align-items:center;color:#93a29c}
+  canvas{image-rendering:pixelated}
+  section{padding:14px}
+  h2{font-size:14px;margin:0 0 8px;letter-spacing:1px;text-transform:uppercase;color:#7ea55f}
+  .strip{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .cell span{font-size:11px;color:#93a29c}
+  .cell.chk{background:
+      linear-gradient(45deg,#1b262a 25%,transparent 25%,transparent 75%,#1b262a 75%),
+      linear-gradient(45deg,#1b262a 25%,#182024 25%,#182024 75%,#1b262a 75%);
+      background-size:12px 12px;background-position:0 0,6px 6px}
+  #err{color:#c2603c;padding:0 14px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<header>
+  <strong>Paleopal sprites</strong>
+  <label>zoom <input id="zoom" type="range" min="1" max="8" value="3"><output id="zoomOut">3</output>x</label>
+  <label>coat <select id="coat"></select></label>
+  <label><input id="grid" type="checkbox"> checker</label>
+  <label><input id="anims" type="checkbox" checked> animations</label>
+  <span id="stat" style="color:#93a29c;margin-left:auto"></span>
+</header>
+<div id="err"></div>
+<div id="out"></div>
+
+<script src="../src/00-core.js"></script>
+<script src="../src/01-colour.js"></script>
+<script src="../src/02-sprite-engine.js"></script>
+<script src="../src/species/rex.js"></script>
+<script src="../src/species/triceratops.js"></script>
+<script src="../src/species/brachiosaurus.js"></script>
+<script src="../src/species/registry.js"></script>
+<script>
+/* Every species, every growth stage, every animation frame, on one page.
+   The game only ever shows one animal in one pose, so a sprite change is
+   otherwise checked by eye against a single adult. Open this instead.
+
+   It loads src/ directly, so it is always looking at the same code the game
+   runs. Nothing here is part of the build. */
+const $$ = id => document.getElementById(id);
+const out = $$('out'), zoom = $$('zoom'), coatSel = $$('coat');
+
+/* every coat id that exists on any species, plus the per-species default */
+const COATS = ['wild'];
+for (const sp in SKINS) for (const k of SKINS[sp]) if (!COATS.includes(k.id)) COATS.push(k.id);
+coatSel.innerHTML = COATS.map(c => `<option value="${c}">${c}</option>`).join('');
+
+function cell(cv, label, sc){
+  const d = document.createElement('div');
+  d.className = 'cell' + ($$('grid').checked ? ' chk' : '');
+  const c = document.createElement('canvas');
+  c.width = cv.width * sc; c.height = cv.height * sc;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.drawImage(cv, 0, 0, c.width, c.height);
+  d.appendChild(c);
+  const s = document.createElement('span'); s.textContent = label;
+  d.appendChild(s);
+  return d;
+}
+
+function build(){
+  const sc = +zoom.value, want = coatSel.value, showAnims = $$('anims').checked;
+  $$('zoomOut').textContent = sc;
+  out.innerHTML = '';
+  const t0 = performance.now();
+  let frames = 0;
+
+  for (const spId in SPECIES){
+    /* fall back to wild where a coat does not exist for this species */
+    const skin = SKINS[spId].some(k => k.id === want) ? want : 'wild';
+    const sec = document.createElement('section');
+    sec.innerHTML = `<h2>${SPECIES[spId].common} &middot; ${skin}</h2>`;
+
+    const growth = document.createElement('div');
+    growth.className = 'strip';
+    for (let st = 0; st < STAGE.length; st++){
+      const f = frameOf(spId, st, 'idle', 0, false, skin); frames++;
+      growth.appendChild(cell(f.cv, STAGE[st].key, sc));
+    }
+    sec.appendChild(growth);
+
+    if (showAnims){
+      for (const anim in POSES){
+        const row = document.createElement('div');
+        row.className = 'strip';
+        for (let i = 0; i < POSES[anim].length; i++){
+          const f = frameOf(spId, 3, anim, i, false, skin); frames++;
+          row.appendChild(cell(f.cv, anim + ' ' + i, sc));
+        }
+        /* the blink is a separate bake, so it needs looking at too */
+        if (anim === 'idle'){
+          const f = frameOf(spId, 3, 'idle', 0, true, skin); frames++;
+          row.appendChild(cell(f.cv, 'blink', sc));
+        }
+        sec.appendChild(row);
+      }
+    }
+    out.appendChild(sec);
+  }
+  $$('stat').textContent = frames + ' frames, ' + Math.round(performance.now() - t0) + ' ms, cache ' + frameCache.size;
+}
+
+for (const el of [zoom, coatSel, $$('grid'), $$('anims')]) el.addEventListener('input', build);
+window.addEventListener('error', e => { $$('err').textContent = e.message + '\n' + (e.error && e.error.stack || ''); });
+build();
+</script>
+</body>
+</html>

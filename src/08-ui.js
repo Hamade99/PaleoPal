@@ -1,7 +1,13 @@
 /* ==========================================================================
-   INTERFACE
-   All text lives in the DOM so it stays crisp on a phone. The canvas only ever
-   draws the world.
+   CASE CHROME
+   What is left outside the screen: the meter strip, the identity line, the
+   bond row, the five keys, and the prose panels the screen cannot carry.
+
+   This file used to hold every menu in the game, on the rule that all text
+   lived in the DOM. The menus have moved onto the glass — see 07-screens.js —
+   because on the device this copies the screen is the whole interface and the
+   case never changes while you play. What stays here is the printed panel
+   around the screen and the long-form reading.
    ========================================================================== */
 
 const NEED_META = [
@@ -177,12 +183,14 @@ function buildChrome(){
   bone.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnDev').appendChild(bone);
   paintSound();
-  $('act-feed').onclick = () => openSheet('feed');
-  $('act-play').onclick = () => openSheet('play');
-  $('act-wash').onclick = () => { scrub(); };
-  $('act-care').onclick = () => openSheet('care');
-  $('act-shop').onclick = () => openSheet('shop');
-  $('btnNest').onclick = () => openSheet('nest');
+  /* The keys are direct jumps into screens on the glass. Wash is the one
+     action with nothing to choose, so its key does the thing. */
+  $('act-feed').onclick = () => openScreen('feed');
+  $('act-play').onclick = () => openScreen('play');
+  $('act-wash').onclick = () => { closeScreen(); scrub(); };
+  $('act-care').onclick = () => openScreen('care');
+  $('act-shop').onclick = () => openScreen('shop');
+  $('btnNest').onclick = () => openScreen('nest');
   $('btnDossier').onclick = () => openSheet('dossier');
   $('btnSound').onclick = toggleSound;
   $('btnDev').onclick = () => openSheet('dev');
@@ -191,6 +199,27 @@ function buildChrome(){
   $('scrim').onclick = closeSheet;
   armBrandHold();
 }
+
+/* The screen is 224 device pixels across. Displayed at an arbitrary fraction
+   of that, its pixel grid lands unevenly against the grid the case is built
+   on, and every one-pixel line in the interface shows it. Whole and half steps
+   keep the ratio regular, and the case is sized so that a phone gets 1.5x and
+   a desktop 2x. */
+const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
+function fitScreen(){
+  const el = document.querySelector('.screen');
+  if (!el) return;
+  const cs = getComputedStyle(el);
+  const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  let best = W;
+  for (const k of LCD_STEPS) if (W * k <= avail) best = W * k;
+  document.documentElement.style.setProperty('--lcd-w', best + 'px');
+}
+let fitTimer = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(fitScreen, 120);
+});
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It
    swaps its own glyph so the state is readable without opening anything. */
@@ -231,6 +260,14 @@ function armBrandHold(){
 }
 function paintChrome(){
   const busy = mode !== 'live';
+  document.querySelectorAll('.act').forEach(b => b.classList.remove('down'));
+  if (screenOpen()){
+    const k = $('act-' + screen);
+    if (k) k.classList.add('down');           // the key that opened it stays in
+  }
+  /* The status badges float over the glass. A screen is the glass, so they
+     have to get out of the way or they sit on top of its title bar. */
+  $('badges').style.display = screenOpen() ? 'none' : '';
   ['feed','play','wash','care','shop'].forEach(k => { $('act-'+k).disabled = busy; });
   const careBtn = $('act-care');
   const old = careBtn.querySelector('.nub'); if (old) old.remove();
@@ -296,8 +333,11 @@ function refresh(){
 
 /* -------------------------------- sheets ---------------------------------- */
 let openPanel = null;
-/* the only sheets that mean anything before there is a hatched animal */
-const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble', 'dev'];
+/* What is left in the DOM. Feed, Play, Care, Shop and the Nest are screens on
+   the glass now; these are the panels that are all prose, plus the developer
+   harness, and at six pixels a character prose is the one thing the screen
+   cannot carry. */
+const SHEETS_PRE_HATCH = ['dossier', 'trouble', 'dev'];
 /* The developer panel docks rather than covering the screen: on a wide window
    it slides in at the right, on a narrow one it takes the bottom half. It
    raises no scrim either way, so the game stays visible and clickable while a
@@ -317,6 +357,7 @@ function openSheet(which){
 function closeSheet(){
   openPanel = null;
   $('sheet').classList.remove('on'); $('scrim').classList.remove('on');
+  closeScreen();
 }
 
 function rowHTML(art, title, sub, right, attrs){
@@ -359,32 +400,6 @@ function portrait(pet, size){
    06-render.js. Each one builds its own HTML, mounts it, then binds. */
 const SHEETS = {
 
-  feed(b, sp){
-    let html = '';
-    html = `<h2>Feed</h2><p class="lede">${sp.common} is a ${sp.diet}. Favourites fill it up and build trust; the wrong food goes down slowly. Treats are for treats.</p>`;
-    html += FOODS.map(f => {
-      const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
-      return rowHTML(f.id, f.name, (loved ? 'Favourite. ' : hated ? 'Dislikes this. ' : '') + f.note, f.cost + 'c');
-    }).join('');
-    b.innerHTML = html; mountArt(b);
-    b.querySelectorAll('.row').forEach((r,i) => r.onclick = () => { feed(FOODS[i].id); });
-  },
-
-  play(b, sp){
-    let html = '';
-    const trickReady = bondPips() >= 3;
-    html = `<h2>Games</h2><p class="lede">Joy drops about six points an hour and drags health down once it bottoms out. Each game costs a little energy.</p>`;
-    html += Object.keys(GAMES).map(k => rowHTML('', GAMES[k].name, GAMES[k].blurb, GAMES[k].pay + 'c each')).join('');
-    html += `<div class="hr"></div>`;
-    html += rowHTML('', 'Ask for a trick', trickReady ? 'Free. A quick burst of joy.' : 'Unlocks at three bond pips.',
-                    trickReady ? 'free' : 'locked', trickReady ? '' : 'disabled');
-    html += `<p class="note">Petting works too. Press and hold on ${S.name} in the habitat.</p>`;
-    b.innerHTML = html; mountArt(b);
-    const rows = b.querySelectorAll('.row'), keys = Object.keys(GAMES);
-    keys.forEach((k,i) => rows[i].onclick = () => startGame(k));
-    rows[keys.length].onclick = doTrick;
-  },
-
   vitals(b, sp){
     let html = '';
     const n = S.needs, hr = new Date().getHours();
@@ -409,103 +424,6 @@ const SHEETS = {
       S.asleep || n.energy > 70 ? '—' : 'free', S.asleep || n.energy > 70 ? 'disabled' : '');
     b.innerHTML = html; mountArt(b);
     const r = b.querySelector('.row'); if (r) r.onclick = tuckIn;
-  },
-
-  care(b, sp){
-    let html = '';
-    if (S.vet){
-      html = `<h2>Care</h2><p class="lede">${S.name} is on the ground and will not get up. A vet can bring it back.</p>`;
-      html += rowHTML('', 'Call the vet', 'Restores health and clears every illness. Costs some trust.', '30c');
-      b.innerHTML = html; mountArt(b);
-      b.querySelector('.row').onclick = vetVisit;
-    } else if (!S.ills.length){
-      html = `<h2>Care</h2><p class="lede">Nothing to treat right now.</p>
-        <div class="stats">
-          <div class="stat"><b>Health</b><span>${Math.round(S.health)}%</span></div>
-          <div class="stat"><b>Bond</b><span>${Math.round(S.bond)}%</span></div>
-        </div>
-        <p class="note">Illness has causes, not bad luck. Three treats in an hour upsets the stomach. Keeping ${S.name} awake past its bedtime brings on a chill. Letting the pen fall below a fifth clean invites mites. And joy sitting near zero turns into the blues.</p>`;
-      b.innerHTML = html;
-    } else {
-      html = `<h2>Care</h2><p class="lede">Read the symptoms and pick the treatment. Guessing wrong costs coins and a little trust.</p>`;
-      html += S.ills.map(i => `<div class="log"><time>Symptom</time>${ILLS[i.id].symptom}</div>`).join('');
-      html += '<div class="hr"></div>';
-      html += REMEDIES.map(r => rowHTML('', r.name, r.note, r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8 pets' : 'free'))).join('');
-      b.innerHTML = html; mountArt(b);
-      b.querySelectorAll('.row').forEach((r,i) => r.onclick = () => {
-        if (REMEDIES[i].id === 'company'){
-          if (hasIll('blues')){ closeSheet(); say('Press and hold on ' + S.name + '. Eight times should do it.'); }
-          else treat('company');
-          return;
-        }
-        treat(REMEDIES[i].id);
-      });
-    }
-  },
-
-  shop(b, sp){
-    let html = `<h2>Shop</h2><p class="lede">Coins come from digs, cleaning up and the games. Everything here belongs to ${S.name} alone.</p>
-      <p class="note" style="margin-bottom:8px">Coats</p>`;
-    html += SKINS[S.sp].map(k => {
-      const own = S.skinsOwned.includes(k.id), worn = S.skin === k.id;
-      return `<button class="row" data-skin="${k.id}"><span class="art" data-coat="${k.id}"></span>
-        <span class="t"><b>${k.name}</b><small>${k.note}</small></span>
-        <span class="px${own ? ' own' : ''}">${own ? (worn ? 'worn' : 'wear') : k.cost + 'c'}</span></button>`;
-    }).join('');
-    html += `<div class="hr"></div><p class="note" style="margin-bottom:8px">Headgear</p>`;
-    html += HAT_SHOP.map(h => {
-      const own = S.owned.includes(h.id), worn = S[h.slot] === h.id;
-      const where = h.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.';
-      return rowHTML(h.id, h.name, own ? (worn ? 'Currently worn.' : where) : where, own ? (worn ? 'worn' : 'wear') : h.cost + 'c');
-    }).join('');
-    b.innerHTML = html; mountArt(b);
-    b.querySelectorAll('[data-coat]').forEach(slot => {
-      const id = slot.getAttribute('data-coat');
-      const f = frameOf(S.sp, stageIdx(), 'idle', 0, false, id);
-      const c = makeCv(34,30), g = readCtx(c);
-      g.imageSmoothingEnabled = false;
-      const sc = Math.min(34 / f.w, 30 / f.h) * .95;
-      g.drawImage(f.cv, (34 - f.w*sc)/2, 30 - f.h*sc, f.w*sc, f.h*sc);
-      c.style.imageRendering = 'pixelated';
-      slot.appendChild(c);
-    });
-    b.querySelectorAll('.px').forEach(p => { if (p.textContent === 'worn' || p.textContent === 'wear') p.classList.add('own'); });
-    b.querySelectorAll('[data-skin]').forEach(r => r.onclick = () => buySkin(r.getAttribute('data-skin')));
-    const hatRows = Array.from(b.querySelectorAll('.row')).slice(SKINS[S.sp].length);
-    hatRows.forEach((r,i) => r.onclick = () => buyHat(HAT_SHOP[i].id));
-  },
-
-  nest(b, sp){
-    let html = `<h2>The nest</h2><p class="lede">Every animal here ages and gets hungry whether or not it is the one on screen. Coins are shared.</p>`;
-    html += G.pets.map((p,i) => {
-      const active = i === G.active;
-      let sub;
-      if (!p.sp) sub = 'An unchosen egg.';
-      else if (!p.born) sub = 'Still in the shell.';
-      else {
-        const prev = S; S = p;
-        const worst = Math.min(p.needs.hunger, p.needs.energy, p.needs.hygiene, p.needs.joy);
-        sub = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + ' · ' +
-              (p.vet ? 'needs a vet' : p.ills.length ? ILLS[p.ills[0].id].name.toLowerCase() :
-               worst < 25 ? 'needs attention' : p.asleep ? 'asleep' : 'doing fine');
-        S = prev;
-      }
-      return `<button class="row pet${active ? ' here' : ''}" data-pet="${i}">
-        <span class="art" data-pet-art="${i}"></span>
-        <span class="t"><b>${p.name || 'Unnamed'}</b><small>${sub}</small></span>
-        <span class="px">${active ? 'here' : 'visit'}</span></button>`;
-    }).join('');
-    html += '<div class="hr"></div>';
-    html += rowHTML('', 'Take a new egg', G.pets.length >= MAX_PETS ? 'The nest holds ' + MAX_PETS + '.' : 'Start another animal from scratch.',
-                    G.pets.length >= MAX_PETS ? 'full' : 'new', G.pets.length >= MAX_PETS ? 'disabled' : '');
-    b.innerHTML = html; mountArt(b);
-    b.querySelectorAll('[data-pet-art]').forEach(slot => {
-      const c = portrait(G.pets[+slot.getAttribute('data-pet-art')], 34);
-      c.style.imageRendering = 'pixelated'; slot.appendChild(c);
-    });
-    b.querySelectorAll('[data-pet]').forEach(r => r.onclick = () => switchPet(+r.getAttribute('data-pet')));
-    const newRow = b.querySelectorAll('.row')[G.pets.length];
-    if (newRow) newRow.onclick = newEgg;
   },
 
   dossier(b, sp){
@@ -682,6 +600,13 @@ cv.addEventListener('pointerdown', e => {
     if (game.kind === 'leap')  leapJump();
     return;
   }
+  /* A screen owns every tap while it is up: it is the whole display, so
+     there is nothing else on the glass to hit. */
+  if (screenOpen()){
+    const sc = SCREENS[screen];
+    if (sc.tap && screenLayout) sc.tap(mx, my, screenLayout);
+    return;
+  }
   if (mode === 'live'){
     if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet([mx, my]); return; }
     if (bondPips() >= 2 && !S.asleep && !S.vet){
@@ -700,7 +625,12 @@ cv.addEventListener('pointermove', e => {
 window.addEventListener('pointerup', () => { holding = false; });
 window.addEventListener('pointercancel', () => { holding = false; });
 window.addEventListener('keydown', e => {
-  if (e.key === 'Escape'){ if (openPanel) closeSheet(); else if (mode === 'game') endGame(); return; }
+  if (e.key === 'Escape'){
+    if (screenOpen()) closeScreen();
+    else if (openPanel) closeSheet();
+    else if (mode === 'game') endGame();
+    return;
+  }
   if (mode === 'game' && game){
     if (game.kind === 'snack'){
       if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = true;
@@ -780,6 +710,7 @@ function frame(now){
     }
   }
 
+  if (G && hatched()) warmFrames(S.sp, stageIdx(), S.skin);
   stepBehaviour(dt, now);
   stepFeed(dt);
   if (mode === 'game') stepGame(dt, now);
@@ -796,6 +727,7 @@ function frame(now){
 
 async function boot(){
   buildChrome();
+  fitScreen();
   G = freshGame();
   const loaded = loadSave(await Store.get(SAVE_KEY));
   if (loaded.game){

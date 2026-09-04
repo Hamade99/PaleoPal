@@ -386,6 +386,108 @@ first.
 
 ---
 
+## Session 9 — Mouths, the screen, and the case
+
+**Owner's feedback.** A review of the whole project first: what to improve
+structurally, in the art, in the mechanics; whether the sprites are
+future-proof; whether the UI reads as something a person designed. And one
+specific observation — the Tyrannosaurus has no jaw. Just a head, no visible
+mouth.
+
+**The jaw.** Not a style choice, and not missing. `drawRex` had always built a
+hinged mandible and rotated it on the `jaw` pose channel. It was painted onto
+`M.head`, and the compositor only draws an internal edge where two *different*
+materials meet, so the mandible and the cranium merged into one region with
+nothing between them. Correct geometry, correct rig, invisible. The
+Triceratops and Brachiosaurus had no mandible at all, which is why their eat
+animation was identical to idle.
+
+The rotation was the wrong sign as well. The sprite faces −x, so a positive
+rotation about the jaw hinge swings the snout end *up*. Nobody had noticed,
+because there was nothing to see.
+
+**Acted on, art:**
+
+- A `jaw` layer below `head`, so the skull's oral margin is the lip line, on
+  all three species. A dark oral margin is drawn on `mouth` when the jaw is
+  shut; lips still cover the teeth, so that line is all a closed mouth shows.
+- The gape is the wedge between the two oral margins, anchored at the hinge.
+  As a slab carried around by the mandible it put mouth lining outside the
+  head; run through `blob` the curves bowed outward and swallowed the face. It
+  is a straight-edged polygon, because the two margins it spans are straight.
+- Teeth moved to the maxilla, which is where the big ones are. They were also
+  invisible: `mouth` sat above `horn`, so the gape painted over every tooth in
+  it. Those two layers are swapped.
+- Triceratops rebuilt around the beak: a rostral above and a predentary below,
+  riding the jaw. The brow horns were emerging behind and above the eye on a
+  narrow base with a long shaft, which read as rabbit ears; they are wider at
+  the base, shorter, and swing forward as well as up.
+- The frill moved to a `shield` layer with its own colour. On the body ramp it
+  was separated from the neck by nothing but the outline, and that shield is
+  most of this animal's silhouette. The rim scallops went from sixteen to
+  eight: at sprite scale sixteen is a one-pixel sawtooth that reads as fur.
+- Countershading is painted from the spine by `paintBelly`, the way the coats
+  already were, instead of a hand-placed ellipse per species that was
+  invisible at this size. Two wrong turns on the way: at full strength it read
+  as a painted stripe, and a step down its own ramp put it in the dark
+  saturated end and inverted the shading outright. It is mixed a third of the
+  way back toward the flank hue.
+- A shut eye is a line now. The lid was as wide as the pupil with round caps,
+  which at this size was a black smudge across the face.
+
+**Acted on, animation.** The IK is right and stays. The stiffness was never the
+IK — it was that only the legs move, that poses are discrete keyframes, and
+that every pose is a baked bitmap costing 8.7 ms, which is why walk was six
+frames and idle was two at 900 ms each. So the bake got cheaper instead:
+
+- The bake box was 232×210 and the largest frame any species and stage produces
+  is 143×94. It is 168×112 now, the measured union of everything drawn plus a
+  margin.
+- The distance field, lighting and outline passes run over the bounding box the
+  flatten pass records, rather than over the whole canvas.
+- Together: 8.7 ms down to 2.9 ms. Spent on twelve walk frames and a four-frame
+  breathing idle, both generated rather than typed out.
+- `anim.t += 16` hardcoded sixty frames a second, so eat and cheer ran at
+  double speed on a 120 Hz phone. It takes real elapsed time now.
+- The frame cache is LRU with a cap of 180, and `warmFrames` bakes two frames a
+  tick so a twelve-frame walk does not hitch twelve times on first use.
+
+**Acted on, interface.** The menus were web bottom sheets that slid up over the
+whole device, which made the case a costume the app was wearing. They are
+screens drawn inside the 224×168 glass now, opened by the five keys and picked
+by tapping. That needed a font — 5×7, a bit table, baked to a strip per colour,
+still no image assets. Long prose stays in the DOM: at six pixels a character
+the screen cannot carry the dossier's field notes.
+
+**Acted on, the case.** One grid (`--px`, and the screen snaps to whole or half
+multiples of 224), one palette with a real neutral to sit against, one
+typeface. Gradients, inset highlights, drop shadows, a glare sheet and a page
+vignette were all running at once at similar strength; each surface is a flat
+fill with one hard edge and at most one highlight now. And nothing decorative
+is evenly spaced any more — the osteoderms are irregular, the brand sits
+against the mould seam rather than centred, and the four screws are four
+different fixings. Even spacing and stacked effects are most of what made it
+read as rendered rather than moulded.
+
+**Acted on, structure.**
+
+- `tools/sheet.html`: every species, stage and animation frame on one page. The
+  missing jaw survived eight sessions because the only way to look at a sprite
+  was to play the game and watch one adult in one pose.
+- `build.py` had its own copy of the load order and `index.html` had another.
+  It reads the script tags out of `index.html` now. Its regex replacement was
+  a template as well, so the font table's arrow glyph broke the build with a
+  bad escape; the replacement is a function.
+- `S.tally.meals` was written on every meal, never initialised, never read.
+  Gone.
+
+**Not done.** The neck and head are still rigid — an animated neck channel
+lands on top of the same three draw functions and wants a pass of its own. The
+species files still share nothing; that is the thing to fix before a fourth
+animal, not after.
+
+---
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.
@@ -397,3 +499,7 @@ first.
 - **Wall-clock time everywhere.** Never frame time for anything that persists.
 - **Cuteness through proportion.** Bigger skull, bigger eye, shorter snout,
   rounder body. Never by removing a diagnostic feature.
+- **The screen is the interface.** Menus live inside the glass; the case does
+  not change while you play. Long prose is the one exception.
+- **One grid, one edge, no symmetry.** In the case, and for the same reason in
+  the screens.

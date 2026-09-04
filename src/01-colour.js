@@ -31,7 +31,7 @@ function hslToHex(h, s, l){
 function ramp(base, opts){
   opts = opts || {};
   const [h,s,l] = hexToHsl(base);
-  const spread = opts.spread || .17, shift = opts.shift || 22;
+  const spread = opts.spread || .19, shift = opts.shift || 22;
   const out = [];
   for (let i=0;i<5;i++){
     const t = (i-2)/2;                                   // -1 shadow … +1 light
@@ -44,21 +44,65 @@ function ramp(base, opts){
   return out;
 }
 function shiftRamp(r, n){ return r.map((_,i) => r[clamp(i+n,0,4)]); }
+/* blend two hexes. Used to pull the underside toward the flank hue so that
+   countershading reads as light falling off a body rather than as a second
+   colour painted onto it. */
+function mixCol(a, b, t){
+  const A = [1,3,5].map(i => parseInt(a.slice(i,i+2),16));
+  const B = [1,3,5].map(i => parseInt(b.slice(i,i+2),16));
+  return '#' + A.map((v,i) => Math.round(lerp(v,B[i],t)).toString(16).padStart(2,'0')).join('');
+}
 
-/* material keys: each shape is painted onto its own layer with a flat key
-   colour, so material boundaries stay exact and never blend into each other */
-const LAYERS = ['far','skin','belly','limb','head','mark','crest','horn','mouth','sclera','pupil','glint'];
-const MARK_LAYER = LAYERS.indexOf('mark');   // only paints where a body layer already is
-const BODY_TOP   = LAYERS.indexOf('head');
+/* Material keys, in paint order: a later layer wins where two overlap.
+
+   The compositor only draws an internal edge where two *different* materials
+   meet, so two shapes sharing a layer merge into one region with nothing
+   between them. That is why the mandible has a layer of its own instead of
+   sharing `head` — painted onto `head` it was drawn correctly, hinged
+   correctly, and completely invisible, which is what left every animal with a
+   mouthless face.
+
+   `shield` and `jaw` sit below `head`, so a frill and a lower jaw pass behind
+   the skull. `belly` and `mark` sit above the body but are masked to it, so
+   both can be painted generously and let the mask trim them to the
+   silhouette. `mark` stops below `belly`, which is how a coat pattern fades
+   out where the countershading starts rather than running across it.
+
+   `horn` sits above `mouth` because teeth, beaks and claws stand in front of
+   the mouth cavity, not behind it. The other way round the gape painted over
+   every tooth in it. */
+const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','sclera','pupil','glint'];
+const BODY_TOP    = LAYERS.indexOf('head');
+const BELLY_LAYER = LAYERS.indexOf('belly');
+const MARK_LAYER  = LAYERS.indexOf('mark');
+/* Countershading belongs to the trunk, the skull and the jaw. It is kept off
+   the limbs — near-side limbs carry their own lit ramp and far-side limbs are
+   held back in shade, and letting the belly claim either bleached every leg to
+   the same cream as the underside. */
+const BELLY_OK = LAYERS.map(n => n === 'skin' || n === 'shield' || n === 'jaw' || n === 'head');
 
 function buildMaterials(spec){
   const skin = ramp(spec.skin), horn = ramp(spec.horn, {spread:.12, shift:14});
   return {
-    far:    { r: shiftRamp(skin, -2), lit:.45 },
+    /* Far-side limbs. Two steps down with the contrast raised turned them
+       into a black mass slung under the body that read as shadow rather than
+       as legs, which on the four-legged animals is half the sprite. */
+    far:    { r: shiftRamp(skin, -1), lit:.55 },
     skin:   { r: skin,                lit:1 },
-    belly:  { r: ramp(spec.belly),    lit:.65 },
     limb:   { r: shiftRamp(skin, 0),  lit:1.1 },
+    /* display structures: a frill or a plate carries its own colour, which is
+       standard in modern reconstructions and is also the only thing that
+       stops a shield reading as a lump of neck at this size */
+    shield: { r: ramp(spec.shield || spec.crest), lit:.85 },
+    /* a shade under the skull, so the lip line reads as a step and not only
+       as a seam */
+    jaw:    { r: shiftRamp(skin, -1), lit:.85 },
     head:   { r: skin,                lit:.9 },
+    /* Pulled a third of the way back toward the flank. Taken neat, the belly
+       colours are far enough from the body that the underside read as a
+       painted stripe; taken a step down their own ramp they fell into the
+       dark, saturated end and inverted the countershading outright. */
+    belly:  { r: ramp(mixCol(spec.belly, spec.skin, .38)), lit:.62 },
     mark:   { r: ramp(spec.mark || spec.crest), lit:.85 },
     crest:  { r: ramp(spec.crest),    lit:.7 },
     horn:   { r: horn,                lit:1.15 },
@@ -74,21 +118,40 @@ function buildMaterials(spec){
 const LIGHT = [-0.66, -0.75];      // upper-left
 const RIM = 6;                     // how deep the lit/shadowed band reaches
 
+/* Every pass below is per-pixel, and a sprite occupies well under half the
+   box it is drawn in. The flatten pass has to look at all of it — that is how
+   it finds out where the animal is — but it records the bounds while it goes,
+   and the distance field, the lighting and the outline then run over those
+   bounds plus a two-pixel margin for the dilation. Outside them every pixel is
+   background, which is the value the arrays already hold. */
 function composeSprite(layerCanvases, mats, w, h){
   const n = w*h;
   const id = new Int8Array(n).fill(-1);
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  const seen = i => {
+    const x = i % w, y = (i - x) / w;
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  };
   for (let li=0; li<LAYERS.length; li++){
     const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
     if (li === MARK_LAYER){
+      // a coat rides the body, and stops where the countershading starts
       for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && id[i] <= BODY_TOP) id[i] = li;
+    } else if (li === BELLY_LAYER){
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && BELLY_OK[id[i]]) id[i] = li;
     } else {
-      for (let i=0;i<n;i++) if (d[i*4+3] >= 118) id[i] = li;
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118){ if (id[i] < 0) seen(i); id[i] = li; }
     }
   }
+  if (x1 < 0) return makeCv(w,h);                 // nothing was drawn
+  x0 = Math.max(0, x0-2); y0 = Math.max(0, y0-2);
+  x1 = Math.min(w-1, x1+2); y1 = Math.min(h-1, y1+2);
+
   // distance from the silhouette edge (two-pass chamfer)
   const dist = new Float32Array(n);
   const BIG = 1e6;
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x;
     if (id[i] < 0){ dist[i] = 0; continue; }
     const out = (x===0||id[i-1]<0) || (x===w-1||id[i+1]<0) || (y===0||id[i-w]<0) || (y===h-1||id[i+w]<0);
@@ -96,7 +159,7 @@ function composeSprite(layerCanvases, mats, w, h){
                  (y>0&&id[i-w]!==id[i]) || (y<h-1&&id[i+w]!==id[i]);
     dist[i] = out ? 0 : seam ? 2.6 : BIG;
   }
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x; if (!dist[i]) continue;
     let v = dist[i];
     if (x>0) v = Math.min(v, dist[i-1]+1);
@@ -105,7 +168,7 @@ function composeSprite(layerCanvases, mats, w, h){
     if (x<w-1&&y>0) v = Math.min(v, dist[i-w+1]+1.41);
     dist[i] = Math.min(v, BIG);
   }
-  for (let y=h-1;y>=0;y--) for (let x=w-1;x>=0;x--){
+  for (let y=y1;y>=y0;y--) for (let x=x1;x>=x0;x--){
     const i = y*w+x; if (!dist[i]) continue;
     let v = dist[i];
     if (x<w-1) v = Math.min(v, dist[i+1]+1);
@@ -124,7 +187,7 @@ function composeSprite(layerCanvases, mats, w, h){
   };
   const outRamp = ramp(mats.outline, {spread:.09, shift:10});
 
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x;
     if (id[i] < 0) continue;
     const m = mats[LAYERS[id[i]]];
@@ -137,12 +200,12 @@ function composeSprite(layerCanvases, mats, w, h){
       const len = Math.hypot(gx,gy) || 1;
       const nx = -gx/len, ny = -gy/len;                   // outward normal
       const lam = nx*LIGHT[0] + ny*LIGHT[1];
-      step = Math.round(lam * (1 - d/RIM) * 2.6 * m.lit);
+      step = Math.round(lam * (1 - d/RIM) * 3.0 * m.lit);
     }
     put(i, m.r[clamp(2 + step, 0, 4)], 255);
   }
   // selective outline: sample the material it hugs, brighten it on the lit side
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x;
     if (id[i] >= 0) continue;
     let near = -1, ox = 0, oy = 0;

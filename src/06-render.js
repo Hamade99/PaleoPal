@@ -92,8 +92,19 @@ function stepBehaviour(dt, now){
 
 /* ------------------------------- draw ------------------------------------- */
 let lastSceneAt = 0;
+let screenLayout = null;
 function drawScene(now){
   const dt = clamp(now - lastSceneAt, 0, 120); lastSceneAt = now;
+
+  /* A screen replaces the view rather than sliding over it. On the device this
+     copies there is one display and it shows one thing at a time; leaving the
+     habitat visible behind a menu is what a web overlay does. */
+  if (screenOpen()){
+    const sc = SCREENS[screen];
+    screenLayout = sc.layout ? sc.layout() : {};
+    sc.draw(ctx, screenLayout);
+    return;
+  }
   const phase = skyPhase(new Date());
   ctx.drawImage(bakeBg(phase), 0, 0);
 
@@ -112,7 +123,7 @@ function drawScene(now){
   if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'game'){ drawGame(now, phase); return; }
-  drawLive(now);
+  drawLive(now, dt);
   drawFronds(ctx, phase, now);
   const tint = SKY_SPECS[phase].tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
@@ -175,7 +186,7 @@ function drawGear(g, f, x, y, flip){
   }
 }
 
-function drawLive(now){
+function drawLive(now, dt){
   for (const m of S.mess){
     drawMess(ctx, m.x|0, GROUND - 1);
     const fx = m.x + Math.sin(now/280 + m.x) * 5, fy = GROUND - 12 + Math.cos(now/430 + m.x) * 2;
@@ -185,13 +196,15 @@ function drawLive(now){
   if (now > blinkAt){ blinking = true; blinkAt = now + rnd(2400, 5200); setTimeout(() => blinking = false, 150); }
 
   const st = stageIdx(), a = anim.pick(), sp = SPECIES[S.sp];
-  anim.t += 16;
+  // real elapsed time, not an assumed sixty frames a second. On a 120Hz phone
+  // the hardcoded 16 ran eat and cheer at double speed.
+  anim.t += dt;
   let fr;
   if (a === 'walk'){
     const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
     fr = Math.floor((dino.dist / cycle) * POSES.walk.length);
   } else {
-    const fps = a === 'eat' ? 220 : a === 'cheer' ? 200 : 900;
+    const fps = a === 'eat' ? 220 : a === 'cheer' ? 200 : 700;
     fr = Math.floor(anim.t / fps);
   }
   const f = frameOf(S.sp, st, a, fr, blinking && a === 'idle', S.skin);

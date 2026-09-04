@@ -169,6 +169,41 @@ function sampleSpine(spine, t){
    local units put the ground at y = 0 and the animal above it. */
 const spineNormal = q => [-Math.sin(q.ang), Math.cos(q.ang)];
 
+/* ----------------------------- countershading -----------------------------
+   Dark above, pale below is the one colour pattern with direct fossil support
+   — melanosomes in Psittacosaurus and Sinosauropteryx — and it is also the
+   cheapest way to stop a flat-coloured animal reading as a cut-out.
+
+   It used to be a hand-placed ellipse under the ribcage on each species, which
+   at sprite scale was invisible. It now rides the spine, like the coats, and
+   `belly` is masked to body pixels in the compositor, so the band can be drawn
+   far outside the outline and let the mask trim it.
+
+   `hi` is where the pale starts, as a fraction of the body's half-depth at
+   that station: three stops read as throat, mid-body and tail. The throat sits
+   highest because that is where countershading reaches furthest up a living
+   animal, and the tail lowest.
+   -------------------------------------------------------------------------- */
+const BELLY_DEFAULT = { hi:[.45, .58, .70], t0:.02, t1:.99, steps:26 };
+function paintBelly(g, spine, cfg){
+  if (!spine || spine.length < 2) return;
+  cfg = Object.assign({}, BELLY_DEFAULT, cfg || {});
+  const hi = cfg.hi, N = cfg.steps;
+  const top = [], bot = [];
+  for (let i=0;i<=N;i++){
+    const u = i/N, t = lerp(cfg.t0, cfg.t1, u);
+    const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+    const k = u < .5 ? lerp(hi[0], hi[1], u*2) : lerp(hi[1], hi[2], u*2-1);
+    top.push([q.x + nx*q.half*k, q.y + ny*q.half*k]);
+    bot.push([q.x + nx*q.half*2.8, q.y + ny*q.half*2.8]);   // well past the outline
+  }
+  g.beginPath();
+  g.moveTo(top[0][0], top[0][1]);
+  for (let i=1;i<top.length;i++) g.lineTo(top[i][0], top[i][1]);
+  for (let i=bot.length-1;i>=0;i--) g.lineTo(bot[i][0], bot[i][1]);
+  g.closePath(); g.fill();
+}
+
 /* Total arc length of a spine, so pattern density can be specified as a real
    distance rather than as a count. A count gives the short-bodied Triceratops
    the same sixteen bands as the long-necked Brachiosaurus, which on the

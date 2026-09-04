@@ -1,7 +1,7 @@
 # Architecture
 
-No framework, no bundler. Eleven plain scripts concatenated in a fixed order,
-because that order is the only dependency graph there is.
+No framework, no bundler. Plain scripts concatenated in a fixed order, because
+that order is the only dependency graph there is.
 
 ## Load order
 
@@ -9,18 +9,21 @@ because that order is the only dependency graph there is.
 src/00-core.js          utilities, storage adapter, audio, path primitives
 src/01-colour.js        ramp generation, material layers, the lighting compositor
 src/02-sprite-engine.js growth stages, gait/IK, feet, hats, pose table, frame baking
+src/03-font.js          the 5x7 screen font and its text drawing
 src/species/rex.js      one draw function per species
 src/species/triceratops.js
 src/species/brachiosaurus.js
-src/species/registry.js SPECIES table, field notes, coats, pattern painter
+src/species/registry.js SPECIES table, field notes, coats, pattern and belly painters
 src/04-world.js         backdrop baking, parallax, particles, props
 src/05-sim.js           needs, illness, bond, growth, the nest, player actions
 src/06-render.js        behaviour, the draw loop, feeding, minigames
-src/07-ui.js            DOM chrome, sheets, input, save/load, main loop
+src/07-screens.js       the menus, drawn inside the screen
+src/08-ui.js            case chrome, prose panels, input, save/load, main loop
 ```
 
-`build.py` is the only thing that knows this list. `index.html` loads the files
-individually for development; `dist/paleopal.html` is the inlined build.
+`index.html` holds this list and `build.py` reads it from there, so there is
+one load order rather than two that have to agree. `dist/paleopal.html` is the
+inlined build.
 
 ## Two globals
 
@@ -50,9 +53,28 @@ shapes onto twelve **material layers**; the compositor turns those layers into
 lit, outlined pixels. Frames are baked lazily and cached by
 `species|skin|stage|anim|frame|eye`.
 
+## The interface
+
+The five keys on the case open **screens**, which are drawn inside the 224x168
+canvas by `07-screens.js`. A key is a direct jump; a tap on the glass picks
+something within the screen. A screen replaces the view rather than sliding
+over it, and the case does not change while one is open — the key that opened
+it stays latched down.
+
+Each entry in `SCREENS` has a `layout()` that builds hit boxes, a `draw()` and
+a `tap()`. Draw and hit-test read the same boxes, so no rectangle is computed
+twice. Screen text is the bitmap font in `03-font.js`.
+
+What is left in the DOM is the printed panel around the screen — the meter
+strip, the identity line, the bond row — plus the four panels that are all
+prose: the dossier, the developer harness, and the two notices. At six pixels
+a character the screen cannot carry a paragraph, which is the only reason
+those did not move.
+
 ## Rendering
 
-`drawScene()` runs every frame:
+`drawScene()` runs every frame. If a screen is open it draws that and returns.
+Otherwise:
 
 1. baked backdrop for the current sky phase (cached per phase)
 2. stars, sun or moon on a clock-driven arc, parallax clouds, pterosaur, pond
@@ -72,11 +94,14 @@ lit, outlined pixels. Frames are baked lazily and cached by
 | Backdrop, weather, props, particles | `src/04-world.js` |
 | Needs, illness, bond, economy, the nest | `src/05-sim.js` |
 | Minigames, feeding animation, behaviour | `src/06-render.js` |
-| Sheets, chrome, input, save/load | `src/07-ui.js` |
-| A new bottom sheet | a key in `SHEETS` in `src/07-ui.js`, nothing else |
+| Case chrome, prose panels, input, save/load | `src/08-ui.js` |
+| A new screen | a key in `SCREENS` in `src/07-screens.js`, and a way to open it |
+| A new prose panel | a key in `SHEETS` in `src/08-ui.js`, nothing else |
+| The screen font | `src/03-font.js` |
 | Colours, layout, buttons | `src/style.css` |
 | The case: shell, bezel, keys | `src/style.css`, `index.html` |
 | A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
+| Checking any of the art | `tools/sheet.html` |
 
 ## The case
 
@@ -99,6 +124,6 @@ the game could not have reached on its own — setting a growth stage parks
 `S.growth` on a `GROWTH_GATES` boundary and moves `S.stageSeen` with it, the
 way `simulate()` would have.
 
-The `dev` sheet in `07-ui.js` is the only view of it, and `G.dev` gates the
+The `dev` sheet in `08-ui.js` is the only view of it, and `G.dev` gates the
 button in the top bar. It ships **on**; long-pressing the brand plate toggles
 it. See `ROADMAP.md`.

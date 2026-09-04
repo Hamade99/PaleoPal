@@ -3,346 +3,435 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<meta name="theme-color" content="#2a1c0c">
+<meta name="theme-color" content="#1a1208">
 <title>Paleopal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
 <style>
 /* ==========================================================================
    PALEOPAL — the case
    The game lives inside one moulded, speckled dinosaur egg: a shell, a bone
-   bezel, a recessed screen and physical keys. All of it is CSS. The project
-   ships no image assets and this file does not add any; the speckles are
-   tiled radial gradients and the mouldings are layered insets.
+   bezel, a recessed screen and five keys. All of it is CSS. The project ships
+   no image assets and this file does not add any.
+
+   Three rules hold the look together, and they are the whole difference
+   between a designed object and a rendered one:
+
+   1. ONE GRID. Every size, pad, radius and offset is a whole number of --px.
+      The screen is 224 device pixels wide and snaps to a whole or half
+      multiple of that, so the case and the world it contains share a grid.
+
+   2. ONE SURFACE, ONE EDGE. Each material is a flat fill with a single hard
+      edge and at most one highlight line. The first pass had gradients,
+      inset highlights, drop shadows, a glare sheet and a page vignette all
+      running at once at similar strength, which is what makes a thing read as
+      rendered rather than moulded.
+
+   3. NOTHING PERFECTLY SYMMETRICAL. Moulded plastic has a seam, a gate mark
+      and a maker's stamp, and its decoration is cast, not laid out. The
+      osteoderms are irregular, the brand sits off centre against the seam,
+      and the four screws are not four of the same screw.
    ========================================================================== */
 :root{
-  /* screen side — the canvas art is tuned to these, so they do not move */
-  --bg:#0e1417; --deep:#141d21; --panel:#1b262a; --line:#2b3a3f;
-  --bone:#e9e1cb; --dim:#93a29c; --ink:#101a18;
-  --moss:#7ea55f; --ochre:#d9a441; --rust:#c2603c; --sky:#7fb2c9;
+  /* the grid. Everything in the case is a multiple of this. */
+  --px:4px;
+  --lcd-w:448px;                     /* set by JS to a whole or half multiple of 224 */
 
-  /* shell side — warm sandstone plastic, jungle-green keys */
-  --shell-hi:#e3c07a; --shell:#c19243; --shell-mid:#a67a31;
-  --shell-lo:#7d5620; --shell-edge:#4e3209;
-  --scute:#9a6d28; --scute-hi:#d8ab5c;
-  --speck-a:rgba(84,49,12,.50); --speck-b:rgba(126,84,32,.40);
-  --bezel-hi:#f6efdc; --bezel:#ddd1b1; --bezel-lo:#a4936d; --bezel-edge:#6b5d3f;
-  --key:#316d4b; --key-hi:#4a936a; --key-lo:#1a4530; --key-edge:#0e2a1c;
+  /* Screen side. The canvas art is tuned to these, so they do not move. */
+  --bg:#0e1417; --deep:#141d21; --panel:#1b262a; --line:#2b3a3f;
+  --bone:#e9e1cb; --dim:#8fa39a; --ink:#101a18;
+  --moss:#8cb765; --ochre:#e0ac48; --rust:#cf6a44; --sky:#7fb2c9;
+
+  /* Case side. Two families and no more: a warm sandstone plastic for the
+     shell and a cool grey-green for everything that is not the shell. The
+     first pass ran one saturated amber through the shell, the wallet, the
+     buttons and the bezel, so nothing had anything to sit against. */
+  --shell:#c08f43;                   /* the moulding */
+  --shell-hi:#dcb060;                /* the one highlight line, top edges */
+  --shell-lo:#8d6527;                /* the one shade, bottom edges */
+  --shell-edge:#42290a;              /* the hard outline, used everywhere */
+  --scute:#a9782f;
+  --bezel:#d8ccac;                   /* bone */
+  --bezel-lo:#a08e69;
+  --bezel-edge:#5d5138;
+  --key:#2f6b49;                     /* jungle green, the one accent */
+  --key-hi:#448a60;
+  --key-lo:#1b432e;
+  --key-edge:#0c2419;
+  --stamp:rgba(52,32,6,.55);         /* moulded lettering */
+
   --safe:env(safe-area-inset-bottom,0px);
 
-  /* one speckle field, reused wherever the shell plastic shows */
+  /* Cast-in speckle. Irregular on purpose: an even field of dots reads as
+     noise, a cast one reads as material. */
   --speckles:
-    radial-gradient(1.7px 1.7px at 17px 23px,var(--speck-a) 98%,transparent),
-    radial-gradient(1.2px 1.2px at 61px 70px,var(--speck-a) 98%,transparent),
-    radial-gradient(2.3px 2.3px at 40px 11px,var(--speck-b) 98%,transparent),
-    radial-gradient(1.4px 1.4px at 88px 47px,var(--speck-a) 98%,transparent),
-    radial-gradient(2.0px 2.0px at 12px 96px,var(--speck-b) 98%,transparent),
-    radial-gradient(1.1px 1.1px at 71px 33px,var(--speck-a) 98%,transparent),
-    radial-gradient(1.8px 1.8px at 34px 58px,var(--speck-b) 98%,transparent);
+    radial-gradient(2px 2px at 17px 23px,rgba(74,44,10,.55) 98%,transparent),
+    radial-gradient(1px 1px at 61px 70px,rgba(74,44,10,.45) 98%,transparent),
+    radial-gradient(3px 3px at 40px 11px,rgba(120,80,30,.40) 98%,transparent),
+    radial-gradient(1px 1px at 88px 47px,rgba(74,44,10,.50) 98%,transparent),
+    radial-gradient(2px 2px at 12px 96px,rgba(120,80,30,.38) 98%,transparent),
+    radial-gradient(1px 1px at 71px 33px,rgba(74,44,10,.42) 98%,transparent),
+    radial-gradient(2px 2px at 34px 58px,rgba(120,80,30,.44) 98%,transparent);
   --speckle-size:97px 97px,97px 97px,131px 131px,131px 131px,73px 73px,73px 73px,113px 113px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  background:
-    radial-gradient(90% 55% at 50% 108%,rgba(126,165,95,.10),transparent 70%),
-    radial-gradient(120% 80% at 50% 0%,#241a10 0%,#0d0906 65%);
+  /* One flat ground. The radial vignette was doing the work a photograph does,
+     not the work a background does. */
+  background:#1a1208;
   color:var(--bone);
-  font-family:Inter,system-ui,sans-serif;
+  font-family:'Pixelify Sans',ui-monospace,monospace;
   display:flex;align-items:flex-start;justify-content:center;
   overscroll-behavior:none;
 }
-/* the crest stands 38px proud of the shell and the feet 12px below it, so
-   the padding here is what stops either being clipped on a short viewport */
-#app{width:100%;max-width:440px;margin:auto 0;padding:42px 10px calc(24px + var(--safe));position:relative}
+#app{width:100%;max-width:520px;margin:auto 0;
+  padding:calc(var(--px)*10) calc(var(--px)*3) calc(var(--px)*7 + var(--safe));position:relative}
 
 /* ---------- the shell ---------- */
-/* Rounder than the first pass, which was closer to a phone than to an egg:
-   the crown is a proper dome and the base is a full round instead of a
-   softened rectangle. A row of osteoderms runs over the top and two clawed
-   feet carry it, so the case reads as an animal rather than as a gadget. */
 .shell{
-  position:relative;padding:54px 19px 44px;
-  border-radius:50% 50% 46% 46% / 22% 22% 17% 17%;
-  background-image:var(--speckles),
-    radial-gradient(130% 62% at 50% -6%,var(--shell-hi) 0%,var(--shell) 40%,var(--shell-mid) 68%,var(--shell-lo) 100%);
+  position:relative;
+  padding:calc(var(--px)*13) calc(var(--px)*5) calc(var(--px)*10);
+  border-radius:50% 50% 44% 44% / 20% 20% 15% 15%;
+  background-image:var(--speckles),linear-gradient(var(--shell) 0 100%);
   background-size:var(--speckle-size),100% 100%;
   border:2px solid var(--shell-edge);
+  /* one highlight along the crown, one shade along the base, one shadow under
+     the whole thing. Nothing else. */
   box-shadow:
-    inset 0 3px 0 rgba(255,236,196,.55),
-    inset 0 -6px 14px rgba(60,34,4,.5),
-    inset 0 0 0 6px rgba(255,225,170,.10),
-    0 12px 0 #3d2708, 0 20px 34px rgba(0,0,0,.6);
+    inset 0 3px 0 var(--shell-hi),
+    inset 0 -5px 0 var(--shell-lo),
+    0 calc(var(--px)*2) 0 #33200a;
 }
-/* Osteoderms over the crown. They follow the dome rather than sitting in a
-   straight line, which is the difference between a dorsal crest and a zip
-   fastener: each plate is placed on the arc and rotated to stand normal to
-   it. The keychain tab that used to live here is gone — it was the last
-   piece of the case still shaped like a Tamagotchi. */
-.scutes{position:absolute;left:50%;top:-38px;transform:translateX(-50%);
-  width:219px;height:42px;pointer-events:none}
-.scutes i{position:absolute;bottom:0;width:15px;transform-origin:50% 100%;
-  background:linear-gradient(var(--scute-hi),var(--scute) 62%,var(--shell-lo));
-  border:2px solid var(--shell-edge);border-bottom:0;
-  border-radius:58% 58% 0 0 / 78% 78% 0 0;
-  box-shadow:inset 0 1px 0 rgba(255,246,220,.65)}
-.scutes i:nth-child(1){left:0;   bottom:-20px;height:17px;transform:rotate(-28deg)}
-.scutes i:nth-child(2){left:33px;bottom:-10px;height:23px;transform:rotate(-19deg)}
-.scutes i:nth-child(3){left:66px;bottom:-3px; height:28px;transform:rotate(-9deg)}
-.scutes i:nth-child(4){left:98px;bottom:0;    height:32px;width:19px}
-.scutes i:nth-child(5){left:134px;bottom:-3px;height:28px;transform:rotate(9deg)}
-.scutes i:nth-child(6){left:167px;bottom:-10px;height:23px;transform:rotate(19deg)}
-.scutes i:nth-child(7){left:200px;bottom:-20px;height:17px;transform:rotate(28deg)}
+/* the mould seam, and the gate mark it runs to */
+.shell::before{
+  content:"";position:absolute;left:50%;top:calc(var(--px)*-1);bottom:calc(var(--px)*-1);
+  width:1px;background:rgba(66,41,10,.30);pointer-events:none;
+  transform:translateX(calc(var(--px)*9));
+}
+.shell::after{
+  content:"";position:absolute;right:calc(var(--px)*7);bottom:calc(var(--px)*3);
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
+}
 
-/* Two three-toed feet the case stands on. The toes are real elements rather
-   than pale circles painted inside a tab, because they have to break the
-   silhouette to read as toes — outlined the same way the shell is, with a
-   keratin claw on each. */
-.feet{position:absolute;left:0;right:0;bottom:-12px;
-  display:flex;justify-content:center;gap:54px;pointer-events:none}
-.feet i{position:relative;width:96px;height:22px;
-  border-radius:0 0 10px 10px;
-  background:linear-gradient(var(--shell-mid) 30%,var(--shell-lo));
+/* Osteoderms over the crown, cast rather than laid out: no two the same width,
+   the spacing uneven, and the tallest one left of centre. A mirrored row of
+   seven identical plates is the single most machine-made thing a case can do. */
+.scutes{position:absolute;left:50%;top:calc(var(--px)*-9);transform:translateX(-50%);
+  width:calc(var(--px)*56);height:calc(var(--px)*10);pointer-events:none}
+.scutes i{position:absolute;bottom:0;transform-origin:50% 100%;
+  background:var(--scute);
+  border:2px solid var(--shell-edge);border-bottom:0;
+  border-radius:56% 56% 0 0 / 76% 76% 0 0;
+  box-shadow:inset 0 2px 0 var(--shell-hi)}
+.scutes i:nth-child(1){left:0;    bottom:-21px;width:13px;height:15px;transform:rotate(-31deg)}
+.scutes i:nth-child(2){left:30px; bottom:-11px;width:16px;height:24px;transform:rotate(-20deg)}
+.scutes i:nth-child(3){left:64px; bottom:-2px; width:14px;height:27px;transform:rotate(-11deg)}
+.scutes i:nth-child(4){left:92px; bottom:1px;  width:19px;height:33px;transform:rotate(-3deg)}
+.scutes i:nth-child(5){left:126px;bottom:-1px; width:15px;height:26px;transform:rotate(7deg)}
+.scutes i:nth-child(6){left:157px;bottom:-12px;width:17px;height:21px;transform:rotate(18deg)}
+.scutes i:nth-child(7){left:191px;bottom:-22px;width:12px;height:14px;transform:rotate(30deg)}
+
+/* Two three-toed feet. Flat plastic with one hard edge and a keratin claw on
+   each toe — the claws have to break the silhouette or the foot reads as a
+   tab with dots painted on it. */
+.feet{position:absolute;left:0;right:0;bottom:calc(var(--px)*-3);
+  display:flex;justify-content:center;gap:calc(var(--px)*13);pointer-events:none}
+.feet i{position:relative;width:calc(var(--px)*24);height:calc(var(--px)*5);
+  border-radius:0 0 calc(var(--px)*2) calc(var(--px)*2);
+  background:var(--shell-lo);
   border:2px solid var(--shell-edge);border-top:0}
-.feet b{position:absolute;width:26px;height:21px;bottom:-14px;
-  border-radius:0 0 52% 52% / 0 0 74% 74%;
-  background:linear-gradient(var(--shell-lo),var(--shell-mid));
-  border:2px solid var(--shell-edge);border-top:0;
-  box-shadow:0 3px 0 rgba(30,18,3,.45)}
+.feet b{position:absolute;width:calc(var(--px)*6);height:calc(var(--px)*5);
+  bottom:calc(var(--px)*-3);
+  border-radius:0 0 50% 50% / 0 0 72% 72%;
+  background:var(--shell-lo);
+  border:2px solid var(--shell-edge);border-top:0}
 .feet b:nth-child(1){left:1px}
-.feet b:nth-child(2){left:33px;width:30px;height:25px;bottom:-18px}
+.feet b:nth-child(2){left:calc(var(--px)*8);width:calc(var(--px)*7);height:calc(var(--px)*6);
+  bottom:calc(var(--px)*-4)}
 .feet b:nth-child(3){right:1px}
 .feet b::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
-  width:9px;height:8px;border-radius:0 0 50% 50%;
-  background:var(--bezel-hi);box-shadow:0 0 0 1.5px var(--shell-edge)}
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:0 0 50% 50%;
+  background:var(--bezel);box-shadow:0 0 0 1.5px var(--shell-edge)}
 
-/* ---------- faceplate head ---------- */
-.shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:0 6px;margin-bottom:12px}
+/* ---------- faceplate ---------- */
+.shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:calc(var(--px)*2);padding:0 calc(var(--px)*2);margin-bottom:calc(var(--px)*3)}
+/* the brand is moulded lettering, and it sits against the seam rather than in
+   the middle of the shell */
 .brand{
   flex:0 0 100%;text-align:center;position:relative;
-  font-family:'Pixelify Sans',monospace;font-weight:700;font-size:20px;letter-spacing:2px;
-  color:#3a2408;text-shadow:0 1px 0 rgba(255,236,196,.6);
+  font-weight:700;font-size:calc(var(--px)*5);letter-spacing:2px;
+  color:var(--stamp);text-shadow:0 1px 0 rgba(255,236,196,.45);
+  padding-left:calc(var(--px)*9);
 }
-.brand span{color:#1d4a33}
-.brand .rivet{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);
-  width:46px;height:3px;border-radius:2px;background:rgba(87,54,9,.35);box-shadow:0 1px 0 rgba(255,236,196,.45)}
-.tools{display:flex;align-items:center;gap:7px;margin-top:9px}
+.brand span{color:#22503a}
+.brand .rivet{position:absolute;left:50%;bottom:calc(var(--px)*-2);
+  transform:translateX(calc(-50% + var(--px)*4.5));
+  width:calc(var(--px)*11);height:2px;background:rgba(66,41,10,.30);
+  box-shadow:0 1px 0 rgba(255,236,196,.35)}
+.tools{display:flex;align-items:center;gap:calc(var(--px)*2);margin-top:calc(var(--px)*2)}
 .wallet{
-  display:flex;align-items:center;gap:6px;font-family:'Pixelify Sans';font-size:17px;color:var(--ochre);
-  background:linear-gradient(#20292c,#151d20);border:2px solid var(--shell-edge);border-radius:9px;
-  padding:4px 10px 3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 3px 0 rgba(61,39,8,.85)
+  display:flex;align-items:center;gap:calc(var(--px)*1.5);
+  font-size:calc(var(--px)*4);color:var(--ochre);
+  background:#141d21;border:2px solid var(--shell-edge);
+  border-radius:calc(var(--px)*2);
+  padding:calc(var(--px)*1) calc(var(--px)*2.5) calc(var(--px)*0.75);
+  box-shadow:inset 0 2px 0 #0a1013
 }
 #coinArt{display:flex}
+
+/* Small keys on the faceplate. Same moulding as the big ones underneath, so
+   there is one button in this design rather than three. */
 .iconbtn{
-  background:linear-gradient(var(--shell-hi),var(--shell-mid));
-  border:2px solid var(--shell-edge);color:#3a2408;
-  width:36px;height:36px;border-radius:10px;cursor:pointer;
-  font-size:15px;font-family:'Pixelify Sans';display:grid;place-items:center;
-  box-shadow:inset 0 1px 0 rgba(255,242,214,.7),0 4px 0 rgba(61,39,8,.9)
+  background:var(--shell);
+  border:2px solid var(--shell-edge);color:var(--stamp);
+  width:calc(var(--px)*9);height:calc(var(--px)*9);
+  border-radius:calc(var(--px)*2);cursor:pointer;
+  font-size:calc(var(--px)*4);font-family:inherit;display:grid;place-items:center;
+  box-shadow:inset 0 2px 0 var(--shell-hi),inset 0 -2px 0 var(--shell-lo),
+             0 calc(var(--px)*1) 0 var(--shell-edge)
 }
-.iconbtn:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,242,214,.7)}
-.iconbtn:hover{background:linear-gradient(#f0cb87,var(--shell))}
-/* muted reads as a dimmed key, not a dead one */
-.iconbtn.off{filter:saturate(.4) brightness(.88)}
-.iconbtn.dev{background:linear-gradient(var(--key-hi),var(--key));border-color:var(--key-edge);
-  box-shadow:inset 0 1px 0 rgba(190,240,210,.45),0 4px 0 var(--key-edge)}
-.iconbtn.dev:hover{background:linear-gradient(#5aa87a,var(--key-hi))}
-.iconbtn.dev:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(190,240,210,.45)}
+.iconbtn:hover{background:var(--shell-hi)}
+.iconbtn:active,.iconbtn.down{transform:translateY(calc(var(--px)*1));
+  box-shadow:inset 0 2px 0 var(--shell-lo)}
+.iconbtn.off{filter:saturate(.35) brightness(.85)}
+.iconbtn.dev{background:var(--key);border-color:var(--key-edge);color:#dff0e4;
+  box-shadow:inset 0 2px 0 var(--key-hi),inset 0 -2px 0 var(--key-lo),
+             0 calc(var(--px)*1) 0 var(--key-edge)}
+.iconbtn.dev:hover{background:var(--key-hi)}
 #btnNest{position:relative}
-#nestCount{position:absolute;right:-4px;top:-5px;min-width:16px;height:16px;border-radius:9px;
-  background:var(--rust);color:#fff;font-family:'Pixelify Sans';font-size:10px;line-height:15px;
-  text-align:center;font-style:normal;border:1.5px solid var(--shell-edge)}
+#nestCount{position:absolute;right:calc(var(--px)*-1);top:calc(var(--px)*-1);
+  min-width:calc(var(--px)*4);height:calc(var(--px)*4);border-radius:calc(var(--px)*2);
+  background:var(--rust);color:#fff;font-size:calc(var(--px)*2.5);
+  line-height:calc(var(--px)*3.5);text-align:center;font-style:normal;
+  border:1.5px solid var(--shell-edge)}
 #nestCount:empty{display:none}
 
-/* ---------- bone bezel around the screen ---------- */
+/* ---------- bone bezel ---------- */
 .bezel{
-  position:relative;border-radius:22px;padding:11px;
-  background:linear-gradient(160deg,var(--bezel-hi),var(--bezel) 45%,var(--bezel-lo));
+  position:relative;border-radius:calc(var(--px)*5);padding:calc(var(--px)*3);
+  background:var(--bezel);
   border:2px solid var(--bezel-edge);
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.8),inset 0 -3px 6px rgba(88,74,46,.45),
-             0 5px 0 rgba(61,39,8,.55),0 0 0 3px rgba(87,54,9,.35)
+  box-shadow:inset 0 2px 0 #f2ead2,inset 0 -3px 0 var(--bezel-lo),
+             0 calc(var(--px)*1) 0 rgba(66,41,10,.5)
 }
-.screw{position:absolute;width:7px;height:7px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#efe6cd,#8d7d5a);
-  box-shadow:inset 0 0 0 1px rgba(80,66,38,.7),0 1px 0 rgba(255,255,255,.5)}
-.screw::after{content:"";position:absolute;left:1px;top:3px;width:5px;height:1px;background:rgba(70,58,32,.8)}
-.screw.tl{left:5px;top:5px}.screw.tr{right:5px;top:5px}
-.screw.bl{left:5px;bottom:5px}.screw.br{right:5px;bottom:5px}
+/* Four fixings, not four of the same screw: two slotted, one cross, one plug.
+   Nobody reads them individually and everybody reads the difference. */
+.screw{position:absolute;width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:#b9aa85;box-shadow:inset 0 0 0 1px rgba(80,66,38,.7)}
+.screw::after{content:"";position:absolute;left:1px;top:calc(50% - .5px);
+  width:calc(100% - 2px);height:1px;background:rgba(70,58,32,.85)}
+.screw.tr::before{content:"";position:absolute;top:1px;left:calc(50% - .5px);
+  width:1px;height:calc(100% - 2px);background:rgba(70,58,32,.85)}
+.screw.br::after{display:none}
+.screw.tl{left:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.tr{right:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.bl{left:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
+.screw.br{right:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
 
 .screen{
-  border-radius:14px;padding:10px 10px 11px;
-  background:linear-gradient(#131c20,var(--bg));
-  border:1px solid #05090a;
-  box-shadow:inset 0 3px 10px rgba(0,0,0,.85),inset 0 0 0 1px rgba(126,165,95,.10)
+  border-radius:calc(var(--px)*3);padding:calc(var(--px)*2.5);
+  background:var(--bg);
+  border:2px solid #05090a;
+  box-shadow:inset 0 2px 0 #05090a
 }
 
 /* ---------- identity ---------- */
-.ident{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:9px}
-.dname{font-family:'Pixelify Sans';font-size:22px;line-height:1;cursor:pointer;border-bottom:1px dashed transparent;color:var(--bone)}
+.ident{display:flex;align-items:baseline;gap:calc(var(--px)*2);flex-wrap:wrap;
+  margin-bottom:calc(var(--px)*2)}
+.dname{font-size:calc(var(--px)*5);line-height:1;cursor:pointer;
+  border-bottom:1px dashed transparent;color:var(--bone)}
 .dname:hover{border-bottom-color:var(--line)}
-.dsub{font-size:12.5px;color:var(--dim)}
-#nameEdit{font:inherit;font-family:'Pixelify Sans';font-size:22px;background:var(--panel);color:var(--bone);
-  border:1px solid var(--line);border-radius:6px;padding:1px 6px;width:150px}
+.dsub{font-size:calc(var(--px)*3);color:var(--dim)}
+#nameEdit{font:inherit;font-size:calc(var(--px)*5);background:var(--panel);color:var(--bone);
+  border:1px solid var(--line);border-radius:calc(var(--px)*1);
+  padding:1px calc(var(--px)*1.5);width:calc(var(--px)*38)}
 
-/* ---------- needs: the classic icon strip, one chunky meter each ---------- */
-.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
-.need{background:#141d21;border:1px solid var(--line);border-radius:4px;
-  padding:5px 6px 6px;display:flex;flex-direction:column;gap:4px}
-.need .cap{display:flex;align-items:center;gap:4px;min-height:14px}
-.need .cap canvas{image-rendering:pixelated;width:14px;height:14px;flex:0 0 14px}
-.need b{font-weight:600;font-size:10px;color:var(--dim);letter-spacing:.2px;text-transform:uppercase}
-/* Ten hard cells behind a black grid, square corners, a lit top row and a
-   shaded bottom one — the same read as the meters the canvas would draw. The
-   rounded gradient pill it replaced belonged to a different application. */
-.track{position:relative;height:11px;background:#05090a;border:1px solid #000;overflow:hidden}
-.fill{height:100%;width:50%;transition:width .45s linear,background .4s;
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.26),inset 0 -2px 0 rgba(0,0,0,.34)}
+/* ---------- needs: the classic icon strip ---------- */
+.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:calc(var(--px)*1.5);
+  margin-bottom:calc(var(--px)*2.5)}
+.need{background:var(--deep);border:1px solid var(--line);
+  padding:calc(var(--px)*1.25) calc(var(--px)*1.5) calc(var(--px)*1.5);
+  display:flex;flex-direction:column;gap:calc(var(--px)*1)}
+.need .cap{display:flex;align-items:center;gap:calc(var(--px)*1);min-height:calc(var(--px)*3.5)}
+.need .cap canvas{image-rendering:pixelated;width:calc(var(--px)*3);height:calc(var(--px)*3);
+  flex:0 0 calc(var(--px)*3)}
+.need b{font-weight:500;font-size:calc(var(--px)*2.5);color:var(--dim);letter-spacing:.5px}
+/* ten hard cells behind a black grid, square corners */
+.track{position:relative;height:calc(var(--px)*2.5);background:#05090a;border:1px solid #000;
+  overflow:hidden}
+.fill{height:100%;width:50%;transition:width .45s linear,background .4s}
 .seg{position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#05090a calc(10% - 2px) 10%)}
 .need.low b{color:var(--rust)}
-.need.low{border-color:#6d3527;animation:lowpulse 1.6s ease-in-out infinite}
-@keyframes lowpulse{50%{box-shadow:0 0 8px rgba(194,96,60,.35)}}
+.need.low{border-color:#6d3527}
 
-/* ---------- stage: the glass over the world ---------- */
-.stage{position:relative}
-.lcd{position:relative;border-radius:7px;overflow:hidden;
-  box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(126,165,95,.16),inset 0 0 0 1px #000}
-canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;cursor:pointer}
-.glare{position:absolute;inset:0;pointer-events:none;border-radius:7px;
-  background:linear-gradient(147deg,rgba(255,255,255,.10) 0 22%,rgba(255,255,255,0) 46%)}
-.lamp{position:absolute;right:4px;bottom:-7px;width:6px;height:6px;border-radius:50%;
-  background:var(--moss);box-shadow:0 0 6px rgba(126,165,95,.95)}
-.lamp.rest{background:var(--sky);box-shadow:0 0 6px rgba(127,178,201,.85)}
-.lamp.bad{background:var(--rust);box-shadow:0 0 7px rgba(194,96,60,.95)}
+/* ---------- the glass ---------- */
+.stage{position:relative;display:flex;flex-direction:column;align-items:center}
+/* The screen is 224 device pixels across and only ever shown at a whole or
+   half multiple of that, set by fitScreen(). At an arbitrary fraction the
+   pixel grid of the world came out uneven against the grid of the case, which
+   is visible on everything with a one-pixel line in it. */
+.lcd{position:relative;width:var(--lcd-w);max-width:100%;
+  box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(140,183,101,.14)}
+canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
+  touch-action:none;cursor:pointer}
+.lamp{position:absolute;right:0;bottom:calc(var(--px)*-2.5);
+  width:calc(var(--px)*1.5);height:calc(var(--px)*1.5);border-radius:50%;background:var(--moss)}
+.lamp.rest{background:var(--sky)}
+.lamp.bad{background:var(--rust)}
 
 .bubble{
-  position:absolute;left:50%;top:34px;transform:translate(-50%,-6px);
-  background:var(--bone);color:var(--ink);font-size:12.5px;font-weight:500;
-  padding:6px 10px;border-radius:9px;max-width:86%;text-align:center;
-  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;line-height:1.25;
-  box-shadow:0 4px 0 rgba(0,0,0,.4);z-index:2
+  position:absolute;left:50%;top:calc(var(--px)*8);transform:translate(-50%,-4px);
+  background:var(--bone);color:var(--ink);font-size:calc(var(--px)*3);
+  padding:calc(var(--px)*1.5) calc(var(--px)*2.5);max-width:86%;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;line-height:1.3;
+  border:2px solid var(--ink);z-index:2
 }
 .bubble.on{opacity:1;transform:translate(-50%,0)}
-.picks span{position:absolute;bottom:14px;transform:translateX(-50%);text-align:center;
-  font-size:10.5px;color:#b9c4bd;line-height:1.35;white-space:nowrap;
-  background:rgba(10,18,16,.82);border:1px solid rgba(90,116,104,.55);border-radius:6px;padding:3px 7px}
-.picks b{display:block;font-size:11.5px;color:var(--bone);font-weight:600;font-family:'Pixelify Sans';letter-spacing:.3px}
-/* badges ride the top of the screen, clear of the foreground cycads */
-.badge{position:absolute;left:5px;top:5px;right:5px;display:flex;gap:4px;flex-wrap:wrap}
-.tag{background:rgba(10,18,16,.86);border:1px solid #3a4d45;color:var(--bone);font-size:10px;
-  padding:2px 6px;border-radius:20px;display:flex;align-items:center;gap:4px;line-height:1.4}
-.tag.warn{border-color:#8a4130;color:#f5c3ad;background:rgba(48,17,9,.86)}
-.dot{width:5px;height:5px;border-radius:50%;background:var(--moss)}
+.picks span{position:absolute;bottom:calc(var(--px)*3.5);transform:translateX(-50%);
+  text-align:center;font-size:calc(var(--px)*2.75);color:#b9c4bd;line-height:1.35;
+  white-space:nowrap;background:rgba(10,18,16,.85);border:1px solid rgba(90,116,104,.55);
+  padding:calc(var(--px)*0.75) calc(var(--px)*1.75)}
+.picks b{display:block;font-size:calc(var(--px)*3);color:var(--bone);letter-spacing:.3px}
+.badge{position:absolute;left:calc(var(--px)*1);top:calc(var(--px)*1);right:calc(var(--px)*1);
+  display:flex;gap:calc(var(--px)*1);flex-wrap:wrap}
+.tag{background:rgba(10,18,16,.88);border:1px solid #3a4d45;color:var(--bone);
+  font-size:calc(var(--px)*2.5);padding:1px calc(var(--px)*1.5);
+  display:flex;align-items:center;gap:calc(var(--px)*1);line-height:1.5}
+.tag.warn{border-color:#8a4130;color:#f5c3ad;background:rgba(48,17,9,.88)}
+.dot{width:calc(var(--px)*1.25);height:calc(var(--px)*1.25);border-radius:50%;background:var(--moss)}
 .tag.warn .dot{background:var(--rust)}
 
 /* ---------- mood strip ---------- */
-.moodrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:11px 2px 1px}
-.mood{font-size:13px;color:var(--bone);line-height:1.35}
+.moodrow{display:flex;align-items:center;justify-content:space-between;
+  gap:calc(var(--px)*2.5);margin:calc(var(--px)*2.5) 0 0}
+.mood{font-size:calc(var(--px)*3.25);color:var(--bone);line-height:1.35}
 .mood em{font-style:normal;color:var(--dim)}
-.bondwrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);flex:0 0 auto}
+.bondwrap{display:flex;align-items:center;gap:calc(var(--px)*1.5);font-size:calc(var(--px)*2.75);
+  color:var(--dim);flex:0 0 auto}
 .bondwrap canvas{image-rendering:pixelated}
 
-/* ---------- physical keys ---------- */
-.keys{padding-top:14px}
-.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+/* ---------- the five keys ---------- */
+.keys{padding-top:calc(var(--px)*4)}
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*2)}
 .act{
-  background:linear-gradient(var(--key-hi),var(--key) 46%,var(--key-lo));
-  border:2px solid var(--key-edge);color:#eaf6ee;
-  border-radius:14px;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  font-family:'Pixelify Sans';font-size:12px;letter-spacing:.4px;cursor:pointer;position:relative;padding:6px 2px;
-  box-shadow:inset 0 2px 0 rgba(198,246,214,.45),inset 0 -3px 6px rgba(0,0,0,.35),0 5px 0 var(--key-edge),0 7px 8px rgba(40,24,4,.45)
+  background:var(--key);
+  border:2px solid var(--key-edge);color:#dff0e4;
+  border-radius:calc(var(--px)*3);min-height:calc(var(--px)*16);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(var(--px)*1);
+  font-family:inherit;font-size:calc(var(--px)*3);letter-spacing:.4px;cursor:pointer;
+  position:relative;padding:calc(var(--px)*1.5) calc(var(--px)*0.5);
+  box-shadow:inset 0 3px 0 var(--key-hi),inset 0 -3px 0 var(--key-lo),
+             0 calc(var(--px)*1.5) 0 var(--key-edge)
 }
-.act:hover{background:linear-gradient(#57a678,var(--key-hi) 46%,var(--key))}
-.act:active{transform:translateY(5px);box-shadow:inset 0 2px 0 rgba(198,246,214,.45),inset 0 -3px 6px rgba(0,0,0,.35)}
-.act .ico{display:flex;height:26px;align-items:center}
-.act .ico canvas{width:26px;height:26px}
-.act[disabled]{opacity:.34;cursor:default;box-shadow:0 5px 0 var(--key-edge);transform:none;filter:grayscale(.5)}
-.act .nub{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;
-  background:var(--rust);border:1px solid #40140a;box-shadow:0 0 6px rgba(194,96,60,.95)}
+.act:hover{background:var(--key-hi)}
+/* A key that opened a screen stays pressed, the way a latching key does. */
+.act:active,.act.down{transform:translateY(calc(var(--px)*1.5));
+  box-shadow:inset 0 3px 0 var(--key-lo)}
+.act .ico{display:flex;height:calc(var(--px)*6);align-items:center}
+.act .ico canvas{width:calc(var(--px)*6);height:calc(var(--px)*6);image-rendering:pixelated}
+.act[disabled]{opacity:.35;cursor:default;transform:none;filter:grayscale(.5);
+  box-shadow:0 calc(var(--px)*1.5) 0 var(--key-edge)}
+.act .nub{position:absolute;top:calc(var(--px)*1);right:calc(var(--px)*1.5);
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:var(--rust);border:1px solid #40140a}
 
-/* moulded nameplate and speaker slots at the foot of the case */
-.plate{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px;
-  font-family:'Pixelify Sans';font-size:11px;letter-spacing:2.4px;color:rgba(52,32,6,.85);
-  text-shadow:0 1px 0 rgba(255,240,204,.65)}
-.grille{width:34px;height:9px;border-radius:5px;
-  background:repeating-linear-gradient(90deg,rgba(87,54,9,.34) 0 2px,transparent 2px 5px);
-  box-shadow:0 1px 0 rgba(255,236,196,.45)}
+/* moulded nameplate and speaker slots */
+.plate{display:flex;align-items:center;justify-content:center;gap:calc(var(--px)*2);
+  margin-top:calc(var(--px)*4);
+  font-size:calc(var(--px)*2.75);letter-spacing:2.4px;color:var(--stamp);
+  text-shadow:0 1px 0 rgba(255,240,204,.5)}
+.grille{width:calc(var(--px)*8);height:calc(var(--px)*2);
+  background:repeating-linear-gradient(90deg,rgba(66,41,10,.34) 0 2px,transparent 2px 5px);
+  box-shadow:0 1px 0 rgba(255,236,196,.4)}
 
-/* ---------- sheets ---------- */
-.scrim{position:fixed;inset:0;background:rgba(10,6,2,.72);opacity:0;pointer-events:none;transition:opacity .2s;z-index:5}
+/* ---------- the panels that stayed in the DOM ----------
+   Only the dossier, the developer harness and the two notices. Everything a
+   player does to the animal happens on the glass; these are for reading. */
+.scrim{position:fixed;inset:0;background:rgba(10,6,2,.75);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:5}
 .scrim.on{opacity:1;pointer-events:auto}
 .sheet{
   position:fixed;left:50%;bottom:0;transform:translate(-50%,102%);
-  width:100%;max-width:440px;background:var(--deep);
+  width:100%;max-width:520px;background:var(--deep);
   border:2px solid var(--bezel-edge);border-bottom:0;
-  border-radius:20px 20px 0 0;padding:14px 14px calc(18px + var(--safe));z-index:6;
-  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:84vh;overflow-y:auto;
-  box-shadow:0 -8px 30px rgba(0,0,0,.6)
+  border-radius:calc(var(--px)*4) calc(var(--px)*4) 0 0;
+  padding:calc(var(--px)*3) calc(var(--px)*3) calc(var(--px)*4 + var(--safe));z-index:6;
+  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:84vh;overflow-y:auto
 }
 .sheet.on{transform:translate(-50%,0)}
-
-/* Docked: the developer panel never covers the game. Wide windows get a rail
-   on the right, narrow ones the bottom half, and neither raises a scrim. */
 .sheet.dock{max-height:52vh}
 @media (min-width:860px){
   .sheet.dock{
-    left:auto;right:0;top:0;bottom:0;width:360px;max-width:38vw;max-height:100vh;
-    transform:translateX(104%);border-radius:16px 0 0 16px;border:2px solid var(--bezel-edge);border-right:0;
-    padding-top:18px
+    left:auto;right:0;top:0;bottom:0;width:calc(var(--px)*90);max-width:38vw;
+    max-height:100vh;transform:translateX(104%);
+    border-radius:calc(var(--px)*4) 0 0 calc(var(--px)*4);
+    border:2px solid var(--bezel-edge);border-right:0;padding-top:calc(var(--px)*4)
   }
   .sheet.dock.on{transform:translateX(0)}
   .sheet.dock .grip{display:none}
 }
-.sheet h2{font-family:'Pixelify Sans';font-size:19px;font-weight:700;margin-bottom:2px;color:var(--bone)}
-.sheet p.lede{font-size:12.5px;color:var(--dim);margin-bottom:12px;line-height:1.45}
-.grip{width:44px;height:5px;border-radius:3px;background:var(--bezel-lo);margin:0 auto 12px}
+.sheet h2{font-size:calc(var(--px)*5);font-weight:700;margin-bottom:2px;color:var(--bone)}
+.sheet p.lede{font-size:calc(var(--px)*3.25);color:var(--dim);margin-bottom:calc(var(--px)*3);
+  line-height:1.5}
+.grip{width:calc(var(--px)*11);height:calc(var(--px)*1.25);background:var(--bezel-lo);
+  margin:0 auto calc(var(--px)*3)}
 .row{
-  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
-  background:linear-gradient(var(--panel),#172125);border:1px solid var(--line);color:var(--bone);
-  border-radius:12px;padding:10px 12px;margin-bottom:7px;cursor:pointer;font:inherit;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 3px 0 #0b1214
+  display:flex;align-items:center;gap:calc(var(--px)*3);width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--line);color:var(--bone);
+  border-radius:calc(var(--px)*2);padding:calc(var(--px)*2.5) calc(var(--px)*3);
+  margin-bottom:calc(var(--px)*1.75);cursor:pointer;font:inherit;
+  box-shadow:0 calc(var(--px)*0.75) 0 #0b1214
 }
 .row:hover{border-color:#3d5158}
-.row:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.row:active{transform:translateY(calc(var(--px)*0.75));box-shadow:none}
 .row[disabled]{opacity:.4;cursor:default;box-shadow:none;transform:none}
-.row .art{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;overflow:hidden}
+.row .art{width:calc(var(--px)*7);height:calc(var(--px)*7);flex:0 0 calc(var(--px)*7);
+  display:grid;place-items:center;overflow:hidden}
 .row .art canvas{image-rendering:pixelated}
 .row .t{flex:1;min-width:0}
-.row .t b{display:block;font-size:13.5px;font-weight:600}
-.row .t small{display:block;font-size:11.5px;color:var(--dim);margin-top:1px;line-height:1.35}
-.row .px{font-family:'Pixelify Sans';font-size:15px;color:var(--ochre);flex:0 0 auto}
+.row .t b{display:block;font-size:calc(var(--px)*3.5);font-weight:600}
+.row .t small{display:block;font-size:calc(var(--px)*3);color:var(--dim);margin-top:1px;
+  line-height:1.4}
+.row .px{font-size:calc(var(--px)*4);color:var(--ochre);flex:0 0 auto}
 .row .px.own{color:var(--moss)}
-.row.pet.here{border-color:var(--moss);box-shadow:0 3px 0 #0b1214,inset 0 0 0 1px rgba(126,165,95,.4)}
 
-/* chips: a compact row of one-tap switches, used by the developer sheet */
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
-.chip{font:inherit;font-family:'Pixelify Sans';font-size:12.5px;letter-spacing:.3px;cursor:pointer;
-  background:linear-gradient(var(--panel),#172125);border:1px solid var(--line);color:var(--bone);
-  border-radius:9px;padding:7px 11px;box-shadow:0 3px 0 #0b1214}
+.chips{display:flex;flex-wrap:wrap;gap:calc(var(--px)*1.5);margin:0 0 calc(var(--px)*2.5)}
+.chip{font:inherit;font-size:calc(var(--px)*3.25);letter-spacing:.3px;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);color:var(--bone);
+  border-radius:calc(var(--px)*2);padding:calc(var(--px)*1.75) calc(var(--px)*2.75);
+  box-shadow:0 calc(var(--px)*0.75) 0 #0b1214}
 .chip:hover{border-color:#3d5158}
-.chip:active{transform:translateY(3px);box-shadow:none}
-.chip.on{background:linear-gradient(var(--key-hi),var(--key));border-color:var(--key-edge);color:#eaf6ee}
+.chip:active{transform:translateY(calc(var(--px)*0.75));box-shadow:none}
+.chip.on{background:var(--key);border-color:var(--key-edge);color:#dff0e4}
 .chip.warn{color:#f0b7a3;border-color:#7a3a2b}
 
-.log{font-size:12.5px;line-height:1.5;color:var(--bone);border-left:2px solid var(--line);padding:2px 0 2px 10px;margin-bottom:9px}
-.log time{display:block;font-size:10.5px;color:var(--dim);margin-bottom:1px}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-.stat b{display:block;font-size:10.5px;color:var(--dim);font-weight:500}
-.stat span{font-family:'Pixelify Sans';font-size:15px}
-.note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:4px}
-.trait{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:20px;
-  padding:3px 9px;font-size:11.5px;margin:0 5px 5px 0}
-.hr{height:1px;background:var(--line);margin:12px 0}
-.gamebar{display:flex;justify-content:space-between;font-family:'Pixelify Sans';font-size:15px;padding:0 2px 8px}
-.tiny{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.5}
+.log{font-size:calc(var(--px)*3.25);line-height:1.6;color:var(--bone);
+  border-left:2px solid var(--line);padding:2px 0 2px calc(var(--px)*2.5);
+  margin-bottom:calc(var(--px)*2.25)}
+.log time{display:block;font-size:calc(var(--px)*2.75);color:var(--dim);margin-bottom:1px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--px)*2);
+  margin-bottom:calc(var(--px)*3)}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--px)*2);
+  padding:calc(var(--px)*2) calc(var(--px)*2.5)}
+.stat b{display:block;font-size:calc(var(--px)*2.75);color:var(--dim);font-weight:500}
+.stat span{font-size:calc(var(--px)*4)}
+.note{font-size:calc(var(--px)*3);color:var(--dim);line-height:1.6;margin-top:calc(var(--px)*1)}
+.trait{display:inline-block;background:var(--panel);border:1px solid var(--line);
+  border-radius:calc(var(--px)*5);padding:calc(var(--px)*0.75) calc(var(--px)*2.25);
+  font-size:calc(var(--px)*3);margin:0 calc(var(--px)*1.25) calc(var(--px)*1.25) 0}
+.hr{height:1px;background:var(--line);margin:calc(var(--px)*3) 0}
+.tiny{font-size:calc(var(--px)*2.75);color:var(--dim);text-align:center;
+  margin-top:calc(var(--px)*2.5);line-height:1.6}
 button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 
-@media (max-width:360px){
-  .shell{padding:44px 12px 40px}
-  .act{min-height:58px;font-size:11px}
-  .iconbtn{width:33px;height:33px}
+@media (max-width:400px){
+  :root{--px:3.4px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
@@ -389,7 +478,6 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
             <!-- filled by buildChrome() from SPECIES, so it stays in step with the eggs -->
             <div class="picks" id="picks" hidden></div>
             <div class="bubble" id="bubble"></div>
-            <i class="glare"></i>
           </div>
           <i class="lamp" id="lamp"></i>
         </div>
@@ -617,7 +705,7 @@ function hslToHex(h, s, l){
 function ramp(base, opts){
   opts = opts || {};
   const [h,s,l] = hexToHsl(base);
-  const spread = opts.spread || .17, shift = opts.shift || 22;
+  const spread = opts.spread || .19, shift = opts.shift || 22;
   const out = [];
   for (let i=0;i<5;i++){
     const t = (i-2)/2;                                   // -1 shadow … +1 light
@@ -630,21 +718,65 @@ function ramp(base, opts){
   return out;
 }
 function shiftRamp(r, n){ return r.map((_,i) => r[clamp(i+n,0,4)]); }
+/* blend two hexes. Used to pull the underside toward the flank hue so that
+   countershading reads as light falling off a body rather than as a second
+   colour painted onto it. */
+function mixCol(a, b, t){
+  const A = [1,3,5].map(i => parseInt(a.slice(i,i+2),16));
+  const B = [1,3,5].map(i => parseInt(b.slice(i,i+2),16));
+  return '#' + A.map((v,i) => Math.round(lerp(v,B[i],t)).toString(16).padStart(2,'0')).join('');
+}
 
-/* material keys: each shape is painted onto its own layer with a flat key
-   colour, so material boundaries stay exact and never blend into each other */
-const LAYERS = ['far','skin','belly','limb','head','mark','crest','horn','mouth','sclera','pupil','glint'];
-const MARK_LAYER = LAYERS.indexOf('mark');   // only paints where a body layer already is
-const BODY_TOP   = LAYERS.indexOf('head');
+/* Material keys, in paint order: a later layer wins where two overlap.
+
+   The compositor only draws an internal edge where two *different* materials
+   meet, so two shapes sharing a layer merge into one region with nothing
+   between them. That is why the mandible has a layer of its own instead of
+   sharing `head` — painted onto `head` it was drawn correctly, hinged
+   correctly, and completely invisible, which is what left every animal with a
+   mouthless face.
+
+   `shield` and `jaw` sit below `head`, so a frill and a lower jaw pass behind
+   the skull. `belly` and `mark` sit above the body but are masked to it, so
+   both can be painted generously and let the mask trim them to the
+   silhouette. `mark` stops below `belly`, which is how a coat pattern fades
+   out where the countershading starts rather than running across it.
+
+   `horn` sits above `mouth` because teeth, beaks and claws stand in front of
+   the mouth cavity, not behind it. The other way round the gape painted over
+   every tooth in it. */
+const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','sclera','pupil','glint'];
+const BODY_TOP    = LAYERS.indexOf('head');
+const BELLY_LAYER = LAYERS.indexOf('belly');
+const MARK_LAYER  = LAYERS.indexOf('mark');
+/* Countershading belongs to the trunk, the skull and the jaw. It is kept off
+   the limbs — near-side limbs carry their own lit ramp and far-side limbs are
+   held back in shade, and letting the belly claim either bleached every leg to
+   the same cream as the underside. */
+const BELLY_OK = LAYERS.map(n => n === 'skin' || n === 'shield' || n === 'jaw' || n === 'head');
 
 function buildMaterials(spec){
   const skin = ramp(spec.skin), horn = ramp(spec.horn, {spread:.12, shift:14});
   return {
-    far:    { r: shiftRamp(skin, -2), lit:.45 },
+    /* Far-side limbs. Two steps down with the contrast raised turned them
+       into a black mass slung under the body that read as shadow rather than
+       as legs, which on the four-legged animals is half the sprite. */
+    far:    { r: shiftRamp(skin, -1), lit:.55 },
     skin:   { r: skin,                lit:1 },
-    belly:  { r: ramp(spec.belly),    lit:.65 },
     limb:   { r: shiftRamp(skin, 0),  lit:1.1 },
+    /* display structures: a frill or a plate carries its own colour, which is
+       standard in modern reconstructions and is also the only thing that
+       stops a shield reading as a lump of neck at this size */
+    shield: { r: ramp(spec.shield || spec.crest), lit:.85 },
+    /* a shade under the skull, so the lip line reads as a step and not only
+       as a seam */
+    jaw:    { r: shiftRamp(skin, -1), lit:.85 },
     head:   { r: skin,                lit:.9 },
+    /* Pulled a third of the way back toward the flank. Taken neat, the belly
+       colours are far enough from the body that the underside read as a
+       painted stripe; taken a step down their own ramp they fell into the
+       dark, saturated end and inverted the countershading outright. */
+    belly:  { r: ramp(mixCol(spec.belly, spec.skin, .38)), lit:.62 },
     mark:   { r: ramp(spec.mark || spec.crest), lit:.85 },
     crest:  { r: ramp(spec.crest),    lit:.7 },
     horn:   { r: horn,                lit:1.15 },
@@ -660,21 +792,40 @@ function buildMaterials(spec){
 const LIGHT = [-0.66, -0.75];      // upper-left
 const RIM = 6;                     // how deep the lit/shadowed band reaches
 
+/* Every pass below is per-pixel, and a sprite occupies well under half the
+   box it is drawn in. The flatten pass has to look at all of it — that is how
+   it finds out where the animal is — but it records the bounds while it goes,
+   and the distance field, the lighting and the outline then run over those
+   bounds plus a two-pixel margin for the dilation. Outside them every pixel is
+   background, which is the value the arrays already hold. */
 function composeSprite(layerCanvases, mats, w, h){
   const n = w*h;
   const id = new Int8Array(n).fill(-1);
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  const seen = i => {
+    const x = i % w, y = (i - x) / w;
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  };
   for (let li=0; li<LAYERS.length; li++){
     const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
     if (li === MARK_LAYER){
+      // a coat rides the body, and stops where the countershading starts
       for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && id[i] <= BODY_TOP) id[i] = li;
+    } else if (li === BELLY_LAYER){
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && BELLY_OK[id[i]]) id[i] = li;
     } else {
-      for (let i=0;i<n;i++) if (d[i*4+3] >= 118) id[i] = li;
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118){ if (id[i] < 0) seen(i); id[i] = li; }
     }
   }
+  if (x1 < 0) return makeCv(w,h);                 // nothing was drawn
+  x0 = Math.max(0, x0-2); y0 = Math.max(0, y0-2);
+  x1 = Math.min(w-1, x1+2); y1 = Math.min(h-1, y1+2);
+
   // distance from the silhouette edge (two-pass chamfer)
   const dist = new Float32Array(n);
   const BIG = 1e6;
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x;
     if (id[i] < 0){ dist[i] = 0; continue; }
     const out = (x===0||id[i-1]<0) || (x===w-1||id[i+1]<0) || (y===0||id[i-w]<0) || (y===h-1||id[i+w]<0);
@@ -682,7 +833,7 @@ function composeSprite(layerCanvases, mats, w, h){
                  (y>0&&id[i-w]!==id[i]) || (y<h-1&&id[i+w]!==id[i]);
     dist[i] = out ? 0 : seam ? 2.6 : BIG;
   }
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x; if (!dist[i]) continue;
     let v = dist[i];
     if (x>0) v = Math.min(v, dist[i-1]+1);
@@ -691,7 +842,7 @@ function composeSprite(layerCanvases, mats, w, h){
     if (x<w-1&&y>0) v = Math.min(v, dist[i-w+1]+1.41);
     dist[i] = Math.min(v, BIG);
   }
-  for (let y=h-1;y>=0;y--) for (let x=w-1;x>=0;x--){
+  for (let y=y1;y>=y0;y--) for (let x=x1;x>=x0;x--){
     const i = y*w+x; if (!dist[i]) continue;
     let v = dist[i];
     if (x<w-1) v = Math.min(v, dist[i+1]+1);
@@ -710,7 +861,7 @@ function composeSprite(layerCanvases, mats, w, h){
   };
   const outRamp = ramp(mats.outline, {spread:.09, shift:10});
 
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x;
     if (id[i] < 0) continue;
     const m = mats[LAYERS[id[i]]];
@@ -723,12 +874,12 @@ function composeSprite(layerCanvases, mats, w, h){
       const len = Math.hypot(gx,gy) || 1;
       const nx = -gx/len, ny = -gy/len;                   // outward normal
       const lam = nx*LIGHT[0] + ny*LIGHT[1];
-      step = Math.round(lam * (1 - d/RIM) * 2.6 * m.lit);
+      step = Math.round(lam * (1 - d/RIM) * 3.0 * m.lit);
     }
     put(i, m.r[clamp(2 + step, 0, 4)], 255);
   }
   // selective outline: sample the material it hugs, brighten it on the lit side
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+  for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){
     const i = y*w+x;
     if (id[i] >= 0) continue;
     let near = -1, ox = 0, oy = 0;
@@ -756,7 +907,19 @@ function composeSprite(layerCanvases, mats, w, h){
    lighting pass in the colour module turns those layers into shaded pixels.
    ========================================================================== */
 
-const BAKE_W = 232, BAKE_H = 210, BAKE_G = 196, BAKE_CX = 104;
+/* The box every frame is drawn into. `BAKE_CX` is the centreline and `BAKE_G`
+   the ground line inside it; a species draws with the ground at y = 0.
+
+   Every pass in composeSprite is per-pixel over this whole box, so its area is
+   the bake cost. The box was 232x210 and the largest frame any species and
+   stage produces is 143x94 — five sixths of every pass was spent on empty
+   canvas. Measured across every species, stage and animation, the union of
+   what is actually touched is 154x95, and this is that plus a margin.
+
+   Anything that makes an animal appreciably bigger — a longer-necked species,
+   a taller stage — has to grow this. tools/sheet.html shows the clipping
+   immediately. */
+const BAKE_W = 168, BAKE_H = 112, BAKE_G = 100, BAKE_CX = 84;
 
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
@@ -868,12 +1031,15 @@ function toes(g, x, y, n, dir, size){
   for (let i=0;i<n;i++) oval(g, x + dir*i*size*1.7, y, size*.78, size*.55);
 }
 function eyeAt(M, x, y, r, state){
+  /* A shut eye is a line, not a shape. The lid used to be drawn as wide as the
+     pupil with rounded caps, which at this size read as a black smudge across
+     the face rather than as a closed eye. */
   if (state === 1){                                        // closed: a soft lid line
-    tube(M.pupil, [[x-r*1.5,y-r*.1],[x,y+r*.45],[x+r*1.5,y-r*.1]], [r*.55,r*.6,r*.55]);
+    tube(M.pupil, [[x-r*1.35,y-r*.08],[x,y+r*.34],[x+r*1.35,y-r*.08]], [r*.24,r*.32,r*.24]);
     return;
   }
   if (state === 2){                                        // squinting, pleased
-    tube(M.pupil, [[x-r*1.4,y+r*.45],[x,y-r*.5],[x+r*1.4,y+r*.45]], [r*.55,r*.6,r*.55]);
+    tube(M.pupil, [[x-r*1.3,y+r*.34],[x,y-r*.40],[x+r*1.3,y+r*.34]], [r*.24,r*.32,r*.24]);
     return;
   }
   oval(M.sclera, x, y, r*1.1, r*1.24);
@@ -910,11 +1076,30 @@ const HATS = {};
 for (const k in HAT_ART) HATS[k] = hatCanvas(k);
 
 /* ---------------------------- frame baking -------------------------------- */
+/* Walk and idle are generated rather than typed out, because the only reason
+   they were six frames and two frames was that a bake cost eight milliseconds
+   and every pose is one. It costs about a third of that now, so the cycles are
+   as long as they should be: twelve frames of walk reads as a walk instead of
+   as six positions, and four frames of idle is a breath instead of a twitch.
+
+   The body rises twice per stride, once under each foot, with sharp peaks and
+   a flat trough — that asymmetry is the push-off. The tail swings once per
+   stride, a quarter cycle behind it. */
+const WALK_FRAMES = 12, IDLE_FRAMES = 4;
+const TAU = Math.PI * 2;
+const poseCycle = (count, fn) => Array.from({length:count}, (_, i) => fn(i/count, i));
+
 const POSES = {
-  idle:  [ {body:0, legPhase:0, tail:.2}, {body:1.3, legPhase:0, tail:-.2} ],
-  walk:  [ {body:.2, legPhase:0,     tail:0},   {body:1.5, legPhase:1/6, tail:.43},
-           {body:.7, legPhase:2/6,   tail:.43}, {body:.2, legPhase:3/6, tail:0},
-           {body:1.5, legPhase:4/6,  tail:-.43},{body:.7, legPhase:5/6, tail:-.43} ],
+  idle:  poseCycle(IDLE_FRAMES, p => ({
+           body: .65 - .65*Math.cos(TAU*p),          // one slow breath
+           legPhase: 0,
+           tail: .22*Math.sin(TAU*p)
+         })),
+  walk:  poseCycle(WALK_FRAMES, p => ({
+           body: .2 + 1.3*Math.pow(Math.abs(Math.sin(TAU*p)), 1.4),
+           legPhase: p,
+           tail: .48*Math.sin(TAU*p + Math.PI/4)
+         })),
   eat:   [ {body:0, legPhase:0, jaw:1, droop:.7, tail:.3}, {body:0, legPhase:0, jaw:.12, droop:.7, tail:-.1} ],
   sleep: [ {body:-2.5, legPhase:0, droop:1.5, tail:.1, eye:1} ],
   cheer: [ {body:5, legPhase:.5, jaw:.8, tail:.9, eye:2}, {body:0, legPhase:0, jaw:.35, tail:-.7, eye:2} ],
@@ -931,6 +1116,12 @@ function matsFor(spId, skinId){
   }
   return matCache.get(key);
 }
+/* Least-recently-used, because the key space is species x coat x stage x
+   animation x frame x eye and every entry is a canvas. A player only ever has
+   one species, one coat and one stage live, which is about thirty frames; the
+   rest of what gets baked is shop and nest thumbnails. The cap is generous
+   enough never to evict anything in use and small enough to bound the memory. */
+const FRAME_CACHE_MAX = 180;
 const frameCache = new Map();
 function frameOf(spId, stage, anim, idx, blinking, skinId){
   skinId = skinId || 'wild';
@@ -938,7 +1129,11 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   const pose = poses[idx % poses.length];
   const eye = pose.eye !== undefined ? pose.eye : (blinking ? 1 : 0);
   const key = spId+'|'+skinId+'|'+stage+'|'+anim+'|'+(idx%poses.length)+'|'+eye;
-  if (frameCache.has(key)) return frameCache.get(key);
+  if (frameCache.has(key)){
+    const hit = frameCache.get(key);
+    frameCache.delete(key); frameCache.set(key, hit);   // Map keeps insertion order
+    return hit;
+  }
 
   const sp = SPECIES[spId], st = STAGE[stage], k = st.s * sp.scale;
   const canvases = [], M = {};
@@ -950,8 +1145,10 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
-  // the coat rides the body the draw function just laid down, never a path
-  // computed alongside it — the same rule the surface detail follows
+  // Countershading and the coat both ride the body the draw function just laid
+  // down, never a path computed alongside it — the same rule the surface
+  // detail follows. Belly first: the coat is masked to stop where it starts.
+  paintBelly(M.belly, anchors.spine, sp.belly);
   paintPattern(M.mark, skinOf(spId, skinId).pattern, anchors.spine);
 
   const composed = composeSprite(canvases, matsFor(spId, skinId), BAKE_W, BAKE_H);
@@ -964,7 +1161,151 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
     eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head
   };
   frameCache.set(key, out);
+  while (frameCache.size > FRAME_CACHE_MAX) frameCache.delete(frameCache.keys().next().value);
   return out;
+}
+
+/* Bake ahead. A cold bake is a few milliseconds and every pose is one, so a
+   twelve-frame walk baked lazily hitches twelve times the first time an animal
+   crosses the pen. Two frames a tick fills the whole of the current stage and
+   coat inside a second, and does nothing at all once it is full. */
+let warmQueue = [], warmKey = '';
+function warmFrames(spId, stage, skinId){
+  const key = spId + '|' + skinId + '|' + stage;
+  if (key !== warmKey){
+    warmKey = key;
+    warmQueue = [];
+    for (const anim in POSES)
+      for (let i=0;i<POSES[anim].length;i++) warmQueue.push([anim, i, false]);
+    warmQueue.push(['idle', 0, true]);            // the blink is a bake of its own
+  }
+  for (let n=0; n<2 && warmQueue.length; n++){
+    const [anim, i, blink] = warmQueue.shift();
+    frameOf(spId, stage, anim, i, blink, skinId);
+  }
+}
+
+/* ==========================================================================
+   SCREEN FONT
+   The menus live inside the 224x168 screen, so their text has to be drawn as
+   pixels rather than laid out as DOM. This is that font: 5x7 fixed width, one
+   glyph per entry, seven rows of five bits each encoded as base32 so the table
+   stays readable at a glance and small in the build.
+
+   Drawing a glyph pixel by pixel would be thousands of fillRect calls a frame,
+   so each colour the interface uses is baked once into a strip of every glyph
+   and drawn from there. Colours are few and fixed, so the strips are built on
+   first use and then never again.
+
+   There are no image assets here either. The strips are drawn from the table
+   at load, the same way every other picture in this game is made.
+   ========================================================================== */
+
+const FONT_W = 5, FONT_H = 7;
+const FONT_ADV = 6;                 // glyph width plus one column of tracking
+const FONT_LINE = 9;                // baseline to baseline
+
+const B32 = '0123456789ABCDEFGHIJKLMNOPQRSTUV';
+const GLYPHS = {
+  ' ':'0000000', '0':'EHJLPHE', '1':'4C4444E', '2':'EH1248V', '3':'V2421HE', '4':'26AIV22',
+  '5':'VGU11HE', '6':'68GUHHE', '7':'V124888', '8':'EHHEHHE', '9':'EHHF12C', 'A':'EHHVHHH',
+  'B':'UHHUHHU', 'C':'EHGGGHE', 'D':'SIHHHIS', 'E':'VGGUGGV', 'F':'VGGUGGG', 'G':'EHGNHHF',
+  'H':'HHHVHHH', 'I':'E44444E', 'J':'72222IC', 'K':'HIKOKIH', 'L':'GGGGGGV', 'M':'HRLLHHH',
+  'N':'HPLJHHH', 'O':'EHHHHHE', 'P':'UHHUGGG', 'Q':'EHHHLID', 'R':'UHHUKIH', 'S':'FGGE11U',
+  'T':'V444444', 'U':'HHHHHHE', 'V':'HHHHHA4', 'W':'HHHLLRH', 'X':'HHA4AHH', 'Y':'HHA4444',
+  'Z':'V1248GV', 'a':'00E1FHF', 'b':'GGUHHHU', 'c':'00FGGGF', 'd':'11FHHHF', 'e':'00EHVGE',
+  'f':'698U888', 'g':'0FHHF1E', 'h':'GGUHHHH', 'i':'40C444E', 'j':'20622IC', 'k':'GGIKOKI',
+  'l':'C44444E', 'm':'00QLLLL', 'n':'00UHHHH', 'o':'00EHHHE', 'p':'0UHHUGG', 'q':'0FHHF11',
+  'r':'00MOGGG', 's':'00FGE1U', 't':'88U8896', 'u':'00HHHJD', 'v':'00HHHA4', 'w':'00HHLLA',
+  'x':'00HA4AH', 'y':'0HHHF1E', 'z':'00V248V', '.':'00000CC', ',':'0000664', ':':'0CC0CC0',
+  '!':'4444404', '?':'EH16404', '\'':'4400000', '-':'000E000', '+':'044V440', '/':'12448G0',
+  '%':'PQ248BJ', '(':'2488842', ')':'8422248', '*':'0LEVEL0', '#':'AVAAAVA',
+  '\u00b7':'000CC00', '\u25b6':'8CEFEC8', '\u25c0':'26EUE62', '\u25b2':'044EEV0',
+  '\u25bc':'0VEE440'
+};
+
+/* cursor and scroll marks, addressed by name so the screen code does not have
+   to carry literal box-drawing characters around */
+const GL_RIGHT = '▶', GL_LEFT = '◀', GL_UP = '▲', GL_DOWN = '▼';
+const GL_DOT = '·';
+
+const fontStrips = new Map();
+function fontStrip(col){
+  let strip = fontStrips.get(col);
+  if (strip) return strip;
+  const keys = Object.keys(GLYPHS);
+  const cv = makeCv(keys.length * FONT_W, FONT_H), g = readCtx(cv);
+  g.fillStyle = col;
+  const index = new Map();
+  keys.forEach((ch, n) => {
+    const code = GLYPHS[ch], ox = n * FONT_W;
+    index.set(ch, ox);
+    for (let row=0; row<FONT_H; row++){
+      const bits = B32.indexOf(code[row]);
+      for (let bit=0; bit<FONT_W; bit++)
+        if (bits & (1 << (FONT_W - 1 - bit))) g.fillRect(ox + bit, row, 1, 1);
+    }
+  });
+  strip = { cv, index };
+  fontStrips.set(col, strip);
+  return strip;
+}
+
+const textW = s => s.length ? s.length * FONT_ADV - 1 : 0;
+
+/* Draw a single line. `align` is 'left' (default), 'right' or 'centre', and x
+   is the edge the alignment refers to. Returns the x the line ended at. */
+function text(g, str, x, y, col, align){
+  str = String(str);
+  const strip = fontStrip(col || '#e9e1cb');
+  let px = Math.round(align === 'right'  ? x - textW(str)
+                    : align === 'centre' ? x - textW(str)/2 : x);
+  const py = Math.round(y);
+  for (let i=0; i<str.length; i++){
+    const ox = strip.index.get(str[i]);
+    if (ox !== undefined) g.drawImage(strip.cv, ox, 0, FONT_W, FONT_H, px, py, FONT_W, FONT_H);
+    px += FONT_ADV;
+  }
+  return px;
+}
+
+/* Greedy wrap to a pixel width. Long words are broken rather than allowed to
+   run off the screen, because at this size one over-long word is the whole
+   line. */
+function wrapText(str, maxW){
+  const cols = Math.max(1, Math.floor((maxW + 1) / FONT_ADV));
+  const out = [];
+  for (const para of String(str).split('\n')){
+    let line = '';
+    for (const word of para.split(' ')){
+      let w = word;
+      while (w.length > cols){                     // break a word too long to fit
+        if (line) { out.push(line); line = ''; }
+        out.push(w.slice(0, cols));
+        w = w.slice(cols);
+      }
+      if (!line) line = w;
+      else if (line.length + 1 + w.length <= cols) line += ' ' + w;
+      else { out.push(line); line = w; }
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+/* Wrapped paragraph. Returns the y it finished at, so callers can stack. */
+function textBlock(g, str, x, y, maxW, col, lineH){
+  const step = lineH || FONT_LINE;
+  for (const line of wrapText(str, maxW)){ text(g, line, x, y, col); y += step; }
+  return y;
+}
+
+/* Cut a string to fit, with a trailing dot rather than three: at six pixels a
+   character an ellipsis costs three characters of the thing being named. */
+function fit(str, maxW){
+  const cols = Math.max(1, Math.floor((maxW + 1) / FONT_ADV));
+  str = String(str);
+  return str.length <= cols ? str : str.slice(0, cols - 1) + '.';
 }
 
 /* Tyrannosaurus rex sprite
@@ -1011,19 +1352,66 @@ function drawRex(M, P){
     [hx+9, hy+hh*.58]
   ]);
 
-  // skull: deep behind the eye, tapering to a blunt muzzle
-  blob(M.head, [[hx+13, hy-hh*.12],[hx+11, hy-hh*.96],[hx-sn*.34, hy-hh*1.03],
-                [hx-sn*.86, hy-hh*.72],[hx-sn*1.0, hy-hh*.08],[hx-sn*.92, hy+hh*.24],
-                [hx-sn*.45, hy+hh*.32],[hx+13, hy+hh*.36]]);
-  // hinged lower jaw. Lips cover the teeth, so a shut mouth shows none of them
-  M.head.save(); M.head.translate(hx+10, hy+hh*.14); M.head.rotate(jaw*.44);
-  blob(M.head, [[3,-hh*.28],[-sn*.38,-hh*.3],[-sn*.94,-hh*.04],[-sn*.88,hh*.3],[-sn*.34,hh*.46],[3,hh*.4]]);
-  M.head.restore();
+  /* Upper jaw, deep behind the eye. The premaxilla is squared off — a
+     near-vertical front edge rather than a rounded nub — which is the quickest
+     way to read tyrannosaur instead of generic theropod at this size. */
+  const lipY = hy + hh*.30;
+  blob(M.head, [[hx+13, hy-hh*.12],[hx+11, hy-hh*.96],[hx-sn*.30, hy-hh*1.04],
+                [hx-sn*.62, hy-hh*.86],[hx-sn*.86, hy-hh*.62],
+                // the front is carried on three near-vertical stations, so the
+                // curve through them stays flat instead of rounding the tip off
+                [hx-sn*.99, hy-hh*.44],[hx-sn*1.03, hy-hh*.16],[hx-sn*1.02, lipY-hh*.10],
+                [hx-sn*.94, lipY],[hx-sn*.45, lipY+hh*.05],[hx+13, hy+hh*.36]]);
+
+  /* Hinged mandible, on its own material. It was always drawn and always
+     hinged, but it was painted onto `head`, and the compositor only draws an
+     edge where two different materials meet — so the whole lower jaw merged
+     into the skull and the animal had no mouth. It hangs below the upper
+     jaw's oral margin, and that boundary is the lip line.
+
+     −x is forward, so the jaw opens on a negative rotation. */
+  const hinge = [hx + 11, hy + hh*.16], jawA = -jaw * .34;
+  M.jaw.save(); M.jaw.translate(hinge[0], hinge[1]); M.jaw.rotate(jawA);
+  blob(M.jaw, [[2,-hh*.16],[-sn*.40,-hh*.20],[-sn*.92,hh*.02],
+               [-sn*.88,hh*.34],[-sn*.34,hh*.52],[2,hh*.44]]);
+  M.jaw.restore();
+  // pale chin, carried by the jaw rather than left floating under it
+  M.belly.save(); M.belly.translate(hinge[0], hinge[1]); M.belly.rotate(jawA);
+  oval(M.belly, -sn*.52, hh*.38, sn*.22, hh*.09);
+  M.belly.restore();
+
+  const about = (p, a, o) => [o[0] + (p[0]-o[0])*Math.cos(a) - (p[1]-o[1])*Math.sin(a),
+                              o[1] + (p[0]-o[0])*Math.sin(a) + (p[1]-o[1])*Math.cos(a)];
   if (jaw > .06){
-    M.mouth.save(); M.mouth.translate(hx+10, hy+hh*.14); M.mouth.rotate(jaw*.44);
-    blob(M.mouth, [[0,-hh*.2],[-sn*.38,-hh*.22],[-sn*.8,-hh*.02],[-sn*.76,hh*.18],[-sn*.28,hh*.26],[0,hh*.22]]);
-    M.mouth.restore();
-    for (let i=0;i<4;i++) oval(M.horn, hx - sn*.2 - i*sn*.17, hy + hh*.14, Math.max(.8,1.2*hM), Math.max(1.1,2*hM));
+    /* The gape is the wedge between the two oral margins, anchored at the
+       hinge. Drawing it as a slab carried around by the mandible put mouth
+       lining outside the head; drawing it through `blob` bowed the curves
+       outward and swallowed the whole face. Straight edges, because the two
+       margins it runs between are straight. */
+    const uTip = [hx - sn*.93, lipY - hh*.04];
+    const lTip = about([hx - sn*.86, hy + hh*.36], jawA, hinge);
+    const gape = [hinge, uTip, lTip];
+    M.mouth.beginPath();
+    M.mouth.moveTo(gape[0][0], gape[0][1]);
+    for (let i=1;i<gape.length;i++) M.mouth.lineTo(gape[i][0], gape[i][1]);
+    M.mouth.closePath(); M.mouth.fill();
+    /* Teeth. The large ones are maxillary; the dentary shows tips only, which
+       is both what the animal had and what reads at this size. */
+    const tw = Math.max(.9, 1.25*hM);
+    for (let i=0;i<5;i++){
+      const u = .18 + i*.17;
+      oval(M.horn, lerp(hinge[0],uTip[0],u), lerp(hinge[1],uTip[1],u) + hh*.10,
+           tw, Math.max(1.3, (2.4 - i*.22)*hM));
+    }
+    for (let i=0;i<4;i++){
+      const u = .26 + i*.18;
+      oval(M.horn, lerp(hinge[0],lTip[0],u), lerp(hinge[1],lTip[1],u) - hh*.08,
+           tw*.8, Math.max(1.0, 1.5*hM));
+    }
+  } else {
+    // shut: lips cover the teeth, so all that shows is the oral margin itself
+    tube(M.mouth, [[hx+9, hy+hh*.31],[hx-sn*.46, lipY+hh*.02],[hx-sn*.93, lipY-hh*.06]],
+         [Math.max(.9,1.5*hM), Math.max(.8,1.25*hM), Math.max(.6,.8*hM)]);
   }
 
   const ex = hx - sn*.46, ey = hy - hh*.42;
@@ -1033,8 +1421,7 @@ function drawRex(M, P){
     const q = samplePath(topLine, .04 + i*.088);          // ride the actual back line
     oval(M.crest, q[0], q[1] + 1.6*lM, 2.3*lM, 1.4*lM);
   }
-  oval(M.belly, -6, bellyY - 2*lM, 17*lM, 4*lM);
-  oval(M.belly, hx - sn*.3, hy + hh*.26, sn*.3, hh*.16);
+  // the ventral countershading is painted from the spine by paintBelly
 
   // two-fingered hand, palm turned inward the way a theropod wrist actually sits
   const ax = withX + 9, ay = withY + 22*lM;
@@ -1084,18 +1471,23 @@ function drawRex(M, P){
        then recurve forward (STAGE.hornBend)
    -------------------------------------------------------------------------- */
 const TRI_SPEC = { skin:'#ab7040', belly:'#ca9b64', crest:'#8a5228', horn:'#efe6c8',
+                   /* the frill carries its own colour. On the body ramp it was
+                      separated from the neck by nothing but the outline, and a
+                      shield that does not read as a shield is most of this
+                      animal's silhouette thrown away. */
+                   shield:'#c09155',
                    mouth:'#7e3a30', outline:'#26190f' };
 const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
 const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
 /* how far the rim scallops bite in, per growth stage: deltoid when young,
    low spindles fused to the margin when adult */
-const EPI_DEPTH = [.30, .24, .17, .11];
+const EPI_DEPTH = [.22, .17, .12, .08];
 
 function drawTrike(M, P){
   const st = STAGE[P.stage];
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const hF = st.horn, sM = st.snout, fM = st.frill, bend = st.hornBend;
-  const bob = P.body, sw = P.tail||0, dr = P.droop||0;
+  const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
 
   const hipX = 26, hipY = -41*lM - bob;
   const shX = -16, shY = -38*lM - bob;         // torso 42 long, was 36
@@ -1147,22 +1539,59 @@ function drawTrike(M, P){
   const epi = EPI_DEPTH[P.stage];
   const rim = [];
   const A0 = Math.PI*1.04, A1 = Math.PI*2.16;   // front-top, over the crown, down the back
-  for (let i=0;i<=16;i++){                      // the epoccipitals scallop the rim itself
-    const a = A0 + (A1-A0)*i/16;
+  /* The epoccipitals scallop the rim itself. Sixteen of them came out as a
+     one-pixel sawtooth that read as fur; an adult shows five or six knobs in
+     side profile, so the rim is stepped at that count instead. */
+  const EPI_N = 8;
+  for (let i=0;i<=EPI_N;i++){
+    const a = A0 + (A1-A0)*i/EPI_N;
     const r = (i % 2) ? 1.0 : (1 - epi);
     rim.push(rot(Math.cos(a)*fRx*r, Math.sin(a)*fRy*r));
   }
   rim.push(rot(fRx*.30, fRy*.86));              // bottom margin, tucking toward the jaw
   rim.push(rot(-fRx*.62, fRy*.66));             // front-bottom, where the skull joins
-  blob(M.head, rim);
+  blob(M.shield, rim);
 
-  /* Skull: long, low, and carried well forward and below the frill base. */
+  /* Skull: long, low, and carried well forward and below the frill base. The
+     cranium now stops at the oral margin instead of running down to the chin,
+     because the mandible has to live somewhere. */
   const hx = fx - 17*hM*sM - 6, hy = fy + 13*hM, sn = 21*hM*sM, hh = 10.0*hM;
-  blob(M.head, [[hx+19*hM, hy-hh*1.05],[hx-sn*.42, hy-hh*1.16],[hx-sn*.94, hy-hh*.55],
-                [hx-sn*1.02, hy+hh*.35],[hx-sn*.45, hy+hh*.95],[hx+19*hM, hy+hh*.9]]);
-  // hooked rostral beak: a parrot hook, not a rounded snout cap
-  blob(M.horn, [[hx-sn*.86, hy-hh*.66],[hx-sn*1.30, hy-hh*.16],[hx-sn*1.34, hy+hh*.34],
-                [hx-sn*1.06, hy+hh*.62],[hx-sn*.70, hy+hh*.70]]);
+  const lipY = hy + hh*.40;
+  blob(M.head, [[hx+19*hM, hy-hh*1.05],[hx-sn*.42, hy-hh*1.16],[hx-sn*.90, hy-hh*.58],
+                [hx-sn*1.00, hy-hh*.04],[hx-sn*.88, lipY-hh*.04],
+                [hx-sn*.40, lipY+hh*.04],[hx+19*hM, hy+hh*.9]]);
+
+  /* Jaw. A ceratopsian bites with two beaks — the rostral above, the
+     predentary below — and the gap between them is the mouth. The old sprite
+     drew one cream mass across the whole snout, which read as a bald face and
+     left the eat animation with nothing to move. */
+  const jHinge = [hx + 7*hM, hy + hh*.42], jawA = -jaw*.26;
+  M.jaw.save(); M.jaw.translate(jHinge[0], jHinge[1]); M.jaw.rotate(jawA);
+  blob(M.jaw, [[3,-hh*.04],[-sn*.38,-hh*.10],[-sn*.80,hh*.08],
+               [-sn*.74,hh*.44],[-sn*.26,hh*.56],[4,hh*.44]]);
+  M.jaw.restore();
+
+  // rostral: a parrot hook, not a rounded snout cap
+  blob(M.horn, [[hx-sn*.82, hy-hh*.44],[hx-sn*1.18, hy-hh*.04],[hx-sn*1.26, hy+hh*.28],
+                [hx-sn*1.04, hy+hh*.44],[hx-sn*.78, lipY-hh*.06]]);
+  // predentary, riding the jaw so it opens with it
+  M.horn.save(); M.horn.translate(jHinge[0], jHinge[1]); M.horn.rotate(jawA);
+  blob(M.horn, [[-sn*.58, hh*.02],[-sn*.90, hh*.14],[-sn*.84, hh*.46],[-sn*.54, hh*.44]]);
+  M.horn.restore();
+
+  if (jaw > .06){
+    const uTip = [hx - sn*.86, lipY - hh*.06];
+    const lTip = [jHinge[0] + (-sn*.80)*Math.cos(jawA) - (hh*.06)*Math.sin(jawA),
+                  jHinge[1] + (-sn*.80)*Math.sin(jawA) + (hh*.06)*Math.cos(jawA)];
+    M.mouth.beginPath();
+    M.mouth.moveTo(jHinge[0], jHinge[1]);
+    M.mouth.lineTo(uTip[0], uTip[1]);
+    M.mouth.lineTo(lTip[0], lTip[1]);
+    M.mouth.closePath(); M.mouth.fill();
+  } else {
+    tube(M.mouth, [[hx+5*hM, hy+hh*.42],[hx-sn*.42, lipY+hh*.03],[hx-sn*.80, lipY-hh*.04]],
+         [Math.max(.9,1.4*hM), Math.max(.8,1.2*hM), Math.max(.6,.9*hM)]);
+  }
   const ex = hx - sn*.36, ey = hy - hh*.30;
 
   /* Brow horns. The keratin sheath ran well past the bone core, so an adult's
@@ -1173,16 +1602,16 @@ function drawTrike(M, P){
 
      Width tracks the sheath as well as the skull. Scaling thickness on head
      bulk alone gave hatchlings two fat cones where they should have stubs. */
-  const hl = hh*(.50 + 1.95*hF);
+  const hl = hh*(.45 + 1.70*hF);
   const hw = hM * (.40 + .60*hF);
   const browHorn = (dx, dy, len, w) => {
     const bx = ex + dx*hM, by = ey + dy;
-    const tip = [bx - len*(.14 + .44*bend), by - len*.95];
-    const mid = [(bx + tip[0])/2 + len*.18*bend, (by + tip[1])/2 + len*.05];
-    tube(M.horn, [[bx,by], mid, tip], [w*hw, w*.50*hw, w*.12*hw]);
+    const tip = [bx - len*(.30 + .55*bend), by - len*.86];
+    const mid = [(bx + tip[0])/2 + len*.20*bend, (by + tip[1])/2 + len*.05];
+    tube(M.horn, [[bx,by], mid, tip], [w*hw, w*.52*hw, w*.12*hw]);
   };
-  browHorn( 5, -hh*.58, hl,     7.2);
-  browHorn(-3, -hh*.68, hl*.90, 6.0);
+  browHorn( 4, -hh*.54, hl,     9.4);
+  browHorn(-4, -hh*.64, hl*.90, 7.6);
   // nasal horn: small in T. horridus, and small at every age
   tube(M.horn, [[hx-sn*.74, hy-hh*.28],[hx-sn*.88, hy-hh*(.45+.5*hF)]], [4.0*hM, 1.2*hM]);
   // jugal horn: a short cheek point aimed down and back, not a hanging tusk
@@ -1192,13 +1621,13 @@ function drawTrike(M, P){
   for (const q of [[-2,-11],[10,-14],[22,-12],[15,-6],[32,-9],[2,-5],[41,-7]])
     oval(M.crest, q[0], hipY + q[1]*lM, 1.7*lM, 1.2*lM);
 
-  oval(M.belly, 6, bellyY - 3*lM, 23*lM, 5*lM);
+  // the ventral countershading is painted from the spine by paintBelly
 
   legStep(M.limb, hipX+2, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
   legStep(M.limb, shX+4, shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
 
   eyeAt(M, ex, ey, 2.7*hM, P.eye);
-  oval(M.mouth, hx - sn*.74, hy - hh*.12, Math.max(.8,1.2*hM), Math.max(.8,1*hM));
+  oval(M.mouth, hx - sn*.76, hy - hh*.20, Math.max(.8,1.2*hM), Math.max(.8,1*hM));
 
   /* Centreline for the coat painter: nape to tail tip, with the body's
      half-depth at each station so a band knows how far to run. */
@@ -1231,7 +1660,7 @@ const BRA_HIND = { stride:.30, lift:.06, duty:.74, mt:.15, back:.30, bend:1,  th
 function drawBrachio(M, P){
   const st = STAGE[P.stage];
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
-  const bob = P.body, sw = P.tail||0, dr = P.droop||0;
+  const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
   // forelimbs about 1.2 times the hindlimbs: the trait the animal is named for
   const foreLen = 56*lM, hindLen = 46*lM;
   const shX = -14, shY = -foreLen - bob, hipX = 30, hipY = -hindLen - bob;
@@ -1256,13 +1685,45 @@ function drawBrachio(M, P){
 
   const sM = st.snout;
   const hx = n3[0] - 7*hM, hy = n3[1] - 4*hM, sn = 16*hM*sM, hh = 8*hM;
-  blob(M.head, [[hx+10*hM,hy-hh*.8],[hx-sn*.35,hy-hh*1.15],[hx-sn*1.0,hy-hh*.3],
-                [hx-sn*.95,hy+hh*.7],[hx-sn*.2,hy+hh*1.05],[hx+10*hM,hy+hh*.85]]);
+
+  /* The skull is about ten pixels long, so only three things can read on it:
+     the crest silhouette, the eye, and the jaw line. It had two. The muzzle is
+     squared off in front, where the spatulate teeth sat, rather than rounded
+     to a lump. */
+  const lipY = hy + hh*.34;
+  blob(M.head, [[hx+10*hM,hy-hh*.8],[hx-sn*.35,hy-hh*1.15],[hx-sn*.94,hy-hh*.52],
+                [hx-sn*1.04,hy-hh*.06],[hx-sn*.98,lipY-hh*.06],
+                [hx-sn*.30,lipY+hh*.06],[hx+10*hM,hy+hh*.72]]);
+
+  /* Mandible. The sauropod jaw line is long and close to straight, running
+     back to below the eye. */
+  const jHinge = [hx + 6*hM, hy + hh*.30], jawA = -jaw*.30;
+  M.jaw.save(); M.jaw.translate(jHinge[0], jHinge[1]); M.jaw.rotate(jawA);
+  blob(M.jaw, [[2,-hh*.06],[-sn*.42,-hh*.12],[-sn*.94,hh*.02],
+               [-sn*.88,hh*.34],[-sn*.30,hh*.46],[3,hh*.36]]);
+  M.jaw.restore();
+  if (jaw > .06){
+    const uTip = [hx - sn*.96, lipY - hh*.08];
+    const lTip = [jHinge[0] + (-sn*.90)*Math.cos(jawA) - (hh*.04)*Math.sin(jawA),
+                  jHinge[1] + (-sn*.90)*Math.sin(jawA) + (hh*.04)*Math.cos(jawA)];
+    M.mouth.beginPath();
+    M.mouth.moveTo(jHinge[0], jHinge[1]);
+    M.mouth.lineTo(uTip[0], uTip[1]);
+    M.mouth.lineTo(lTip[0], lTip[1]);
+    M.mouth.closePath(); M.mouth.fill();
+  } else {
+    tube(M.mouth, [[hx+4*hM, hy+hh*.30],[hx-sn*.44, lipY+hh*.02],[hx-sn*.92, lipY-hh*.08]],
+         [Math.max(.9,1.3*hM), Math.max(.8,1.1*hM), Math.max(.6,.8*hM)]);
+  }
+
   // tall nasal chamber sitting on the roof of a very small skull
   blob(M.crest, [[hx+2*hM,hy-hh*1.0],[hx-sn*.16,hy-hh*2.05],[hx-sn*.62,hy-hh*1.8],[hx-sn*.6,hy-hh*.85]]);
-  oval(M.mouth, hx - sn*.5, hy - hh*1.55, Math.max(.8,1.1*hM), Math.max(.8,1.0*hM));
+  /* Nares on the crest. As a filled block this read as a hole punched in a
+     tuft of hair; a notch bitten out of the crest's front edge reads as a
+     nostril. */
+  oval(M.mouth, hx - sn*.54, hy - hh*1.62, Math.max(.7,.9*hM), Math.max(.6,.7*hM));
 
-  oval(M.belly, 8, hipY + 15*lM, 16*lM, 4.2*lM);
+  // the ventral countershading is painted from the spine by paintBelly
 
   const nf = legStep(M.limb, shX+4, shY+2, (P.legPhase+.75)%1, 17*lM, BRA_FORE);
   legStep(M.limb, hipX+2, hipY, P.legPhase, 17*lM, BRA_HIND, M.horn);
@@ -1461,6 +1922,41 @@ function sampleSpine(spine, t){
 /* the unit normal to the spine. +normal points at the belly, because sprite
    local units put the ground at y = 0 and the animal above it. */
 const spineNormal = q => [-Math.sin(q.ang), Math.cos(q.ang)];
+
+/* ----------------------------- countershading -----------------------------
+   Dark above, pale below is the one colour pattern with direct fossil support
+   — melanosomes in Psittacosaurus and Sinosauropteryx — and it is also the
+   cheapest way to stop a flat-coloured animal reading as a cut-out.
+
+   It used to be a hand-placed ellipse under the ribcage on each species, which
+   at sprite scale was invisible. It now rides the spine, like the coats, and
+   `belly` is masked to body pixels in the compositor, so the band can be drawn
+   far outside the outline and let the mask trim it.
+
+   `hi` is where the pale starts, as a fraction of the body's half-depth at
+   that station: three stops read as throat, mid-body and tail. The throat sits
+   highest because that is where countershading reaches furthest up a living
+   animal, and the tail lowest.
+   -------------------------------------------------------------------------- */
+const BELLY_DEFAULT = { hi:[.45, .58, .70], t0:.02, t1:.99, steps:26 };
+function paintBelly(g, spine, cfg){
+  if (!spine || spine.length < 2) return;
+  cfg = Object.assign({}, BELLY_DEFAULT, cfg || {});
+  const hi = cfg.hi, N = cfg.steps;
+  const top = [], bot = [];
+  for (let i=0;i<=N;i++){
+    const u = i/N, t = lerp(cfg.t0, cfg.t1, u);
+    const q = sampleSpine(spine, t), [nx,ny] = spineNormal(q);
+    const k = u < .5 ? lerp(hi[0], hi[1], u*2) : lerp(hi[1], hi[2], u*2-1);
+    top.push([q.x + nx*q.half*k, q.y + ny*q.half*k]);
+    bot.push([q.x + nx*q.half*2.8, q.y + ny*q.half*2.8]);   // well past the outline
+  }
+  g.beginPath();
+  g.moveTo(top[0][0], top[0][1]);
+  for (let i=1;i<top.length;i++) g.lineTo(top[i][0], top[i][1]);
+  for (let i=bot.length-1;i>=0;i--) g.lineTo(bot[i][0], bot[i][1]);
+  g.closePath(); g.fill();
+}
 
 /* Total arc length of a spine, so pattern density can be specified as a real
    distance rather than as a count. A count gives the short-bodied Triceratops
@@ -2106,7 +2602,7 @@ function feed(id){
   if (hasIll('bellyache')) return refuse(S.name + ' turns away from it. Settle the stomach first.');
   if (S.needs.hunger > 94) return refuse(S.name + ' is full.');
   G.coins -= f.cost;
-  closeSheet();
+  closeScreen();                                  // back to the habitat to watch it land
   tossFood(id);                                   // the food arcs in; effects land on the bite
   refreshLight();
 }
@@ -2453,8 +2949,19 @@ function stepBehaviour(dt, now){
 
 /* ------------------------------- draw ------------------------------------- */
 let lastSceneAt = 0;
+let screenLayout = null;
 function drawScene(now){
   const dt = clamp(now - lastSceneAt, 0, 120); lastSceneAt = now;
+
+  /* A screen replaces the view rather than sliding over it. On the device this
+     copies there is one display and it shows one thing at a time; leaving the
+     habitat visible behind a menu is what a web overlay does. */
+  if (screenOpen()){
+    const sc = SCREENS[screen];
+    screenLayout = sc.layout ? sc.layout() : {};
+    sc.draw(ctx, screenLayout);
+    return;
+  }
   const phase = skyPhase(new Date());
   ctx.drawImage(bakeBg(phase), 0, 0);
 
@@ -2473,7 +2980,7 @@ function drawScene(now){
   if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'game'){ drawGame(now, phase); return; }
-  drawLive(now);
+  drawLive(now, dt);
   drawFronds(ctx, phase, now);
   const tint = SKY_SPECS[phase].tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
@@ -2536,7 +3043,7 @@ function drawGear(g, f, x, y, flip){
   }
 }
 
-function drawLive(now){
+function drawLive(now, dt){
   for (const m of S.mess){
     drawMess(ctx, m.x|0, GROUND - 1);
     const fx = m.x + Math.sin(now/280 + m.x) * 5, fy = GROUND - 12 + Math.cos(now/430 + m.x) * 2;
@@ -2546,13 +3053,15 @@ function drawLive(now){
   if (now > blinkAt){ blinking = true; blinkAt = now + rnd(2400, 5200); setTimeout(() => blinking = false, 150); }
 
   const st = stageIdx(), a = anim.pick(), sp = SPECIES[S.sp];
-  anim.t += 16;
+  // real elapsed time, not an assumed sixty frames a second. On a 120Hz phone
+  // the hardcoded 16 ran eat and cheer at double speed.
+  anim.t += dt;
   let fr;
   if (a === 'walk'){
     const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
     fr = Math.floor((dino.dist / cycle) * POSES.walk.length);
   } else {
-    const fps = a === 'eat' ? 220 : a === 'cheer' ? 200 : 900;
+    const fps = a === 'eat' ? 220 : a === 'cheer' ? 200 : 700;
     fr = Math.floor(anim.t / fps);
   }
   const f = frameOf(S.sp, st, a, fr, blinking && a === 'idle', S.skin);
@@ -2978,9 +3487,466 @@ function scoreTag(text){
 }
 
 /* ==========================================================================
-   INTERFACE
-   All text lives in the DOM so it stays crisp on a phone. The canvas only ever
-   draws the world.
+   SCREENS
+   The menus are drawn inside the 224x168 screen, not slid over the top of the
+   case as web sheets. On the hardware this is copied from, the screen is the
+   whole interface: the case never changes while you play, and everything you
+   can do to the animal happens on the glass in front of it.
+
+   A key on the case opens a screen; a tap on the screen picks something in it.
+   The keys are direct jumps and nothing else, which is why there is no cursor
+   here — the pointer is the cursor.
+
+   Each screen is an entry in SCREENS with `draw`, which paints it, and `tap`,
+   which is handed a canvas-space point and decides what was hit. Both are
+   given a layout object built by `screenLayout`, so hit boxes are computed
+   once and drawn and tested from the same numbers. Nothing here computes a
+   rectangle twice.
+
+   Long prose has nowhere to go at six pixels a character, so the dossier's
+   field notes still open as a DOM panel. That is the only text left outside
+   the glass.
+   ========================================================================== */
+
+/* the screen palette, and the one place any of it is named */
+const SC = {
+  ink:    '#0b1113',   // the recess behind a panel
+  panel:  '#16211f',   // a panel face
+  edge:   '#2f4640',   // panel border
+  line:   '#24332f',   // rules and inactive cells
+  bone:   '#e9e1cb',   // primary text
+  dim:    '#8fa39a',   // secondary text
+  gold:   '#e0ac48',   // coins and prices
+  moss:   '#8cb765',   // affirmative, owned, worn
+  rust:   '#cf6a44',   // refusals, warnings, costs you cannot meet
+  sel:    '#3d5c4e'    // the selected cell's fill
+};
+
+/* one grid unit. Everything on a screen is a whole number of these, which is
+   what keeps the interface on the same pixel grid as the world behind it. */
+const U = 4;
+
+let screen = null;          // null when the habitat is showing
+let screenState = {};       // per-screen scratch: which item is selected, scroll
+
+function openScreen(which){
+  if (!SCREENS[which]) return;
+  if (mode === 'game') return;
+  if (mode !== 'live' && !SCREENS[which].preHatch) return;
+  screen = which;
+  screenState = { pick: 0, scroll: 0 };
+  SFX.pop();
+  paintChrome();
+}
+function closeScreen(){
+  if (!screen) return;
+  screen = null;
+  paintChrome();
+}
+const screenOpen = () => screen !== null;
+
+/* ------------------------------ chrome ------------------------------------
+   Every screen wears the same frame: a title bar with the purse in it, a body,
+   and a close tab. Drawing it in one place is what stops six screens drifting
+   apart by two pixels each.
+   -------------------------------------------------------------------------- */
+const BAR_H = 13, PAD = 3;
+
+function panel(g, x, y, w, h, fill){
+  g.fillStyle = fill || SC.panel;
+  g.fillRect(x, y, w, h);
+  g.fillStyle = SC.edge;
+  g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
+  g.fillRect(x, y, 1, h); g.fillRect(x+w-1, y, 1, h);
+}
+
+function screenFrame(g, title){
+  g.fillStyle = SC.ink;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = SC.panel;
+  g.fillRect(0, 0, W, BAR_H);
+  g.fillStyle = SC.edge;
+  g.fillRect(0, BAR_H - 1, W, 1);
+  text(g, title, PAD, 3, SC.bone);
+  const purse = Math.floor(G.coins) + 'c';
+  text(g, purse, W - PAD - 11, 3, SC.gold, 'right');
+  // close tab, top right, always in the same place on every screen
+  g.fillStyle = SC.line;
+  g.fillRect(W - 11, 2, 9, 9);
+  g.fillStyle = SC.dim;
+  for (let i=0;i<5;i++){ g.fillRect(W - 9 + i, 4 + i, 1, 1); g.fillRect(W - 5 - i, 4 + i, 1, 1); }
+  return { close: [W - 12, 1, 11, 11] };
+}
+
+/* The animal, small, on its own screen. A menu about the animal that does not
+   show the animal is a form. */
+function petOnScreen(g, cx, baseY, maxH){
+  if (!hatched()) return null;
+  const f = frameOf(S.sp, stageIdx(), 'idle', 0, false, S.skin);
+  const sc = Math.min(1, maxH / f.h);
+  const w = Math.round(f.w * sc), h = Math.round(f.h * sc);
+  const x = Math.round(cx - w/2), y = Math.round(baseY - h);
+  g.fillStyle = 'rgba(10,20,18,.45)';
+  g.beginPath(); g.ellipse(cx, baseY + 1, w*.34, 2, 0, 0, 7); g.fill();
+  g.drawImage(f.cv, x, y, w, h);
+  return [x, y, w, h];
+}
+
+const hit = (box, mx, my) =>
+  mx >= box[0] && mx < box[0] + box[2] && my >= box[1] && my < box[1] + box[3];
+
+/* ------------------------------- item grid --------------------------------
+   The shape almost every screen wants: a row of picture cells across the top
+   of the body, and the selected one's name, price and note written out
+   underneath. It replaced a vertical list of text rows, which is the shape a
+   settings page has, not a shelf of things.
+   -------------------------------------------------------------------------- */
+const CELL = 30, CELL_GAP = 3;
+
+function gridLayout(items, top, cols){
+  cols = cols || Math.floor((W - PAD*2 + CELL_GAP) / (CELL + CELL_GAP));
+  const rows = Math.ceil(items.length / cols);
+  const wide = cols * CELL + (cols - 1) * CELL_GAP;
+  const x0 = Math.round((W - wide) / 2);
+  return {
+    items, cols, rows, x0, top, cell: CELL,
+    box(i){
+      const r = Math.floor(i / cols), c = i % cols;
+      return [x0 + c * (CELL + CELL_GAP), top + r * (CELL + CELL_GAP), CELL, CELL];
+    },
+    bottom: top + rows * CELL + (rows - 1) * CELL_GAP
+  };
+}
+
+/* Draw one cell: a recessed square, a picture in it, and a price or state
+   along the bottom edge. `art` is handed the centre of the cell. */
+function gridCell(g, box, opts){
+  const [x, y, w, h] = box;
+  panel(g, x, y, w, h, opts.on ? SC.sel : SC.panel);
+  if (opts.art) opts.art(g, x + w/2, y + h/2 - 2);
+  if (opts.tag) text(g, opts.tag, x + w/2, y + h - 9, opts.tagCol || SC.dim, 'centre');
+  if (opts.on){
+    g.fillStyle = SC.moss;
+    g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
+    g.fillRect(x, y, 1, h); g.fillRect(x+w-1, y, 1, h);
+  }
+}
+
+/* the caption block under a grid: name on the left, price on the right, then
+   the note wrapped underneath */
+function caption(g, y, name, right, rightCol, note){
+  g.fillStyle = SC.line;
+  g.fillRect(PAD, y, W - PAD*2, 1);
+  y += 4;
+  text(g, name, PAD, y, SC.bone);
+  if (right) text(g, right, W - PAD, y, rightCol || SC.gold, 'right');
+  if (note) textBlock(g, note, PAD, y + 10, W - PAD*2, SC.dim, 8);
+  return y;
+}
+
+/* a full-width action strip at the foot of a screen */
+function actionBar(g, label, col, dim){
+  const y = H - 14, box = [PAD, y, W - PAD*2, 11];
+  panel(g, box[0], box[1], box[2], box[3], dim ? SC.line : SC.panel);
+  text(g, label, W/2, y + 2, dim ? SC.dim : (col || SC.moss), 'centre');
+  return box;
+}
+
+/* ------------------------------ the screens ------------------------------- */
+const SCREENS = {};
+
+/* -------------------------------- feed ------------------------------------ */
+SCREENS.feed = {
+  layout(){
+    const g = gridLayout(FOODS, BAR_H + 6);
+    return { grid: g };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'FEED');
+    const sp = SPECIES[S.sp];
+    FOODS.forEach((f, i) => {
+      const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
+      gridCell(g, L.grid.box(i), {
+        on: i === screenState.pick,
+        art: (gg, cx, cy) => drawItem(gg, f.id, Math.round(cx) - 4, Math.round(cy) - 4, 2),
+        tag: loved ? 'love' : hated ? 'no' : '',
+        tagCol: loved ? SC.moss : SC.rust
+      });
+    });
+    const f = FOODS[screenState.pick];
+    const afford = G.coins >= f.cost;
+    caption(g, L.grid.bottom + 4, f.name, f.cost + 'c', afford ? SC.gold : SC.rust, f.note);
+    petOnScreen(g, W/2, H - 18, 34);
+    L.act = actionBar(g, afford ? 'FEED IT' : 'NOT ENOUGH COINS', SC.moss, !afford);
+    L.close = frame.close;
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < FOODS.length; i++)
+      if (hit(L.grid.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)) feed(FOODS[screenState.pick].id);
+  }
+};
+
+/* ------------------------------- list rows --------------------------------
+   Not everything is a picture. A game or a remedy is a name and a price, and
+   forcing those into a grid of blank squares would be a grid for its own sake.
+   -------------------------------------------------------------------------- */
+const ROW_H = 15;
+
+function rowsLayout(items, top, h){
+  const rh = h || ROW_H;
+  return {
+    items, top, rh,
+    box(i){ return [PAD, top + i * (rh + 2), W - PAD*2, rh]; },
+    bottom: top + items.length * (rh + 2)
+  };
+}
+function listRow(g, box, label, right, opts){
+  opts = opts || {};
+  const [x, y, w, h] = box;
+  panel(g, x, y, w, h, opts.on ? SC.sel : SC.panel);
+  text(g, fit(label, w - 60), x + 4, y + 4, opts.dim ? SC.dim : SC.bone);
+  if (right) text(g, right, x + w - 4, y + 4, opts.rightCol || SC.gold, 'right');
+  if (opts.on){
+    g.fillStyle = SC.moss;
+    g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
+    g.fillRect(x, y, 1, h); g.fillRect(x+w-1, y, 1, h);
+  }
+}
+
+/* -------------------------------- play ------------------------------------ */
+SCREENS.play = {
+  layout(){
+    const keys = Object.keys(GAMES);
+    return { keys, rows: rowsLayout(keys.concat(['trick']), BAR_H + 5) };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'PLAY');
+    L.keys.forEach((k, i) => listRow(g, L.rows.box(i), GAMES[k].name, GAMES[k].pay + 'c/pt',
+                                     { on: i === screenState.pick }));
+    const trickReady = bondPips() >= 3;
+    listRow(g, L.rows.box(L.keys.length), 'Ask for a trick', trickReady ? 'free' : 'bond 3',
+            { on: screenState.pick === L.keys.length, dim: !trickReady,
+              rightCol: trickReady ? SC.moss : SC.dim });
+    const pick = screenState.pick;
+    const note = pick < L.keys.length ? GAMES[L.keys[pick]].blurb
+               : trickReady ? 'A quick burst of joy, and it costs nothing.'
+                            : 'Unlocks at three bond hearts. Petting is what builds them.';
+    caption(g, L.rows.bottom + 3, '', '', null, note);
+    L.act = actionBar(g, pick < L.keys.length ? 'START' : 'ASK',
+                      SC.moss, pick === L.keys.length && !trickReady);
+    L.close = frame.close;
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < L.rows.items.length; i++)
+      if (hit(L.rows.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      if (screenState.pick < L.keys.length){ closeScreen(); startGame(L.keys[screenState.pick]); }
+      else doTrick();
+    }
+  }
+};
+
+/* -------------------------------- care ------------------------------------ */
+SCREENS.care = {
+  layout(){
+    const lines = S.ills.reduce((n, i) => n + wrapText(ILLS[i.id].symptom, W - PAD*2).length, 0);
+    const top = BAR_H + (S.ills.length ? 5 + lines * 8 + 4 : 5);
+    return { rows: rowsLayout(S.vet ? ['vet'] : REMEDIES.map(r => r.id), top) };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'CARE');
+    L.close = frame.close;
+    let y = BAR_H + 4;
+    if (S.vet){
+      textBlock(g, S.name + ' is on the ground and will not get up.', PAD, y, W - PAD*2, SC.rust, 8);
+      listRow(g, L.rows.box(0), 'Call the vet', '30c', { on: true });
+      caption(g, L.rows.bottom + 3, '', '', null,
+              'Restores health and clears every illness. It costs some trust.');
+      L.act = actionBar(g, G.coins >= 30 ? 'CALL' : 'NOT ENOUGH COINS', SC.moss, G.coins < 30);
+      return;
+    }
+    if (!S.ills.length){
+      textBlock(g, 'Nothing to treat. ' + S.name + ' is well.', PAD, y, W - PAD*2, SC.moss, 8);
+      textBlock(g, 'Illness has causes, not luck. Three treats in an hour upsets the stomach. '
+                 + 'A late night brings on a chill. A filthy pen invites mites. Joy at zero '
+                 + 'turns into the blues.', PAD, y + 14, W - PAD*2, SC.dim, 8);
+      petOnScreen(g, W/2, H - 12, 44);
+      L.act = null;
+      return;
+    }
+    S.ills.forEach(i => { y = textBlock(g, ILLS[i.id].symptom, PAD, y, W - PAD*2, SC.rust, 8); });
+    REMEDIES.forEach((r, i) => listRow(g, L.rows.box(i), r.name,
+      r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
+      { on: i === screenState.pick, rightCol: r.cost ? SC.gold : SC.moss }));
+    caption(g, L.rows.bottom + 3, '', '', null, REMEDIES[screenState.pick].note);
+    L.act = actionBar(g, 'TREAT', SC.moss);
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    if (!L.act) return;
+    if (S.vet){ if (hit(L.act, mx, my)) vetVisit(); return; }
+    for (let i = 0; i < REMEDIES.length; i++)
+      if (hit(L.rows.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      const r = REMEDIES[screenState.pick];
+      if (r.id === 'company' && hasIll('blues')){
+        closeScreen();
+        say('Press and hold on ' + S.name + '. Eight times should do it.');
+        return;
+      }
+      treat(r.id);
+    }
+  }
+};
+
+/* -------------------------------- shop ------------------------------------
+   Two shelves under one heading, because coats and headgear are bought the
+   same way and splitting them across two screens would only add a step. A coat
+   is shown as the animal wearing it, not as a swatch: the thing being sold is
+   what your animal will look like.
+   -------------------------------------------------------------------------- */
+function thumb(g, cv, cx, cy, maxW, maxH){
+  const sc = Math.min(maxW / cv.width, maxH / cv.height, 1);
+  const w = Math.max(1, Math.round(cv.width * sc)), h = Math.max(1, Math.round(cv.height * sc));
+  g.drawImage(cv, Math.round(cx - w/2), Math.round(cy - h/2), w, h);
+}
+
+SCREENS.shop = {
+  layout(){
+    const coats = SKINS[S.sp];
+    const cg = gridLayout(coats, BAR_H + 11, 4);
+    const hg = gridLayout(HAT_SHOP, cg.bottom + 15, 6);
+    return { coats, coatGrid: cg, hatGrid: hg };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'SHOP');
+    L.close = frame.close;
+    // the shop keys its selection by shelf, not by index
+    if (typeof screenState.pick !== 'string') screenState.pick = 'coat:0';
+    text(g, 'COATS', PAD, BAR_H + 2, SC.dim);
+    L.coats.forEach((k, i) => {
+      const own = S.skinsOwned.includes(k.id), worn = S.skin === k.id;
+      gridCell(g, L.coatGrid.box(i), {
+        on: screenState.pick === 'coat:' + i,
+        art: (gg, cx, cy) => thumb(gg, frameOf(S.sp, stageIdx(), 'idle', 0, false, k.id).cv, cx, cy, 24, 17),
+        tag: worn ? 'worn' : own ? 'own' : k.cost + 'c',
+        tagCol: worn ? SC.moss : own ? SC.dim : SC.gold
+      });
+    });
+    text(g, 'HEADGEAR', PAD, L.coatGrid.bottom + 4, SC.dim);
+    HAT_SHOP.forEach((item, i) => {
+      const own = S.owned.includes(item.id), worn = S[item.slot] === item.id;
+      gridCell(g, L.hatGrid.box(i), {
+        on: screenState.pick === 'hat:' + i,
+        art: (gg, cx, cy) => thumb(gg, HATS[item.id], cx, cy, 14, 13),
+        tag: worn ? 'worn' : own ? 'own' : item.cost + 'c',
+        tagCol: worn ? SC.moss : own ? SC.dim : SC.gold
+      });
+    });
+    const sel = screenState.pick || 'coat:0';
+    const isCoat = sel.slice(0, 5) === 'coat:', n = +sel.split(':')[1];
+    const item = isCoat ? L.coats[n] : HAT_SHOP[n];
+    const own = isCoat ? S.skinsOwned.includes(item.id) : S.owned.includes(item.id);
+    const worn = isCoat ? S.skin === item.id : S[item.slot] === item.id;
+    caption(g, L.hatGrid.bottom + 4, item.name, own ? (worn ? 'worn' : 'owned') : item.cost + 'c',
+            own ? SC.moss : (G.coins >= item.cost ? SC.gold : SC.rust),
+            isCoat ? item.note : (item.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.'));
+    /* An animal is always wearing a coat, so a worn coat has nothing to
+       toggle off; headgear does. */
+    L.act = actionBar(g,
+      own ? (worn ? (isCoat ? 'ALREADY WORN' : 'TAKE IT OFF') : 'WEAR IT') : 'BUY IT',
+      SC.moss, (!own && G.coins < item.cost) || (worn && isCoat));
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < L.coats.length; i++)
+      if (hit(L.coatGrid.box(i), mx, my)){ screenState.pick = 'coat:' + i; SFX.pop(); return; }
+    for (let i = 0; i < HAT_SHOP.length; i++)
+      if (hit(L.hatGrid.box(i), mx, my)){ screenState.pick = 'hat:' + i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      const sel = screenState.pick || 'coat:0', n = +sel.split(':')[1];
+      if (sel.slice(0, 5) === 'coat:') buySkin(L.coats[n].id); else buyHat(HAT_SHOP[n].id);
+    }
+  }
+};
+
+/* -------------------------------- nest ------------------------------------ */
+SCREENS.nest = {
+  preHatch: true,
+  layout(){
+    const slots = G.pets.slice();
+    if (G.pets.length < MAX_PETS) slots.push(null);          // the empty cup
+    return { slots, grid: gridLayout(slots, BAR_H + 11, 6) };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'NEST');
+    L.close = frame.close;
+    text(g, numWord(G.pets.length) + ' in the nest', PAD, BAR_H + 2, SC.dim);
+    L.slots.forEach((p, i) => {
+      gridCell(g, L.grid.box(i), {
+        on: i === screenState.pick,
+        art: (gg, cx, cy) => {
+          if (!p){ text(gg, '+', cx, cy - 3, SC.dim, 'centre'); return; }
+          if (!p.sp || !p.born){
+            gg.save(); gg.translate(cx, cy); gg.scale(.62, .62);
+            drawEggArt(gg, 0, 0, p.sp || Object.keys(SPECIES)[0], 0);
+            gg.restore(); return;
+          }
+          const prev = S; S = p;
+          const f = frameOf(p.sp, stageIdx(), 'idle', 0, false, p.skin || 'wild');
+          S = prev;
+          thumb(gg, f.cv, cx, cy, 24, 17);
+        },
+        tag: p ? (i === G.active ? 'here' : '') : 'new',
+        tagCol: p ? SC.moss : SC.gold
+      });
+    });
+    const p = L.slots[screenState.pick];
+    let name = 'Take a new egg', right = 'new';
+    let note = 'Start another animal from scratch. Everything in the nest ages and gets hungry whether or not it is the one on screen. Coins are shared.';
+    if (p){
+      name = p.name || 'Unnamed';
+      if (!p.sp){ note = 'An egg nobody has chosen yet.'; right = 'egg'; }
+      else if (!p.born){ note = 'Still in the shell.'; right = 'egg'; }
+      else {
+        const prev = S; S = p;
+        const worst = Math.min(p.needs.hunger, p.needs.energy, p.needs.hygiene, p.needs.joy);
+        note = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + '. '
+             + (p.vet ? 'Needs a vet.' : p.ills.length ? ILLS[p.ills[0].id].name + '.'
+                : worst < 25 ? 'Needs attention.' : p.asleep ? 'Asleep.' : 'Doing fine.');
+        S = prev;
+        right = screenState.pick === G.active ? 'here' : 'visit';
+      }
+    }
+    caption(g, L.grid.bottom + 4, name, right, SC.moss, note);
+    L.act = actionBar(g, p ? (screenState.pick === G.active ? 'ALREADY HERE' : 'VISIT') : 'TAKE AN EGG',
+                      SC.moss, !!p && screenState.pick === G.active);
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < L.slots.length; i++)
+      if (hit(L.grid.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      const p = L.slots[screenState.pick];
+      if (!p){ closeScreen(); newEgg(); }
+      else if (screenState.pick !== G.active){ closeScreen(); switchPet(screenState.pick); }
+    }
+  }
+};
+
+/* ==========================================================================
+   CASE CHROME
+   What is left outside the screen: the meter strip, the identity line, the
+   bond row, the five keys, and the prose panels the screen cannot carry.
+
+   This file used to hold every menu in the game, on the rule that all text
+   lived in the DOM. The menus have moved onto the glass — see 07-screens.js —
+   because on the device this copies the screen is the whole interface and the
+   case never changes while you play. What stays here is the printed panel
+   around the screen and the long-form reading.
    ========================================================================== */
 
 const NEED_META = [
@@ -3156,12 +4122,14 @@ function buildChrome(){
   bone.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';
   $('btnDev').appendChild(bone);
   paintSound();
-  $('act-feed').onclick = () => openSheet('feed');
-  $('act-play').onclick = () => openSheet('play');
-  $('act-wash').onclick = () => { scrub(); };
-  $('act-care').onclick = () => openSheet('care');
-  $('act-shop').onclick = () => openSheet('shop');
-  $('btnNest').onclick = () => openSheet('nest');
+  /* The keys are direct jumps into screens on the glass. Wash is the one
+     action with nothing to choose, so its key does the thing. */
+  $('act-feed').onclick = () => openScreen('feed');
+  $('act-play').onclick = () => openScreen('play');
+  $('act-wash').onclick = () => { closeScreen(); scrub(); };
+  $('act-care').onclick = () => openScreen('care');
+  $('act-shop').onclick = () => openScreen('shop');
+  $('btnNest').onclick = () => openScreen('nest');
   $('btnDossier').onclick = () => openSheet('dossier');
   $('btnSound').onclick = toggleSound;
   $('btnDev').onclick = () => openSheet('dev');
@@ -3170,6 +4138,27 @@ function buildChrome(){
   $('scrim').onclick = closeSheet;
   armBrandHold();
 }
+
+/* The screen is 224 device pixels across. Displayed at an arbitrary fraction
+   of that, its pixel grid lands unevenly against the grid the case is built
+   on, and every one-pixel line in the interface shows it. Whole and half steps
+   keep the ratio regular, and the case is sized so that a phone gets 1.5x and
+   a desktop 2x. */
+const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
+function fitScreen(){
+  const el = document.querySelector('.screen');
+  if (!el) return;
+  const cs = getComputedStyle(el);
+  const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  let best = W;
+  for (const k of LCD_STEPS) if (W * k <= avail) best = W * k;
+  document.documentElement.style.setProperty('--lcd-w', best + 'px');
+}
+let fitTimer = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(fitScreen, 120);
+});
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It
    swaps its own glyph so the state is readable without opening anything. */
@@ -3210,6 +4199,14 @@ function armBrandHold(){
 }
 function paintChrome(){
   const busy = mode !== 'live';
+  document.querySelectorAll('.act').forEach(b => b.classList.remove('down'));
+  if (screenOpen()){
+    const k = $('act-' + screen);
+    if (k) k.classList.add('down');           // the key that opened it stays in
+  }
+  /* The status badges float over the glass. A screen is the glass, so they
+     have to get out of the way or they sit on top of its title bar. */
+  $('badges').style.display = screenOpen() ? 'none' : '';
   ['feed','play','wash','care','shop'].forEach(k => { $('act-'+k).disabled = busy; });
   const careBtn = $('act-care');
   const old = careBtn.querySelector('.nub'); if (old) old.remove();
@@ -3275,8 +4272,11 @@ function refresh(){
 
 /* -------------------------------- sheets ---------------------------------- */
 let openPanel = null;
-/* the only sheets that mean anything before there is a hatched animal */
-const SHEETS_PRE_HATCH = ['dossier', 'nest', 'trouble', 'dev'];
+/* What is left in the DOM. Feed, Play, Care, Shop and the Nest are screens on
+   the glass now; these are the panels that are all prose, plus the developer
+   harness, and at six pixels a character prose is the one thing the screen
+   cannot carry. */
+const SHEETS_PRE_HATCH = ['dossier', 'trouble', 'dev'];
 /* The developer panel docks rather than covering the screen: on a wide window
    it slides in at the right, on a narrow one it takes the bottom half. It
    raises no scrim either way, so the game stays visible and clickable while a
@@ -3296,6 +4296,7 @@ function openSheet(which){
 function closeSheet(){
   openPanel = null;
   $('sheet').classList.remove('on'); $('scrim').classList.remove('on');
+  closeScreen();
 }
 
 function rowHTML(art, title, sub, right, attrs){
@@ -3338,32 +4339,6 @@ function portrait(pet, size){
    06-render.js. Each one builds its own HTML, mounts it, then binds. */
 const SHEETS = {
 
-  feed(b, sp){
-    let html = '';
-    html = `<h2>Feed</h2><p class="lede">${sp.common} is a ${sp.diet}. Favourites fill it up and build trust; the wrong food goes down slowly. Treats are for treats.</p>`;
-    html += FOODS.map(f => {
-      const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
-      return rowHTML(f.id, f.name, (loved ? 'Favourite. ' : hated ? 'Dislikes this. ' : '') + f.note, f.cost + 'c');
-    }).join('');
-    b.innerHTML = html; mountArt(b);
-    b.querySelectorAll('.row').forEach((r,i) => r.onclick = () => { feed(FOODS[i].id); });
-  },
-
-  play(b, sp){
-    let html = '';
-    const trickReady = bondPips() >= 3;
-    html = `<h2>Games</h2><p class="lede">Joy drops about six points an hour and drags health down once it bottoms out. Each game costs a little energy.</p>`;
-    html += Object.keys(GAMES).map(k => rowHTML('', GAMES[k].name, GAMES[k].blurb, GAMES[k].pay + 'c each')).join('');
-    html += `<div class="hr"></div>`;
-    html += rowHTML('', 'Ask for a trick', trickReady ? 'Free. A quick burst of joy.' : 'Unlocks at three bond pips.',
-                    trickReady ? 'free' : 'locked', trickReady ? '' : 'disabled');
-    html += `<p class="note">Petting works too. Press and hold on ${S.name} in the habitat.</p>`;
-    b.innerHTML = html; mountArt(b);
-    const rows = b.querySelectorAll('.row'), keys = Object.keys(GAMES);
-    keys.forEach((k,i) => rows[i].onclick = () => startGame(k));
-    rows[keys.length].onclick = doTrick;
-  },
-
   vitals(b, sp){
     let html = '';
     const n = S.needs, hr = new Date().getHours();
@@ -3388,103 +4363,6 @@ const SHEETS = {
       S.asleep || n.energy > 70 ? '—' : 'free', S.asleep || n.energy > 70 ? 'disabled' : '');
     b.innerHTML = html; mountArt(b);
     const r = b.querySelector('.row'); if (r) r.onclick = tuckIn;
-  },
-
-  care(b, sp){
-    let html = '';
-    if (S.vet){
-      html = `<h2>Care</h2><p class="lede">${S.name} is on the ground and will not get up. A vet can bring it back.</p>`;
-      html += rowHTML('', 'Call the vet', 'Restores health and clears every illness. Costs some trust.', '30c');
-      b.innerHTML = html; mountArt(b);
-      b.querySelector('.row').onclick = vetVisit;
-    } else if (!S.ills.length){
-      html = `<h2>Care</h2><p class="lede">Nothing to treat right now.</p>
-        <div class="stats">
-          <div class="stat"><b>Health</b><span>${Math.round(S.health)}%</span></div>
-          <div class="stat"><b>Bond</b><span>${Math.round(S.bond)}%</span></div>
-        </div>
-        <p class="note">Illness has causes, not bad luck. Three treats in an hour upsets the stomach. Keeping ${S.name} awake past its bedtime brings on a chill. Letting the pen fall below a fifth clean invites mites. And joy sitting near zero turns into the blues.</p>`;
-      b.innerHTML = html;
-    } else {
-      html = `<h2>Care</h2><p class="lede">Read the symptoms and pick the treatment. Guessing wrong costs coins and a little trust.</p>`;
-      html += S.ills.map(i => `<div class="log"><time>Symptom</time>${ILLS[i.id].symptom}</div>`).join('');
-      html += '<div class="hr"></div>';
-      html += REMEDIES.map(r => rowHTML('', r.name, r.note, r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8 pets' : 'free'))).join('');
-      b.innerHTML = html; mountArt(b);
-      b.querySelectorAll('.row').forEach((r,i) => r.onclick = () => {
-        if (REMEDIES[i].id === 'company'){
-          if (hasIll('blues')){ closeSheet(); say('Press and hold on ' + S.name + '. Eight times should do it.'); }
-          else treat('company');
-          return;
-        }
-        treat(REMEDIES[i].id);
-      });
-    }
-  },
-
-  shop(b, sp){
-    let html = `<h2>Shop</h2><p class="lede">Coins come from digs, cleaning up and the games. Everything here belongs to ${S.name} alone.</p>
-      <p class="note" style="margin-bottom:8px">Coats</p>`;
-    html += SKINS[S.sp].map(k => {
-      const own = S.skinsOwned.includes(k.id), worn = S.skin === k.id;
-      return `<button class="row" data-skin="${k.id}"><span class="art" data-coat="${k.id}"></span>
-        <span class="t"><b>${k.name}</b><small>${k.note}</small></span>
-        <span class="px${own ? ' own' : ''}">${own ? (worn ? 'worn' : 'wear') : k.cost + 'c'}</span></button>`;
-    }).join('');
-    html += `<div class="hr"></div><p class="note" style="margin-bottom:8px">Headgear</p>`;
-    html += HAT_SHOP.map(h => {
-      const own = S.owned.includes(h.id), worn = S[h.slot] === h.id;
-      const where = h.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.';
-      return rowHTML(h.id, h.name, own ? (worn ? 'Currently worn.' : where) : where, own ? (worn ? 'worn' : 'wear') : h.cost + 'c');
-    }).join('');
-    b.innerHTML = html; mountArt(b);
-    b.querySelectorAll('[data-coat]').forEach(slot => {
-      const id = slot.getAttribute('data-coat');
-      const f = frameOf(S.sp, stageIdx(), 'idle', 0, false, id);
-      const c = makeCv(34,30), g = readCtx(c);
-      g.imageSmoothingEnabled = false;
-      const sc = Math.min(34 / f.w, 30 / f.h) * .95;
-      g.drawImage(f.cv, (34 - f.w*sc)/2, 30 - f.h*sc, f.w*sc, f.h*sc);
-      c.style.imageRendering = 'pixelated';
-      slot.appendChild(c);
-    });
-    b.querySelectorAll('.px').forEach(p => { if (p.textContent === 'worn' || p.textContent === 'wear') p.classList.add('own'); });
-    b.querySelectorAll('[data-skin]').forEach(r => r.onclick = () => buySkin(r.getAttribute('data-skin')));
-    const hatRows = Array.from(b.querySelectorAll('.row')).slice(SKINS[S.sp].length);
-    hatRows.forEach((r,i) => r.onclick = () => buyHat(HAT_SHOP[i].id));
-  },
-
-  nest(b, sp){
-    let html = `<h2>The nest</h2><p class="lede">Every animal here ages and gets hungry whether or not it is the one on screen. Coins are shared.</p>`;
-    html += G.pets.map((p,i) => {
-      const active = i === G.active;
-      let sub;
-      if (!p.sp) sub = 'An unchosen egg.';
-      else if (!p.born) sub = 'Still in the shell.';
-      else {
-        const prev = S; S = p;
-        const worst = Math.min(p.needs.hunger, p.needs.energy, p.needs.hygiene, p.needs.joy);
-        sub = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + ' · ' +
-              (p.vet ? 'needs a vet' : p.ills.length ? ILLS[p.ills[0].id].name.toLowerCase() :
-               worst < 25 ? 'needs attention' : p.asleep ? 'asleep' : 'doing fine');
-        S = prev;
-      }
-      return `<button class="row pet${active ? ' here' : ''}" data-pet="${i}">
-        <span class="art" data-pet-art="${i}"></span>
-        <span class="t"><b>${p.name || 'Unnamed'}</b><small>${sub}</small></span>
-        <span class="px">${active ? 'here' : 'visit'}</span></button>`;
-    }).join('');
-    html += '<div class="hr"></div>';
-    html += rowHTML('', 'Take a new egg', G.pets.length >= MAX_PETS ? 'The nest holds ' + MAX_PETS + '.' : 'Start another animal from scratch.',
-                    G.pets.length >= MAX_PETS ? 'full' : 'new', G.pets.length >= MAX_PETS ? 'disabled' : '');
-    b.innerHTML = html; mountArt(b);
-    b.querySelectorAll('[data-pet-art]').forEach(slot => {
-      const c = portrait(G.pets[+slot.getAttribute('data-pet-art')], 34);
-      c.style.imageRendering = 'pixelated'; slot.appendChild(c);
-    });
-    b.querySelectorAll('[data-pet]').forEach(r => r.onclick = () => switchPet(+r.getAttribute('data-pet')));
-    const newRow = b.querySelectorAll('.row')[G.pets.length];
-    if (newRow) newRow.onclick = newEgg;
   },
 
   dossier(b, sp){
@@ -3661,6 +4539,13 @@ cv.addEventListener('pointerdown', e => {
     if (game.kind === 'leap')  leapJump();
     return;
   }
+  /* A screen owns every tap while it is up: it is the whole display, so
+     there is nothing else on the glass to hit. */
+  if (screenOpen()){
+    const sc = SCREENS[screen];
+    if (sc.tap && screenLayout) sc.tap(mx, my, screenLayout);
+    return;
+  }
   if (mode === 'live'){
     if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet([mx, my]); return; }
     if (bondPips() >= 2 && !S.asleep && !S.vet){
@@ -3679,7 +4564,12 @@ cv.addEventListener('pointermove', e => {
 window.addEventListener('pointerup', () => { holding = false; });
 window.addEventListener('pointercancel', () => { holding = false; });
 window.addEventListener('keydown', e => {
-  if (e.key === 'Escape'){ if (openPanel) closeSheet(); else if (mode === 'game') endGame(); return; }
+  if (e.key === 'Escape'){
+    if (screenOpen()) closeScreen();
+    else if (openPanel) closeSheet();
+    else if (mode === 'game') endGame();
+    return;
+  }
   if (mode === 'game' && game){
     if (game.kind === 'snack'){
       if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = true;
@@ -3759,6 +4649,7 @@ function frame(now){
     }
   }
 
+  if (G && hatched()) warmFrames(S.sp, stageIdx(), S.skin);
   stepBehaviour(dt, now);
   stepFeed(dt);
   if (mode === 'game') stepGame(dt, now);
@@ -3775,6 +4666,7 @@ function frame(now){
 
 async function boot(){
   buildChrome();
+  fitScreen();
   G = freshGame();
   const loaded = loadSave(await Store.get(SAVE_KEY));
   if (loaded.game){

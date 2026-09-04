@@ -8,7 +8,19 @@
    lighting pass in the colour module turns those layers into shaded pixels.
    ========================================================================== */
 
-const BAKE_W = 232, BAKE_H = 210, BAKE_G = 196, BAKE_CX = 104;
+/* The box every frame is drawn into. `BAKE_CX` is the centreline and `BAKE_G`
+   the ground line inside it; a species draws with the ground at y = 0.
+
+   Every pass in composeSprite is per-pixel over this whole box, so its area is
+   the bake cost. The box was 232x210 and the largest frame any species and
+   stage produces is 143x94 — five sixths of every pass was spent on empty
+   canvas. Measured across every species, stage and animation, the union of
+   what is actually touched is 154x95, and this is that plus a margin.
+
+   Anything that makes an animal appreciably bigger — a longer-necked species,
+   a taller stage — has to grow this. tools/sheet.html shows the clipping
+   immediately. */
+const BAKE_W = 168, BAKE_H = 112, BAKE_G = 100, BAKE_CX = 84;
 
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
@@ -120,12 +132,15 @@ function toes(g, x, y, n, dir, size){
   for (let i=0;i<n;i++) oval(g, x + dir*i*size*1.7, y, size*.78, size*.55);
 }
 function eyeAt(M, x, y, r, state){
+  /* A shut eye is a line, not a shape. The lid used to be drawn as wide as the
+     pupil with rounded caps, which at this size read as a black smudge across
+     the face rather than as a closed eye. */
   if (state === 1){                                        // closed: a soft lid line
-    tube(M.pupil, [[x-r*1.5,y-r*.1],[x,y+r*.45],[x+r*1.5,y-r*.1]], [r*.55,r*.6,r*.55]);
+    tube(M.pupil, [[x-r*1.35,y-r*.08],[x,y+r*.34],[x+r*1.35,y-r*.08]], [r*.24,r*.32,r*.24]);
     return;
   }
   if (state === 2){                                        // squinting, pleased
-    tube(M.pupil, [[x-r*1.4,y+r*.45],[x,y-r*.5],[x+r*1.4,y+r*.45]], [r*.55,r*.6,r*.55]);
+    tube(M.pupil, [[x-r*1.3,y+r*.34],[x,y-r*.40],[x+r*1.3,y+r*.34]], [r*.24,r*.32,r*.24]);
     return;
   }
   oval(M.sclera, x, y, r*1.1, r*1.24);
@@ -162,11 +177,30 @@ const HATS = {};
 for (const k in HAT_ART) HATS[k] = hatCanvas(k);
 
 /* ---------------------------- frame baking -------------------------------- */
+/* Walk and idle are generated rather than typed out, because the only reason
+   they were six frames and two frames was that a bake cost eight milliseconds
+   and every pose is one. It costs about a third of that now, so the cycles are
+   as long as they should be: twelve frames of walk reads as a walk instead of
+   as six positions, and four frames of idle is a breath instead of a twitch.
+
+   The body rises twice per stride, once under each foot, with sharp peaks and
+   a flat trough — that asymmetry is the push-off. The tail swings once per
+   stride, a quarter cycle behind it. */
+const WALK_FRAMES = 12, IDLE_FRAMES = 4;
+const TAU = Math.PI * 2;
+const poseCycle = (count, fn) => Array.from({length:count}, (_, i) => fn(i/count, i));
+
 const POSES = {
-  idle:  [ {body:0, legPhase:0, tail:.2}, {body:1.3, legPhase:0, tail:-.2} ],
-  walk:  [ {body:.2, legPhase:0,     tail:0},   {body:1.5, legPhase:1/6, tail:.43},
-           {body:.7, legPhase:2/6,   tail:.43}, {body:.2, legPhase:3/6, tail:0},
-           {body:1.5, legPhase:4/6,  tail:-.43},{body:.7, legPhase:5/6, tail:-.43} ],
+  idle:  poseCycle(IDLE_FRAMES, p => ({
+           body: .65 - .65*Math.cos(TAU*p),          // one slow breath
+           legPhase: 0,
+           tail: .22*Math.sin(TAU*p)
+         })),
+  walk:  poseCycle(WALK_FRAMES, p => ({
+           body: .2 + 1.3*Math.pow(Math.abs(Math.sin(TAU*p)), 1.4),
+           legPhase: p,
+           tail: .48*Math.sin(TAU*p + Math.PI/4)
+         })),
   eat:   [ {body:0, legPhase:0, jaw:1, droop:.7, tail:.3}, {body:0, legPhase:0, jaw:.12, droop:.7, tail:-.1} ],
   sleep: [ {body:-2.5, legPhase:0, droop:1.5, tail:.1, eye:1} ],
   cheer: [ {body:5, legPhase:.5, jaw:.8, tail:.9, eye:2}, {body:0, legPhase:0, jaw:.35, tail:-.7, eye:2} ],
@@ -183,6 +217,12 @@ function matsFor(spId, skinId){
   }
   return matCache.get(key);
 }
+/* Least-recently-used, because the key space is species x coat x stage x
+   animation x frame x eye and every entry is a canvas. A player only ever has
+   one species, one coat and one stage live, which is about thirty frames; the
+   rest of what gets baked is shop and nest thumbnails. The cap is generous
+   enough never to evict anything in use and small enough to bound the memory. */
+const FRAME_CACHE_MAX = 180;
 const frameCache = new Map();
 function frameOf(spId, stage, anim, idx, blinking, skinId){
   skinId = skinId || 'wild';
@@ -190,7 +230,11 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   const pose = poses[idx % poses.length];
   const eye = pose.eye !== undefined ? pose.eye : (blinking ? 1 : 0);
   const key = spId+'|'+skinId+'|'+stage+'|'+anim+'|'+(idx%poses.length)+'|'+eye;
-  if (frameCache.has(key)) return frameCache.get(key);
+  if (frameCache.has(key)){
+    const hit = frameCache.get(key);
+    frameCache.delete(key); frameCache.set(key, hit);   // Map keeps insertion order
+    return hit;
+  }
 
   const sp = SPECIES[spId], st = STAGE[stage], k = st.s * sp.scale;
   const canvases = [], M = {};
@@ -202,8 +246,10 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
-  // the coat rides the body the draw function just laid down, never a path
-  // computed alongside it — the same rule the surface detail follows
+  // Countershading and the coat both ride the body the draw function just laid
+  // down, never a path computed alongside it — the same rule the surface
+  // detail follows. Belly first: the coat is masked to stop where it starts.
+  paintBelly(M.belly, anchors.spine, sp.belly);
   paintPattern(M.mark, skinOf(spId, skinId).pattern, anchors.spine);
 
   const composed = composeSprite(canvases, matsFor(spId, skinId), BAKE_W, BAKE_H);
@@ -216,5 +262,26 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
     eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head
   };
   frameCache.set(key, out);
+  while (frameCache.size > FRAME_CACHE_MAX) frameCache.delete(frameCache.keys().next().value);
   return out;
+}
+
+/* Bake ahead. A cold bake is a few milliseconds and every pose is one, so a
+   twelve-frame walk baked lazily hitches twelve times the first time an animal
+   crosses the pen. Two frames a tick fills the whole of the current stage and
+   coat inside a second, and does nothing at all once it is full. */
+let warmQueue = [], warmKey = '';
+function warmFrames(spId, stage, skinId){
+  const key = spId + '|' + skinId + '|' + stage;
+  if (key !== warmKey){
+    warmKey = key;
+    warmQueue = [];
+    for (const anim in POSES)
+      for (let i=0;i<POSES[anim].length;i++) warmQueue.push([anim, i, false]);
+    warmQueue.push(['idle', 0, true]);            // the blink is a bake of its own
+  }
+  for (let n=0; n<2 && warmQueue.length; n++){
+    const [anim, i, blink] = warmQueue.shift();
+    frameOf(spId, stage, anim, i, blink, skinId);
+  }
 }

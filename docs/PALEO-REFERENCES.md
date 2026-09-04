@@ -11,6 +11,11 @@ this came from research during development rather than from memory.
 - **Gastralia** (belly ribs) make the torso barrel-shaped rather than lean.
 - Exactly **two fingers** per hand, with palms facing inward, not pronated.
 - Forward-facing eyes giving binocular overlap.
+- The **premaxilla is squared off and deep** - a near-vertical front edge
+  rather than a rounded nub. At sprite scale it is the quickest way to read
+  tyrannosaur instead of generic theropod.
+- The large teeth are **maxillary**; the dentary shows tips. The sprite draws
+  them that way round when the jaw opens, and none at all when it is shut.
 - Level spine with the tail as a counterweight.
 - A keratin row runs the neck and back — speculative but a common convention.
 
@@ -23,6 +28,11 @@ this came from research during development rather than from memory.
 - Skin impressions show large scales with scattered **low nubbins**, not the
   spines older reconstructions used.
 - A **jugal horn** juts down from each cheek, below the eye.
+- The beak is **two bones**: a rostral above and a predentary below, with the
+  mouth between them. Drawn as one cream mass it reads as a bald face.
+- The postorbital horns rise from **directly above the orbit**, on a base
+  about as wide as the eye socket, tapering fast. Set further back on a
+  narrow base they read as ears.
 - *T. horridus* has a long snout and only a small nasal horn.
 - Hatchlings emerged nearly hornless with a small frill; both grow in.
 - Upright hindlimbs, forelimbs held with the elbows out.
@@ -44,6 +54,10 @@ this came from research during development rather than from memory.
 - Forelimbs about **1.2× the hindlimbs**, which is where the sloping back comes
   from and what the animal is named for.
 - Neck held near **60°** with a slight S-curve, not vertical.
+- The jaw line is **long and close to straight**, running back to below the
+  eye, and the muzzle is squared off in front where the spatulate teeth sat.
+- At about ten pixels of skull only three things can read: the crest
+  silhouette, the eye, and the jaw line.
 - A **hump of tall neural spines** over the shoulders anchored the neck muscles.
 - Nasal chambers formed a **crest on the roof** of a very small skull.
 - Short tail for a sauropod, held clear of the ground.
@@ -58,7 +72,8 @@ this came from research during development rather than from memory.
 - **Countershading** — dark above, pale below — is the one pattern with direct
   fossil support, recovered from melanosomes in *Psittacosaurus* (a
   ceratopsian, so it bears on the Triceratops) and *Sinosauropteryx*. The
-  `belly` material layer is doing this on every animal.
+  `belly` material layer is doing this on every animal, painted from the
+  spine so it follows the body rather than sitting in a fixed box.
 - *Sinosauropteryx* also preserves a **banded tail** and a bandit mask. Banding
   that resolves into tail rings is therefore the best-supported pattern
   available, and it is what the `bands` coats draw.

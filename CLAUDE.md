@@ -39,10 +39,19 @@ just the adult.
   omission, and the Care sheet explains the cause.
 - **Cuteness through proportion**, never by dropping a diagnostic feature.
   Bigger skull, bigger eye, shorter snout, rounder body.
-- **All text lives in the DOM.** The canvas draws only the world.
+- **One grid, one edge, no symmetry.** Every size in the case is a multiple of
+  `--px`; each surface is a flat fill with one hard edge and at most one
+  highlight; nothing decorative is evenly spaced or mirrored. Stacking effects
+  and spacing things perfectly is what made the first case look rendered
+  rather than moulded.
+- **The screen is the interface.** Menus are drawn inside the 224x168 canvas
+  and opened by the five keys on the case; the case never changes while you
+  play. Screen text uses the bitmap font in `03-font.js`, not the DOM. The
+  exception is long prose — the dossier's field notes — which stays a DOM
+  panel, because six pixels a character cannot carry three paragraphs.
 - **No `localStorage` directly.** Go through `Store` in `00-core.js`.
-- **No image assets.** The case, the icons and the animals are all drawn from
-  code. Keep it that way.
+- **No image assets.** The case, the icons, the animals and the screen font
+  are all drawn from code. Keep it that way.
 - **The developer tools are a harness, not a cheat menu.** Anything added to
   `DEV` must write the same fields the simulation writes.
 
@@ -58,9 +67,22 @@ cost time:
    points the body outline uses. Computing a parallel path independently makes
    the detail float off the body.
 
+3. **An internal edge only appears between two different materials.** Two
+   shapes on one layer merge into a single region with nothing between them.
+   That is why the mandible has its own layer: painted onto `head` it was
+   drawn correctly, hinged correctly, and completely invisible, and every
+   animal had a mouthless face until session 9.
+
 Draw the body as one closed `blob` covering neck, ribcage, hips and tail.
 Separate tubes produce lumpy joins; that is what the rex and trike looked like
 before they were rebuilt.
+
+Countershading and coats are painted from the spine the draw function returns,
+not by hand per species. `belly` and `mark` are masked to body pixels, so both
+can be drawn generously and let the mask trim them.
+
+Check art in `tools/sheet.html`, not by playing. Every species, stage and
+animation frame is on one page.
 
 Growth stages use separate `head` and `snout` multipliers. Do not merge them:
 young animals have large braincases and short muzzles, and applying one number

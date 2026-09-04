@@ -1,0 +1,450 @@
+/* ==========================================================================
+   SCREENS
+   The menus are drawn inside the 224x168 screen, not slid over the top of the
+   case as web sheets. On the hardware this is copied from, the screen is the
+   whole interface: the case never changes while you play, and everything you
+   can do to the animal happens on the glass in front of it.
+
+   A key on the case opens a screen; a tap on the screen picks something in it.
+   The keys are direct jumps and nothing else, which is why there is no cursor
+   here — the pointer is the cursor.
+
+   Each screen is an entry in SCREENS with `draw`, which paints it, and `tap`,
+   which is handed a canvas-space point and decides what was hit. Both are
+   given a layout object built by `screenLayout`, so hit boxes are computed
+   once and drawn and tested from the same numbers. Nothing here computes a
+   rectangle twice.
+
+   Long prose has nowhere to go at six pixels a character, so the dossier's
+   field notes still open as a DOM panel. That is the only text left outside
+   the glass.
+   ========================================================================== */
+
+/* the screen palette, and the one place any of it is named */
+const SC = {
+  ink:    '#0b1113',   // the recess behind a panel
+  panel:  '#16211f',   // a panel face
+  edge:   '#2f4640',   // panel border
+  line:   '#24332f',   // rules and inactive cells
+  bone:   '#e9e1cb',   // primary text
+  dim:    '#8fa39a',   // secondary text
+  gold:   '#e0ac48',   // coins and prices
+  moss:   '#8cb765',   // affirmative, owned, worn
+  rust:   '#cf6a44',   // refusals, warnings, costs you cannot meet
+  sel:    '#3d5c4e'    // the selected cell's fill
+};
+
+/* one grid unit. Everything on a screen is a whole number of these, which is
+   what keeps the interface on the same pixel grid as the world behind it. */
+const U = 4;
+
+let screen = null;          // null when the habitat is showing
+let screenState = {};       // per-screen scratch: which item is selected, scroll
+
+function openScreen(which){
+  if (!SCREENS[which]) return;
+  if (mode === 'game') return;
+  if (mode !== 'live' && !SCREENS[which].preHatch) return;
+  screen = which;
+  screenState = { pick: 0, scroll: 0 };
+  SFX.pop();
+  paintChrome();
+}
+function closeScreen(){
+  if (!screen) return;
+  screen = null;
+  paintChrome();
+}
+const screenOpen = () => screen !== null;
+
+/* ------------------------------ chrome ------------------------------------
+   Every screen wears the same frame: a title bar with the purse in it, a body,
+   and a close tab. Drawing it in one place is what stops six screens drifting
+   apart by two pixels each.
+   -------------------------------------------------------------------------- */
+const BAR_H = 13, PAD = 3;
+
+function panel(g, x, y, w, h, fill){
+  g.fillStyle = fill || SC.panel;
+  g.fillRect(x, y, w, h);
+  g.fillStyle = SC.edge;
+  g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
+  g.fillRect(x, y, 1, h); g.fillRect(x+w-1, y, 1, h);
+}
+
+function screenFrame(g, title){
+  g.fillStyle = SC.ink;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = SC.panel;
+  g.fillRect(0, 0, W, BAR_H);
+  g.fillStyle = SC.edge;
+  g.fillRect(0, BAR_H - 1, W, 1);
+  text(g, title, PAD, 3, SC.bone);
+  const purse = Math.floor(G.coins) + 'c';
+  text(g, purse, W - PAD - 11, 3, SC.gold, 'right');
+  // close tab, top right, always in the same place on every screen
+  g.fillStyle = SC.line;
+  g.fillRect(W - 11, 2, 9, 9);
+  g.fillStyle = SC.dim;
+  for (let i=0;i<5;i++){ g.fillRect(W - 9 + i, 4 + i, 1, 1); g.fillRect(W - 5 - i, 4 + i, 1, 1); }
+  return { close: [W - 12, 1, 11, 11] };
+}
+
+/* The animal, small, on its own screen. A menu about the animal that does not
+   show the animal is a form. */
+function petOnScreen(g, cx, baseY, maxH){
+  if (!hatched()) return null;
+  const f = frameOf(S.sp, stageIdx(), 'idle', 0, false, S.skin);
+  const sc = Math.min(1, maxH / f.h);
+  const w = Math.round(f.w * sc), h = Math.round(f.h * sc);
+  const x = Math.round(cx - w/2), y = Math.round(baseY - h);
+  g.fillStyle = 'rgba(10,20,18,.45)';
+  g.beginPath(); g.ellipse(cx, baseY + 1, w*.34, 2, 0, 0, 7); g.fill();
+  g.drawImage(f.cv, x, y, w, h);
+  return [x, y, w, h];
+}
+
+const hit = (box, mx, my) =>
+  mx >= box[0] && mx < box[0] + box[2] && my >= box[1] && my < box[1] + box[3];
+
+/* ------------------------------- item grid --------------------------------
+   The shape almost every screen wants: a row of picture cells across the top
+   of the body, and the selected one's name, price and note written out
+   underneath. It replaced a vertical list of text rows, which is the shape a
+   settings page has, not a shelf of things.
+   -------------------------------------------------------------------------- */
+const CELL = 30, CELL_GAP = 3;
+
+function gridLayout(items, top, cols){
+  cols = cols || Math.floor((W - PAD*2 + CELL_GAP) / (CELL + CELL_GAP));
+  const rows = Math.ceil(items.length / cols);
+  const wide = cols * CELL + (cols - 1) * CELL_GAP;
+  const x0 = Math.round((W - wide) / 2);
+  return {
+    items, cols, rows, x0, top, cell: CELL,
+    box(i){
+      const r = Math.floor(i / cols), c = i % cols;
+      return [x0 + c * (CELL + CELL_GAP), top + r * (CELL + CELL_GAP), CELL, CELL];
+    },
+    bottom: top + rows * CELL + (rows - 1) * CELL_GAP
+  };
+}
+
+/* Draw one cell: a recessed square, a picture in it, and a price or state
+   along the bottom edge. `art` is handed the centre of the cell. */
+function gridCell(g, box, opts){
+  const [x, y, w, h] = box;
+  panel(g, x, y, w, h, opts.on ? SC.sel : SC.panel);
+  if (opts.art) opts.art(g, x + w/2, y + h/2 - 2);
+  if (opts.tag) text(g, opts.tag, x + w/2, y + h - 9, opts.tagCol || SC.dim, 'centre');
+  if (opts.on){
+    g.fillStyle = SC.moss;
+    g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
+    g.fillRect(x, y, 1, h); g.fillRect(x+w-1, y, 1, h);
+  }
+}
+
+/* the caption block under a grid: name on the left, price on the right, then
+   the note wrapped underneath */
+function caption(g, y, name, right, rightCol, note){
+  g.fillStyle = SC.line;
+  g.fillRect(PAD, y, W - PAD*2, 1);
+  y += 4;
+  text(g, name, PAD, y, SC.bone);
+  if (right) text(g, right, W - PAD, y, rightCol || SC.gold, 'right');
+  if (note) textBlock(g, note, PAD, y + 10, W - PAD*2, SC.dim, 8);
+  return y;
+}
+
+/* a full-width action strip at the foot of a screen */
+function actionBar(g, label, col, dim){
+  const y = H - 14, box = [PAD, y, W - PAD*2, 11];
+  panel(g, box[0], box[1], box[2], box[3], dim ? SC.line : SC.panel);
+  text(g, label, W/2, y + 2, dim ? SC.dim : (col || SC.moss), 'centre');
+  return box;
+}
+
+/* ------------------------------ the screens ------------------------------- */
+const SCREENS = {};
+
+/* -------------------------------- feed ------------------------------------ */
+SCREENS.feed = {
+  layout(){
+    const g = gridLayout(FOODS, BAR_H + 6);
+    return { grid: g };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'FEED');
+    const sp = SPECIES[S.sp];
+    FOODS.forEach((f, i) => {
+      const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
+      gridCell(g, L.grid.box(i), {
+        on: i === screenState.pick,
+        art: (gg, cx, cy) => drawItem(gg, f.id, Math.round(cx) - 4, Math.round(cy) - 4, 2),
+        tag: loved ? 'love' : hated ? 'no' : '',
+        tagCol: loved ? SC.moss : SC.rust
+      });
+    });
+    const f = FOODS[screenState.pick];
+    const afford = G.coins >= f.cost;
+    caption(g, L.grid.bottom + 4, f.name, f.cost + 'c', afford ? SC.gold : SC.rust, f.note);
+    petOnScreen(g, W/2, H - 18, 34);
+    L.act = actionBar(g, afford ? 'FEED IT' : 'NOT ENOUGH COINS', SC.moss, !afford);
+    L.close = frame.close;
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < FOODS.length; i++)
+      if (hit(L.grid.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)) feed(FOODS[screenState.pick].id);
+  }
+};
+
+/* ------------------------------- list rows --------------------------------
+   Not everything is a picture. A game or a remedy is a name and a price, and
+   forcing those into a grid of blank squares would be a grid for its own sake.
+   -------------------------------------------------------------------------- */
+const ROW_H = 15;
+
+function rowsLayout(items, top, h){
+  const rh = h || ROW_H;
+  return {
+    items, top, rh,
+    box(i){ return [PAD, top + i * (rh + 2), W - PAD*2, rh]; },
+    bottom: top + items.length * (rh + 2)
+  };
+}
+function listRow(g, box, label, right, opts){
+  opts = opts || {};
+  const [x, y, w, h] = box;
+  panel(g, x, y, w, h, opts.on ? SC.sel : SC.panel);
+  text(g, fit(label, w - 60), x + 4, y + 4, opts.dim ? SC.dim : SC.bone);
+  if (right) text(g, right, x + w - 4, y + 4, opts.rightCol || SC.gold, 'right');
+  if (opts.on){
+    g.fillStyle = SC.moss;
+    g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
+    g.fillRect(x, y, 1, h); g.fillRect(x+w-1, y, 1, h);
+  }
+}
+
+/* -------------------------------- play ------------------------------------ */
+SCREENS.play = {
+  layout(){
+    const keys = Object.keys(GAMES);
+    return { keys, rows: rowsLayout(keys.concat(['trick']), BAR_H + 5) };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'PLAY');
+    L.keys.forEach((k, i) => listRow(g, L.rows.box(i), GAMES[k].name, GAMES[k].pay + 'c/pt',
+                                     { on: i === screenState.pick }));
+    const trickReady = bondPips() >= 3;
+    listRow(g, L.rows.box(L.keys.length), 'Ask for a trick', trickReady ? 'free' : 'bond 3',
+            { on: screenState.pick === L.keys.length, dim: !trickReady,
+              rightCol: trickReady ? SC.moss : SC.dim });
+    const pick = screenState.pick;
+    const note = pick < L.keys.length ? GAMES[L.keys[pick]].blurb
+               : trickReady ? 'A quick burst of joy, and it costs nothing.'
+                            : 'Unlocks at three bond hearts. Petting is what builds them.';
+    caption(g, L.rows.bottom + 3, '', '', null, note);
+    L.act = actionBar(g, pick < L.keys.length ? 'START' : 'ASK',
+                      SC.moss, pick === L.keys.length && !trickReady);
+    L.close = frame.close;
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < L.rows.items.length; i++)
+      if (hit(L.rows.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      if (screenState.pick < L.keys.length){ closeScreen(); startGame(L.keys[screenState.pick]); }
+      else doTrick();
+    }
+  }
+};
+
+/* -------------------------------- care ------------------------------------ */
+SCREENS.care = {
+  layout(){
+    const lines = S.ills.reduce((n, i) => n + wrapText(ILLS[i.id].symptom, W - PAD*2).length, 0);
+    const top = BAR_H + (S.ills.length ? 5 + lines * 8 + 4 : 5);
+    return { rows: rowsLayout(S.vet ? ['vet'] : REMEDIES.map(r => r.id), top) };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'CARE');
+    L.close = frame.close;
+    let y = BAR_H + 4;
+    if (S.vet){
+      textBlock(g, S.name + ' is on the ground and will not get up.', PAD, y, W - PAD*2, SC.rust, 8);
+      listRow(g, L.rows.box(0), 'Call the vet', '30c', { on: true });
+      caption(g, L.rows.bottom + 3, '', '', null,
+              'Restores health and clears every illness. It costs some trust.');
+      L.act = actionBar(g, G.coins >= 30 ? 'CALL' : 'NOT ENOUGH COINS', SC.moss, G.coins < 30);
+      return;
+    }
+    if (!S.ills.length){
+      textBlock(g, 'Nothing to treat. ' + S.name + ' is well.', PAD, y, W - PAD*2, SC.moss, 8);
+      textBlock(g, 'Illness has causes, not luck. Three treats in an hour upsets the stomach. '
+                 + 'A late night brings on a chill. A filthy pen invites mites. Joy at zero '
+                 + 'turns into the blues.', PAD, y + 14, W - PAD*2, SC.dim, 8);
+      petOnScreen(g, W/2, H - 12, 44);
+      L.act = null;
+      return;
+    }
+    S.ills.forEach(i => { y = textBlock(g, ILLS[i.id].symptom, PAD, y, W - PAD*2, SC.rust, 8); });
+    REMEDIES.forEach((r, i) => listRow(g, L.rows.box(i), r.name,
+      r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
+      { on: i === screenState.pick, rightCol: r.cost ? SC.gold : SC.moss }));
+    caption(g, L.rows.bottom + 3, '', '', null, REMEDIES[screenState.pick].note);
+    L.act = actionBar(g, 'TREAT', SC.moss);
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    if (!L.act) return;
+    if (S.vet){ if (hit(L.act, mx, my)) vetVisit(); return; }
+    for (let i = 0; i < REMEDIES.length; i++)
+      if (hit(L.rows.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      const r = REMEDIES[screenState.pick];
+      if (r.id === 'company' && hasIll('blues')){
+        closeScreen();
+        say('Press and hold on ' + S.name + '. Eight times should do it.');
+        return;
+      }
+      treat(r.id);
+    }
+  }
+};
+
+/* -------------------------------- shop ------------------------------------
+   Two shelves under one heading, because coats and headgear are bought the
+   same way and splitting them across two screens would only add a step. A coat
+   is shown as the animal wearing it, not as a swatch: the thing being sold is
+   what your animal will look like.
+   -------------------------------------------------------------------------- */
+function thumb(g, cv, cx, cy, maxW, maxH){
+  const sc = Math.min(maxW / cv.width, maxH / cv.height, 1);
+  const w = Math.max(1, Math.round(cv.width * sc)), h = Math.max(1, Math.round(cv.height * sc));
+  g.drawImage(cv, Math.round(cx - w/2), Math.round(cy - h/2), w, h);
+}
+
+SCREENS.shop = {
+  layout(){
+    const coats = SKINS[S.sp];
+    const cg = gridLayout(coats, BAR_H + 11, 4);
+    const hg = gridLayout(HAT_SHOP, cg.bottom + 15, 6);
+    return { coats, coatGrid: cg, hatGrid: hg };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'SHOP');
+    L.close = frame.close;
+    // the shop keys its selection by shelf, not by index
+    if (typeof screenState.pick !== 'string') screenState.pick = 'coat:0';
+    text(g, 'COATS', PAD, BAR_H + 2, SC.dim);
+    L.coats.forEach((k, i) => {
+      const own = S.skinsOwned.includes(k.id), worn = S.skin === k.id;
+      gridCell(g, L.coatGrid.box(i), {
+        on: screenState.pick === 'coat:' + i,
+        art: (gg, cx, cy) => thumb(gg, frameOf(S.sp, stageIdx(), 'idle', 0, false, k.id).cv, cx, cy, 24, 17),
+        tag: worn ? 'worn' : own ? 'own' : k.cost + 'c',
+        tagCol: worn ? SC.moss : own ? SC.dim : SC.gold
+      });
+    });
+    text(g, 'HEADGEAR', PAD, L.coatGrid.bottom + 4, SC.dim);
+    HAT_SHOP.forEach((item, i) => {
+      const own = S.owned.includes(item.id), worn = S[item.slot] === item.id;
+      gridCell(g, L.hatGrid.box(i), {
+        on: screenState.pick === 'hat:' + i,
+        art: (gg, cx, cy) => thumb(gg, HATS[item.id], cx, cy, 14, 13),
+        tag: worn ? 'worn' : own ? 'own' : item.cost + 'c',
+        tagCol: worn ? SC.moss : own ? SC.dim : SC.gold
+      });
+    });
+    const sel = screenState.pick || 'coat:0';
+    const isCoat = sel.slice(0, 5) === 'coat:', n = +sel.split(':')[1];
+    const item = isCoat ? L.coats[n] : HAT_SHOP[n];
+    const own = isCoat ? S.skinsOwned.includes(item.id) : S.owned.includes(item.id);
+    const worn = isCoat ? S.skin === item.id : S[item.slot] === item.id;
+    caption(g, L.hatGrid.bottom + 4, item.name, own ? (worn ? 'worn' : 'owned') : item.cost + 'c',
+            own ? SC.moss : (G.coins >= item.cost ? SC.gold : SC.rust),
+            isCoat ? item.note : (item.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.'));
+    /* An animal is always wearing a coat, so a worn coat has nothing to
+       toggle off; headgear does. */
+    L.act = actionBar(g,
+      own ? (worn ? (isCoat ? 'ALREADY WORN' : 'TAKE IT OFF') : 'WEAR IT') : 'BUY IT',
+      SC.moss, (!own && G.coins < item.cost) || (worn && isCoat));
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < L.coats.length; i++)
+      if (hit(L.coatGrid.box(i), mx, my)){ screenState.pick = 'coat:' + i; SFX.pop(); return; }
+    for (let i = 0; i < HAT_SHOP.length; i++)
+      if (hit(L.hatGrid.box(i), mx, my)){ screenState.pick = 'hat:' + i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      const sel = screenState.pick || 'coat:0', n = +sel.split(':')[1];
+      if (sel.slice(0, 5) === 'coat:') buySkin(L.coats[n].id); else buyHat(HAT_SHOP[n].id);
+    }
+  }
+};
+
+/* -------------------------------- nest ------------------------------------ */
+SCREENS.nest = {
+  preHatch: true,
+  layout(){
+    const slots = G.pets.slice();
+    if (G.pets.length < MAX_PETS) slots.push(null);          // the empty cup
+    return { slots, grid: gridLayout(slots, BAR_H + 11, 6) };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'NEST');
+    L.close = frame.close;
+    text(g, numWord(G.pets.length) + ' in the nest', PAD, BAR_H + 2, SC.dim);
+    L.slots.forEach((p, i) => {
+      gridCell(g, L.grid.box(i), {
+        on: i === screenState.pick,
+        art: (gg, cx, cy) => {
+          if (!p){ text(gg, '+', cx, cy - 3, SC.dim, 'centre'); return; }
+          if (!p.sp || !p.born){
+            gg.save(); gg.translate(cx, cy); gg.scale(.62, .62);
+            drawEggArt(gg, 0, 0, p.sp || Object.keys(SPECIES)[0], 0);
+            gg.restore(); return;
+          }
+          const prev = S; S = p;
+          const f = frameOf(p.sp, stageIdx(), 'idle', 0, false, p.skin || 'wild');
+          S = prev;
+          thumb(gg, f.cv, cx, cy, 24, 17);
+        },
+        tag: p ? (i === G.active ? 'here' : '') : 'new',
+        tagCol: p ? SC.moss : SC.gold
+      });
+    });
+    const p = L.slots[screenState.pick];
+    let name = 'Take a new egg', right = 'new';
+    let note = 'Start another animal from scratch. Everything in the nest ages and gets hungry whether or not it is the one on screen. Coins are shared.';
+    if (p){
+      name = p.name || 'Unnamed';
+      if (!p.sp){ note = 'An egg nobody has chosen yet.'; right = 'egg'; }
+      else if (!p.born){ note = 'Still in the shell.'; right = 'egg'; }
+      else {
+        const prev = S; S = p;
+        const worst = Math.min(p.needs.hunger, p.needs.energy, p.needs.hygiene, p.needs.joy);
+        note = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + '. '
+             + (p.vet ? 'Needs a vet.' : p.ills.length ? ILLS[p.ills[0].id].name + '.'
+                : worst < 25 ? 'Needs attention.' : p.asleep ? 'Asleep.' : 'Doing fine.');
+        S = prev;
+        right = screenState.pick === G.active ? 'here' : 'visit';
+      }
+    }
+    caption(g, L.grid.bottom + 4, name, right, SC.moss, note);
+    L.act = actionBar(g, p ? (screenState.pick === G.active ? 'ALREADY HERE' : 'VISIT') : 'TAKE AN EGG',
+                      SC.moss, !!p && screenState.pick === G.active);
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < L.slots.length; i++)
+      if (hit(L.grid.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (hit(L.act, mx, my)){
+      const p = L.slots[screenState.pick];
+      if (!p){ closeScreen(); newEgg(); }
+      else if (screenState.pick !== G.active){ closeScreen(); switchPet(screenState.pick); }
+    }
+  }
+};

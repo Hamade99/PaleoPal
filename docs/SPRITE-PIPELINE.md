@@ -5,25 +5,39 @@ skeleton propagates through four growth stages, six animations and every coat.
 
 ## 1. Material layers
 
-A species draw function receives `M`, an object of twelve canvas contexts, and
-paints flat shapes onto them. Order matters: later layers win where they
+A species draw function receives `M`, an object of fourteen canvas contexts,
+and paints flat shapes onto them. Order matters: later layers win where they
 overlap.
 
 ```
-far     limbs on the far side of the body (shaded darker)
+far     limbs on the far side of the body, held back in shade
 skin    the main body mass
-belly   pale underside
-limb    near-side limbs, so belly shading never bleaches them
+limb    near-side limbs
+shield  display structures that pass behind the skull — the frill
+jaw     the mandible, behind the skull, so the boundary is the lip line
 head    skull and neck, kept separate so it lights as its own form
-mark    coat pattern — masked to body pixels only
+belly   countershading  — masked to the trunk, skull and jaw
+mark    coat pattern     — masked to body pixels only
 crest   keratin rows, nubbins, brow ridges
-horn    horns, beaks, claws, teeth
-mouth   open mouth interior, nostrils
+mouth   the gape, the oral margin, nostrils
+horn    horns, beaks, claws, teeth — in front of the mouth, never behind it
 sclera / pupil / glint   the eye
 ```
 
 Painting onto separate layers rather than one canvas means material boundaries
 stay exact and never blend into each other.
+
+**An internal edge is only drawn where two different materials meet.** Two
+shapes sharing a layer merge into one region with nothing between them. The
+mandible used to be painted onto `head`: correctly shaped, correctly hinged,
+and invisible, which is why every animal had a smooth face with an eye on it
+and no mouth. It has its own layer now, and `head` sits above it, so the skull's
+oral margin is the lip line.
+
+`belly` and `mark` are masked to what is already painted, so both can be drawn
+generously and let the mask trim them to the silhouette. `mark` stops below
+`belly`, which is how a coat fades out where the countershading starts instead
+of running across it.
 
 ## 2. Composition and lighting (`composeSprite`)
 
@@ -54,6 +68,10 @@ frame, so feet always reach the floor regardless of body bob.
 
 **The sprite faces −x. A planted foot must travel toward +x.** Getting that
 backwards is what produced the moonwalk in session 3.
+
+The walk cycle is twelve frames, and idle is four. Both are generated rather
+than typed out — see `poseCycle` — because the only reason they used to be six
+and two was that a bake cost eight milliseconds and every pose is one.
 
 The walk cycle is driven by distance travelled, not a timer:
 
@@ -86,7 +104,24 @@ and the Triceratops draw function builds the horn as a three-point tube whose
 middle control point bows *against* the tip, which is what makes a recurve read
 as a recurve rather than as a bent stick.
 
-## 6. Coats
+## 6. Countershading
+
+Dark above, pale below is the one colour pattern with direct fossil support,
+and it is also what stops a flat-coloured animal reading as a cut-out. It used
+to be a hand-placed ellipse under the ribcage in each species file, which at
+sprite scale was invisible.
+
+`paintBelly` now rides the same spine the coats use. `hi` gives the height the
+pale starts at as a fraction of the body's half-depth, in three stops — throat,
+mid-body, tail — because countershading reaches highest at the throat and
+lowest at the tail. The band is drawn well past the outline and the mask cuts
+it.
+
+The belly ramp is mixed a third of the way back toward the flank hue. Taken
+neat it read as a painted stripe; taken a step down its own ramp it fell into
+the dark saturated end and inverted the shading outright.
+
+## 7. Coats
 
 A coat swaps the three body ramps and paints a pattern onto the `mark` layer,
 which the compositor masks to body pixels only.
@@ -108,7 +143,7 @@ the animal sat in it. It read as a barcode painted over a dinosaur.
 Everything is a deterministic function of the loop index, so a coat never
 crawls between animation frames.
 
-## 7. Anchors
+## 8. Anchors
 
 Each draw function returns `{ eye, eyeR, mouth, hat, top }` in local units. The
 baker converts them to trimmed-sprite pixel coordinates and adds `hs`, the head
@@ -130,9 +165,33 @@ offsets, which is why gear stays put across stages and animations.
 
 That is the whole list. The egg row draws itself, hit-tests itself and labels
 itself from `SPECIES` via `eggChoices()`, so there is nothing to add in
-`06-render.js`, `07-ui.js` or `index.html`. Slots are centred and tighten as
+`06-render.js`, `08-ui.js` or `index.html`. Slots are centred and tighten as
 the row grows; past about six species the row will need to become a scroller
 rather than a single line.
 
 Every `checks` line in the registry is a promise that the sprite draws that
 feature. Do not add one without adding the geometry.
+
+## 9. What a frame costs
+
+Every pass in `composeSprite` is per-pixel over the bake box, so the box's area
+is the bake cost. Two things brought a cold bake from 8.7 ms to under 3 ms:
+
+- **The box was five sixths empty.** It was 232x210 and the largest frame any
+  species and stage produces is 143x94. It is now 168x112, which is the
+  measured union of everything drawn plus a margin. Anything that makes an
+  animal appreciably bigger has to grow it, and `tools/sheet.html` shows the
+  clipping at once.
+- **The later passes run over a bounding box.** The flatten pass has to look at
+  the whole box — that is how it finds the animal — but it records the bounds
+  while it goes, and the distance field, the lighting and the outline then run
+  over those bounds plus two pixels.
+
+Frames are cached least-recently-used with a cap of 180, because the key space
+is species x coat x stage x animation x frame x eye and every entry is a
+canvas. A player has one species, one coat and one stage live, which is about
+thirty frames; the rest is shop and nest thumbnails.
+
+`warmFrames` bakes two frames a tick until the current stage and coat are
+complete. Without it a twelve-frame walk hitches twelve times the first time an
+animal crosses the pen.
