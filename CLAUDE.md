@@ -53,6 +53,16 @@ quarry could not be caught by anyone.
   state needs the sprite to differ *and* a mark, or it does not exist.
 - **Cuteness through proportion**, never by dropping a diagnostic feature.
   Bigger skull, bigger eye, shorter snout, rounder body.
+- **Growing up changes what an animal has, not only how big it is.** A scale
+  column and a set of ratios gives four sizes of one animal. `muzzle`, `bulk`,
+  `torso` and `fuzz` in `STAGE` are for features that arrive or go; use them,
+  and add another column rather than overloading one that exists.
+- **Nothing fractured is drawn with a sine.** Thresholding `sin(x)` to place
+  gullies, joints, crevasses or scallops gives an evenly spaced row, and the
+  eye reads evenly spaced as manufactured — it has produced a barcode on the
+  volcano, the cliff and the glacier in turn. Use `hash1()` in `04-world.js`,
+  and quantise the input so a feature is a block a few pixels wide: sampled
+  per column, random placement is just hatching.
 - **One grid, one edge, no symmetry.** Every size in the case is a multiple of
   `--px`; each surface is a flat fill with one hard edge and at most one
   highlight; nothing decorative is evenly spaced or mirrored. Stacking effects

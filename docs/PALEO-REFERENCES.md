@@ -24,6 +24,12 @@ this came from research during development rather than from memory.
 - The **maxillary margin is sinuous**, not level: high at the cheek, bowed down
   through the tooth row, lifting again at the tip. Drawn as a straight line the
   face read as a box with an eye on it.
+- **Ontogeny.** Juveniles are gracile and long-legged with a shallow, narrow
+  snout; the deep skull, the thick neck and the barrel chest come late. The
+  lacrimal and postorbital ornament grows in with them. Juvenile tyrannosaurs
+  are reconstructed with substantial filamentous covering that reduces with
+  age, an adult keeping a keratin row and little else. All four are STAGE
+  columns: `muzzle`, `bulk`, `torso`, `fuzz`.
 
 ## Triceratops horridus
 
@@ -39,7 +45,11 @@ this came from research during development rather than from memory.
   shoulder hump and reads as a lump of neck.
 - Skin impressions show large scales with scattered **low nubbins**, not the
   spines older reconstructions used.
-- A **jugal horn** juts down from each cheek, below the eye.
+- A **jugal horn** juts down from each cheek, below the eye — a boss on the
+  cheek, not a tusk hanging below the jaw line.
+- The beak is **two bones that meet**: the rostral above and the predentary
+  below. The mandible reaches the upper beak's tip; short of it the animal has
+  a permanent underbite and reads as a shark.
 - The beak is **two bones**: a rostral above and a predentary below, with the
   mouth between them. Drawn as one cream mass it reads as a bald face.
 - The postorbital horns rise from **directly above the orbit**, on a base
@@ -94,6 +104,22 @@ this came from research during development rather than from memory.
   and truncated at a crater rim rather than coming to a point. A straight-sided
   triangle is a slag heap and a convex one is a butte. Old lava channels run
   from the rim down the flanks, and gullies radiate down the ash slopes.
+
+## The five habitats
+
+- **Fern valley** — the default: open ground under an active stratovolcano.
+- **Salt lagoon** — a warm shallow sea behind a sand bar, with sea stacks.
+  Stacks are undercut at the waterline, which is what distinguishes one from a
+  rock that happens to be in the sea.
+- **Ash flats** — the same valley after an eruption. Standing dead snags, ash
+  drifts, and bone half-buried in it, which is what an ash fall preserves.
+- **Fern gorge** — a cut in a plateau with a fall at its head. Bedded cliff
+  faces broken by vertical joints, moss on the wet ledges.
+- **Polar dawn** — high-latitude forest under a glacier front. Polar dinosaur
+  faunas are well documented (Prince Creek in Alaska, the Otway and Strzelecki
+  groups in Australia) and lived through months of darkness. Ice is white on
+  top and blue inside, and the blue is the whole difference between ice and
+  snow.
 
 ## Skin and colour
 

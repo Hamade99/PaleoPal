@@ -5,16 +5,6 @@
    the upper left, and depth carried by parallax rather than by blur.
    ========================================================================== */
 
-const SKY_SPECS = {
-  night: { top:'#0a1124', low:'#28374f', far:'#1c2942', mid:'#151f2d', tree:'#111d20',
-           grass:'#2b4331', dirt:'#382f27', water:'#22405a', tint:'rgba(16,24,54,.44)' },
-  dawn:  { top:'#2c3f70', low:'#e39a6c', far:'#5d5b7c', mid:'#44465d', tree:'#2e4038',
-           grass:'#5b7949', dirt:'#7b6046', water:'#7d6f86', tint:'rgba(196,124,84,.13)' },
-  day:   { top:'#4d9dc9', low:'#c3e2d8', far:'#8fa79d', mid:'#6c8b6f', tree:'#3e5a44',
-           grass:'#78a051', dirt:'#a5825a', water:'#6fa6b8', tint:'rgba(0,0,0,0)' },
-  dusk:  { top:'#2b2854', low:'#da834b', far:'#504563', mid:'#3a3347', tree:'#2b3934',
-           grass:'#597047', dirt:'#6f553f', water:'#6b5570', tint:'rgba(96,62,116,.20)' }
-};
 function skyPhase(d){
   const h = d.getHours() + d.getMinutes()/60;
   if (h < 5 || h >= 21) return 'night';
@@ -23,10 +13,128 @@ function skyPhase(d){
   return 'dusk';
 }
 const BAYER = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+/* Deterministic value noise in [0,1). Every attempt in this file at making a
+   surface look broken by thresholding a sine has come out as a barcode: the
+   volcano's gullies, the cliff's joints and the glacier's crevasses were all
+   evenly spaced stripes, because a sine over a threshold is periodic and the
+   eye reads periodic as manufactured. Anything that is supposed to look
+   fractured picks its positions from here instead. */
+function hash1(x){ const v = Math.sin(x*127.1 + 311.7) * 43758.5453; return v - Math.floor(v); }
 const mixHex = (a,b,t) => {
   const A = [1,3,5].map(i=>parseInt(a.slice(i,i+2),16)), B = [1,3,5].map(i=>parseInt(b.slice(i,i+2),16));
   return '#' + A.map((v,i)=>Math.round(lerp(v,B[i],t)).toString(16).padStart(2,'0')).join('');
 };
+
+/* ------------------------------- habitats ---------------------------------
+   Five places to keep an animal, bought in the shop and shared by every
+   animal in the nest — a habitat is the enclosure, not the pet.
+
+   A biome supplies four things and inherits everything else:
+
+     sky     the two sky colours per phase, because the sky is half the
+             screen and is the one thing that cannot be derived
+     ground  the DAY colours of the six ground materials. Dawn, dusk and
+             night are mixed from those by PHASE_MIX below.
+     tint    the wash laid over the finished frame
+     three painters — landmark, treeline and floor — run inside the shared
+             bake between the shared ridges and the shared grass line, plus
+             an optional `live` for anything that has to move
+
+   Writing four phases by hand for five biomes is a hundred and eighty hex
+   values that all have to agree with each other, and they would not. Mixing
+   the day palette toward one colour per phase reproduces the hand-tuned
+   valley palette this game shipped with to within a couple of values, which
+   is the check that the rule is the same one the eye was already applying.
+   -------------------------------------------------------------------------- */
+const PHASE_MIX = {
+  day:   { to:'#0b1122', k:0    },
+  dawn:  { to:'#2a2440', k:0.26 },
+  dusk:  { to:'#2b2038', k:0.30 },
+  night: { to:'#0b1122', k:0.66 }
+};
+const GROUND_KEYS = ['far','mid','tree','grass','dirt','water'];
+
+const BIOMES = {
+  valley: {
+    id:'valley', name:'Fern valley', cost:0,
+    note:'Open ground under a live volcano. Where every animal starts.',
+    sky:{ night:['#0a1124','#28374f'], dawn:['#2c3f70','#e39a6c'],
+          day:['#4d9dc9','#c3e2d8'],   dusk:['#2b2854','#da834b'] },
+    ground:{ far:'#8fa79d', mid:'#6c8b6f', tree:'#3e5a44',
+             grass:'#78a051', dirt:'#a5825a', water:'#6fa6b8' },
+    tint:{ night:'rgba(16,24,54,.44)', dawn:'rgba(196,124,84,.13)',
+           day:'rgba(0,0,0,0)',        dusk:'rgba(96,62,116,.20)' },
+    landmark: drawVolcano, treeline: valleyTrees, floor: valleyFloor, live: drawPlume
+  },
+  lagoon: {
+    id:'lagoon', name:'Salt lagoon', cost:130,
+    note:'A warm shallow sea behind a bar of pale sand. Sea stacks on the horizon.',
+    sky:{ night:['#08111f','#1e3448'], dawn:['#34497a','#f0a878'],
+          day:['#58a8d6','#d8ecec'],   dusk:['#2f2a58','#e0864c'] },
+    ground:{ far:'#b7c3c0', mid:'#7f9a92', tree:'#4a6a52',
+             grass:'#a8b47a', dirt:'#d6c69a', water:'#59a8c0' },
+    tint:{ night:'rgba(14,26,56,.42)', dawn:'rgba(212,140,88,.14)',
+           day:'rgba(0,0,0,0)',        dusk:'rgba(112,64,104,.20)' },
+    landmark: drawSeaStacks, treeline: lagoonTrees, floor: lagoonFloor, live: drawSurf,
+    // a low bar of dune rather than a hill, so the water is not hidden
+    nearRidge:{ base:127, col:'#c2b083', lit:'#dccca3', waves:[[.052,1.4,4],[.13,.6,2]] }
+  },
+  ashfall: {
+    id:'ashfall', name:'Ash flats', cost:170,
+    note:'The valley after the mountain woke. Dust in the air and nothing green left standing.',
+    sky:{ night:['#120e1c','#2e2634'], dawn:['#4a3c58','#e08a5c'],
+          day:['#7e8faa','#d3cdc4'],   dusk:['#3a2a44','#d46a3c'] },
+    ground:{ far:'#8b8496', mid:'#6a6472', tree:'#3a3640',
+             grass:'#6e6a63', dirt:'#8e857c', water:'#6a7078' },
+    tint:{ night:'rgba(20,16,34,.46)', dawn:'rgba(200,120,76,.15)',
+           day:'rgba(150,132,110,.10)', dusk:'rgba(120,64,60,.22)' },
+    landmark: drawAshVolcano, treeline: ashTrees, floor: ashFloor, live: drawAshfall
+  },
+  gorge: {
+    id:'gorge', name:'Fern gorge', cost:210,
+    note:'A cut in the plateau with a fall at the head of it. Wet, green and loud.',
+    sky:{ night:['#070e18','#1c2a34'], dawn:['#2e3f60','#dba888'],
+          day:['#4f93b0','#cfe4d6'],   dusk:['#262848','#c07a54'] },
+    ground:{ far:'#7d9285', mid:'#55705c', tree:'#2e4a38',
+             grass:'#5f8f4e', dirt:'#6f5c46', water:'#7fc0c4' },
+    tint:{ night:'rgba(12,22,44,.46)', dawn:'rgba(180,124,92,.13)',
+           day:'rgba(0,0,0,0)',        dusk:'rgba(84,58,104,.22)' },
+    landmark: drawFalls, treeline: gorgeTrees, floor: gorgeFloor, live: drawFallsSpray,
+    /* The wall is the near side of the gorge, not something behind the hills:
+       painted before the near ridge, the fall disappeared behind it half way
+       down and its spray was drawn over the treeline in front. */
+    landmarkFront: true
+  },
+  boreal: {
+    id:'boreal', name:'Polar dawn', cost:260,
+    note:'High-latitude forest under a glacier. Dinosaurs lived here, in the dark half of the year.',
+    sky:{ night:['#060c1a','#17253c'], dawn:['#2a3a68','#eab48c'],
+          day:['#6fa8d0','#e6eef2'],   dusk:['#26244e','#c98a6a'] },
+    ground:{ far:'#b9c6d6', mid:'#8ea0b2', tree:'#2d4444',
+             grass:'#cdd8e0', dirt:'#a9b6c2', water:'#6f9ec4' },
+    tint:{ night:'rgba(18,30,64,.42)', dawn:'rgba(214,150,104,.14)',
+           day:'rgba(0,0,0,0)',        dusk:'rgba(80,66,116,.22)' },
+    landmark: drawGlacier, treeline: borealTrees, floor: borealFloor, live: drawAurora
+  }
+};
+const BIOME_IDS = Object.keys(BIOMES);
+const biomeId = () => (G && BIOMES[G.biome] ? G.biome : 'valley');
+
+/* The nine-colour palette a painter works from, built once per biome and
+   phase and then cached. Everything that used to read SKY_SPECS[phase] reads
+   skyOf(phase) instead. */
+const skyCache = new Map();
+function skySpec(bid, phase){
+  const key = bid + '|' + phase;
+  if (skyCache.has(key)) return skyCache.get(key);
+  const B = BIOMES[bid] || BIOMES.valley, m = PHASE_MIX[phase];
+  const out = { top: B.sky[phase][0], low: B.sky[phase][1], tint: B.tint[phase] };
+  for (const k of GROUND_KEYS) out[k] = m.k ? mixHex(B.ground[k], m.to, m.k) : B.ground[k];
+  skyCache.set(key, out);
+  return out;
+}
+const skyOf = phase => skySpec(biomeId(), phase);
+
 const STARS = Array.from({length:54}, () => ({x:rnd(2,W-2), y:rnd(3,92), p:rnd(0,6.3), b:rnd(.4,1)}));
 const MOTES = Array.from({length:14}, () => ({x:rnd(0,W), y:rnd(40,GROUND-6), vx:rnd(2,7), vy:rnd(-3,3), p:rnd(0,6.3)}));
 
@@ -109,6 +217,67 @@ function treeFern(g, x, base, h, body, litc){
   g.fillStyle = litc; g.fillRect(x - 1, crown - 2, 4, 2);
 }
 
+/* ---------------------- extra scenery primitives --------------------------
+   The shared kit — ridge, conifer, araucaria, treeFern, boulder, fallenLog,
+   cycadPlant, reeds — covers the valley. These are what the other four
+   habitats need on top of it.
+   -------------------------------------------------------------------------- */
+
+/* A standing dead trunk: bark gone, a couple of broken limbs, no crown. Half
+   the reason the ash flats read as a place something happened. */
+function snag(g, x, base, h, col, lit){
+  g.fillStyle = col;
+  for (let r=0;r<h;r++){
+    const lean = Math.round(Math.sin(r*.14 + x)*1.1);
+    g.fillRect(x + lean, base - r, 2, 1);
+    if (r === h-1) g.fillRect(x + lean, base - r - 1, 1, 1);
+  }
+  g.fillStyle = lit; g.fillRect(x, base - h + 1, 1, Math.round(h*.5));
+  // two broken limbs, at different heights and lengths
+  const a = Math.round(h*.62), b = Math.round(h*.34);
+  g.fillStyle = col;
+  for (let i=0;i<Math.round(h*.30);i++) g.fillRect(x - 1 - i, base - a - Math.round(i*.7), 1, 1);
+  for (let i=0;i<Math.round(h*.20);i++) g.fillRect(x + 2 + i, base - b - Math.round(i*.5), 1, 1);
+}
+
+/* A cycadeoid: a stout barrel trunk with a crown of stiff fronds. Reads as
+   tropical without being a coconut palm, which is eighty million years early. */
+function palmoid(g, x, base, h, col, lit, shd){
+  const trunk = Math.round(h*.60);
+  g.fillStyle = shd; g.fillRect(x-1, base - trunk, 4, trunk);
+  g.fillStyle = col; g.fillRect(x, base - trunk, 2, trunk);
+  for (let r=2;r<trunk;r+=3){ g.fillStyle = shd; g.fillRect(x-1, base - r, 4, 1); }
+  const crown = base - trunk;
+  for (let a=0;a<7;a++){
+    const ang = .12 + a*.50, len = h*(.50 - Math.abs(a-3)*.04);
+    const dir = a < 3 ? -1 : a > 3 ? 1 : 0;
+    for (let t=1;t<=8;t++){
+      const u = t/8;
+      const px = Math.round(x + dir*Math.cos(ang)*len*u);
+      const py = Math.round(crown - Math.sin(ang)*len*u + u*u*4);
+      g.fillStyle = (t & 1) ? col : shd;
+      g.fillRect(px, py - 1, 2, 2);
+      if (t < 3){ g.fillStyle = lit; g.fillRect(px, py - 1, 2, 1); }
+    }
+  }
+}
+
+/* A snow-capped spire conifer. The cap is what makes a dark triangle read as
+   a tree in winter rather than as a hole in the snow. */
+function spireConifer(g, x, base, h, body, lit, snow){
+  g.fillStyle = '#2a2620';
+  g.fillRect(x, base - Math.round(h*.14), 2, Math.round(h*.14));
+  for (let r=0;r<h;r++){
+    const u = r/h;                                   // 0 at the top
+    const wd = Math.max(1, Math.round(h*.34 * Math.pow(u, .78)));
+    const y = base - h + r;
+    g.fillStyle = body; g.fillRect(x + 1 - (wd>>1), y, wd, 1);
+    if (u < .30){ g.fillStyle = snow; g.fillRect(x + 1 - (wd>>1), y, Math.max(1, wd-1), 1); }
+    else if (r % 4 === 1){ g.fillStyle = snow; g.fillRect(x + 1 - (wd>>1), y, Math.max(1, wd>>1), 1); }
+    else if (r % 4 === 2){ g.fillStyle = lit;  g.fillRect(x + 1 - (wd>>1), y, 1, 1); }
+  }
+}
+
 /* --------------------------------- volcano ---------------------------------
    The old one was a cone of one flat colour with a two-pixel orange bar laid
    across the top and a translucent rectangle standing over it: a dark hill
@@ -183,9 +352,9 @@ function drawVolcano(g, S_){
     g.fillRect(px+i, y, 1, 1);
     /* Gullies: radiating streaks that get further apart down the slope, so
        the flank has a direction instead of being a flat field. */
-    if (Math.sin(i*1.7) > .78){
+    if (hash1(Math.floor(i/3)*2.3) > .74){
       g.fillStyle = lit ? mixHex(S_.far, S_.low, .34) : mixHex(S_.far, '#000000', .52);
-      g.fillRect(px+i, y+3, 1, Math.round((base - y) * .42));
+      g.fillRect(px+i, y+3, 1, Math.round((base - y) * (.28 + hash1(Math.floor(i/3)*5.9)*.34)));
     }
   }
 
@@ -272,9 +441,376 @@ function reeds(g, x, base, n, col, lit){
     g.fillStyle = col; g.fillRect(rx + (i&1?1:-1), base - h + 2, 1, 2);
   }
 }
-function bakeBg(phase){
-  if (bgCache.has(phase)) return bgCache.get(phase);
-  const S_ = SKY_SPECS[phase], c = makeCv(W,H), g = readCtx(c);
+/* ------------------------------- landmarks --------------------------------
+   One per habitat, baked behind the near ridge. A landmark is what makes a
+   place a place: without one, five palettes over the same three hills are the
+   same picture five times.
+   -------------------------------------------------------------------------- */
+
+/* Ash flats: the same mountain, closer and in the middle of doing it. The
+   cone is drawn by the valley's own painter at a different seat, because the
+   two habitats are the same valley on either side of one afternoon. */
+function drawAshVolcano(g, S_){
+  const keep = VOLC.x;
+  VOLC.x = 120;                                  // it has moved to the middle of the view
+  drawVolcano(g, S_);
+  VOLC.x = keep;
+  // fresh flows, still warm, running out across the flats
+  for (const dir of [-1, 1]){
+    for (let k=0;k<26;k++){
+      const y = GROUND - 34 + k;
+      const rx = 120 + dir * (volcSpan(y) * .62 + k*1.4);
+      g.fillStyle = mixHex('#5a2a1a', S_.low, .10);
+      g.fillRect(Math.round(rx), y, 2, 1);
+    }
+  }
+}
+
+/* Salt lagoon: sea stacks standing off a headland, and the sea itself, which
+   is the horizon rather than a pool in the ground. */
+function drawSeaStacks(g, S_){
+  const sea = mixHex(S_.water, S_.low, .40), seaNear = S_.water;
+  const seaLit = mixHex(S_.water, '#ffffff', .40);
+  const rock = mixHex(S_.far, '#000000', .30), rockLit = mixHex(S_.far, S_.low, .26);
+  const rockShd = mixHex(S_.far, '#000000', .50);
+  const HZ = 96, SHORE = GROUND + 2;
+  /* Open water from the horizon down to the shore, banded so it recedes: the
+     far water takes the haze colour and the near water does not. */
+  for (let y=HZ;y<SHORE;y++){
+    const t = (y - HZ) / (SHORE - HZ);
+    g.fillStyle = mixHex(sea, seaNear, t);
+    g.fillRect(0, y, W, 1);
+    if ((y % 3) === 0){                                   // catch light on the swell
+      g.fillStyle = seaLit;
+      for (let x=(y*13)%9; x<W; x+=9 + (y%5)) g.fillRect(x, y, 2 + (y%3), 1);
+    }
+  }
+  /* The stacks stand IN the water, so they are based on the waterline at the
+     distance they sit, not on the ground line — based at the shore they were
+     forty pixels tall behind a hill and none of them showed. Undercut at the
+     base, because that is what the sea does to a stack. */
+  for (const st of [[40,34,9,108],[62,22,6,102],[176,29,8,112]]){
+    const [px, h, hw, foot] = st;
+    for (let i=-hw;i<=hw;i++){
+      const t = Math.abs(i)/hw;
+      const top = foot - Math.round(h * (1 - Math.pow(t, 3.4)));
+      const cut = Math.round((1 - t) * 2);                // the notch at the waterline
+      g.fillStyle = i < 0 ? rock : rockShd;
+      g.fillRect(px+i, top, 1, foot - top - cut);
+      g.fillStyle = i < 0 ? rockLit : rock;
+      g.fillRect(px+i, top, 1, 1);
+    }
+    g.fillStyle = seaLit;                                 // wash around the foot
+    g.fillRect(px-hw-2, foot-1, hw*2+5, 1);
+  }
+}
+
+/* Fern gorge: a cliff wall closing the view, with a fall coming off the lip
+   into a pool. Vertical is the whole point — every other habitat here is
+   horizontal bands, and a wall of rock is what makes this one a gorge. */
+const FALLS = { x:150, top:24, w:20, pool: GROUND - 6 };
+function drawFalls(g, S_){
+  /* Keyed off the MIDDLE plane, not the far one. Taken a third of the way to
+     black from the haze colour the wall came out nearly black, which at this
+     size is a hole in the picture rather than rock. */
+  const rock = mixHex(S_.mid, '#000000', .10), rockLit = mixHex(S_.mid, S_.low, .40);
+  const rockShd = mixHex(S_.mid, '#000000', .40);
+  const wet = mixHex(S_.water, '#ffffff', .34);
+  /* The wall: a broken face running in from the right edge to the fall. The
+     first version banded it on a fixed period, which came out as courses of
+     masonry — a cliff is bedded, but the beds are uneven and they are broken
+     by joints running down through them. */
+  for (let x=100;x<W;x++){
+    const u = clamp((x - 100) / 40, 0, 1);
+    const top = Math.round(84 - u*58 + hash1(x*.9)*3 + Math.sin(x*.061)*4);
+    /* A joint is a short break in a few beds, not a stripe from the sky to
+       the floor. Both its position and its extent come off the hash, or the
+       wall comes out as courses of masonry with pilasters on it. */
+    const jb = Math.floor(x/3);
+    const joint = hash1(jb*1.7) > .80;
+    const jTop = top + 4 + Math.round(hash1(jb*3.3) * (GROUND - top) * .45);
+    const jLen = 6 + Math.round(hash1(jb*5.1) * (GROUND - top) * .40);
+    for (let y=top;y<GROUND+2;y++){
+      const bed = ((y*2 + Math.round(Math.sin(x*.08)*5) + Math.round(hash1(y*.7)*6)) % 19);
+      const inJoint = joint && y > jTop && y < jTop + jLen;
+      g.fillStyle = inJoint ? rockShd
+                  : bed < 3 ? mixHex(rock, rockShd, .40)
+                  : (x < 124 ? rock : mixHex(rock, rockShd, .16));
+      g.fillRect(x, y, 1, 1);
+    }
+    g.fillStyle = rockLit; g.fillRect(x, top, 1, 2);
+    if (hash1(Math.floor(x/5)*2.9) > .72){                     // moss on a wet ledge
+      g.fillStyle = mixHex(rock, S_.tree, .45);
+      g.fillRect(x, top + 3 + Math.round(hash1(Math.floor(x/5)*7.7)*(GROUND-top)*.8), 1, 2);
+    }
+  }
+  // the notch the water has cut, and the fall standing in it
+  const half = FALLS.w/2;
+  for (let i=-half;i<=half;i++){
+    const t = Math.abs(i)/half;
+    const x = Math.round(FALLS.x + i);
+    g.fillStyle = rockShd; g.fillRect(x, FALLS.top, 1, FALLS.pool - FALLS.top);
+    if (t < .74){
+      g.fillStyle = mixHex(S_.water, S_.low, .34);
+      g.fillRect(x, FALLS.top + 2, 1, FALLS.pool - FALLS.top - 2);
+      if (t < .42){ g.fillStyle = wet; g.fillRect(x, FALLS.top + 2, 1, FALLS.pool - FALLS.top - 2); }
+    }
+  }
+  // the plunge pool it lands in
+  for (let x=FALLS.x-26;x<FALLS.x+26;x++){
+    const t = Math.abs(x - FALLS.x)/26;
+    const dep = Math.round((1 - t*t) * 8);
+    if (dep < 1) continue;
+    g.fillStyle = mixHex(S_.water, '#000000', .34); g.fillRect(x, FALLS.pool, 1, dep);
+    g.fillStyle = S_.water; g.fillRect(x, FALLS.pool, 1, Math.max(1, dep-2));
+    g.fillStyle = wet; g.fillRect(x, FALLS.pool, 1, 1);
+  }
+}
+
+/* Polar dawn: a glacier tongue coming down out of the range. Ice is not white
+   — it is white on top and blue underneath, and the blue is what says ice
+   rather than snow. */
+function drawGlacier(g, S_){
+  /* An ice FRONT, not an ice mountain. The first attempt built a pointed cone
+     with evenly spaced crevasses down it, which came out as a striped tent.
+     What reads as a glacier at this size is the thing a glacier actually
+     presents to you: a long wall of ice with a broken top, a face split into
+     seracs, and blue in every shadow — ice is white on top and blue inside,
+     and the blue is the whole difference between ice and snow. */
+  const ice     = mixHex('#c6dcea', S_.low, .30);
+  const iceLit  = mixHex('#f4fafd', S_.low, .18);
+  const iceShd  = mixHex('#7ba7c6', S_.low, .18);
+  const iceDeep = mixHex('#3f7ba6', S_.low, .12);
+  const x0 = 86, foot = 106;
+  for (let x=x0;x<W;x++){
+    const u = (x - x0) / (W - x0);
+    // a broken top edge: two long waves and a short one, so no two seracs match
+    const top = Math.round(74 - u*16
+                + Math.sin(x*.055 + 1.3)*3.4
+                + Math.sin(x*.019)*2.6
+                + hash1(x*.53)*3.5);
+    // which serac this column belongs to, and whether it is a lit or shaded face
+    /* Seracs and crevasses are blocks, not columns. Sampled per pixel the
+       hash gives a different answer every column, and a one-pixel feature
+       repeated a hundred and forty times is hatching — the same barcode with
+       the spacing randomised. Quantising x is what makes them features. */
+    const serac = hash1(Math.floor(x/7)*3.1);
+    g.fillStyle = serac > .55 ? iceShd : ice;
+    g.fillRect(x, top, 1, foot - top + 2);
+    g.fillStyle = iceLit; g.fillRect(x, top, 1, 2);        // sun on the upper surface
+    /* A crevasse opens somewhere down the face and closes again; run from a
+       fixed depth on a fixed period they were a row of blue bars, and the
+       whole front read as a barcode. */
+    const cb = Math.floor(x/4);
+    if (hash1(cb*7.3) > .74){
+      const cTop = top + 3 + Math.round(hash1(cb*4.7) * (foot - top) * .30);
+      g.fillStyle = iceDeep;
+      g.fillRect(x, cTop, 1, 4 + Math.round(hash1(cb*6.3) * (foot - top) * .45));
+    }
+  }
+  // the calving face at the foot: undercut, and bluest where it meets the moraine
+  g.fillStyle = iceDeep; g.fillRect(x0, foot, W - x0, 3);
+  g.fillStyle = iceShd;  g.fillRect(x0, foot + 3, W - x0, 1);
+  /* No rock shoulder. A dark block butted against the left end of the ice
+     read as a chimney standing in a snowfield; the front running out of the
+     haze on its own is what a glacier looks like from a valley floor. */
+}
+
+/* -------------------------- treelines and floors --------------------------
+   A treeline sits on the middle plane behind the animal; a floor is the band
+   the animal stands on and everything scattered across it. The grass edge and
+   the dithered dirt under it are shared, because every habitat needs a ground
+   line in the same place — what differs is what is growing out of it.
+   -------------------------------------------------------------------------- */
+
+function valleyTrees(g, S_){
+  /* Eight identical conifers in two clumps was a hedge; a Late Cretaceous
+     skyline has araucaria with domed crowns on bare trunks and tree ferns
+     under them, and three silhouettes instead of one is most of what turns a
+     hedge into a wood. */
+  const body = mixHex(S_.tree, S_.low, .18), lit = mixHex(S_.tree, S_.low, .38);
+  const farBody = mixHex(S_.tree, S_.low, .32), farLit = mixHex(S_.tree, S_.low, .46);
+  [[52,15],[62,11],[150,13],[162,17],[172,12],[100,10]]
+    .forEach(t => conifer(g, t[0], GROUND-4, t[1], farBody, farLit));   // back rank, hazed
+  [[14,26],[26,19],[38,23],[196,24],[208,17],[184,20],[120,15],[132,21]]
+    .forEach(t => conifer(g, t[0], GROUND-2, t[1], body, lit));
+  [[8,26],[46,21],[142,23],[216,19]]
+    .forEach(t => araucaria(g, t[0], GROUND-2, t[1], body, lit));
+  [[33,12],[128,10],[203,11],[70,9]]
+    .forEach(t => treeFern(g, t[0], GROUND-1, t[1], body, lit));
+}
+function valleyFloor(g, S_){
+  const rockCol = mixHex(S_.mid,'#000000',.12), rockLit = mixHex(S_.mid, S_.low,.42),
+        rockShd = mixHex(S_.mid,'#000000',.38);
+  boulder(g, 68, GROUND+2, 17, 10, rockCol, rockLit, rockShd);
+  boulder(g, 78, GROUND+2, 9, 6, rockCol, rockLit, rockShd);
+  boulder(g, 133, GROUND+1, 12, 7, rockCol, rockLit, rockShd);
+  const logCol = mixHex(S_.dirt,'#000000',.18), logLit = mixHex(S_.dirt, S_.low,.34),
+        logShd = mixHex(S_.dirt,'#000000',.44);
+  fallenLog(g, 92, GROUND+2, 34, logCol, logLit, logShd);
+  const plCol = mixHex(S_.tree, S_.low, .22), plLit = mixHex(S_.tree, S_.low, .5),
+        plShd = mixHex(S_.tree,'#000000',.35);
+  cycadPlant(g, 32, GROUND+2, 22, plCol, plLit, plShd);
+  cycadPlant(g, 116, GROUND+1, 15, plCol, plLit, plShd);
+  cycadPlant(g, 190, GROUND+3, 19, plCol, plLit, plShd);
+  waterHole(g, S_, 142, 212, 11);
+  reeds(g, 138, GROUND+8, 5, plShd, plLit);
+  reeds(g, 205, GROUND+8, 4, plShd, plLit);
+}
+
+function lagoonTrees(g, S_){
+  const body = mixHex(S_.tree, S_.low, .16), lit = mixHex(S_.tree, S_.low, .40),
+        shd = mixHex(S_.tree,'#000000',.30);
+  [[16,30],[30,22],[196,27],[210,20],[92,18]]
+    .forEach(t => palmoid(g, t[0], GROUND-2, t[1], body, lit, shd));
+  [[46,11],[74,9],[168,12],[120,8]]
+    .forEach(t => treeFern(g, t[0], GROUND-1, t[1], body, lit));
+}
+function lagoonFloor(g, S_){
+  // wet sand: a darker strip where the water has been, running the width
+  g.fillStyle = mixHex(S_.dirt, S_.water, .30);
+  for (let x=0;x<W;x++){
+    const y = GROUND + 9 + Math.round(Math.sin(x*.045 + 1.2)*2.5 + Math.sin(x*.13)*1.2);
+    g.fillRect(x, y, 1, H - y);
+  }
+  const rockCol = mixHex(S_.mid,'#000000',.16), rockLit = mixHex(S_.mid, S_.low,.44),
+        rockShd = mixHex(S_.mid,'#000000',.42);
+  boulder(g, 58, GROUND+3, 13, 7, rockCol, rockLit, rockShd);
+  boulder(g, 172, GROUND+2, 10, 5, rockCol, rockLit, rockShd);
+  // driftwood, bleached
+  const dw = mixHex(S_.dirt, '#ffffff', .30);
+  fallenLog(g, 96, GROUND+4, 30, dw, mixHex(dw,'#ffffff',.3), mixHex(dw,'#000000',.35));
+  // shells and weed along the strand line
+  for (let i=0;i<22;i++){
+    const x = (rnd(4,W-6))|0, y = (GROUND+5+rnd(0,10))|0;
+    g.fillStyle = mixHex(S_.dirt,'#ffffff',.55); g.fillRect(x,y,2,1); g.fillRect(x,y-1,1,1);
+  }
+  for (let i=0;i<9;i++){
+    const x = (rnd(6,W-8))|0, y = (GROUND+12+rnd(0,10))|0;
+    g.fillStyle = mixHex(S_.tree,'#000000',.20); g.fillRect(x,y,4,1); g.fillRect(x+2,y+1,3,1);
+  }
+}
+
+function ashTrees(g, S_){
+  const col = mixHex(S_.tree, S_.low, .10), lit = mixHex(S_.tree, S_.low, .34);
+  [[14,24],[27,15],[40,20],[62,12],[186,22],[199,14],[212,19],[92,16],[104,10],[160,13]]
+    .forEach(t => snag(g, t[0], GROUND-2, t[1], col, lit));
+}
+function ashFloor(g, S_){
+  // drifts of ash, banked where the wind put them
+  const drift = mixHex(S_.dirt, '#ffffff', .22);
+  for (let x=0;x<W;x++){
+    const h = 2 + Math.round(2.4*Math.abs(Math.sin(x*.037 + .8)) + 1.6*Math.abs(Math.sin(x*.11)));
+    g.fillStyle = drift; g.fillRect(x, GROUND+4, 1, h);
+  }
+  const rockCol = mixHex(S_.mid,'#000000',.20), rockLit = mixHex(S_.mid, S_.low,.30),
+        rockShd = mixHex(S_.mid,'#000000',.46);
+  boulder(g, 50, GROUND+2, 15, 9, rockCol, rockLit, rockShd);
+  boulder(g, 148, GROUND+2, 11, 6, rockCol, rockLit, rockShd);
+  boulder(g, 200, GROUND+1, 9, 5, rockCol, rockLit, rockShd);
+  const logCol = mixHex(S_.dirt,'#000000',.42);
+  fallenLog(g, 78, GROUND+3, 30, logCol, mixHex(logCol,S_.low,.20), mixHex(logCol,'#000000',.4));
+  // half-buried bone, which is what an ash flat preserves
+  g.fillStyle = mixHex('#efe6c8', S_.low, .24);
+  g.fillRect(112, GROUND+16, 15, 2); g.fillRect(110, GROUND+15, 4, 4); g.fillRect(126, GROUND+15, 4, 4);
+}
+
+function gorgeTrees(g, S_){
+  const body = mixHex(S_.tree, S_.low, .12), lit = mixHex(S_.tree, S_.low, .34);
+  const farBody = mixHex(S_.tree, S_.low, .30), farLit = mixHex(S_.tree, S_.low, .44);
+  [[10,30],[22,24],[34,28],[48,22],[62,26],[76,20]]
+    .forEach(t => conifer(g, t[0], GROUND-3, t[1], farBody, farLit));
+  [[6,25],[30,21],[58,23],[84,19]]
+    .forEach(t => araucaria(g, t[0], GROUND-2, t[1], body, lit));
+  [[18,14],[42,12],[68,13],[92,11],[100,9]]
+    .forEach(t => treeFern(g, t[0], GROUND-1, t[1], body, lit));
+}
+function gorgeFloor(g, S_){
+  const plCol = mixHex(S_.tree, S_.low, .20), plLit = mixHex(S_.tree, S_.low, .48),
+        plShd = mixHex(S_.tree,'#000000',.32);
+  const rockCol = mixHex(S_.mid,'#000000',.10), rockLit = mixHex(S_.tree, S_.low,.30),
+        rockShd = mixHex(S_.mid,'#000000',.40);
+  // mossy boulders: the lit face is moss, not stone
+  boulder(g, 40, GROUND+3, 16, 9, rockCol, rockLit, rockShd);
+  boulder(g, 60, GROUND+2, 10, 6, rockCol, rockLit, rockShd);
+  boulder(g, 104, GROUND+4, 13, 7, rockCol, rockLit, rockShd);
+  cycadPlant(g, 22, GROUND+3, 24, plCol, plLit, plShd);
+  cycadPlant(g, 78, GROUND+2, 18, plCol, plLit, plShd);
+  cycadPlant(g, 128, GROUND+4, 21, plCol, plLit, plShd);
+  // the stream running out of the plunge pool, along the front
+  for (let x=0;x<W;x++){
+    const y = GROUND + 14 + Math.round(Math.sin(x*.028 + 2.1)*3);
+    g.fillStyle = mixHex(S_.water,'#000000',.28); g.fillRect(x, y, 1, H - y);
+    g.fillStyle = S_.water; g.fillRect(x, y, 1, Math.max(1, H - y - 3));
+    g.fillStyle = mixHex(S_.water,'#ffffff',.34); g.fillRect(x, y, 1, 1);
+  }
+  reeds(g, 12, GROUND+13, 6, plShd, plLit);
+  reeds(g, 186, GROUND+13, 5, plShd, plLit);
+}
+
+function borealTrees(g, S_){
+  const body = mixHex(S_.tree, S_.low, .14), lit = mixHex(S_.tree, S_.low, .34);
+  const snow = mixHex('#eef4f8', S_.low, .22);
+  const farBody = mixHex(S_.tree, S_.low, .40), farLit = mixHex(S_.tree, S_.low, .52);
+  [[46,14],[58,11],[70,16],[196,13],[208,10]]
+    .forEach(t => spireConifer(g, t[0], GROUND-4, t[1], farBody, farLit, snow));
+  [[10,30],[22,24],[34,28],[86,22],[100,26],[184,25],[214,21],[120,19]]
+    .forEach(t => spireConifer(g, t[0], GROUND-2, t[1], body, lit, snow));
+}
+function borealFloor(g, S_){
+  // wind-packed snow: drifts with a lit crest and a blue shadow behind each
+  const lit = mixHex(S_.grass, '#ffffff', .45), shd = mixHex(S_.grass, '#4d86ad', .34);
+  for (let x=0;x<W;x++){
+    const h = 3 + Math.round(3.2*Math.abs(Math.sin(x*.031 + 1.7)) + 1.8*Math.abs(Math.sin(x*.094)));
+    g.fillStyle = shd; g.fillRect(x, GROUND+4, 1, h + 2);
+    g.fillStyle = lit; g.fillRect(x, GROUND+4, 1, 1);
+  }
+  const rockCol = mixHex(S_.mid,'#000000',.22), rockLit = mixHex(S_.mid, S_.low,.40),
+        rockShd = mixHex(S_.mid,'#000000',.44);
+  boulder(g, 56, GROUND+2, 15, 8, rockCol, rockLit, rockShd);
+  boulder(g, 150, GROUND+3, 11, 6, rockCol, rockLit, rockShd);
+  // caps of snow on top of them, which is the whole reason they read as cold
+  g.fillStyle = lit;
+  g.fillRect(50, GROUND-6, 13, 2); g.fillRect(146, GROUND-3, 9, 2);
+  const logCol = mixHex(S_.dirt,'#000000',.34);
+  fallenLog(g, 96, GROUND+4, 28, logCol, lit, mixHex(logCol,'#000000',.4));
+  // meltwater, refrozen at the edges
+  waterHole(g, S_, 168, 216, 8);
+  g.fillStyle = mixHex('#dbeaf2', S_.low, .20);
+  g.fillRect(168, GROUND+7, 48, 1); g.fillRect(172, GROUND+8, 8, 1); g.fillRect(200, GROUND+9, 10, 1);
+}
+
+/* The watering hole, cut into the dirt. Two habitats want one in different
+   places and at different depths, so it is a function rather than a passage
+   copied twice. */
+function waterHole(g, S_, x0, x1, deep){
+  for (let x=x0;x<x1;x++){
+    const t = (x-x0)/(x1-x0), dep = Math.round(Math.sin(t*Math.PI)*deep);
+    if (dep <= 1) continue;
+    g.fillStyle = mixHex(S_.dirt,'#000000',.45); g.fillRect(x, GROUND+6, 1, 2);
+    g.fillStyle = mixHex(S_.water,'#000000',.25); g.fillRect(x, GROUND+8, 1, dep);
+    g.fillStyle = S_.water; g.fillRect(x, GROUND+8, 1, Math.max(1, dep-3));
+    g.fillStyle = mixHex(S_.water,S_.low,.45); g.fillRect(x, GROUND+8, 1, 1);
+  }
+}
+
+/* The shared bake.
+
+   Sky, four depth planes, a river out on the valley floor, the grass edge and
+   the dithered dirt band are the same everywhere — every habitat needs a
+   horizon and a ground line, and having them in one place is what stops five
+   backdrops drifting apart by two pixels each. What differs is the landmark
+   standing behind the near ridge, what is growing on the middle plane, and
+   what is scattered on the floor, and those are three functions on the biome.
+
+   Cached per biome and phase, so a habitat is baked once and then costs
+   nothing. */
+function bakeBg(phase, bid){
+  bid = bid || biomeId();
+  const key = bid + '|' + phase;
+  if (bgCache.has(key)) return bgCache.get(key);
+  const B = BIOMES[bid] || BIOMES.valley;
+  const S_ = skySpec(bid, phase), c = makeCv(W,H), g = readCtx(c);
   const horizon = 108;
 
   // dithered sky: five steps with a 4x4 ordered dither across each boundary
@@ -285,8 +821,8 @@ function bakeBg(phase){
   }
   g.fillStyle = S_.low; g.fillRect(0, horizon, W, GROUND - horizon + 2);
 
-  /* Four depth planes now, each flatter and lighter than the one in front.
-     The furthest is nearly the colour of the sky it stands against: without a
+  /* Four depth planes, each flatter and lighter than the one in front. The
+     furthest is nearly the colour of the sky it stands against: without a
      plane that close to the haze, the range began abruptly at a hard edge and
      the distance behind it read as painted card. */
   ridge(g, { base:66, col: mixHex(S_.far, S_.low, .86), lit: mixHex(S_.far, S_.low, .92),
@@ -298,32 +834,26 @@ function bakeBg(phase){
   /* A river out on the valley floor, between the far range and the near one.
      One flat band of sky colour lying down is the cheapest depth cue there
      is: everything above it is read as far away because the water proves
-     there is ground between here and there. */
-  const riv = mixHex(S_.water, S_.low, .62);
-  for (let x=0;x<W;x++){
-    const top = 92 + Math.round(Math.sin(x*.021 + 1.4)*2.5 + Math.sin(x*.055)*1.2);
-    const dep = 3 + Math.round(Math.sin(x*.03 + 2.2)*1.4);
-    g.fillStyle = riv; g.fillRect(x, top, 1, dep);
-    g.fillStyle = mixHex(S_.water, '#ffffff', .30); g.fillRect(x, top, 1, 1);
+     there is ground between here and there. It has to be painted before the
+     landmark, or it runs straight across the landmark's flank. */
+  if (bid !== 'lagoon'){
+    const riv = mixHex(S_.water, S_.low, .62);
+    for (let x=0;x<W;x++){
+      const top = 92 + Math.round(Math.sin(x*.021 + 1.4)*2.5 + Math.sin(x*.055)*1.2);
+      const dep = 3 + Math.round(Math.sin(x*.03 + 2.2)*1.4);
+      g.fillStyle = riv; g.fillRect(x, top, 1, dep);
+      g.fillStyle = mixHex(S_.water, '#ffffff', .30); g.fillRect(x, top, 1, 1);
+    }
   }
-  drawVolcano(g, S_);
-  ridge(g, { base:100, col: mixHex(S_.mid, S_.low, .2), lit: mixHex(S_.mid, S_.low, .45),
-             waves:[[.048,3.4,8],[.11,1.7,3]] });
-
-  /* Treeline on the middle plane. Eight identical conifers in two clumps was
-     a hedge; a Late Cretaceous skyline has araucaria with domed crowns on
-     bare trunks and tree ferns under them, and three silhouettes instead of
-     one is most of what turns a hedge into a wood. */
-  const treeBody = mixHex(S_.tree, S_.low, .18), treeLit = mixHex(S_.tree, S_.low, .38);
-  const farBody  = mixHex(S_.tree, S_.low, .32), farLit  = mixHex(S_.tree, S_.low, .46);
-  [[52,15],[62,11],[150,13],[162,17],[172,12],[100,10]]
-    .forEach(t => conifer(g, t[0], GROUND-4, t[1], farBody, farLit));   // back rank, hazed
-  [[14,26],[26,19],[38,23],[196,24],[208,17],[184,20],[120,15],[132,21]]
-    .forEach(t => conifer(g, t[0], GROUND-2, t[1], treeBody, treeLit));
-  [[8,26],[46,21],[142,23],[216,19]]
-    .forEach(t => araucaria(g, t[0], GROUND-2, t[1], treeBody, treeLit));
-  [[33,12],[128,10],[203,11],[70,9]]
-    .forEach(t => treeFern(g, t[0], GROUND-1, t[1], treeBody, treeLit));
+  if (B.landmark && !B.landmarkFront) B.landmark(g, S_);
+  /* The near plane. A hill in every habitat except the coast, where the whole
+     point is that there is nothing between you and the water — run at base
+     100 it buried the sea and the stacks standing in it. */
+  ridge(g, B.nearRidge || { base:100, col: mixHex(S_.mid, S_.low, .2),
+                            lit: mixHex(S_.mid, S_.low, .45),
+                            waves:[[.048,3.4,8],[.11,1.7,3]] });
+  if (B.landmark && B.landmarkFront) B.landmark(g, S_);
+  if (B.treeline) B.treeline(g, S_);
 
   // ground: lit grass edge, then dithered dirt
   const grassLit = mixHex(S_.grass, S_.low, .40), grassDark = mixHex(S_.grass, '#000000', .32);
@@ -342,43 +872,145 @@ function bakeBg(phase){
     const x = (rnd(2,W-4))|0, y = (GROUND+6+rnd(0,H-GROUND-9))|0;
     g.fillStyle = d1; g.fillRect(x,y,2,2); g.fillStyle = d2; g.fillRect(x,y,1,1);
   }
-  for (let i=0;i<16;i++){                                   // grass tufts
+  for (let i=0;i<16;i++){                                   // ground cover
     const x = (rnd(4,W-4))|0, y = (GROUND+5+rnd(0,H-GROUND-10))|0;
     g.fillStyle = mixHex(S_.grass,'#000000',.15); g.fillRect(x,y,1,3);
     g.fillRect(x-1,y+1,1,2); g.fillRect(x+1,y+1,1,2);
   }
-  // scenery on the ground line, behind where the animal walks
-  const rockCol = mixHex(S_.mid,'#000000',.12), rockLit = mixHex(S_.mid, S_.low,.42), rockShd = mixHex(S_.mid,'#000000',.38);
-  boulder(g, 68, GROUND+2, 17, 10, rockCol, rockLit, rockShd);
-  boulder(g, 78, GROUND+2, 9, 6, rockCol, rockLit, rockShd);
-  boulder(g, 133, GROUND+1, 12, 7, rockCol, rockLit, rockShd);
-  const logCol = mixHex(S_.dirt,'#000000',.18), logLit = mixHex(S_.dirt, S_.low,.34), logShd = mixHex(S_.dirt,'#000000',.44);
-  fallenLog(g, 92, GROUND+2, 34, logCol, logLit, logShd);
-  const plCol = mixHex(S_.tree, S_.low, .22), plLit = mixHex(S_.tree, S_.low, .5), plShd = mixHex(S_.tree,'#000000',.35);
-  cycadPlant(g, 32, GROUND+2, 22, plCol, plLit, plShd);
-  cycadPlant(g, 116, GROUND+1, 15, plCol, plLit, plShd);
-  cycadPlant(g, 190, GROUND+3, 19, plCol, plLit, plShd);
-  // watering hole, cut into the dirt on the right
-  const px0 = 142, px1 = 212;
-  for (let x=px0;x<px1;x++){
-    const t = (x-px0)/(px1-px0), dep = Math.round(Math.sin(t*Math.PI)*11);
-    if (dep <= 1) continue;
-    g.fillStyle = mixHex(S_.dirt,'#000000',.45); g.fillRect(x, GROUND+6, 1, 2);
-    g.fillStyle = mixHex(S_.water,'#000000',.25); g.fillRect(x, GROUND+8, 1, dep);
-    g.fillStyle = S_.water; g.fillRect(x, GROUND+8, 1, Math.max(1, dep-3));
-    g.fillStyle = mixHex(S_.water,S_.low,.45); g.fillRect(x, GROUND+8, 1, 1);
-  }
-  reeds(g, 138, GROUND+8, 5, plShd, plLit);
-  reeds(g, 205, GROUND+8, 4, plShd, plLit);
-  bgCache.set(phase,c);
+  if (B.floor) B.floor(g, S_);
+  bgCache.set(key, c);
   return c;
 }
 
+/* A habitat at thumbnail size, for the shop. What is being sold is the view,
+   so the shelf shows the view rather than a swatch or a name. */
+function biomeThumb(bid){
+  return bakeBg(skyPhase(new Date()), bid);
+}
+
 /* --------------------------- moving backdrop ------------------------------- */
+/* Clouds.
+
+   The old ones were three stacked rectangles — a wide one, a narrower one on
+   top, a narrower one on top of that — which is a wedding cake, and all four
+   were the same wedding cake at four sizes.
+
+   Fair-weather cumulus has three properties and none of them is a rectangle:
+
+     1. A FLAT BASE. The condensation level is an altitude, so every cloud in
+        a field has its bottom on the same line and that line is straight and
+        sharp. It is the single most recognisable thing about a cumulus and
+        the thing a stack of centred rectangles destroys.
+     2. A CAULIFLOWER TOP of overlapping rounded lobes at different radii,
+        with one dominant tower that is never in the middle.
+     3. STRONG SIDE LIGHTING. The lobes facing the sun are near-white, the
+        undersides are grey, and the base is the darkest part of the cloud —
+        at dawn and dusk it is also the warmest, because it is being lit from
+        underneath by a sun near the horizon.
+
+   So a cumulus is drawn column by column against the union of its lobes, the
+   way the ridges and the volcano are. Cirrus is a different cloud entirely —
+   ice crystals sheared out into fibrous streaks with no body and no base —
+   and having one kind of each is most of what stops the sky reading as four
+   copies of one thing. */
 const CLOUDS = [
-  { x:30,  y:16, v:1.9, w:26, h:5, near:1 }, { x:140, y:10, v:2.6, w:34, h:6, near:1 },
-  { x:88,  y:32, v:1.1, w:20, h:4, near:0 }, { x:196, y:26, v:1.4, w:24, h:4, near:0 }
+  { x:30,  y:28, v:5.4, w:38, kind:'cumulus', seed:0.31 },
+  { x:132, y:24, v:7.2, w:48, kind:'cumulus', seed:1.77 },
+  { x:196, y:37, v:3.6, w:28, kind:'cumulus', seed:2.55 },
+  { x:88,  y:9,  v:2.4, w:58, kind:'cirrus',  seed:0.94 },
+  { x:20,  y:48, v:1.7, w:44, kind:'cirrus',  seed:3.10 }
 ];
+
+/* Lobes are derived from the cloud's seed rather than stored, so the shape is
+   fixed for the life of the cloud and no two clouds share one. */
+function cloudLobes(c){
+  if (c.lobes) return c.lobes;
+  const n = 4 + (Math.abs(Math.sin(c.seed*12.9)) > .5 ? 1 : 0);
+  const out = [];
+  for (let i=0;i<n;i++){
+    const u = (i + .5)/n;
+    const r = c.w * (0.13 + 0.10*Math.abs(Math.sin(c.seed*3.7 + i*1.9)));
+    out.push({ x: (u - .5) * c.w * (0.80 + 0.12*Math.sin(c.seed*7.1 + i*2.3)), r });
+  }
+  out[n > 4 ? 1 : 0].r *= 1.45;           // one dominant tower, off centre
+  /* The lobe's widest point sits a third of a radius above the base, so most
+     of the circle is above the flat bottom and the sides meet it steeply. At
+     0.58 the tallest cloud stood thirty pixels off its base and ran off the
+     top of the sky, where it was clipped into a rectangle. */
+  for (const L of out) L.cy = -L.r*0.35;
+  return (c.lobes = out);
+}
+
+function drawCumulus(g, c, x, top, body, shade, base){
+  const half = Math.ceil(c.w/2), baseY = Math.round(c.y);
+  const lobes = cloudLobes(c);
+  const skyline = i => {                                   // top of the union of lobes
+    let t = 0;
+    for (const L of lobes){
+      const dx = i - L.x;
+      if (Math.abs(dx) < L.r){
+        const y = L.cy - Math.sqrt(L.r*L.r - dx*dx);
+        if (y < t) t = y;
+      }
+    }
+    return t;
+  };
+  for (let i=-half;i<=half;i++){
+    const t = Math.max(Math.round(skyline(i)), 1 - baseY); // never off the top of the sky
+    if (t >= 0) continue;                                  // outside the cloud
+    const h = -t, px = x + i;
+    g.fillStyle = body; g.fillRect(px, baseY + t, 1, h);
+    // the underside darkens toward the flat base
+    g.fillStyle = shade;
+    g.fillRect(px, baseY - Math.max(1, Math.round(h*.30)), 1, Math.max(1, Math.round(h*.30)));
+    g.fillStyle = base; g.fillRect(px, baseY - 1, 1, 1);
+    /* Sunlit crown. Light comes from the upper left, the same as everything
+       else in this game, so a column whose surface is still rising to the
+       right is facing the light and a column past the crest is not. */
+    const rising = Math.round(skyline(i+1)) < t;
+    g.fillStyle = top;
+    g.fillRect(px, baseY + t, 1, rising ? 2 : 1);
+  }
+}
+
+function drawCirrus(g, c, x, top, body){
+  const half = c.w/2;
+  for (let k=0;k<4;k++){
+    const len = Math.round(c.w * (0.42 + 0.5*Math.abs(Math.sin(c.seed*5.3 + k*2.1))));
+    const x0 = Math.round(x - half + (c.w - len) * (0.5 + 0.45*Math.sin(c.seed + k*1.6)));
+    const y0 = Math.round(c.y + k*2 + Math.sin(c.seed*2.2 + k)*1.5);
+    const rake = (k % 2 ? 1 : -1) * 2 / Math.max(1, len);   // sheared by the wind aloft
+    for (let i=0;i<len;i++){
+      const a = Math.sin((i/len) * Math.PI);                // fibrous: fades at both ends
+      if (a < .34) continue;
+      g.fillStyle = a > .82 ? top : body;
+      g.fillRect(x0 + i, y0 + Math.round(i*rake), 1, 1);
+    }
+  }
+}
+
+function drawClouds(g, phase, dt){
+  const S_ = skyOf(phase), night = phase === 'night';
+  /* A cloud is white lit and grey shaded, but the underside takes its colour
+     from the horizon it is being lit by — which at dawn and dusk means the
+     base of every cloud in the sky goes warm. */
+  const top   = night ? 'rgba(206,216,240,.36)' : mixHex(S_.low, '#ffffff', .82);
+  const body  = night ? 'rgba(158,170,200,.30)' : mixHex(S_.low, '#ffffff', .52);
+  /* The underside darkens toward slate rather than toward the ground colour.
+     Mixed toward S_.mid the bases came out green, which is a cloud with a
+     field reflected in it; mixed toward S_.top they went purple at dawn,
+     which is a cloud lit by the wrong half of the sky. Keeping the horizon's
+     own hue and only taking light out of it leaves a grey base by day and a
+     warm one at dawn and dusk, which is what a low sun actually does. */
+  const shade = night ? 'rgba(112,124,156,.28)' : mixHex(S_.low, '#46505f', .24);
+  const base  = night ? 'rgba(84,94,128,.32)'   : mixHex(S_.low, '#46505f', .46);
+  for (const c of CLOUDS){
+    c.x += c.v * dt/1000; if (c.x > W + c.w) c.x = -c.w;
+    const x = Math.round(c.x);
+    if (c.kind === 'cirrus') drawCirrus(g, c, x, top, body);
+    else drawCumulus(g, c, x, top, body, shade, base);
+  }
+}
 let flyer = null, flyerAt = 4000;
 function drawSkyBody(g, phase, now){
   // the sun and moon ride an arc keyed to the player's actual clock
@@ -388,25 +1020,12 @@ function drawSkyBody(g, phase, now){
   const cx = 18 + t*(W-36), cy = 62 - Math.sin(clamp(t,0,1)*Math.PI) * 44;
   if (night){
     g.fillStyle = '#e8e6d2'; g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
-    g.fillStyle = SKY_SPECS[phase].top; g.beginPath(); g.arc(cx-3.5, cy-2.5, 6, 0, 7); g.fill();
+    g.fillStyle = skyOf(phase).top; g.beginPath(); g.arc(cx-3.5, cy-2.5, 6, 0, 7); g.fill();
   } else {
     g.fillStyle = phase === 'day' ? 'rgba(250,238,170,.35)' : 'rgba(250,200,140,.3)';
     g.beginPath(); g.arc(cx, cy, 12, 0, 7); g.fill();
     g.fillStyle = phase === 'day' ? '#f7ecac' : '#f6c887';
     g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
-  }
-}
-function drawClouds(g, phase, dt){
-  const lit = phase === 'night' ? 'rgba(196,206,232,.30)' : 'rgba(248,246,234,.92)';
-  const shd = phase === 'night' ? 'rgba(150,162,192,.26)' : 'rgba(214,214,204,.85)';
-  for (const c of CLOUDS){
-    c.x += c.v * dt/1000 * 4; if (c.x > W + c.w) c.x = -c.w;
-    const x = Math.round(c.x), y = c.y, w = c.near ? c.w : c.w*.7, hh = c.near ? c.h : c.h-1;
-    g.fillStyle = lit;
-    g.fillRect(x - w/2, y, w, hh);
-    g.fillRect(x - w/4, y - 3, w/2, 3);
-    g.fillRect(x + w/6, y - 5, w/4, 2);
-    g.fillStyle = shd; g.fillRect(x - w/2, y + hh - 1, w, 1);
   }
 }
 function drawFlyers(g, dt, now){
@@ -518,6 +1137,97 @@ function drawPlume(g, phase, now){
   }
 }
 
+/* --------------------------- live habitat layers ---------------------------
+   Anything in a habitat that moves has to be drawn per frame, because the
+   backdrop is baked once per biome and phase and then cached — the volcano's
+   smoke sat still for the whole life of this project for exactly that reason.
+   One hook per biome, called from drawScene.
+   -------------------------------------------------------------------------- */
+
+/* Salt lagoon: a surf line running up the sand and back down it. */
+function drawSurf(g, phase, now){
+  const S_ = skyOf(phase);
+  const foam = mixHex(S_.water, '#ffffff', .72), wash = mixHex(S_.water, '#ffffff', .40);
+  for (let k=0;k<3;k++){
+    const u = ((now/3400 + k*.34) % 1);
+    const reach = GROUND - 6 + Math.round(Math.sin(u*Math.PI) * 11);   // in and back out
+    const a = Math.sin(u*Math.PI);
+    if (a < .12) continue;
+    for (let x=0;x<W;x++){
+      const y = reach + Math.round(Math.sin(x*.06 + k*2.1 + now/900)*1.6);
+      g.fillStyle = a > .55 ? foam : wash;
+      g.fillRect(x, y, 1, 1);
+      if (a > .70 && (x + k*3) % 7 < 3) g.fillRect(x, y+1, 1, 1);
+    }
+  }
+}
+
+/* Ash flats: the plume, and everything it drops. */
+const ASH = Array.from({length:26}, () => ({ x:rnd(0,W), y:rnd(0,GROUND), v:rnd(6,16), p:rnd(0,6.3) }));
+function drawAshfall(g, phase, now){
+  const keep = VOLC.x; VOLC.x = 120;
+  drawPlume(g, phase, now);
+  drawPlume(g, phase, now + 2100);            // a second column, offset: it is erupting
+  VOLC.x = keep;
+  g.fillStyle = phase === 'night' ? 'rgba(180,176,186,.34)' : 'rgba(96,88,84,.42)';
+  for (const a of ASH){
+    a.y += a.v * 0.016;
+    a.x += Math.sin(now/1100 + a.p) * .30;
+    if (a.y > GROUND){ a.y = -2; a.x = rnd(0, W); }
+    g.fillRect(a.x|0, a.y|0, 1, 1);
+  }
+}
+
+/* Fern gorge: the fall coming down, and the spray coming off it. */
+function drawFallsSpray(g, phase, now){
+  const S_ = skyOf(phase);
+  const white = mixHex(S_.water, '#ffffff', .78), pale = mixHex(S_.water, '#ffffff', .40);
+  const half = FALLS.w/2;
+  /* Streaks down the cut at different rates. The span stops at the pool: run
+     to the ground line they carried on over the treeline in front of the
+     wall, which is a waterfall falling through a wood. */
+  const span = FALLS.pool - FALLS.top - 5;
+  for (let k=0;k<7;k++){
+    const off = (k - 3) * 2.4 + Math.sin(k*2.3)*1.2;
+    if (Math.abs(off) > half*.72) continue;
+    const x = Math.round(FALLS.x + off);
+    for (let i=0;i<4;i++){
+      const y = FALLS.top + 3 + ((now*(0.06 + k*0.008) + i*span/4 + k*13) % span);
+      g.fillStyle = (k % 2) ? white : pale;
+      g.fillRect(x, y|0, 1, Math.min(4, FALLS.pool - y));
+    }
+  }
+  // the boil at the foot, and mist coming off it
+  for (let i=0;i<9;i++){
+    const u = ((now/1500 + i*.11) % 1);
+    const r = 2 + u*7;
+    g.fillStyle = 'rgba(226,240,240,' + ((1-u)*.24).toFixed(3) + ')';
+    g.beginPath();
+    g.ellipse(FALLS.x + Math.sin(i*2.1)*13, FALLS.pool - 1 - u*12, r, r*.62, 0, 0, 7);
+    g.fill();
+  }
+}
+
+/* Polar dawn: aurora, and only when it would be visible. */
+function drawAurora(g, phase, now){
+  if (phase === 'day') return;
+  const a = phase === 'night' ? 1 : .34;
+  for (let k=0;k<3;k++){
+    const base = 22 + k*9, amp = 7 - k*1.6;
+    for (let x=0;x<W;x+=1){
+      const y = base + Math.sin(x*.028 + now/2600 + k*1.7)*amp
+                     + Math.sin(x*.071 + now/1500 + k)*2.2;
+      const h = 10 + Math.sin(x*.041 + now/2000 + k*2.4)*7;
+      if (h < 2) continue;
+      const fade = (0.10 + 0.06*Math.sin(x*.02 + now/3100 + k)) * a;
+      g.fillStyle = 'rgba(126,226,168,' + fade.toFixed(3) + ')';
+      g.fillRect(x, y|0, 1, h|0);
+      g.fillStyle = 'rgba(150,180,246,' + (fade*.7).toFixed(3) + ')';
+      g.fillRect(x, (y+h*.7)|0, 1, (h*.5)|0);
+    }
+  }
+}
+
 /* A live rank of grass along the ground line, leaning on a slow breeze. The
    baked backdrop cannot move, so the boundary the animal stands on was the
    one hard line in the scene that never did anything. */
@@ -525,7 +1235,7 @@ const BLADES = Array.from({length:34}, (_, i) => ({
   x: 3 + i*6.6 + (i%3)*1.7, h: 4 + (i%4)*2, p: (i*1.7) % 6.3
 }));
 function drawGrassLine(g, phase, now){
-  const S_ = SKY_SPECS[phase];
+  const S_ = skyOf(phase);
   const col = mixHex(S_.grass, '#000000', .20), lit = mixHex(S_.grass, S_.low, .34);
   for (const b of BLADES){
     const lean = Math.sin(now/1600 + b.p) * 1.6 + Math.sin(now/430 + b.p*2) * .4;
@@ -547,7 +1257,7 @@ function drawMotes(g, dt, phase){
   }
 }
 function drawWater(g, phase, now){
-  const S_ = SKY_SPECS[phase];
+  const S_ = skyOf(phase);
   g.fillStyle = mixHex(S_.water, S_.low, .55);
   for (let i=0;i<4;i++){
     const y = GROUND + 10 + i*2;
@@ -563,7 +1273,7 @@ function drawWater(g, phase, now){
 /* ---------------------- foreground, drawn over the animal ------------------ */
 const FRONDS = [ {x:-3, s:1.15, p:0, dir:1}, {x:W+3, s:1.0, p:2.4, dir:-1} ];
 function drawFronds(g, phase, now){
-  const S_ = SKY_SPECS[phase];
+  const S_ = skyOf(phase);
   const dark = mixHex(S_.tree,'#000000',.40), body = S_.tree, lit = mixHex(S_.tree,S_.low,.32);
   for (const f of FRONDS){
     for (let a=0;a<4;a++){

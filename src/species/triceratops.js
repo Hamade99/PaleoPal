@@ -32,6 +32,12 @@ const TRI_SPEC = { skin:'#a06635', belly:'#c8975e', crest:'#7d4a22', horn:'#efe6
                       and a shield that does not read as a shield is most of
                       this animal's silhouette thrown away. */
                    shield:'#cfa068',
+                   /* The beak is its own material. On the horn ramp the
+                      rostral and predentary came out near-white, which put
+                      two blobs of bone on the front of the face with no edge
+                      between them and the horn sheaths above. Keratin, but
+                      duller and darker than a horn. */
+                   beak:'#b3925e',
                    mouth:'#7e3a30', outline:'#26190f' };
 const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
 const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
@@ -43,12 +49,17 @@ function drawTrike(M, P){
   const st = STAGE[P.stage];
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const hF = st.horn, sM = st.snout, fM = st.frill, bend = st.hornBend;
+  const bk = st.bulk, tor = st.torso;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
 
-  const hipX = 26, hipY = -41*lM - bob;
-  const shX = -16, shY = -38*lM - bob;         // glenoid
+  /* `torso` shortens the trunk in young animals and `bulk` deepens it. A
+     hatchling built on the adult's proportions came out long and thin on
+     stick legs — a scale model of an adult rather than a baby, which reads as
+     underfed rather than young. Babies are short-bodied and round. */
+  const hipX = 26*tor, hipY = -41*lM - bob;
+  const shX = -16*tor, shY = -38*lM - bob;     // glenoid
   const withY = hipY - 25*lM;                  // tall neural spines: a shoulder hump
-  const backY = hipY - 20*lM, bellyY = hipY + 14*lM;
+  const backY = hipY - 20*lM, bellyY = hipY + 14*lM*bk;
   const T = d => hipX + d*tM;
 
   legStep(M.far, hipX-7, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
@@ -64,14 +75,14 @@ function drawTrike(M, P){
     [shX-2,  withY],                           // shoulder hump
     [8,      backY-1],                         // back
     [hipX+4, backY+2],                         // hips
-    [T(14),  hipY-17*lM+sw*1.5],               // tail base, still deep
+    [T(14),  hipY-17*lM*bk+sw*1.5],            // tail base, still deep
     [T(30),  hipY-13*lM+sw*3],
     [T(46),  hipY-8.5*lM+sw*5],
     [T(62),  hipY-3*lM+sw*7],                  // tail tip
     [T(60),  hipY-0.5*lM+sw*7],
     [T(42),  hipY+2*lM+sw*4],
-    [T(22),  hipY+6*lM+sw*1.5],
-    [T(5),   hipY+10*lM],
+    [T(22),  hipY+6*lM*bk+sw*1.5],
+    [T(5),   hipY+10*lM*bk],
     [hipX-6, bellyY],                          // belly
     [2,      bellyY+2*lM],
     [shX+3,  bellyY-1*lM],
@@ -84,9 +95,9 @@ function drawTrike(M, P){
      the frill has a material of its own for exactly that. */
   const nkX = shX - 7*nM, nkY = withY + 9*lM;
   const hx = nkX - 20*nM - 9*hM*sM, hy = nkY + 7*lM + dr*5;   // the jaw joint
-  const sn = 24*hM*sM, hh = 10.5*hM;
+  const sn = 22.5*hM*sM, hh = 10.5*hM;   // a shorter face than the first pass
   tube(M.skin, [[shX-2, nkY-2*lM],[nkX-4, nkY+1*lM],[hx+14*hM, hy-hh*.10]],
-       [15*lM, 13.5*lM, 12*hM]);
+       [15*lM*bk, 13.5*lM*bk, 12*hM]);
 
   /* Frill: a solid bone shield, anchored to the back of the skull roof and
      opening up and back over the neck. Its rim stands clear of the back line
@@ -146,35 +157,57 @@ function drawTrike(M, P){
     [hx+16*hM,   hy+hh*.36]
   ]);
 
-  /* Jaw. A ceratopsian bites with two beaks — the rostral above, the
-     predentary below — and the gap between them is the mouth. The old sprite
-     drew one cream mass across the whole snout, which read as a bald face and
-     left the eat animation with nothing to move. */
+  /* Jaw and beak.
+
+     A ceratopsian bites with two beaks — the rostral above, the predentary
+     below — and they meet. The first pass built the mandible as a fixed
+     fraction of the snout measured from the hinge, which left its tip twenty
+     units short of the upper beak: a permanent underbite that read as a
+     shark. The rostral overhung it, and both were drawn on `horn`, so the
+     front of the face was two pale blobs with nothing between them.
+
+     The mandible is built against the upper beak's own tip now. `beakL` is
+     where that tip falls in hinge-local coordinates, so the lower jaw closes
+     on it however the skull is scaled, at every growth stage. */
   const jHinge = [hx + 8*hM, hy + hh*.44], jawA = -jaw*.26;
+  const beakTip = -sn*1.10;                      // the upper beak, from hx
+  const beakL = beakTip - 8*hM;                  // the same point, from the hinge
   M.jaw.save(); M.jaw.translate(jHinge[0], jHinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[4,-hh*.06],[-sn*.36,-hh*.12],[-sn*.78,hh*.06],
-               [-sn*.72,hh*.42],[-sn*.24,hh*.56],[5,hh*.44]]);
+  /* Deep at the back where the coronoid process is, tapering to the beak.
+     Carried at one depth the whole way it was a slab, and the face came out
+     as three stacked bands: skull, jaw, beak. */
+  blob(M.jaw, [[4, -hh*.10],
+               [beakL*.30, -hh*.18],             // dorsal margin, under the tooth row
+               [beakL*.66, -hh*.12],
+               [beakL*.90,  hh*.06],             // rising to meet the predentary
+               [beakL*.84,  hh*.30],
+               [beakL*.40,  hh*.42],
+               [4, hh*.48]]);
   M.jaw.restore();
 
-  // rostral: a parrot hook, not a rounded snout cap
-  blob(M.horn, [[hx-sn*.92, hy-hh*.40],[hx-sn*1.16, hy-hh*.04],[hx-sn*1.22, hy+hh*.24],
-                [hx-sn*1.04, hy+hh*.42],[hx-sn*.88, lipY-hh*.04]]);
-  // predentary, riding the jaw so it opens with it
-  M.horn.save(); M.horn.translate(jHinge[0], jHinge[1]); M.horn.rotate(jawA);
-  blob(M.horn, [[-sn*.56, hh*.00],[-sn*.88, hh*.12],[-sn*.82, hh*.44],[-sn*.52, hh*.42]]);
-  M.horn.restore();
+  /* Rostral: the hooked tip of the upper beak, and only the tip. It used to
+     start a third of the way back down the snout, which is a parrot's face
+     rather than a Triceratops'. */
+  blob(M.beak, [[hx-sn*.94, hy-hh*.30],[hx+beakTip, hy-hh*.02],[hx+beakTip-sn*.06, hy+hh*.26],
+                [hx+beakTip+sn*.10, hy+hh*.44],[hx-sn*.90, lipY-hh*.04]]);
+  // predentary, riding the jaw so it opens with it, closing on the rostral
+  M.beak.save(); M.beak.translate(jHinge[0], jHinge[1]); M.beak.rotate(jawA);
+  // it hooks up at the front, the way a predentary does, and stays inside the
+  // mandible's own outline instead of hanging off it as a spike
+  blob(M.beak, [[beakL*.56, -hh*.06],[beakL*.92, hh*.02],[beakL*.86, hh*.26],[beakL*.52, hh*.34]]);
+  M.beak.restore();
 
   if (jaw > .06){
-    const uTip = [hx - sn*.86, lipY - hh*.04];
-    const lTip = [jHinge[0] + (-sn*.78)*Math.cos(jawA) - (hh*.06)*Math.sin(jawA),
-                  jHinge[1] + (-sn*.78)*Math.sin(jawA) + (hh*.06)*Math.cos(jawA)];
+    const uTip = [hx + beakTip + sn*.06, lipY - hh*.04];
+    const lTip = [jHinge[0] + (beakL*.86)*Math.cos(jawA) - (hh*.06)*Math.sin(jawA),
+                  jHinge[1] + (beakL*.86)*Math.sin(jawA) + (hh*.06)*Math.cos(jawA)];
     M.mouth.beginPath();
     M.mouth.moveTo(jHinge[0], jHinge[1]);
     M.mouth.lineTo(uTip[0], uTip[1]);
     M.mouth.lineTo(lTip[0], lTip[1]);
     M.mouth.closePath(); M.mouth.fill();
   } else {
-    tube(M.mouth, [[hx+6*hM, lipY+hh*.06],[hx-sn*.38, lipY+hh*.04],[hx-sn*.80, lipY-hh*.04]],
+    tube(M.mouth, [[hx+6*hM, lipY+hh*.06],[hx-sn*.38, lipY+hh*.04],[hx-sn*.86, lipY-hh*.02]],
          [Math.max(.9,1.4*hM), Math.max(.8,1.2*hM), Math.max(.6,.9*hM)]);
   }
   const ex = hx - sn*.30, ey = hy - hh*.34;
@@ -203,8 +236,12 @@ function drawTrike(M, P){
   browHorn(-4, -hh*.62, hl*.88, 7.8);
   // nasal horn: small in T. horridus, and small at every age
   tube(M.horn, [[hx-sn*.72, hy-hh*.30],[hx-sn*.86, hy-hh*(.50+.5*hF)]], [4.0*hM, 1.2*hM]);
-  // jugal horn: a short cheek point aimed down and back, not a hanging tusk
-  blob(M.horn, [[hx-sn*.06, hy+hh*.66],[hx-sn*.32, hy+hh*.60],[hx-sn*.10, hy+hh*1.14]]);
+  /* Jugal horn: a point on the cheek, and it has to stay on the cheek. Run
+     down past the mandible's ventral line it stops being a cheek boss and
+     becomes a pale tusk hanging under the jaw — which, with the rostral also
+     drawn in horn, was the second of the two white tips on the front of this
+     face. */
+  blob(M.beak, [[hx-sn*.04, hy+hh*.60],[hx-sn*.28, hy+hh*.56],[hx-sn*.12, hy+hh*.90]]);
 
   // low nubbin feature scales over the flank and tail base
   for (const q of [[-2,-11],[10,-14],[22,-12],[15,-6],[32,-9],[2,-5],[41,-7]])

@@ -104,6 +104,28 @@ and the Triceratops draw function builds the horn as a three-point tube whose
 middle control point bows *against* the tip, which is what makes a recurve read
 as a recurve rather than as a bent stick.
 
+### Growth is not a scale factor
+
+`s` and a set of ratios gave four sizes of one animal. Only the hatchling read
+as its own thing; the juvenile, subadult and adult were the same silhouette
+with a slightly smaller head each time. Four columns turn features on and off
+instead of scaling them, and the rex and the Triceratops use them:
+
+| column | what it is | why it is separate |
+| --- | --- | --- |
+| `muzzle` | snout DEPTH | separate from `snout`, which is length. A young tyrannosaur has a shallow muzzle in front of a large braincase; the deep boxy skull arrives late. One number for both gives a hatchling an adult's slab of a face. |
+| `bulk` | trunk and neck depth | juveniles are slab-sided and leggy, adults barrel-chested. It is the difference you see across a room. |
+| `torso` | trunk LENGTH | young animals are short-bodied and big-headed, and the body catches up last. It is also what stopped the Triceratops hatchling reading as underfed. |
+| `fuzz` | protofeather coverage | the single most visible thing that can differ between two stages of one animal. |
+
+`fuzz` on the rex is spaced **by distance along `topLine`**, not by count — the
+same lesson the coat painter learned in section 7. Thirty-seven filaments over
+a hatchling's short back overlap into a solid band, which is a thicker animal,
+not a coat.
+
+The Brachiosaurus reads none of these. Its four stages were the ones the owner
+was happy with, and a column only exists where a species asks for it.
+
 ## 6. Countershading
 
 Dark above, pale below is the one colour pattern with direct fossil support,
@@ -161,6 +183,13 @@ field:
 | 1 | shut: one soft lid line, not a filled shape | `sleep`, and a blink |
 | 2 | squinting, pleased | `cheer` |
 | 3 | half-lidded: open but sunk under a heavy lid | `sick` |
+
+`beak` is a material layer of its own rather than a colour on `horn`, because
+the compositor only draws an edge between different materials. Sharing `horn`,
+a ceratopsian's rostral and predentary were two near-white blobs stuck on the
+front of a tan face with nothing dividing them from the horn sheaths above. A
+species that does not set `spec.beak` gets its horn colour and nothing changes
+for it.
 
 State 3 exists because `sick` used to borrow state 1 from `sleep`. `anim.pick()`
 returns `sick` for as long as an illness lasts, so an ill animal sat with its

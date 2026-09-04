@@ -14,10 +14,13 @@ const SPECIES = {
       'Work on tooth wear and jaw foramina points to lips covering the teeth, so a closed mouth showed none of them.',
       'Belly ribs called gastralia made the torso barrel-shaped rather than lean.',
       'Each hand has exactly two fingers, and the palms faced inward, not down.',
-      'Both eyes face forward, so it judged distance the way a hawk does.'
+      'Both eyes face forward, so it judged distance the way a hawk does.',
+      'Young ones carried a coat of filaments that thinned with age. An adult kept a keratin row and little else.',
+      'A juvenile has a shallow snout and long legs. The deep boxy skull and the barrel chest arrive late.'
     ],
     checks:['Lips covering the teeth','Deep barrel torso','Two fingers, palms inward',
-            'Level spine, tail as counterweight','Keratin row down the neck','Forward-facing eyes']
+            'Level spine, tail as counterweight','Keratin row down the neck','Forward-facing eyes',
+            'Down when young, bare when grown','Shallow snout and long legs as a juvenile']
   },
   trike: {
     id:'trike', draw:drawTrike, spec:TRI_SPEC, scale:.86, speed:10, strideBase:.34*41,
@@ -31,11 +34,13 @@ const SPECIES = {
       'The frill is solid bone, ringed with small knobs called epoccipitals. They begin as deep scallops and flatten into the rim with age.',
       'Skin impressions show large scales with scattered low nubbins, not the spines older art gave it.',
       'A jugal horn juts down from each cheek, below the eye.',
-      'T. horridus carried a long snout and only a small nasal horn.'
+      'T. horridus carried a long snout and only a small nasal horn.',
+      'The beak has two halves: a rostral bone above and a predentary below, and they meet.'
     ],
     checks:['Horns above the eyes, sheathed long','Horn curve reverses between hatchling and adult',
             'Solid frill with rim knobs, deeper when young','Hooked rostral beak',
-            'Jugal horn on each cheek','Nubbin feature scales','Upright hind legs, elbows held out']
+            'Lower beak meeting the upper','Jugal horn on each cheek','Nubbin feature scales',
+            'Upright hind legs, elbows held out','Short-bodied and stocky as a hatchling']
   },
   brachio: {
     id:'brachio', draw:drawBrachio, spec:BRA_SPEC, scale:.66, speed:5.5, strideBase:.30*46,

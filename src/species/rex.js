@@ -7,15 +7,27 @@ const REX_GAIT = { stride:.46, lift:.17, duty:.56, mt:.22, back:.34, bend:1, thi
 function drawRex(M, P){
   const st = STAGE[P.stage];
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
+  const bk = st.bulk, tor = st.torso, fz = st.fuzz, bs = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
 
-  // skeleton landmarks. Hip is the acetabulum; everything else hangs off it.
+  /* Skeleton landmarks. Hip is the acetabulum; everything else hangs off it.
+
+     `torso` shortens the trunk in young animals and `bulk` deepens it, which
+     between them are most of the difference between a leggy slab-sided
+     juvenile and a barrel-chested adult. Before they existed the three older
+     stages were one animal at three sizes. */
   const hipX = 16,  hipY = -46*lM - bob;
-  const backY = hipY - 24*lM, withX = -18, withY = hipY - 25*lM;
-  const bellyY = hipY + 9*lM, throatY = hipY + 3*lM;
+  const backY = hipY - 24*lM, withX = -18*tor, withY = hipY - 25*lM;
+  const bellyY = hipY + 9*lM*bk, throatY = hipY + 3*lM*bk;
   const hx = withX - 26*nM - 4*hM, hy = withY - 10*nM - 2 + dr*9;
   const sM = st.snout;
-  const sn = 23*hM*sM, hh = 15.5*hM;      // shorter and deeper than it was
+  /* Skull depth at the orbit, and at the muzzle. A young tyrannosaur carries a
+     shallow snout in front of a large braincase; the deep boxy skull is an
+     adult feature and arrives late. One depth for both gave a hatchling an
+     adult's slab of a face at hatchling scale. */
+  const hh = 15.5*hM, fh = hh * (0.46 + 0.54*st.muzzle);
+  const dep = u => hh + (fh - hh) * u;     // linear taper along the snout
+  const sn = 23*hM*sM;
   const T = d => hipX + d*tM;
 
   // far limb first, behind everything
@@ -30,15 +42,15 @@ function drawRex(M, P){
     [withX, withY],                         // withers
     [0, backY-1],                           // back
     [hipX+7, backY+1],                      // over the hips
-    [T(23), hipY-18*lM+sw*2],               // deep tail base
+    [T(23), hipY-18*lM*bk+sw*2],            // deep tail base
     [T(48), hipY-13*lM+sw*4],
     [T(72), hipY-7*lM+sw*6],                // tail tip
     [T(70), hipY-4*lM+sw*6],
     [T(43), hipY-1*lM+sw*4],
-    [T(17), hipY+4*lM],
+    [T(17), hipY+4*lM*bk],
     [hipX-6, bellyY],                       // belly
     [-8, bellyY-1],
-    [withX-7, throatY-2],                   // chest and throat
+    [withX-7*bk, throatY-2],                // chest and throat
     [hx+9, hy+hh*.58]
   ]);
 
@@ -63,19 +75,19 @@ function drawRex(M, P){
          is the quickest way to read tyrannosaur rather than generic theropod
          at this size — but it is shorter and deeper than it was, so the head
          is a head rather than a snout with a skull behind it. */
-  const lipBack = hy + hh*.26, lipMid = hy + hh*.44, lipTip = hy + hh*.30;
+  const lipBack = hy + hh*.26, lipMid = hy + dep(.46)*.44, lipTip = hy + fh*.30;
   blob(M.head, [
     [hx+14, hy-hh*.06],                     // occiput, meeting the nape
     [hx+12, hy-hh*.90],
     [hx+2,  hy-hh*1.18],                    // vaulted braincase, over the orbit
-    [hx-sn*.34, hy-hh*1.06],
-    [hx-sn*.66, hy-hh*.84],
-    [hx-sn*.88, hy-hh*.56],
+    [hx-sn*.34, hy-dep(.34)*1.06],
+    [hx-sn*.66, hy-dep(.66)*.84],
+    [hx-sn*.88, hy-dep(.88)*.56],
     // three near-vertical stations across the front, so the curve through
     // them stays flat instead of rounding the premaxilla off
-    [hx-sn*1.00, hy-hh*.30],
-    [hx-sn*1.05, hy+hh*.02],
-    [hx-sn*1.02, lipTip-hh*.06],
+    [hx-sn*1.00, hy-fh*.30],
+    [hx-sn*1.05, hy+fh*.02],
+    [hx-sn*1.02, lipTip-fh*.06],
     [hx-sn*.92, lipTip],                    // the oral margin, and its curve
     [hx-sn*.46, lipMid],
     [hx+14, lipBack]
@@ -92,8 +104,8 @@ function drawRex(M, P){
      −x is forward, so the jaw opens on a negative rotation. */
   const hinge = [hx + 12, hy + hh*.18], jawA = -jaw * .34;
   M.jaw.save(); M.jaw.translate(hinge[0], hinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[2,-hh*.12],[-sn*.42,-hh*.10],[-sn*.90,hh*.06],
-               [-sn*.94,hh*.32],[-sn*.66,hh*.52],[-sn*.24,hh*.58],[2,hh*.46]]);
+  blob(M.jaw, [[2,-hh*.12],[-sn*.42,-dep(.42)*.10],[-sn*.90,fh*.06],
+               [-sn*.94,fh*.32],[-sn*.66,dep(.66)*.52],[-sn*.24,hh*.58],[2,hh*.46]]);
   M.jaw.restore();
   // pale chin, carried by the jaw rather than left floating under it
   M.belly.save(); M.belly.translate(hinge[0], hinge[1]); M.belly.rotate(jawA);
@@ -135,15 +147,57 @@ function drawRex(M, P){
   }
 
   const ex = hx - sn*.40, ey = hy - hh*.34;
-  /* Brow over the orbit, and the keratin row along the neck and back. The
-     brow is a rounded hood rather than the flat plate it was — a straight bar
-     over a round eye reads as a scowl, and there is a lacrimal boss there in
-     any case. */
-  blob(M.crest, [[ex+7.5*hM, ey-hh*.30],[ex+2*hM, ey-hh*.74],[ex-6*hM, ey-hh*.60],
-                 [ex-7.5*hM, ey-hh*.30],[ex-4*hM, ey-hh*.22],[ex+3*hM, ey-hh*.24]]);
-  for (let i=0;i<10;i++){
-    const q = samplePath(topLine, .04 + i*.088);          // ride the actual back line
-    oval(M.crest, q[0], q[1] + 1.6*lM, 2.3*lM, 1.4*lM);
+  /* Brow over the orbit. The lacrimal boss and the postorbital rugosity are
+     adult ornament: they are barely there on a hatchling and heaviest on a
+     full-grown animal, so this rides the same column the other horns do.
+     It is a rounded hood rather than the flat plate it was — a straight bar
+     over a round eye reads as a scowl. */
+  const bw = .40 + .60*bs;
+  blob(M.crest, [[ex+7.5*hM, ey-hh*.30],[ex+2*hM, ey-hh*(.30+.44*bw)],
+                 [ex-6*hM, ey-hh*(.30+.30*bw)],[ex-7.5*hM, ey-hh*.30],
+                 [ex-4*hM, ey-hh*.22],[ex+3*hM, ey-hh*.24]]);
+  if (bs > .55){                                          // the postorbital boss
+    oval(M.crest, ex + 8.5*hM, ey - hh*.16, 2.4*hM*bs, 3.0*hM*bs);
+  }
+
+  /* The coat.
+
+     A juvenile tyrannosaur is reconstructed with a substantial covering of
+     filaments that reduces with age; an adult keeps a keratin row down the
+     neck and back and little else. This is the single most visible thing that
+     can differ between two stages of one animal, and without it the juvenile,
+     subadult and adult were one silhouette at three sizes.
+
+     Both the down and the keratin row ride `topLine`, the same points the body
+     outline uses, so neither can float off the back. The down is drawn as
+     overlapping ovals of uneven length: an even row of equal spines is a
+     mohawk, and what this wants to read as is a ragged fringe. */
+  const backLen = pathLength(topLine);
+  if (fz > .10){
+    // one filament every few units of spine, not a fixed count: at a fixed
+    // count a hatchling's short back took thirty-seven of them and they
+    // overlapped into a solid band, which is a thicker animal, not a coat
+    const n = Math.max(7, Math.round(backLen / (3.4*lM)));
+    for (let i=0;i<n;i++){
+      const t = i/(n-1);
+      const q = samplePath(topLine, .01 + t*.92);
+      const wob = Math.abs(Math.sin(i*2.39 + 1.1));
+      // long enough to break the outline: a coat that stops at the back line
+      // is a texture, and this has to read as a covering
+      const len = (1.8 + 5.2*fz) * lM * (0.40 + 0.60*wob) * (1 - t*.40);
+      oval(M.crest, q[0] + len*.40, q[1] - len*.30, 1.5*lM, len*.62);
+    }
+    // and a tuft at the nape, where a young theropod's coat is thickest
+    for (let i=0;i<4;i++){
+      const len = (2.2 + 5.6*fz) * lM * (0.55 + 0.45*Math.abs(Math.sin(i*3.1)));
+      oval(M.crest, hx + 11 + i*2.4*lM, hy - hh*.36 - len*.30, 1.7*lM, len*.58);
+    }
+  }
+  // the keratin row: sparse and low when young, a full row on an adult
+  const rows = Math.max(5, Math.round(backLen / (5.6*lM)));
+  for (let i=0;i<rows;i++){
+    const q = samplePath(topLine, .04 + i*(.88/rows));     // ride the actual back line
+    oval(M.crest, q[0], q[1] + 1.6*lM, 2.3*lM, (.8 + .6*(1-fz))*lM);
   }
   // the ventral countershading is painted from the spine by paintBelly
 

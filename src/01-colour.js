@@ -70,8 +70,15 @@ function mixCol(a, b, t){
 
    `horn` sits above `mouth` because teeth, beaks and claws stand in front of
    the mouth cavity, not behind it. The other way round the gape painted over
-   every tooth in it. */
-const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','sclera','pupil','glint'];
+   every tooth in it.
+
+   `beak` is a layer and not just a colour on `horn` because a rostral and a
+   brow horn are different materials and the compositor only draws an edge
+   between different materials. Sharing `horn`, a ceratopsian's beak was two
+   near-white blobs stuck on the front of a tan face with nothing dividing
+   them from the horn sheaths above. A species that does not set `spec.beak`
+   gets its horn colour here and nothing changes for it. */
+const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
 const BODY_TOP    = LAYERS.indexOf('head');
 const BELLY_LAYER = LAYERS.indexOf('belly');
 const MARK_LAYER  = LAYERS.indexOf('mark');
@@ -106,6 +113,9 @@ function buildMaterials(spec){
     mark:   { r: ramp(spec.mark || spec.crest), lit:.85 },
     crest:  { r: ramp(spec.crest),    lit:.7 },
     horn:   { r: horn,                lit:1.15 },
+    /* Keratin, but not the same keratin. A beak is duller and darker than a
+       horn sheath, and it has to be, or it reads as bone stuck to the face. */
+    beak:   { r: ramp(spec.beak || spec.horn, {spread:.10, shift:8}), lit:.95 },
     mouth:  { r: ramp(spec.mouth, {spread:.10}), lit:.35 },
     sclera: { r: ramp('#f6f2e2', {spread:.07}),  lit:.3 },
     pupil:  { r: ramp('#181410', {spread:.05}),  lit:0 },

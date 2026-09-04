@@ -30,7 +30,8 @@ Nothing here is started. Ordered roughly by value.
 - More species. Stegosaurus and a small feathered theropod would both exercise
   parts of the sprite engine that nothing currently uses.
 - Breeding or trait inheritance between animals in the nest.
-- Habitat decoration as a second coin sink.
+- Habitat *decoration* — props you place yourself. The five habitats are a
+  coin sink now, but they are bought whole and cannot be arranged.
 - Per-game high scores and a weekly best.
 
 ## Engineering
@@ -67,3 +68,9 @@ Nothing here is started. Ordered roughly by value.
 - Araucaria and tree fern silhouettes are in the treeline now, but at
   twenty-odd pixels tall the difference between them and a conifer is two or
   three pixels of crown. They read as variety rather than as species.
+- The Brachiosaurus does not use the `bulk`, `torso`, `muzzle` or `fuzz`
+  columns, so its four stages are still one animal at four sizes. It was left
+  alone deliberately this pass; it is the obvious next thing.
+- Every habitat shares one ridge profile and one ground line. The palettes,
+  landmarks and dressing carry the difference, and at a glance they do, but
+  the skyline behind all five is the same three hills.

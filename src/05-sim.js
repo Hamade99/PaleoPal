@@ -76,7 +76,11 @@ function freshPet(){
   };
 }
 function freshGame(){
+  /* The habitat is on the keeper, not on the pet: it is the enclosure, and
+     every animal in the nest is standing in it. Coats and headgear are on the
+     animal because they are the animal's. */
   return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, dev:true, lastDay:'', streak:0,
+           biome:'valley', biomesOwned:['valley'],
            lastTick:Date.now(), lastSeen:Date.now() };
 }
 
@@ -388,6 +392,26 @@ function buySkin(id){
   logEvent('Unlocked the ' + k.name.toLowerCase() + ' coat.');
   refresh();
 }
+/* Habitats. Bought once and then chosen, the way a coat is — except that
+   there is always exactly one in use and it belongs to the whole nest, so
+   switching costs nothing and cannot be undone into a state with no habitat
+   at all. */
+function buyHabitat(id){
+  const b = BIOMES[id];
+  if (!b) return;
+  if (G.biomesOwned.includes(id)){
+    if (G.biome === id) return refuse('Already out there.');
+    G.biome = id; SFX.pop(); say('Moved everyone to the ' + b.name.toLowerCase() + '.');
+    logEvent('Moved to the ' + b.name.toLowerCase() + '.');
+    refresh(); save(); return;
+  }
+  if (G.coins < b.cost) return refuse('Not enough coins.');
+  G.coins -= b.cost; G.biomesOwned.push(id); G.biome = id;
+  SFX.coin(); say('A new place to live.');
+  logEvent('Opened up the ' + b.name.toLowerCase() + '.');
+  refresh(); save();
+}
+
 function doTrick(){
   if (bondPips() < 3) return refuse(S.name + ' does not know you well enough yet.');
   if (S.asleep) return refuse(S.name + ' is asleep.');
@@ -484,6 +508,8 @@ const DEV = {
   cureAll(){ S.ills = []; S.vet = false; S.health = Math.max(S.health, 60); DEV.done('All clear.'); },
 
   /* --- world --- */
+  setBiome(id){ if (!BIOMES[id]) return; if (!G.biomesOwned.includes(id)) G.biomesOwned.push(id);
+                G.biome = id; DEV.done('Now in the ' + BIOMES[id].name.toLowerCase() + '.'); },
   addMess(){ if (S.mess.length < 4) S.mess.push({ x: rnd(28, W-28) }); DEV.done('Mess dropped.'); },
   clearMess(){ S.mess = []; DEV.done('Pen cleaned.'); },
 
@@ -491,7 +517,8 @@ const DEV = {
   unlockAll(){
     S.skinsOwned = SKINS[S.sp].map(k => k.id);
     S.owned = HAT_SHOP.map(h => h.id);
-    DEV.done('Every coat and every hat unlocked.');
+    G.biomesOwned = BIOME_IDS.slice();
+    DEV.done('Every coat, hat and habitat unlocked.');
   },
 
   /* --- species ---

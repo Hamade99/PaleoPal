@@ -95,11 +95,13 @@ Otherwise:
 | Growth stage multipliers, gait, feet, hats, poses | `src/02-sprite-engine.js` |
 | Lighting, palettes, material list | `src/01-colour.js` |
 | Backdrop, weather, props, particles | `src/04-world.js` |
+| A habitat's palette, landmark, treeline or floor | its entry in `BIOMES`, `src/04-world.js` |
 | Needs, illness, bond, economy, the nest | `src/05-sim.js` |
 | Minigames, feeding animation, behaviour | `src/06-render.js` |
 | Case chrome, prose panels, input, save/load | `src/08-ui.js` |
 | A new screen | a key in `SCREENS` in `src/07-screens.js`, and a way to open it |
 | A new prose panel | a key in `SHEETS` in `src/08-ui.js`, nothing else |
+| A new shop shelf | a key in `SHELVES` and a case in `shelfItems()`, `src/07-screens.js` |
 | The screen font | `src/03-font.js` |
 | Colours, layout, buttons | `src/style.css` |
 | The crown ridge's plates | `--x/--w/--h` in `src/style.css`; the arc in `fitCrown()` |
@@ -107,6 +109,38 @@ Otherwise:
 | The case: shell, bezel, keys | `src/style.css`, `index.html` |
 | A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
 | Checking any of the art | `tools/sheet.html` |
+
+## Habitats
+
+Five places to keep an animal, bought on the shop's third shelf. A habitat is
+the enclosure and not the pet, so `G.biome` and `G.biomesOwned` live on the
+keeper next to the purse, while coats and headgear stay on the animal.
+
+Each entry in `BIOMES` supplies four things and inherits the rest:
+
+- **`sky`** — the two sky colours for each of the four phases. The sky is half
+  the screen and it is the one part that cannot be derived.
+- **`ground`** — the six ground materials at **day**. Dawn, dusk and night are
+  mixed from those by `PHASE_MIX`. Writing four phases by hand for five biomes
+  is a hundred and eighty hex values that all have to agree; the mix rule
+  reproduces the hand-tuned valley palette this game shipped with to within a
+  couple of values, which is the check that it is the same rule the eye was
+  already applying.
+- **`tint`** — the wash over the finished frame.
+- **three painters** — `landmark`, `treeline` and `floor` — called from inside
+  the shared bake, plus an optional **`live`** for anything that moves.
+
+`bakeBg(phase, biome)` owns the parts every habitat needs in the same place:
+the dithered sky, four depth planes, the grass edge and the dirt band. It
+caches per `biome|phase`. Two optional keys handle the exceptions: `nearRidge`
+replaces the near hill (the lagoon uses a low sand bar, because a coast has
+nothing between you and the water) and `landmarkFront` paints the landmark
+after the near ridge instead of before it (the gorge's cliff is the near side
+of the gorge).
+
+Anything in a habitat that moves has to be in `live`, because the backdrop is
+baked once per biome and phase and then cached — the volcano's smoke sat still
+for the whole life of this project for exactly that reason.
 
 ## The case
 

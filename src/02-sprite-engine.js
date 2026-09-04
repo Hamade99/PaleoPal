@@ -25,20 +25,48 @@ const BAKE_W = 168, BAKE_H = 112, BAKE_G = 100, BAKE_CX = 84;
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
 
+   A scale column and a set of ratios is not growth. With `s` doing most of the
+   work the juvenile, subadult and adult were one animal at three sizes with a
+   slightly smaller head each time, and the only stage that read as its own
+   thing was the hatchling. Growing up changes what an animal *has*, not only
+   how big the parts are, so four of these columns turn features on and off
+   rather than scaling them:
+
+   `muzzle` is snout DEPTH, and it is separate from `snout`, which is snout
+   length. A young tyrannosaur has a shallow, narrow muzzle in front of a large
+   braincase; the deep boxy skull is an adult feature and arrives late. Driving
+   both off one number gives a hatchling either an adult's slab of a face or a
+   pinched adult.
+
+   `bulk` is how deep the trunk and neck are for a given length. Juveniles are
+   slab-sided and leggy, adults are barrel-chested with a thick neck. It is the
+   difference you actually see across a room.
+
+   `torso` is trunk LENGTH. Young animals are short-bodied and big-headed; the
+   body catches up last.
+
+   `fuzz` is protofeather coverage. Juvenile tyrannosaurs are reconstructed
+   with a substantial coat that reduces with age, which is both well supported
+   and the single most visible thing that can change between two stages of the
+   same animal.
+
    `frill` is separate from `horn` for the reason `snout` is separate from
    `head`: a baby Triceratops already has a frill, deeply scalloped and
-   obvious, while its horns are barely stubs. Driving the frill off the horn
-   column left hatchlings with almost no frill under an enormous skull.
+   obvious, while its horns are barely stubs.
 
    `hornBend` is the ontogenetic sequence Horner and Goodwin read off a series
    of ten skulls: the postorbital horns start as straight stubs, curve
    backward in juveniles, straighten out in subadults, then recurve forward in
    adults. Negative is backward, positive forward. */
 const STAGE = [
-  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, neck:.44, limb:.68, tail:.54, horn:.14, frill:.50, hornBend: 0.00 },
-  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, neck:.68, limb:.83, tail:.76, horn:.48, frill:.70, hornBend:-1.00 },
-  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, neck:.87, limb:.93, tail:.90, horn:.80, frill:.86, hornBend:-0.15 },
-  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, neck:1.00, limb:1.00, tail:1.00, horn:1.00, frill:1.00, hornBend: 1.00 }
+  { key:'hatchling', label:'Hatchling', s:.44, head:1.62, snout:.58, muzzle:.62, neck:.44, limb:.68, tail:.54,
+    bulk:1.34, torso:.70, fuzz:1.00, horn:.14, frill:.50, hornBend: 0.00 },
+  { key:'juvenile',  label:'Juvenile',  s:.64, head:1.38, snout:.76, muzzle:.74, neck:.68, limb:.83, tail:.76,
+    bulk:1.12, torso:.84, fuzz:.68,  horn:.48, frill:.70, hornBend:-1.00 },
+  { key:'subadult',  label:'Subadult',  s:.83, head:1.18, snout:.90, muzzle:.89, neck:.87, limb:.93, tail:.90,
+    bulk:1.04, torso:.94, fuzz:.30,  horn:.80, frill:.86, hornBend:-0.15 },
+  { key:'adult',     label:'Adult',     s:1.0, head:1.06, snout:1.00, muzzle:1.00, neck:1.00, limb:1.00, tail:1.00,
+    bulk:1.00, torso:1.00, fuzz:.06,  horn:1.00, frill:1.00, hornBend: 1.00 }
 ];
 
 /* --------------------------- gait and limbs -------------------------------
@@ -114,6 +142,16 @@ function drawFoot(g, hornG, ank, tx, ty, w, kind){
   }
   tube(g, [[ank[0],ank[1]],[tx,ty]], [w*.46, w*.4]);
   oval(g, tx - w*.1, ty - w*.15, w*.56, w*.28);
+}
+/* How long a polyline is, in local units. Anything spaced along a path has to
+   be spaced by distance and not by count: a fixed number of filaments spread
+   over a hatchling's short back overlap into one solid band, and the same
+   number over an adult's is a row of separated spikes. The coat painter
+   learned this in session 8; the fuzz needed telling too. */
+function pathLength(pts){
+  let d = 0;
+  for (let i=0;i<pts.length-1;i++) d += Math.hypot(pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]);
+  return d;
 }
 function samplePath(pts, t){
   let total = 0; const seg = [];

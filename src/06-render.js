@@ -115,7 +115,9 @@ function drawScene(now){
     }
   }
   drawSkyBody(ctx, phase, now);
-  drawPlume(ctx, phase, now);
+  // whatever this habitat has that moves: a plume, surf, a fall, an aurora
+  const live = (BIOMES[biomeId()] || BIOMES.valley).live;
+  if (live) live(ctx, phase, now);
   drawClouds(ctx, phase, dt);
   drawFlyers(ctx, dt, now);
   drawWater(ctx, phase, now);
@@ -127,7 +129,7 @@ function drawScene(now){
   if (mode === 'game'){ drawGame(now, phase); return; }
   drawLive(now, dt);
   drawFronds(ctx, phase, now);
-  const tint = SKY_SPECS[phase].tint;
+  const tint = skyOf(phase).tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
 }
 
@@ -651,7 +653,7 @@ function leapJump(){
 /* The track, overdrawn so the habitat props do not sit still behind a running
    animal. Three scroll rates: scrub, ground, fringe. */
 function drawLeapGround(){
-  const S_ = SKY_SPECS[skyPhase(new Date())];
+  const S_ = skyOf(skyPhase(new Date()));
   const grass = S_.grass, grassLit = mixHex(S_.grass, S_.low, .40);
   const grassDark = mixHex(S_.grass, '#000000', .34);
   const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.26), d2 = mixHex(S_.dirt, S_.low,.22);
@@ -702,7 +704,7 @@ function drawLeapGround(){
    the screen now, every blade a different height, scrolling fastest of the
    three layers — which is the layer that actually sells the speed. */
 function drawLeapTufts(){
-  const S_ = SKY_SPECS[skyPhase(new Date())];
+  const S_ = skyOf(skyPhase(new Date()));
   const near = mixHex(S_.grass, '#000000', .52);
   const nearLit = mixHex(S_.grass, '#000000', .34);
   for (let x=0;x<W;x++){
@@ -737,7 +739,7 @@ function drawObstacle(g, o){
        each side, the earth under the lip is exposed and darker, the water
        sits down inside it, and the far wall is in shadow. Depth is what makes
        a hazard read as something to jump rather than something to step in. */
-    const S_ = SKY_SPECS[skyPhase(new Date())];
+    const S_ = skyOf(skyPhase(new Date()));
     const soil = mixHex(S_.dirt, '#000000', .52);            // the cut bank
     const deep = mixHex(S_.water, '#000000', .34);
     const body = S_.water;

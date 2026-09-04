@@ -745,6 +745,166 @@ species.
 
 ---
 
+## Session 11 — Clouds, five habitats, growing up
+
+**Owner's feedback.** The clouds are all the same shape at different sizes and
+want real reference. There should be four or five backgrounds in the same
+style, bought in the shop. The Triceratops is much better but the snout and
+mouth are odd, the white tips on the front look wrong, and the lower jaw is so
+much shorter than the snout that it reads as a shark. The T. rex's juvenile,
+subadult and adult are the same animal scaled up — only the hatchling is
+distinct — and the same goes for the Triceratops, whose hatchling is also too
+skinny. The Brachiosaurus is fine at every stage; leave it. The river leap fix
+was good.
+
+### Clouds
+
+Three stacked rectangles is a wedding cake, and all four clouds were the same
+wedding cake at four sizes. Fair-weather cumulus has three properties and none
+of them is a rectangle:
+
+1. **A flat base.** The condensation level is an altitude, so every cloud in a
+   field has its bottom on the same line and that line is straight and sharp.
+   It is the most recognisable thing about a cumulus and the thing a stack of
+   centred rectangles destroys.
+2. **A cauliflower top** of overlapping lobes at different radii, with one
+   dominant tower that is never in the middle.
+3. **Strong side lighting.** Sunward lobes near-white, undersides grey, and the
+   base the darkest part — and at dawn and dusk the warmest, because a sun near
+   the horizon lights it from underneath.
+
+So a cumulus is drawn column by column against the union of its lobes, the way
+the ridges and the volcano are, and the lobes come off the cloud's seed rather
+than being stored. Cirrus is a different cloud — ice sheared into fibrous
+streaks with no body and no base — and having one kind of each is most of what
+stops the sky reading as four copies of one thing.
+
+Two corrections on the way. The lobes were seated at 0.58 of a radius above the
+base, which put the tallest cloud thirty pixels off its bottom and ran it off
+the top of the sky, where it was clipped square. And the underside was first
+mixed toward the ground colour, which gave every cloud a field reflected in it,
+then toward the sky's top, which turned the bases purple at dawn: keeping the
+horizon's own hue and only taking light out of it is what leaves a grey base by
+day and a warm one at dawn and dusk.
+
+### Five habitats
+
+`G.biome` and `G.biomesOwned` sit on the keeper next to the purse, because a
+habitat is the enclosure and not the pet. Fern valley is free and is what the
+game already had; Salt lagoon, Ash flats, Fern gorge and Polar dawn cost 130 to
+260.
+
+The structure is a shared bake with three holes in it. Sky, four depth planes,
+the grass edge and the dirt band are the same everywhere — every habitat needs
+a horizon and a ground line, and one copy of them is what stops five backdrops
+drifting apart by two pixels each. A biome supplies its sky colours, its **day**
+ground palette, a tint, and three painters: `landmark`, `treeline`, `floor`,
+plus an optional `live`.
+
+Dawn, dusk and night are mixed from the day palette by one rule per phase. The
+check on that rule is that it reproduces the hand-tuned valley palette this game
+shipped with to within a couple of values on every entry — it is the rule the
+eye was already applying, written down. The alternative was a hundred and
+eighty hex values that all had to agree with each other, and they would not.
+
+Two exceptions needed keys of their own, both of them the near ridge:
+
+- `nearRidge` replaces the near hill. The lagoon uses a low sand bar, because
+  the point of a coast is that there is nothing between you and the water — at
+  base 100 the hill buried the sea and every stack standing in it.
+- `landmarkFront` paints the landmark after the near ridge rather than before.
+  The gorge's cliff is the near side of the gorge; painted behind the hill the
+  fall vanished half way down and its spray was drawn over the treeline in
+  front of the wall.
+
+Anything that moves is in `live`, because the backdrop is cached per biome and
+phase: surf running up the lagoon's sand and back down it, ash falling on the
+flats under a doubled plume, the fall and its spray in the gorge, and an aurora
+over the polar habitat at night and dusk.
+
+**The barcode, three times.** The glacier came out as a striped circus tent, the
+cliff as courses of masonry with pilasters on it, and the volcano's gullies as
+corduroy. All three placed a feature by thresholding a sine, and a sine over a
+threshold is periodic — the eye reads periodic as manufactured. There is a
+`hash1()` in the world module now and a house rule pointing at it. The second
+half of that lesson cost another pass: sampled per column, a hash is not
+irregularity, it is hatching. A feature has to be a block a few pixels wide, so
+the input is quantised.
+
+The shop needed a third shelf and would not take one — two stacked grids
+already ran the caption into the action bar. It has tabs now, one shelf at a
+time, which is also how a shop with a counter works. A habitat is shown as the
+view itself, for the same reason a coat is shown as the animal wearing it: the
+thing being sold is what you will be looking at. The price tags got a strip to
+sit on, because a habitat thumbnail is the whole frame scaled down and the
+price was being written across the sky.
+
+### The Triceratops' face
+
+Three faults and all of them at the front of the head.
+
+- **The underbite.** The mandible was built as a fixed fraction of the snout
+  measured from the jaw joint, which left its tip twenty units short of the
+  upper beak at every scale. A ceratopsian's two beaks meet, so the mandible is
+  built against the upper beak's own tip now — `beakL` is where that tip falls
+  in hinge-local coordinates, so the jaw closes on it however the skull is
+  scaled and at every growth stage.
+- **The white tips.** The rostral and the predentary were drawn on `horn`,
+  which is the near-white keratin the brow horns are made of, so the front of
+  the face was two blobs of bone with no edge between them and the horns above.
+  A beak is duller and darker than a horn sheath and it is a different
+  material, so it has a layer: `beak`, which a species that does not ask for it
+  inherits from `horn` unchanged. The rostral is also the tip of the beak now
+  rather than a third of the muzzle.
+- **The tusk.** The jugal horn ran down past the mandible's ventral line, which
+  stops being a cheek boss and becomes a pale fang hanging under the jaw. It
+  stays on the cheek.
+
+The mandible is also deep at the back where the coronoid process is and tapers
+to the beak. Carried at one depth it was a slab, and the face came out as three
+stacked bands: skull, jaw, beak.
+
+### Growing up
+
+The complaint was exact: only the hatchling read as its own animal. `s` scaled
+everything and the ratios that varied — head, snout, neck, limb, tail — were
+too gentle to change a silhouette. Growing up changes what an animal *has*.
+
+Four new columns in `STAGE`, used by the rex and the Triceratops:
+
+- **`muzzle`**, snout depth, separate from `snout`, which is length. A young
+  tyrannosaur has a shallow muzzle in front of a large braincase and the deep
+  boxy skull arrives late; the skull now carries two depths and tapers between
+  them.
+- **`bulk`**, how deep the trunk and neck are for a given length.
+- **`torso`**, trunk length. This is what fixed the skinny Triceratops
+  hatchling: built on adult proportions it was a scale model of an adult, which
+  reads as underfed rather than as young.
+- **`fuzz`**, protofeather coverage on the rex. Juvenile tyrannosaurs are
+  reconstructed with a substantial coat that thins with age, and it is the
+  single most visible thing that can differ between two stages of one animal.
+
+The rex's brow boss now rides `STAGE.horn`, which it was not using, so the
+lacrimal ridge grows in over the four stages and a postorbital boss appears at
+subadult. The keratin row is sparse and low when young and a full row on an
+adult.
+
+`fuzz` had to be spaced by distance along the topline rather than by count —
+the lesson the coat painter learned in session 8, relearned here. Thirty-seven
+filaments over a hatchling's short back overlap into one solid band, which is a
+thicker animal, not a coat.
+
+The Brachiosaurus reads none of the four columns. It was the one the owner was
+happy with, and a column only exists where a species asks for it.
+
+**Not done.** The Brachiosaurus therefore still has four stages of one animal,
+which is now the obvious next thing. All five habitats share one ridge profile
+and one ground line — the palettes, landmarks and dressing carry the
+difference, and at a glance they do, but the skyline behind all five is the
+same three hills. And the species files still share nothing.
+
+---
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

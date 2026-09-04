@@ -145,7 +145,14 @@ function gridCell(g, box, opts){
   const [x, y, w, h] = box;
   panel(g, x, y, w, h, opts.on ? SC.sel : SC.panel);
   if (opts.art) opts.art(g, x + w/2, y + h/2 - 2);
-  if (opts.tag) text(g, opts.tag, x + w/2, y + h - 9, opts.tagCol || SC.dim, 'centre');
+  /* The tag sits over the art, so it gets a strip to sit on. A coat thumbnail
+     leaves the bottom of its cell empty and never noticed; a habitat is the
+     whole view scaled down, and the price was written across the sky. */
+  if (opts.tag){
+    g.fillStyle = SC.ink;
+    g.fillRect(x + 1, y + h - 10, w - 2, 9);
+    text(g, opts.tag, x + w/2, y + h - 9, opts.tagCol || SC.dim, 'centre');
+  }
   if (opts.on){
     g.fillStyle = SC.moss;
     g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
@@ -376,75 +383,120 @@ SCREENS.care = {
 };
 
 /* -------------------------------- shop ------------------------------------
-   Two shelves under one heading, because coats and headgear are bought the
-   same way and splitting them across two screens would only add a step. A coat
-   is shown as the animal wearing it, not as a swatch: the thing being sold is
-   what your animal will look like.
+   Three shelves — coats, headgear, habitats — one at a time behind a row of
+   tabs.
+
+   Two shelves stacked used most of the screen and left the caption running
+   into the action bar; a third would not have fitted at all. One shelf at a
+   time is also how a shop with a counter works: you look at the coats, or you
+   look at the hats. The tabs are the only navigation in this game that is not
+   a physical key, and they are here because the alternative is four keys for
+   one screen.
+
+   A habitat is shown as the view itself rather than as a swatch or a name,
+   for the same reason a coat is shown as the animal wearing it: the thing
+   being sold is what you will be looking at.
    -------------------------------------------------------------------------- */
+const SHELVES = ['coat', 'hat', 'land'];
+const SHELF_NAME = { coat:'COATS', hat:'HEADGEAR', land:'HABITAT' };
+
+function shelfTabs(g, active){
+  const w = Math.floor((W - PAD*2 - 4) / SHELVES.length), y = BAR_H + 2, h = 11;
+  const boxes = [];
+  SHELVES.forEach((k, i) => {
+    const box = [PAD + i*(w+2), y, w, h];
+    boxes.push(box);
+    const on = k === active;
+    panel(g, box[0], box[1], box[2], box[3], on ? SC.sel : SC.ink);
+    text(g, SHELF_NAME[k], box[0] + box[2]/2, y + 2, on ? SC.bone : SC.dim, 'centre');
+    if (on){
+      g.fillStyle = SC.moss;
+      g.fillRect(box[0], y, box[2], 1); g.fillRect(box[0], y+h-1, box[2], 1);
+      g.fillRect(box[0], y, 1, h); g.fillRect(box[0]+box[2]-1, y, 1, h);
+    }
+  });
+  return boxes;
+}
+
+/* One row per shelf: what is on it, how wide the row is, and the three
+   questions the caption and the action bar both need answered. Keeping them
+   in one place is what stops the label saying "owned" over a button that
+   says "buy it". */
+function shelfItems(which){
+  if (which === 'coat'){
+    const items = SKINS[S.sp];
+    return { items, cols:4, cell:[24,17],
+      art: (g, it, cx, cy) => thumb(g, frameOf(S.sp, stageIdx(), 'idle', 0, false, it.id).cv, cx, cy, 24, 17),
+      own: it => S.skinsOwned.includes(it.id), worn: it => S.skin === it.id,
+      note: it => it.note, take:false, here:'worn' };
+  }
+  if (which === 'hat'){
+    return { items: HAT_SHOP, cols:6, cell:[14,13],
+      art: (g, it, cx, cy) => thumb(g, HATS[it.id], cx, cy, 14, 13),
+      own: it => S.owned.includes(it.id), worn: it => S[it.slot] === it.id,
+      note: it => it.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.',
+      take:true, here:'worn' };
+  }
+  return { items: BIOME_IDS.map(id => BIOMES[id]), cols:5, cell:[26,20],
+    art: (g, it, cx, cy) => thumb(g, biomeThumb(it.id), cx, cy, 26, 20),
+    own: it => G.biomesOwned.includes(it.id), worn: it => G.biome === it.id,
+    note: it => it.note, take:false, here:'here' };
+}
+
+SCREENS.shop = {
+  layout(){
+    if (!SHELVES.includes(screenState.shelf)) screenState.shelf = 'coat';
+    const sh = shelfItems(screenState.shelf);
+    if (typeof screenState.pick !== 'number' || screenState.pick >= sh.items.length) screenState.pick = 0;
+    return { sh, grid: gridLayout(sh.items, BAR_H + 16, sh.cols) };
+  },
+  draw(g, L){
+    const frame = screenFrame(g, 'SHOP');
+    L.close = frame.close;
+    L.tabs = shelfTabs(g, screenState.shelf);
+    const sh = L.sh;
+    sh.items.forEach((it, i) => {
+      const own = sh.own(it), worn = sh.worn(it);
+      gridCell(g, L.grid.box(i), {
+        on: i === screenState.pick,
+        art: (gg, cx, cy) => sh.art(gg, it, cx, cy),
+        tag: worn ? sh.here : own ? 'own' : it.cost + 'c',
+        tagCol: worn ? SC.moss : own ? SC.dim : SC.gold
+      });
+    });
+    const item = sh.items[screenState.pick];
+    const own = sh.own(item), worn = sh.worn(item);
+    caption(g, L.grid.bottom + 4, item.name, own ? (worn ? 'in use' : 'owned') : item.cost + 'c',
+            own ? SC.moss : (G.coins >= item.cost ? SC.gold : SC.rust), sh.note(item));
+    /* An animal is always wearing a coat and always standing somewhere, so a
+       coat and a habitat in use have nothing to toggle off; headgear does. */
+    L.act = actionBar(g,
+      own ? (worn ? (sh.take ? 'TAKE IT OFF' : 'IN USE') : (screenState.shelf === 'land' ? 'MOVE HERE' : 'WEAR IT'))
+          : 'BUY IT',
+      SC.moss, (!own && G.coins < item.cost) || (worn && !sh.take));
+  },
+  tap(mx, my, L){
+    if (hit(L.close, mx, my)) return closeScreen();
+    for (let i = 0; i < L.tabs.length; i++)
+      if (hit(L.tabs[i], mx, my)){
+        if (screenState.shelf !== SHELVES[i]){ screenState.shelf = SHELVES[i]; screenState.pick = 0; SFX.pop(); }
+        return;
+      }
+    for (let i = 0; i < L.sh.items.length; i++)
+      if (hit(L.grid.box(i), mx, my)){ screenState.pick = i; SFX.pop(); return; }
+    if (!hit(L.act, mx, my)) return;
+    const item = L.sh.items[screenState.pick];
+    if (screenState.shelf === 'coat') buySkin(item.id);
+    else if (screenState.shelf === 'hat') buyHat(item.id);
+    else buyHabitat(item.id);
+  }
+};
+
 function thumb(g, cv, cx, cy, maxW, maxH){
   const sc = Math.min(maxW / cv.width, maxH / cv.height, 1);
   const w = Math.max(1, Math.round(cv.width * sc)), h = Math.max(1, Math.round(cv.height * sc));
   g.drawImage(cv, Math.round(cx - w/2), Math.round(cy - h/2), w, h);
 }
-
-SCREENS.shop = {
-  layout(){
-    const coats = SKINS[S.sp];
-    const cg = gridLayout(coats, BAR_H + 11, 4);
-    const hg = gridLayout(HAT_SHOP, cg.bottom + 15, 6);
-    return { coats, coatGrid: cg, hatGrid: hg };
-  },
-  draw(g, L){
-    const frame = screenFrame(g, 'SHOP');
-    L.close = frame.close;
-    // the shop keys its selection by shelf, not by index
-    if (typeof screenState.pick !== 'string') screenState.pick = 'coat:0';
-    text(g, 'COATS', PAD, BAR_H + 2, SC.dim);
-    L.coats.forEach((k, i) => {
-      const own = S.skinsOwned.includes(k.id), worn = S.skin === k.id;
-      gridCell(g, L.coatGrid.box(i), {
-        on: screenState.pick === 'coat:' + i,
-        art: (gg, cx, cy) => thumb(gg, frameOf(S.sp, stageIdx(), 'idle', 0, false, k.id).cv, cx, cy, 24, 17),
-        tag: worn ? 'worn' : own ? 'own' : k.cost + 'c',
-        tagCol: worn ? SC.moss : own ? SC.dim : SC.gold
-      });
-    });
-    text(g, 'HEADGEAR', PAD, L.coatGrid.bottom + 4, SC.dim);
-    HAT_SHOP.forEach((item, i) => {
-      const own = S.owned.includes(item.id), worn = S[item.slot] === item.id;
-      gridCell(g, L.hatGrid.box(i), {
-        on: screenState.pick === 'hat:' + i,
-        art: (gg, cx, cy) => thumb(gg, HATS[item.id], cx, cy, 14, 13),
-        tag: worn ? 'worn' : own ? 'own' : item.cost + 'c',
-        tagCol: worn ? SC.moss : own ? SC.dim : SC.gold
-      });
-    });
-    const sel = screenState.pick || 'coat:0';
-    const isCoat = sel.slice(0, 5) === 'coat:', n = +sel.split(':')[1];
-    const item = isCoat ? L.coats[n] : HAT_SHOP[n];
-    const own = isCoat ? S.skinsOwned.includes(item.id) : S.owned.includes(item.id);
-    const worn = isCoat ? S.skin === item.id : S[item.slot] === item.id;
-    caption(g, L.hatGrid.bottom + 4, item.name, own ? (worn ? 'worn' : 'owned') : item.cost + 'c',
-            own ? SC.moss : (G.coins >= item.cost ? SC.gold : SC.rust),
-            isCoat ? item.note : (item.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.'));
-    /* An animal is always wearing a coat, so a worn coat has nothing to
-       toggle off; headgear does. */
-    L.act = actionBar(g,
-      own ? (worn ? (isCoat ? 'ALREADY WORN' : 'TAKE IT OFF') : 'WEAR IT') : 'BUY IT',
-      SC.moss, (!own && G.coins < item.cost) || (worn && isCoat));
-  },
-  tap(mx, my, L){
-    if (hit(L.close, mx, my)) return closeScreen();
-    for (let i = 0; i < L.coats.length; i++)
-      if (hit(L.coatGrid.box(i), mx, my)){ screenState.pick = 'coat:' + i; SFX.pop(); return; }
-    for (let i = 0; i < HAT_SHOP.length; i++)
-      if (hit(L.hatGrid.box(i), mx, my)){ screenState.pick = 'hat:' + i; SFX.pop(); return; }
-    if (hit(L.act, mx, my)){
-      const sel = screenState.pick || 'coat:0', n = +sel.split(':')[1];
-      if (sel.slice(0, 5) === 'coat:') buySkin(L.coats[n].id); else buyHat(HAT_SHOP[n].id);
-    }
-  }
-};
 
 /* -------------------------------- nest ------------------------------------ */
 SCREENS.nest = {
