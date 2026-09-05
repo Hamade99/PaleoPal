@@ -13,16 +13,23 @@ which is the fastest way to check a change to the art.
 
 ## Edit the art
 
-```
-python -m http.server
-```
+Double-click `tools/edit.cmd`, or run `python tools/edit.py`. It opens the
+editor and writes `src/00-art.js` when you press Save — no dialog, no
+downloads folder, and the same in every browser, Firefox included. Close the
+window when you are done.
 
-then open `http://localhost:8000/tools/editor.html`. Pixel sprites, growth
-columns, species proportions, coats and habitat palettes, all with live
-previews, saved back to `src/00-art.js`. It needs a server rather than
-`file://` for two reasons: it reads that file to save it, and the browser will
-only hand out a writable file handle on a secure origin — localhost counts,
-`file://` does not.
+    python tools/edit.py -b firefox    # open a particular browser
+    python tools/edit.py -n            # serve only; open the URL yourself
+
+Pixel sprites, growth columns, species proportions, coats and habitat palettes,
+all with live previews.
+
+You can also just open `tools/editor.html` from disk with no launcher. Editing
+and the previews work exactly the same; only saving is worse, because a browser
+that is not talking to the launcher has to fall back on what it can do by
+itself. Chrome and Edge ask once for the file and then write it in place.
+Firefox has no writable-file API at all, so there Save downloads `00-art.js`
+for you to move into `src/`. That is the whole reason the launcher exists.
 
 ## Build the shippable file
 

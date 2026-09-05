@@ -111,7 +111,7 @@ Otherwise:
 | The case: shell, bezel, keys | `src/style.css`, `index.html` |
 | A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
 | Checking any of the art | `tools/sheet.html` |
-| Changing any of the art | `tools/editor.html`, served over http |
+| Changing any of the art | `tools/edit.cmd`, or `python tools/edit.py` |
 | A new editable sprite | an entry in `PIX`, and a marker if it is a new block |
 
 ## Habitats
@@ -156,7 +156,11 @@ Everything that can be changed without changing behaviour lives in one file,
   mess, the heart. All of it used to be hand-written `fillRect` calls in three
   modules. The outline each icon and hat wears is *not* stored — it is a pass
   over the finished grid in `pixCanvas`, so an edit cannot leave a sprite with a
-  half-drawn border.
+  half-drawn border. That pass dilates *outward*, so the canvas it returns is
+  `PIX_PAD` larger than the sprite on every side; without the margin any pixel
+  touching the edge of its box lost its outline there, which eleven sprites
+  did. The pad is published as `canvas.pad`, because headgear hangs itself by
+  the canvas's bottom edge and has to take it back off.
 - **`STAGE`** — the growth columns, shared by every species.
 - **`SPECIES_STAGE`** — one row per stage per species, for where a species at
   a given age departs from both the shared growth curve and its own adult
@@ -181,6 +185,14 @@ data; that is checked, not assumed.
 Every draw function starts by resolving through **`artFor(species, stage)`**,
 which merges those three layers — the shared growth row, the species' own
 proportions, and its per-stage overrides — and caches the result.
+
+A sprite's stored size is its own business. Icons are fitted to their slot by
+CSS — a fixed square box and `object-fit:contain` — so one can be redrawn at any
+size and any aspect and still land centred in the same box as its neighbours.
+Both earlier versions of that rule picked an axis and got the other one wrong:
+a square box squashes a tall sprite, and a height-driven one lets a wide sprite
+grow out of the button. The only thing size still costs is sharpness, because a
+sprite whose padded height does not divide the slot scales by a fraction.
 
 Anything that changes art has to call **`artChanged()`** afterwards. Five
 independent caches hold baked results — frames, materials, pixels, backdrops,

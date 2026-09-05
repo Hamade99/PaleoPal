@@ -241,8 +241,8 @@ body{
   padding:calc(var(--px)*1.25) calc(var(--px)*1.5) calc(var(--px)*1.5);
   display:flex;flex-direction:column;gap:calc(var(--px)*1)}
 .need .cap{display:flex;align-items:center;gap:calc(var(--px)*1);min-height:calc(var(--px)*3.5)}
-.need .cap canvas{image-rendering:pixelated;width:calc(var(--px)*3);height:calc(var(--px)*3);
-  flex:0 0 calc(var(--px)*3)}
+.need .cap canvas{image-rendering:pixelated;object-fit:contain;
+  width:calc(var(--px)*3.5);height:calc(var(--px)*3.5);flex:0 0 calc(var(--px)*3.5)}
 .need b{font-weight:500;font-size:calc(var(--px)*2.5);color:var(--dim);letter-spacing:.5px}
 /* ten hard cells behind a black grid, square corners */
 .track{position:relative;height:calc(var(--px)*2.5);background:#05090a;border:1px solid #000;
@@ -317,8 +317,21 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 /* A key that opened a screen stays pressed, the way a latching key does. */
 .act:active,.act.down{transform:translateY(calc(var(--px)*1.5));
   box-shadow:inset 0 3px 0 var(--key-lo)}
-.act .ico{display:flex;height:calc(var(--px)*6);align-items:center}
-.act .ico canvas{width:calc(var(--px)*6);height:calc(var(--px)*6);image-rendering:pixelated}
+/* A fixed square slot, and the sprite is fitted inside it whatever its shape.
+   Two earlier versions of this rule each handled one axis and ignored the
+   other: `width` and `height` both set squashed anything that was not square,
+   and driving the height alone let a wide sprite grow sideways out of the
+   button. `contain` scales by whichever axis runs out first and centres what
+   is left over, so an icon can be drawn any size or shape and lands in the
+   same box as the other four.
+
+   Seven rather than six because pixCanvas returns a canvas two pixels larger
+   than the art, and 14 into 28 is a clean doubling where 14 into 24 is not.
+   The button has the room: its min-height is 16 and its contents come to
+   about 14. */
+.act .ico{display:flex;width:calc(var(--px)*7);height:calc(var(--px)*7);
+  align-items:center;justify-content:center}
+.act .ico canvas{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
 .act[disabled]{opacity:.35;cursor:default;transform:none;filter:grayscale(.5);
   box-shadow:0 calc(var(--px)*1.5) 0 var(--key-edge)}
 .act .nub{position:absolute;top:calc(var(--px)*1);right:calc(var(--px)*1.5);
@@ -377,7 +390,8 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 .row[disabled]{opacity:.4;cursor:default;box-shadow:none;transform:none}
 .row .art{width:calc(var(--px)*7);height:calc(var(--px)*7);flex:0 0 calc(var(--px)*7);
   display:grid;place-items:center;overflow:hidden}
-.row .art canvas{image-rendering:pixelated}
+.row .art canvas{image-rendering:pixelated;object-fit:contain;
+  max-width:100%;max-height:100%}
 .row .t{flex:1;min-width:0}
 .row .t b{display:block;font-size:calc(var(--px)*3.5);font-weight:600}
 .row .t small{display:block;font-size:calc(var(--px)*3);color:var(--dim);margin-top:1px;

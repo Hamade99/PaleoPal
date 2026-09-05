@@ -169,17 +169,23 @@ function drawEgg(now){
 function drawGear(g, f, x, y, flip){
   const place = (id, anchor, scale) => {
     if (!id || !PIX['hat.' + id]) return;
-    const art = hatArt(id), w = art.width * scale, hgt = art.height * scale;
+    /* pixCanvas leaves a pixel of margin for the outline. Horizontally it
+       cancels, because the hat is centred and the margin is on both sides;
+       vertically the hat is hung by its bottom edge, so that pixel has to come
+       back off or every hat rides one scaled pixel high. */
+    const art = hatArt(id), pad = (art.pad || 0) * scale,
+          w = art.width * scale, hgt = art.height * scale;
     const ax = flip ? x + (f.ox - anchor[0]) : x - f.ox + anchor[0];
     const ay = y - f.oy + anchor[1];
     g.save(); g.translate(Math.round(ax), Math.round(ay));
     if (flip) g.scale(-1, 1);
-    g.drawImage(art, -w/2, -hgt, w, hgt);
+    g.drawImage(art, -w/2, -hgt + pad, w, hgt);
     g.restore();
   };
   place(S.hat, f.hat, Math.max(.6, f.hs * 1.55));
   if (S.face && PIX['hat.' + S.face]){
-    const art = hatArt(S.face), scale = Math.max(.5, f.eyeR * 3.6 / art.width);
+    const art = hatArt(S.face), pad = art.pad || 0,
+          scale = Math.max(.5, f.eyeR * 3.6 / (art.width - pad*2));
     const w = art.width * scale, hgt = art.height * scale;
     const ax = flip ? x + (f.ox - f.eye[0]) : x - f.ox + f.eye[0];
     const ay = y - f.oy + f.eye[1];

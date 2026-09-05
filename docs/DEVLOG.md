@@ -1007,6 +1007,8 @@ the wrong thing about your own edit.
 It runs from a local server rather than `file://`, for two reasons that are the
 same reason: it reads `00-art.js` in order to save it, and the browser will only
 hand out a writable file handle on a secure origin. `python -m http.server`.
+(Half of that turned out to be wrong, and the whole requirement went away in
+session 13 — see below.)
 
 Two faults found by driving it headlessly. `const $` at the top of the editor's
 script collided with `00-core.js`'s, which is a redeclaration that kills the
@@ -1100,6 +1102,161 @@ again on reload.
 point on the outline. That needs the species outlines themselves extracted to
 data, which is the same job again one level deeper, and is worth doing once the
 `TUNE` sliders have shown which numbers people actually reach for.
+
+---
+
+## Session 13 — saving, and making it work in Firefox
+
+Reported as a bug: modify a sprite, click Save, get *NetworkError when
+attempting to fetch resource* in the corner. Nothing was broken. The editor had
+been opened by double-clicking it, and session 12's note above says it has to be
+served over http instead.
+
+That note was half wrong, and the wrong half was the whole requirement.
+
+Saving keeps everything outside the `<data:NAME>` markers, so it has to read the
+current text of `00-art.js` before it can write. It did that with `fetch`, and a
+`file://` page is not allowed to fetch a sibling file — hence the error, which
+is Firefox's wording for any failed fetch and says nothing useful about why.
+
+The second reason given, that a writable file handle needs a secure origin, is
+true and does not imply a server: `file://` **is** a secure context. Writing was
+never the problem. Only the read was.
+
+So the read now goes through the handle that already does the writing. One
+`showSaveFilePicker` call, asked for on the first Save, and `getFile()` on that
+same handle supplies the template. No fetch, no server, and one dialog instead
+of a server plus a dialog.
+
+Three things fell out of it:
+
+- **A save re-reads the file rather than trusting the copy taken at load.** Edit
+  the prose in `00-art.js` by hand with the editor still open and the edit
+  survives the next Save, where before it was silently overwritten with text
+  read minutes earlier.
+- **The handle is kept in IndexedDB,** which structured clone can store, so
+  after a reload the second save is a one-click permission prompt rather than
+  another trip through the file dialog. All of it is wrapped: a browser that
+  refuses storage to a `file://` page just gets the dialog again.
+- **The template is no longer warmed at load on `file://`.** It was a `fetch` at
+  startup; making that path ask for a file would have put a dialog in your face
+  before the editor had been looked at. On `file://` it waits for Save.
+
+**Firefox was the one that lost.** It has no writable-file API at all, so no
+amount of serving fixes it: Save could only ever read through an `<input>` and
+hand back a download to be moved into `src/`. The server never bought Firefox
+anything.
+
+So the writing left the browser. `tools/edit.py` serves the folder on a free
+port, opens the editor, and answers `POST /save` by writing `src/00-art.js`
+itself — which is a server again, but one you double-click and close, that
+never appears in a URL bar and never asks you anything. Firefox saves with no
+dialog at all now, and so does everything else; `tools/edit.cmd` is the
+double-clickable front of it.
+
+Two details worth keeping.
+
+The endpoint refuses a body that does not carry the `<data:...>` markers. The
+one thing a tool that overwrites its own source file must never do is truncate
+it, and an empty or half-formed POST is exactly how that happens.
+
+It writes `encoding="utf-8", newline=""` explicitly, for the same reason
+`build.py` does: the default encoding on this machine is cp1252 and the default
+newline is CRLF, and either one silently rewrites all 29 KB.
+
+### The save that reverted a source change
+
+Caught within the hour, by the fix for it not being in the file any more.
+
+`loadTemplate` cached the text of `00-art.js` from page load and every save
+rewrote *that*. The editor had been open since before `pixCanvas` was changed,
+so pressing Save wrote back a copy of the file from before the change and undid
+it — silently, and with a cheerful "Saved" in the corner. Nothing about the art
+was wrong; the eight hundred lines around it were simply old.
+
+The writable-handle path never had this, because it reads through the handle at
+save time. The launcher path did, because a fetch looked cheap enough to do
+once. It is now done on every save, with `cache: 'no-store'`, since a
+200-from-cache is precisely the stale copy being guarded against.
+
+The general form: the marked blocks come from the editor, everything around
+them comes from the file **as it is at the moment of saving**. An editor that
+holds a whole source file in memory and writes it back later is not an editor,
+it is a very slow undo.
+
+Saving now has three paths, tried best first — the launcher, then a writable
+handle, then a download — and nothing has to detect which. A static server
+answers 501 to a POST and a `file://` page cannot POST at all, so a failure
+falls through on its own.
+
+Verified without a browser: the launcher serves the page and the file, a POST
+carrying a real edit lands byte-identical on disk with LF and its `·` and `—`
+intact, the saved file still parses, and both a junk body and a wrong path are
+refused with the file untouched.
+
+### The outline had nowhere to go
+
+Found while checking a redrawn `icon.play`. `pixCanvas` cut the canvas to the
+sprite's exact `w`x`h` and then dilated the outline **outward**, so any art
+pixel touching the edge lost its outline on that side, silently. Eleven of the
+twenty-nine sprites were affected — `icon.feed` on two sides, `heart` on three,
+and the new `icon.play`, which fills its box, on all four, leaving it with no
+outline anywhere.
+
+It had been invisible for twelve sessions because the icons that touched an
+edge mostly touched one, and a missing outline on one side reads as a slightly
+odd sprite rather than as a bug.
+
+The canvas is now a pixel larger on every side and the art is drawn at `+1,+1`.
+A sprite is art, not a box; it should not have to keep a spare row clear to be
+drawn correctly. The pad is published as `canvas.pad`, because headgear places
+itself from the canvas size: horizontally it cancels, since a hat is centred
+and the margin is on both sides, but a hat is hung by its bottom edge and would
+otherwise ride one scaled pixel high. The face mask takes its scale from the
+art's width and not the canvas's, or every mask would shrink.
+
+Checked by running the real `pixCanvas` against a stub 2D context and asking
+the only question that matters — is any solid pixel still touching
+transparency? Twenty-nine sprites, none.
+
+### The icon slot handled one axis at a time
+
+The same redraw turned up the other half, and it took two goes to get right.
+
+`.act .ico canvas` set `width` and `height` both to `--px * 6`. That costs
+nothing while every icon is 12x12 and squashes a 15x19 one to four fifths of
+its height the moment somebody draws a taller one. Driving the height alone
+fixes exactly that case and no other: a sprite drawn *wider* then grows
+sideways out of the button instead, and the grid columns stop being equal.
+
+Both versions were the same mistake, which is picking an axis. The slot is now
+a fixed square with `object-fit:contain`, so the sprite is scaled by whichever
+axis runs out first and centred in what is left. 24x12, 12x24, 20x20 and 30x8
+all land inside the same box, centred, with their proportions intact. An icon
+can be drawn any size and any shape.
+
+The shop rows had the literal version of the bug: `.row .art` is a fixed box
+with `overflow:hidden` and nobody had ever sized the canvas inside it, so
+`mountArt`'s 30px canvas was quietly clipped to 28. Same fix.
+
+Seven `--px` rather than six, because the canvas is two pixels bigger than the
+art now: 14 into 28 is a clean doubling and 14 into 24 is not, and `.act` has
+the room — its `min-height` is 16 and its contents come to about 14. The
+need-meter icons went from 3 to 3.5 and the coin from 13px to 14px for the same
+reason: below 1:1 a pixel sprite starts dropping rows.
+
+One thing the code cannot fix. A 19-row sprite in a slot sized for 12-row art
+lands on a scale of 1.333, so its pixels come out alternating one and two
+screen pixels wide. Crisp heights in that slot are 12 rows (2x) or 26 (1x). A
+play icon that wants to read as taller is better drawn *narrower* — 9x12 renders
+22x28 against the others' 28x28, which is taller in proportion and exact.
+
+Checked by round-tripping the real `src/00-art.js` through `rewrite()` outside a
+browser: all eleven blocks come back byte-for-byte equal as data, and a second
+save changes nothing further. The first save does reflow the marked regions and
+drops comments written *inside* them — four section headings in `PIX` — which is
+what "the text between the markers is replaced" has always meant, and is
+unchanged here.
 
 ---
 

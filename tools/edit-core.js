@@ -89,7 +89,7 @@ function rewrite(template){
   for (const name of BLOCKS){
     const open = '/*<data:' + name + '>*/', close = '/*</data>*/';
     const a = out.indexOf(open);
-    if (a < 0) throw new Error('no marker for ' + name + ' in ' + DATA_FILE);
+    if (a < 0) throw new Error('no <data:' + name + '> marker — is that file really src/00-art.js?');
     const b = out.indexOf(close, a);
     if (b < 0) throw new Error('unclosed marker for ' + name);
     out = out.slice(0, a + open.length) + '\n' + blockText(name) + '\n' + out.slice(b);
@@ -106,38 +106,157 @@ let templateText = null, fileHandle = null;
    shares with the game's modules. */
 window.EDIT = { LIVE, rewrite: t => rewrite(t), template: () => templateText };
 
+/* A save keeps everything outside the markers, so it needs the file's current
+   text before it can write a word. Fetching that text is the only thing here
+   that ever wanted a local server: `fetch` refuses a sibling file on a
+   `file://` page, and double-clicking the editor is the entire point of it.
+
+   Writing never wanted one. A `file://` page is already a secure context, so
+   the writable-handle API is there too — it was only the read that was
+   blocked. So one handle does both jobs now: asked for once, then read through
+   on every save rather than trusting text cached at load, which also means
+   prose edited by hand in 00-art.js between two saves survives. */
+
+const canWrite = () => typeof window.showSaveFilePicker === 'function';
+
+/* A file handle is one of the few things structured clone can put in
+   IndexedDB, so the browser hands the same one back after a reload and the
+   second save is a permission prompt rather than a trip through the dialog.
+   Best effort throughout: a browser that refuses storage to a `file://` page
+   just gets the dialog again, which is what it would have got anyway. */
+function idb(run){
+  return new Promise(resolve => {
+    let req;
+    try { req = indexedDB.open('paleopal-editor', 1); }
+    catch (e){ return resolve(null); }
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onerror = () => resolve(null);
+    req.onsuccess = () => {
+      try {
+        const tx = req.result.transaction('handles', 'readwrite');
+        const r = run(tx.objectStore('handles'));
+        tx.oncomplete = () => resolve(r ? r.result : null);
+        tx.onerror = () => resolve(null);
+      } catch (e){ resolve(null); }
+    };
+  });
+}
+
+/* Recalled at load and not on the click. A browser opens a file dialog only
+   while the click that asked for it is still fresh, and waiting on storage
+   first is a good way to spend that. */
+const recalled = idb(s => s.get('art'));
+
+async function allowed(h){
+  if (!h || !h.queryPermission) return !!h;
+  const opt = { mode: 'readwrite' };
+  return await h.queryPermission(opt) === 'granted'
+      || await h.requestPermission(opt) === 'granted';
+}
+
+/* Firefox has no writable handles at all. There the file comes in through an
+   <input>, which a `file://` page is allowed to use, and goes back out as a
+   download to be moved into src/ by hand. */
+function askForFile(){
+  return new Promise((resolve, reject) => {
+    const i = document.createElement('input');
+    i.type = 'file'; i.accept = '.js';
+    i.oncancel = () => reject(Object.assign(new Error('Save cancelled.'),
+                                            { name: 'AbortError' }));
+    i.onchange = () => i.files[0] ? resolve(i.files[0])
+                                  : reject(new Error('No file chosen.'));
+    i.click();
+  });
+}
+
+/* Re-read on every save, never cached from page load.
+
+   This is not caution, it is a bug that has already happened. The editor sits
+   open for hours while 00-art.js is also being edited in a text editor, and a
+   save that writes back the copy taken at load silently reverts everything
+   that happened in between — it reverted a change to `pixCanvas`, in this file's
+   own repository, within an hour of this path being written. The marked blocks
+   are meant to come from the editor; everything around them is meant to come
+   from the file as it is now.
+
+   `no-store` because the fetch is the read: a 200-from-cache is exactly the
+   stale copy this is here to avoid. Only the file:// path caches, because
+   there a re-read means another file dialog. */
 async function loadTemplate(){
-  if (templateText) return templateText;
-  const r = await fetch(DATA_FILE);
+  if (location.protocol === 'file:'){
+    if (!templateText) templateText = await (await askForFile()).text();
+    return templateText;
+  }
+  const r = await fetch(DATA_FILE, { cache: 'no-store' });
   if (!r.ok) throw new Error('could not read ' + DATA_FILE + ' (' + r.status + ')');
   templateText = await r.text();
   return templateText;
 }
 
-/* Save straight over src/00-art.js where the browser allows it. The first save
-   asks for the file once and then remembers it, so the loop is edit, save,
-   reload the game. Where it is not allowed, the same text downloads instead
-   and has to be moved into place by hand. */
+/* At load, warm the template only where that is free. Over http:// it is a
+   fetch; on a `file://` page it would be a file dialog in the face before the
+   editor has even been looked at, so there it waits for Save. */
+async function warmTemplate(){
+  if (location.protocol !== 'file:') await loadTemplate();
+}
+
+/* The launcher, tools/edit.py, answers POST /save by writing the file itself.
+   That is the only way Firefox can save at all — it has no writable-file API
+   and is not getting one — and it is the least ceremony anywhere else too: no
+   dialog, no permission prompt, nothing to move afterwards.
+
+   Nothing has to detect it. A plain static server answers 501 to a POST and a
+   file:// page cannot POST at all, so anything other than a clean 200 just
+   falls through to the browser's own machinery below. */
+async function saveToLauncher(text){
+  if (location.protocol === 'file:') return null;
+  let r;
+  try {
+    r = await fetch('/save', { method: 'POST', body: text,
+                               headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+  } catch (e){ return null; }
+  const said = (await r.text()).trim();
+  if (!r.ok) throw new Error(said || ('save endpoint said ' + r.status));
+  return said || 'Saved.';
+}
+
+/* Save straight over src/00-art.js. Three ways, best first: the launcher, then
+   a writable handle asked for once, then a download to move by hand. */
 async function saveData(){
-  const text = rewrite(await loadTemplate());
-  if (window.showSaveFilePicker){
+  if (location.protocol !== 'file:'){
+    const text = rewrite(await loadTemplate());
+    const done = await saveToLauncher(text);
+    if (done){ templateText = text; return done; }
+  }
+  if (canWrite()){
     try {
       if (!fileHandle){
+        const kept = await recalled;
+        if (kept && await allowed(kept)) fileHandle = kept;
+      }
+      if (!fileHandle){
         fileHandle = await window.showSaveFilePicker({
+          id: 'paleopalArt',            // reopens in the folder used last time
           suggestedName: '00-art.js',
           types: [{ description: 'JavaScript', accept: { 'text/javascript': ['.js'] } }]
         });
+        idb(s => s.put(fileHandle, 'art'));
       }
+      const text = rewrite(await (await fileHandle.getFile()).text());
       const w = await fileHandle.createWritable();
       await w.write(text); await w.close();
       templateText = text;                       // the markers moved with it
       return 'Saved to ' + fileHandle.name + '.';
     } catch (e){
-      if (e.name === 'AbortError') return 'Save cancelled.';
       fileHandle = null;
-      // fall through to the download
+      if (e.name === 'AbortError') return 'Save cancelled.';
+      if (/marker/.test(e.message)) throw e;     // wrong file picked; say so
+      // anything else: fall through to the download
     }
   }
+  let text;
+  try { text = rewrite(await loadTemplate()); }
+  catch (e){ if (e.name === 'AbortError') return 'Save cancelled.'; throw e; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
   a.download = '00-art.js';

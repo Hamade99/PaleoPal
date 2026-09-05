@@ -67,7 +67,7 @@ function buildChrome(){
     sl.appendChild(c);
   });
   const coin = pixelIcon('coin');
-  coin.style.cssText = 'width:13px;height:13px;image-rendering:pixelated';
+  coin.style.cssText = 'width:14px;height:14px;image-rendering:pixelated';
   $('coinArt').appendChild(coin);
   const nest = pixelIcon('nest');
   nest.style.cssText = 'width:20px;height:20px;image-rendering:pixelated';

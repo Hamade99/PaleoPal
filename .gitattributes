@@ -2,4 +2,5 @@
 # this keeps Windows checkouts from reintroducing CRLF and turning every
 # rebuild of dist/paleopal.html into a whole-file diff.
 * text=auto eol=lf
+*.cmd text eol=crlf
 *.png binary

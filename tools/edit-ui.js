@@ -430,5 +430,5 @@ PAINT.habitat = bioPaint;
 
 /* ---- go ------------------------------------------------------------------ */
 pixBuild();
-loadTemplate().then(() => note('Ready. Edits are live; Save writes src/00-art.js.'))
-  .catch(e => note(e.message + ' — serve the folder over http, not file://', true));
+warmTemplate().then(() => note('Ready. Edits are live; Save writes src/00-art.js.'))
+  .catch(e => note(e.message, true));
