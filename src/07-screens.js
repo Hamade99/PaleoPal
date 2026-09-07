@@ -435,7 +435,7 @@ function shelfItems(which){
     return { items: HAT_SHOP, cols:6, cell:[14,13],
       art: (g, it, cx, cy) => thumb(g, hatArt(it.id), cx, cy, 14, 13),
       own: it => S.owned.includes(it.id), worn: it => S[GEAR_FIELD[it.slot]] === it.id,
-      note: it => it.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.',
+      note: () => 'Sits on the head.',
       take:true, here:'worn' };
   }
   return { items: BIOME_IDS.map(id => BIOMES[id]), cols:5, cell:[26,20],

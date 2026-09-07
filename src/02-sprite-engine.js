@@ -198,11 +198,10 @@ Object.defineProperty(HATS, 'get', { value:null });          // keep it a plain 
 const HAT_IDS = Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
 /* A hat is hung by the bottom of its art, and the art is not the canvas. Every
    hat is drawn in a 12x11 grid with its brim wherever the artist put it, so the
-   crown has two blank rows under it and the goggles five, and the outline pass
+   crown has four blank rows under it and the cap three, and the outline pass
    adds one more all round. Hanging by the canvas edge floated every hat that
-   distance above the skull — three pixels on a cap, five on the goggles, scaled
-   up with the animal — which is what made a worn hat read as a hovering object
-   rather than as headgear. Measure the last row that has ink in it once, at
+   distance above the skull, scaled up with the animal, which is what made a
+   worn hat read as a hovering object rather than as headgear. Measure the last row that has ink in it once, at
    bake time, and hang from that. `pixInvalidate()` drops HATS, so an edit in
    the editor re-measures. */
 function hatArt(id){

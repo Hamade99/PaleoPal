@@ -203,27 +203,24 @@ function drawGear(g, f, x, y, flip){
      inside its 12x11 grid and none of them fill it. */
   const place = (id, anchor, width) => {
     if (!id || !PIX['hat.' + id]) return;
-    const art = hatArt(id), scale = Math.max(.6, width / art.inkW),
+    /* The species puts the anchor on the right part of the skull; `GEAR_FIT`
+       is where one particular hat on one particular animal says that is not
+       quite it. Its nudges are in sprite units, so they are multiplied by the
+       animal's own scale and a fit made on an adult holds on a hatchling, and
+       they are applied before the flip so they stay on the same end of the
+       head when the animal turns round. */
+    const fit = (GEAR_FIT[S.sp] || {})[id] || {};
+    const art = hatArt(id), scale = Math.max(.6, width * (fit.s || 1) / art.inkW),
           w = art.width * scale, hgt = art.height * scale;
-    const ax = flip ? x + (f.ox - anchor[0]) : x - f.ox + anchor[0];
-    const ay = y - f.oy + anchor[1];
+    const hx = anchor[0] + (fit.dx || 0) * f.k, hy = anchor[1] + (fit.dy || 0) * f.k;
+    const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
+    const ay = y - f.oy + hy;
     g.save(); g.translate(Math.round(ax), Math.round(ay));
     if (flip) g.scale(-1, 1);
     g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
     g.restore();
   };
   place(S.hat, f.hat, f.hatW);
-  if (S.face && PIX['hat.' + S.face]){
-    const art = hatArt(S.face), pad = art.pad || 0,
-          scale = Math.max(.5, f.eyeR * 3.6 / (art.width - pad*2));
-    const w = art.width * scale, hgt = art.height * scale;
-    const ax = flip ? x + (f.ox - f.eye[0]) : x - f.ox + f.eye[0];
-    const ay = y - f.oy + f.eye[1];
-    g.save(); g.translate(Math.round(ax), Math.round(ay));
-    if (flip) g.scale(-1, 1);
-    g.drawImage(art, -w*.42, -hgt*.55, w, hgt);
-    g.restore();
-  }
 }
 
 function drawLive(now, dt){

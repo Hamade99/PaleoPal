@@ -36,7 +36,6 @@ const ILLS = {
 };
 const HAT_SHOP = [
   { id:'frond',   name:'Fern sprig',   cost:20,  slot:'head' },
-  { id:'goggles', name:'Dig goggles',  cost:45,  slot:'face' },
   { id:'cap',     name:'Field cap',    cost:70,  slot:'head' },
   { id:'cone',    name:'Party cone',   cost:95,  slot:'head' },
   { id:'hardhat', name:'Site helmet',  cost:130, slot:'head' },
@@ -46,9 +45,9 @@ const HAT_SHOP = [
    different name, and the two are not the same word. Writing `S[slot]` put
    every head hat in `S.head`, which nothing draws, nothing saves and the save
    validator does not know about — so the five head hats could be bought and
-   paid for and never appeared, while the goggles worked, because `face` is the
-   one slot whose two names happen to match. One map, and everything that turns
-   a slot into a field goes through it. */
+   paid for and never appeared, while the one face item there used to be worked,
+   because `face` is the one slot whose two names happen to match. One map, and
+   everything that turns a slot into a field goes through it. */
 const GEAR_FIELD = { head:'hat', face:'face' };
 const TRAITS = {
   appetite:[ {id:'greedy', name:'Bottomless', note:'Gets hungry fast and never says no.', hunger:1.35, foodJoy:1.0},

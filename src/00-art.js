@@ -263,20 +263,6 @@ const PIX = {
       '            ',
       '            '
     ] },
-  'hat.goggles': { w:12, h:11,
-    pal:['#3a4d55','#9fd2e0'], rows:[
-      '            ',
-      '            ',
-      '            ',
-      ' 0000000000 ',
-      ' 0111001110 ',
-      ' 0111001110 ',
-      '            ',
-      '            ',
-      '            ',
-      '            ',
-      '            '
-    ] },
   'hat.cone': { w:12, h:11,
     pal:['#d95f7f','#5fb0a5','#e8e3ac'], rows:[
       '            ',
@@ -831,6 +817,27 @@ const SPECIES_STAGE = {
   rex:     [ {headLen:23}, {headLen:28}, {headLen:30}, {} ],
   trike:   [ { epi:.22 }, { epi:.17 }, { epi:.12 }, {} ],
   brachio: [ {}, {}, {}, {} ]
+};
+/*</data>*/
+
+/* ------------------------------- gear fit ---------------------------------
+   Where one hat sits on one animal, when the species' own anchor is not quite
+   right for it. The anchor is a place on the skull and it is the same place
+   for every hat; a party cone and a bone crown are not the same shape and do
+   not want the identical spot, and that difference is taste, not anatomy, so
+   it lives here as data rather than in the draw functions.
+
+   `dx` moves it toward the tail, `dy` moves it up, both in sprite units, so
+   they scale with the animal and a fit made on an adult still holds on a
+   hatchling. `s` multiplies the width the species asked for. An absent
+   species, an absent hat or an absent field all mean "no change", so this
+   table only ever says the things that are not already right.
+   -------------------------------------------------------------------------- */
+/*<data:GEAR_FIT>*/
+const GEAR_FIT = {
+  rex:     {},
+  trike:   { cone:{ dy:-2 }, hardhat:{ dx:4, s:1.18 }, crown:{ dx:4, s:1.15 } },
+  brachio: {}
 };
 /*</data>*/
 

@@ -115,13 +115,21 @@ function drawBrachio(M, P){
     [hipX + TL*tM,     hipY + 10,  1.5*lM]
   ];
 
-  /* Headgear goes over the nasal arch, which is the only thing on this skull
-     tall enough to hang a hat on. Centred on the crest's peak and dropped
-     slightly into it so it caps the hump rather than balancing on the point;
-     `hatW` is the crest's own span, so it covers what it is sitting on and
-     grows with the arch. */
+  /* Headgear goes over the nasal arch, the only thing on this skull tall enough
+     to hang a hat on. Both the centre and the width come off the arch's own
+     control points rather than a fraction of the snout: the arch is built from
+     `crTop` and `crBack`, which move with `st.horn` as the animal grows, so a
+     hand-picked fraction of `sn` drifted across it — a pixel and a half behind
+     the middle on an adult and the same distance in front of it on a hatchling,
+     which is what made every hat look pushed off one edge or the other. */
+  const crestBack = hx + 2*hM, crestFront = hx - sn*.62;
+  /* Nudged forward off the exact summit. The arch is not symmetrical — the
+     front slope is long and the back one drops away — so a hat centred on the
+     highest pixel sits over the back slope and looks pushed off the edge, which
+     is the complaint even though the arithmetic was centred. */
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
-           hat:[hx - sn*.18, hy - hh*crTop*.97], hatW: sn*.78 + 2*hM,
+           hat:[(crestBack + crestFront)/2 - sn*.12, hy - hh*crTop*.97],
+           hatW: (crestBack - crestFront)*1.05,
            top: hy - hh*crTop, spine };
 }
 

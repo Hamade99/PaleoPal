@@ -946,20 +946,6 @@ const PIX = {
       '            ',
       '            '
     ] },
-  'hat.goggles': { w:12, h:11,
-    pal:['#3a4d55','#9fd2e0'], rows:[
-      '            ',
-      '            ',
-      '            ',
-      ' 0000000000 ',
-      ' 0111001110 ',
-      ' 0111001110 ',
-      '            ',
-      '            ',
-      '            ',
-      '            ',
-      '            '
-    ] },
   'hat.cone': { w:12, h:11,
     pal:['#d95f7f','#5fb0a5','#e8e3ac'], rows:[
       '            ',
@@ -1514,6 +1500,27 @@ const SPECIES_STAGE = {
   rex:     [ {headLen:23}, {headLen:28}, {headLen:30}, {} ],
   trike:   [ { epi:.22 }, { epi:.17 }, { epi:.12 }, {} ],
   brachio: [ {}, {}, {}, {} ]
+};
+/*</data>*/
+
+/* ------------------------------- gear fit ---------------------------------
+   Where one hat sits on one animal, when the species' own anchor is not quite
+   right for it. The anchor is a place on the skull and it is the same place
+   for every hat; a party cone and a bone crown are not the same shape and do
+   not want the identical spot, and that difference is taste, not anatomy, so
+   it lives here as data rather than in the draw functions.
+
+   `dx` moves it toward the tail, `dy` moves it up, both in sprite units, so
+   they scale with the animal and a fit made on an adult still holds on a
+   hatchling. `s` multiplies the width the species asked for. An absent
+   species, an absent hat or an absent field all mean "no change", so this
+   table only ever says the things that are not already right.
+   -------------------------------------------------------------------------- */
+/*<data:GEAR_FIT>*/
+const GEAR_FIT = {
+  rex:     {},
+  trike:   { cone:{ dy:-2 }, hardhat:{ dx:4, s:1.18 }, crown:{ dx:4, s:1.15 } },
+  brachio: {}
 };
 /*</data>*/
 
@@ -2223,11 +2230,10 @@ Object.defineProperty(HATS, 'get', { value:null });          // keep it a plain 
 const HAT_IDS = Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
 /* A hat is hung by the bottom of its art, and the art is not the canvas. Every
    hat is drawn in a 12x11 grid with its brim wherever the artist put it, so the
-   crown has two blank rows under it and the goggles five, and the outline pass
+   crown has four blank rows under it and the cap three, and the outline pass
    adds one more all round. Hanging by the canvas edge floated every hat that
-   distance above the skull — three pixels on a cap, five on the goggles, scaled
-   up with the animal — which is what made a worn hat read as a hovering object
-   rather than as headgear. Measure the last row that has ink in it once, at
+   distance above the skull, scaled up with the animal, which is what made a
+   worn hat read as a hovering object rather than as headgear. Measure the last row that has ink in it once, at
    bake time, and hang from that. `pixInvalidate()` drops HATS, so an edit in
    the editor re-measures. */
 function hatArt(id){
@@ -3142,13 +3148,21 @@ function drawBrachio(M, P){
     [hipX + TL*tM,     hipY + 10,  1.5*lM]
   ];
 
-  /* Headgear goes over the nasal arch, which is the only thing on this skull
-     tall enough to hang a hat on. Centred on the crest's peak and dropped
-     slightly into it so it caps the hump rather than balancing on the point;
-     `hatW` is the crest's own span, so it covers what it is sitting on and
-     grows with the arch. */
+  /* Headgear goes over the nasal arch, the only thing on this skull tall enough
+     to hang a hat on. Both the centre and the width come off the arch's own
+     control points rather than a fraction of the snout: the arch is built from
+     `crTop` and `crBack`, which move with `st.horn` as the animal grows, so a
+     hand-picked fraction of `sn` drifted across it — a pixel and a half behind
+     the middle on an adult and the same distance in front of it on a hatchling,
+     which is what made every hat look pushed off one edge or the other. */
+  const crestBack = hx + 2*hM, crestFront = hx - sn*.62;
+  /* Nudged forward off the exact summit. The arch is not symmetrical — the
+     front slope is long and the back one drops away — so a hat centred on the
+     highest pixel sits over the back slope and looks pushed off the edge, which
+     is the complaint even though the arithmetic was centred. */
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
-           hat:[hx - sn*.18, hy - hh*crTop*.97], hatW: sn*.78 + 2*hM,
+           hat:[(crestBack + crestFront)/2 - sn*.12, hy - hh*crTop*.97],
+           hatW: (crestBack - crestFront)*1.05,
            top: hy - hh*crTop, spine };
 }
 
@@ -4726,7 +4740,6 @@ const ILLS = {
 };
 const HAT_SHOP = [
   { id:'frond',   name:'Fern sprig',   cost:20,  slot:'head' },
-  { id:'goggles', name:'Dig goggles',  cost:45,  slot:'face' },
   { id:'cap',     name:'Field cap',    cost:70,  slot:'head' },
   { id:'cone',    name:'Party cone',   cost:95,  slot:'head' },
   { id:'hardhat', name:'Site helmet',  cost:130, slot:'head' },
@@ -4736,9 +4749,9 @@ const HAT_SHOP = [
    different name, and the two are not the same word. Writing `S[slot]` put
    every head hat in `S.head`, which nothing draws, nothing saves and the save
    validator does not know about — so the five head hats could be bought and
-   paid for and never appeared, while the goggles worked, because `face` is the
-   one slot whose two names happen to match. One map, and everything that turns
-   a slot into a field goes through it. */
+   paid for and never appeared, while the one face item there used to be worked,
+   because `face` is the one slot whose two names happen to match. One map, and
+   everything that turns a slot into a field goes through it. */
 const GEAR_FIELD = { head:'hat', face:'face' };
 const TRAITS = {
   appetite:[ {id:'greedy', name:'Bottomless', note:'Gets hungry fast and never says no.', hunger:1.35, foodJoy:1.0},
@@ -5571,27 +5584,24 @@ function drawGear(g, f, x, y, flip){
      inside its 12x11 grid and none of them fill it. */
   const place = (id, anchor, width) => {
     if (!id || !PIX['hat.' + id]) return;
-    const art = hatArt(id), scale = Math.max(.6, width / art.inkW),
+    /* The species puts the anchor on the right part of the skull; `GEAR_FIT`
+       is where one particular hat on one particular animal says that is not
+       quite it. Its nudges are in sprite units, so they are multiplied by the
+       animal's own scale and a fit made on an adult holds on a hatchling, and
+       they are applied before the flip so they stay on the same end of the
+       head when the animal turns round. */
+    const fit = (GEAR_FIT[S.sp] || {})[id] || {};
+    const art = hatArt(id), scale = Math.max(.6, width * (fit.s || 1) / art.inkW),
           w = art.width * scale, hgt = art.height * scale;
-    const ax = flip ? x + (f.ox - anchor[0]) : x - f.ox + anchor[0];
-    const ay = y - f.oy + anchor[1];
+    const hx = anchor[0] + (fit.dx || 0) * f.k, hy = anchor[1] + (fit.dy || 0) * f.k;
+    const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
+    const ay = y - f.oy + hy;
     g.save(); g.translate(Math.round(ax), Math.round(ay));
     if (flip) g.scale(-1, 1);
     g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
     g.restore();
   };
   place(S.hat, f.hat, f.hatW);
-  if (S.face && PIX['hat.' + S.face]){
-    const art = hatArt(S.face), pad = art.pad || 0,
-          scale = Math.max(.5, f.eyeR * 3.6 / (art.width - pad*2));
-    const w = art.width * scale, hgt = art.height * scale;
-    const ax = flip ? x + (f.ox - f.eye[0]) : x - f.ox + f.eye[0];
-    const ay = y - f.oy + f.eye[1];
-    g.save(); g.translate(Math.round(ax), Math.round(ay));
-    if (flip) g.scale(-1, 1);
-    g.drawImage(art, -w*.42, -hgt*.55, w, hgt);
-    g.restore();
-  }
 }
 
 function drawLive(now, dt){
@@ -6705,7 +6715,7 @@ function shelfItems(which){
     return { items: HAT_SHOP, cols:6, cell:[14,13],
       art: (g, it, cx, cy) => thumb(g, hatArt(it.id), cx, cy, 14, 13),
       own: it => S.owned.includes(it.id), worn: it => S[GEAR_FIELD[it.slot]] === it.id,
-      note: it => it.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.',
+      note: () => 'Sits on the head.',
       take:true, here:'worn' };
   }
   return { items: BIOME_IDS.map(id => BIOMES[id]), cols:5, cell:[26,20],

@@ -73,7 +73,8 @@ function jsPIX(pix){
    property of the window — `window.PIX` is undefined while `PIX` is right
    there. Listing them also means a block that stops being editable fails
    loudly at load instead of silently saving stale text. */
-const LIVE = { PIX, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, REX_TUNE, TRI_TUNE, BRA_TUNE,
+const LIVE = { PIX, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, GEAR_FIT,
+               REX_TUNE, TRI_TUNE, BRA_TUNE,
                REX_SPEC, TRI_SPEC, BRA_SPEC, SKINS, BIOME_ART };
 const BLOCKS = Object.keys(LIVE);
 
