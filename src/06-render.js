@@ -10,7 +10,25 @@ let dino = { x: W/2, dir: -1, tx: W/2, until: 0, walking:false, dig:0, digAt: 0,
 let dinoTop = GROUND - 40, dinoBox = [0,0,0,0];
 let egg = { cracks: 0, wob: 0 };
 let game = null, feedFX = null;
-let blinkAt = 0, blinking = false, zAt = 0;
+let habitatTarget = null;
+let blinkAt = 0, blinking = false, blinkUntil = 0, zAt = 0;
+
+function strideCycle(spId, stage){
+  const growth = artFor(spId, stage).st, species = SPECIES[spId];
+  return Math.max(3, species.strideBase * growth.limb * growth.s * species.scale);
+}
+
+function stepPresentation(dt, now){
+  egg.wob = Math.max(0, egg.wob - dt * .0036);
+  anim.t += dt;
+  if (mode !== 'live' || !hatched()) return;
+  if (now > blinkAt){ blinkUntil = now + 150; blinkAt = now + rnd(2400, 5200); }
+  blinking = now < blinkUntil;
+  for (const mess of S.mess) if (Math.random() < 1-Math.exp(-dt*.0006)) emit('stink', mess.x, GROUND-6, 1, {vy:-12, life:1000});
+  if (S.asleep && now > zAt){ zAt = now + 1100; emit('bubbleZ', dino.x - 10*dino.dir, dinoTop+2, 1, {vy:-13, vx:3, life:2100}); }
+  if (hasIll('chill') && Math.random() < 1-Math.exp(-dt*.00072)){ emit('spark', dino.x-14*dino.dir, dinoTop+8, 2, {col:'#cfe0e8'}); SFX.sneeze(); }
+  if (hasIll('mites') && Math.random() < 1-Math.exp(-dt*.0012)) emit('crumb', dino.x+rnd(-10,10), dinoTop+10, 1, {col:'#8a7350', vy:-6, g:40});
+}
 
 const anim = {
   name:'idle', frame:0, t:0, until:0,
@@ -43,7 +61,6 @@ function stepFeed(dt){
     feedFX.phase = 'bite'; feedFX.t = 0;
     anim.play('eat', 1500); SFX.chomp();
     emit('crumb', dino.x - 12*dino.dir, GROUND-26, 8, {vy:12, g:90, life:600});
-    swallow(feedFX.id);
   } else if (feedFX.phase === 'bite' && feedFX.t > 900){
     feedFX = null;
   }
@@ -59,6 +76,7 @@ function drawFeed(g, mouth){
 /* ------------------------------ behaviour --------------------------------- */
 function stepBehaviour(dt, now){
   if (mode !== 'live') return;
+  if (habitatTarget && (habitatTarget.pet !== S || habitatTarget.biome !== biomeId() || S.asleep || S.vet)) habitatTarget = null;
   const busy = feedFX || performance.now() < anim.until;
   const canMove = !S.asleep && !S.vet && !S.ills.length && !busy;
 
@@ -78,7 +96,17 @@ function stepBehaviour(dt, now){
   }
   if (!canMove){ dino.walking = false; return; }
 
-  if (now > dino.until){ dino.tx = rnd(26, W-26); dino.until = now + rnd(2600, 6500) / trait('tempo').speed; }
+  if (habitatTarget){
+    dino.tx = HABITAT_ART[habitatTarget.biome].slot[0];
+    dino.until = now + 2000;
+    if (Math.abs(dino.x-dino.tx) <= 4){ habitatTarget = null; visitHabitat(); return; }
+  }
+  if (now > dino.until){
+    const cautious = trait('social').id === 'shy' && S.bond < 40;
+    const radius = cautious ? 20 : trait('tempo').id === 'placid' ? 38 : W;
+    dino.tx = clamp(dino.x + rnd(-radius,radius),26,W-26);
+    dino.until = now + rnd(2600, 6500) / trait('tempo').speed;
+  }
   const d = dino.tx - dino.x;
   if (Math.abs(d) > 3){
     dino.walking = true; dino.dir = d > 0 ? 1 : -1;
@@ -91,10 +119,8 @@ function stepBehaviour(dt, now){
 }
 
 /* ------------------------------- draw ------------------------------------- */
-let lastSceneAt = 0;
 let screenLayout = null;
 function drawScene(now){
-  const dt = clamp(now - lastSceneAt, 0, 120); lastSceneAt = now;
 
   /* A screen replaces the view rather than sliding over it. On the device this
      copies there is one display and it shows one thing at a time; leaving the
@@ -118,16 +144,21 @@ function drawScene(now){
   // whatever this habitat has that moves: a plume, surf, a fall, an aurora
   const live = (BIOMES[biomeId()] || BIOMES.valley).live;
   if (live) live(ctx, phase, now);
-  drawClouds(ctx, phase, dt);
-  drawFlyers(ctx, dt, now);
+  drawClouds(ctx, phase);
+  drawFlyers(ctx);
   drawWater(ctx, phase, now);
   drawGrassLine(ctx, phase, now);
-  if (phase !== 'night') drawMotes(ctx, dt, phase);
+  if (phase !== 'night') drawMotes(ctx, phase);
 
   if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'game'){ drawGame(now, phase); return; }
-  drawLive(now, dt);
+  const habitat = HABITAT_ART[biomeId()];
+  ctx.save();
+  ctx.globalAlpha = S.habitatAt && Date.now()-S.habitatAt < 30*MIN ? .45 : 1;
+  drawItem(ctx, habitat.item, habitat.slot[0]-6, habitat.slot[1]-10, 1.5);
+  ctx.restore();
+  drawLive(now);
   drawFronds(ctx, phase, now);
   const tint = skyOf(phase).tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
@@ -158,7 +189,6 @@ function drawEggArt(g, cx, cy, spId, cracks){
 }
 function drawEgg(now){
   const wob = egg.wob > 0 ? Math.sin(now/40) * 2 : 0;
-  egg.wob = Math.max(0, egg.wob - .06);
   ctx.fillStyle = 'rgba(16,26,24,.5)';
   ctx.beginPath(); ctx.ellipse(W/2, GROUND + 1, 12, 3, 0, 0, 7); ctx.fill();
   drawEggArt(ctx, W/2 + wob, GROUND - 16, S.sp, egg.cracks);
@@ -201,17 +231,14 @@ function drawLive(now, dt){
     drawMess(ctx, m.x|0, GROUND - 1);
     const fx = m.x + Math.sin(now/280 + m.x) * 5, fy = GROUND - 12 + Math.cos(now/430 + m.x) * 2;
     ctx.fillStyle = '#2f2f2f'; ctx.fillRect(fx|0, fy|0, 1, 1);
-    if (Math.random() < .01) emit('stink', m.x, GROUND - 6, 1, {vy:-12, life:1000});
   }
-  if (now > blinkAt){ blinking = true; blinkAt = now + rnd(2400, 5200); setTimeout(() => blinking = false, 150); }
 
   const st = stageIdx(), a = anim.pick(), sp = SPECIES[S.sp];
   // real elapsed time, not an assumed sixty frames a second. On a 120Hz phone
   // the hardcoded 16 ran eat and cheer at double speed.
-  anim.t += dt;
   let fr;
   if (a === 'walk'){
-    const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
+    const cycle = strideCycle(S.sp, st);
     fr = Math.floor((dino.dist / cycle) * POSES.walk.length);
   } else {
     const fps = a === 'eat' ? 220 : a === 'cheer' ? 200 : 700;
@@ -239,9 +266,6 @@ function drawLive(now, dt){
   /* Zs on a clock rather than a two-percent chance per frame: at 120Hz that
      was twice as many as at 60, and either way it could go seconds without
      one, which is a poor signal for the state it is the signal for. */
-  if (S.asleep && now > zAt){ zAt = now + 1100; emit('bubbleZ', x + 10*(flip?-1:1), dinoTop + 2, 1, {vy:-13, vx:3, life:2100}); }
-  if (hasIll('chill') && Math.random() < .012){ emit('spark', x - 14*dino.dir, dinoTop + 8, 2, {col:'#cfe0e8'}); SFX.sneeze(); }
-  if (hasIll('mites') && Math.random() < .02) emit('crumb', x + rnd(-10,10), dinoTop + 10, 1, {col:'#8a7350', vy:-6, g:40});
   if (dino.dig > 0){ ctx.fillStyle='#8f6f4c'; ctx.fillRect(x - 16*dino.dir, GROUND-2, 6, 2); }
 
   if (S.asleep){ ctx.fillStyle = 'rgba(14,16,44,.28)'; ctx.fillRect(0, 0, W, H); }
@@ -285,32 +309,67 @@ function stateMark(g, x, top, now){
 
 /* ============================== MINIGAMES ================================== */
 const GAMES = {
-  snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:2 },
-  forage:{ name:'Forage',     blurb:'Food turns up around the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', pay:2 },
-  leap:  { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:3 }
+  snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:1,
+    start:() => ({x:W/2, tx:W/2, dir:-1, items:[], combo:0, spawn:.5, stun:0, kL:false, kR:false}),
+    update:stepSnack, draw:drawSnack, input:inputSnack, finish:finishRound },
+  forage:{ name:'Forage', blurb:'Food turns up around the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', pay:1,
+    start:() => ({x:W/2, tx:W/2, dir:-1, dist:0, walking:false, snap:0, finds:[], thief:null, thiefAt:4, chain:0, missed:0, spawn:.4}),
+    update:stepForage, draw:drawForage, input:(input) => { if (input.type === 'point') tapForage(input.x,input.y); }, finish:finishRound },
+  leap: { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:2,
+    start:() => ({obs:[], y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0}),
+    update:stepLeap, draw:drawLeap, input:(input) => { if ((input.type === 'point' && !input.move) || (input.down && [' ','ArrowUp','w'].includes(input.key))) leapJump(); }, finish:finishRound }
 };
-function startGame(kind){
+function challengeWeek(now = Date.now()){ return Math.floor((now - Date.UTC(1970,0,5))/(7*24*HOUR)); }
+function gameProfile(pet){
+  const stage = stageIdx(pet), reach = pet.sp === 'brachio' ? 5 : pet.sp === 'trike' ? 3 : 0;
+  return { speed:88-stage*6+(pet.sp === 'rex' ? 8 : pet.sp === 'brachio' ? -8 : 0),
+    reach:10+stage*4+reach, catch:11+stage*2, jump:148-stage*3-(pet.sp === 'brachio' ? 6 : 0), stun:800-stage*100,
+    runSpeed:78+stage*8+(pet.sp === 'rex' ? 6 : pet.sp === 'brachio' ? -6 : 0) };
+}
+function gameRandom(min=0, max=1){
+  game.seed = (Math.imul(game.seed,1664525)+1013904223) >>> 0;
+  return min + (max-min)*game.seed/4294967296;
+}
+function gamePick(items){ return items[Math.floor(gameRandom(0,items.length))]; }
+function inputSnack(input){
+  if (input.type === 'point') game.tx = clamp(input.x,18,W-18);
+  if (['ArrowLeft','a'].includes(input.key)) game.kL = input.down;
+  if (['ArrowRight','d'].includes(input.key)) game.kR = input.down;
+  if (input.type === 'key' && !input.down) game.tx = game.x;
+}
+function gameInput(input){ if (game) GAMES[game.kind].input(input); }
+function startGame(kind, seed){
+  if (!Object.hasOwn(GAMES,kind) || game) return;
   if (S.asleep) return refuse(S.name + ' is asleep.');
   if (S.vet) return refuse(S.name + ' is in no state to play.');
   if (S.needs.energy < 12) return refuse('Too tired to run around.');
   closeSheet();
   mode = 'game'; feedFX = null;
-  if (kind === 'snack') game = { kind, x:W/2, tx:W/2, dir:-1, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
-  if (kind === 'forage') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
-                                  snap:0, finds:[], thief:null, thiefAt:rnd(3,6),
-                                  score:0, chain:0, missed:0, left:30, spawn:.4 };
-  if (kind === 'leap')  game = { kind, obs:[], score:0, left:30, y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0 };
+  const week = challengeWeek();
+  game = Object.assign({kind, score:0, left:30, pet:S, week, profile:gameProfile(S),
+    recordKey:kind+':'+S.sp+':'+stageIdx(S), seed:seed ?? (week*97+Object.keys(GAMES).indexOf(kind)+1)}, GAMES[kind].start());
+  if (kind === 'leap') game.speed = game.profile.runSpeed;
   say(GAMES[kind].blurb.split('.')[0] + '.');
   paintChrome();
 }
+function finishRound(round){
+  if (round.left > 0) return;
+  const records = round.pet.records || (round.pet.records = {});
+  const previous = records[round.recordKey] || {best:0, week:round.week, weekly:0};
+  records[round.recordKey] = {best:Math.max(previous.best,round.score), week:round.week,
+    weekly:Math.max(previous.week === round.week ? previous.weekly : 0,round.score)};
+  observePet(round.pet, 'game:'+round.kind);
+}
 function endGame(){
   if (!game) return;
+  const player = game.pet;
+  GAMES[game.kind].finish(game);
   const g = GAMES[game.kind], earned = game.score * g.pay;
   G.coins += earned;
-  S.needs.joy = clamp(S.needs.joy + Math.min(34, game.score * 2.4), 0, 100);
-  S.needs.energy = clamp(S.needs.energy - 7, 0, 100);
-  S.bond = clamp(S.bond + (game.score > 8 ? 3 : 1), 0, 100);
-  if (game.score > 8) logEvent('A good run at ' + g.name.toLowerCase() + ': ' + game.score + '.');
+  player.needs.joy = clamp(player.needs.joy + Math.min(34, game.score * 2.4), 0, 100);
+  player.needs.energy = clamp(player.needs.energy - 7, 0, 100);
+  player.bond = clamp(player.bond + (game.score > 8 ? 3 : 1), 0, 100);
+  if (game.score > 8) logEvent('A good run at ' + g.name.toLowerCase() + ': ' + game.score + '.', player);
   say(game.score ? 'Scored ' + game.score + '. That is ' + earned + ' coins.' : 'Nothing scored. Next time.');
   if (game.score) SFX.coin();
   game = null; mode = 'live';
@@ -318,16 +377,13 @@ function endGame(){
 }
 function stepGame(dt, now){
   if (!game) return;
-  game.left -= dt/1000;
-  if (game.left <= 0) return endGame();
-  if (game.kind === 'snack') return stepSnack(dt, now);
-  if (game.kind === 'forage') return stepForage(dt, now);
-  if (game.kind === 'leap')  return stepLeap(dt, now);
+  const elapsed = Math.min(dt,game.left*1000);
+  game.left = Math.max(0,game.left-elapsed/1000);
+  GAMES[game.kind].update(elapsed, now);
+  if (game.left <= 0) endGame();
 }
 function drawGame(now, phase){
-  if (game.kind === 'snack') drawSnack(now);
-  if (game.kind === 'forage') drawForage(now);
-  if (game.kind === 'leap')  drawLeap(now);
+  GAMES[game.kind].draw(now);
   drawParts(ctx);
   ctx.fillStyle = 'rgba(16,22,24,.78)'; ctx.fillRect(0, 0, W, 9);
   ctx.fillStyle = game.left < 6 ? '#c2603c' : '#7ea55f';
@@ -341,8 +397,9 @@ function gameSprite(anim2, frame, scaleTo){
 /* ------ snack run ------ */
 function stepSnack(dt, now){
   let vx = 0;
-  if (game.kL) vx -= 110; if (game.kR) vx += 110;
-  if (!vx) vx = clamp((game.tx - game.x) * 7, -135, 135);
+  const speed = game.profile.speed * 1.6;
+  if (game.kL) vx -= speed; if (game.kR) vx += speed;
+  if (!vx) vx = clamp((game.tx - game.x) * 7, -speed, speed);
   if (now < game.stun) vx = 0;
   /* Which way it is facing comes from which way it is actually moving. It used
      to come from `tx < x`, which is inverted — the sprite is drawn facing −x,
@@ -354,16 +411,16 @@ function stepSnack(dt, now){
   game.x = clamp(game.x + vx * dt/1000, 18, W-18);
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
-    game.spawn = rnd(.42, .72);
-    const sp = SPECIES[S.sp], rock = Math.random() < .22;
-    game.items.push({ x: rnd(16, W-16), y: 4, vy: rnd(44, 62), id: rock ? 'rock' : pick(sp.likes.concat(['berry','fern'])), rock });
+    game.spawn = gameRandom(.42, .72);
+    const sp = SPECIES[game.pet.sp], rock = gameRandom() < .22;
+    game.items.push({ x: gameRandom(16, W-16), y: 4, vy: gameRandom(44, 62), id: rock ? 'rock' : gamePick(sp.likes), rock });
   }
   const mouthY = GROUND - 34;
   for (const it of game.items){
     it.y += it.vy * dt/1000;
-    if (it.y > mouthY - 6 && it.y < mouthY + 22 && Math.abs(it.x - game.x) < 15){
+    if (it.y > mouthY - 6 && it.y < mouthY + 22 && Math.abs(it.x - game.x) < game.profile.catch){
       it.dead = true;
-      if (it.rock){ game.combo = 0; game.stun = now + 750; SFX.bonk(); emit('spark', game.x, mouthY, 4, {col:'#e8c352'}); }
+      if (it.rock){ game.combo = 0; game.stun = now + game.profile.stun; SFX.bonk(); emit('spark', game.x, mouthY, 4, {col:'#e8c352'}); }
       else { game.combo++; game.score += game.combo >= 5 ? 2 : 1; SFX.chomp(); emit('spark', it.x, it.y, 3); }
     }
     if (it.y > GROUND){ it.dead = true; if (!it.rock) game.combo = 0; }
@@ -411,7 +468,7 @@ function drawSnack(now){
    stage and the animal's own speed all decide whether you make it.
    -------------------------------------------------------------------------- */
 const FORAGE_H = 50;                           // drawn sprite height in the pen
-const FORAGE_LIFE = 4600;                      // how long a find sits before it spoils
+const FORAGE_LIFE = 3600;                      // how long a find sits before it spoils
 
 function forageSprite(now){
   const snapping = now < game.snap;
@@ -420,7 +477,7 @@ function forageSprite(now){
   if (!game.walking) return gameSprite('idle', Math.floor(now/700), FORAGE_H);
   // one sprite stride to one stride of ground, the same rule the habitat uses
   const probe = gameSprite('walk', 0, FORAGE_H);
-  const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
+  const cycle = strideCycle(S.sp, st);
   const frame = Math.floor((game.dist / probe.sc) / cycle * POSES.walk.length);
   return gameSprite('walk', frame, FORAGE_H);
 }
@@ -429,17 +486,17 @@ function forageSprite(now){
    of one that is already there. */
 function forageSlot(){
   for (let tries=0; tries<12; tries++){
-    const x = rnd(18, W-18);
+    const x = gameRandom(18, W-18);
     if (game.finds.every(f => Math.abs(f.x - x) > 26)) return x;
   }
-  return rnd(18, W-18);
+  return gameRandom(18, W-18);
 }
 
 function stepForage(dt, now){
   const sec = dt / 1000;
 
   // run toward the last place the player pointed
-  const speed = 54 + stageIdx() * 11;
+  const speed = game.profile.speed;
   const d = game.tx - game.x;
   if (Math.abs(d) > 1.5){
     const step = clamp(d, -speed*sec, speed*sec);
@@ -452,9 +509,9 @@ function stepForage(dt, now){
   // new finds
   game.spawn -= sec;
   if (game.spawn <= 0 && game.finds.length < 5){
-    game.spawn = rnd(.95, 1.55);
+    game.spawn = gameRandom(.6, 1.05);
     // what turns up is what this species eats, and nothing else
-    game.finds.push({ x: forageSlot(), id: pick(SPECIES[S.sp].likes), age: 0 });
+    game.finds.push({ x: forageSlot(), id: gamePick(SPECIES[game.pet.sp].likes), age: 0 });
   }
   for (const f of game.finds){
     f.age += dt;
@@ -476,17 +533,17 @@ function stepForage(dt, now){
     const dir = goal > t.x ? 1 : -1;
     t.x += dir * 74 * sec;
     if (!t.carry && Math.abs(t.x - t.mark.x) < 3){
-      if (t.mark.dead){ game.thief = null; game.thiefAt = rnd(2.2, 4.2); }
+      if (t.mark.dead){ game.thief = null; game.thiefAt = gameRandom(2.2, 4.2); }
       else { t.mark.dead = true; t.carry = true; game.missed++; game.chain = 0; SFX.pop(); }
     } else if (t.carry && (t.x < -12 || t.x > W+12)){
-      game.thief = null; game.thiefAt = rnd(2.2, 4.2);
+      game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
     }
   }
 
   /* Reach. A horizontal distance along the ground, because everything here is
      on the ground — the old game measured to a mouth anchor thirty pixels up
      and then spawned half its quarry on the floor. */
-  const reach = 12 + stageIdx() * 2;
+  const reach = game.profile.reach;
   for (const f of game.finds){
     if (f.dead) continue;
     if (Math.abs(f.x - game.x) < reach){
@@ -495,7 +552,7 @@ function stepForage(dt, now){
       game.score += game.chain >= 4 ? 2 : 1;
       game.snap = now + 260;
       if (game.thief && game.thief.mark === f && !game.thief.carry){
-        game.thief = null; game.thiefAt = rnd(2.2, 4.2);    // beaten to it
+        game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
       }
       SFX.chomp();
       emit('spark', f.x, GROUND - 4, 4, {col:'#cfe0a8'});
@@ -504,7 +561,7 @@ function stepForage(dt, now){
   }
   game.finds = game.finds.filter(f => !f.dead);
   if (game.thief && game.thief.mark.dead && !game.thief.carry){
-    game.thief = null; game.thiefAt = rnd(2.2, 4.2);
+    game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
   }
 }
 
@@ -624,21 +681,21 @@ const LEAP_KINDS = ['log','rock','water','log','rock'];
 
 function stepLeap(dt, now){
   game.run += dt/1000 * game.speed;
-  game.speed = Math.min(140, game.speed + dt/1000 * 3);
+  game.speed = Math.min(game.profile.runSpeed+45, game.speed + dt/1000 * 3);
   game.vy += 340 * dt/1000;
   game.y = Math.min(0, game.y + game.vy * dt/1000);
   if (game.y === 0) game.vy = 0;
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
-    game.spawn = rnd(.85, 1.5) * (110 / game.speed);
-    game.obs.push({ x: W + 14, kind: pick(LEAP_KINDS), hit:false, past:false });
+    game.spawn = Math.max(.95,gameRandom(1.1, 1.7) * 110/game.speed);
+    game.obs.push({ x: W + 14, kind: gamePick(LEAP_KINDS), hit:false, past:false });
   }
   for (const o of game.obs){
     o.x -= game.speed * dt/1000;
     const cfg = LEAP_OBS[o.kind];
     if (!o.hit && Math.abs(o.x - 54) < cfg.half && game.y > -cfg.clear){
       o.hit = true; game.speed = Math.max(70, game.speed * .7);
-      game.stun = now + 500; SFX.bonk();
+      game.stun = now + game.profile.stun; SFX.bonk();
       if (o.kind === 'water') emit('spark', 54, GROUND-2, 8, {col:'#9fd2e0', vy:-30, g:150});
       else emit('crumb', 54, GROUND-8, 6, {col:'#9b7a52', vy:-20, g:120});
     }
@@ -653,7 +710,7 @@ function stepLeap(dt, now){
 function leapJump(){
   if (!game || game.kind !== 'leap') return;
   if (game.y < -1) return;
-  game.vy = -136; SFX.purr();
+  game.vy = -game.profile.jump; SFX.purr();
 }
 
 /* The track, overdrawn so the habitat props do not sit still behind a running

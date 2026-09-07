@@ -15,7 +15,7 @@ const SPECIES = {
       'Belly ribs called gastralia made the torso barrel-shaped rather than lean.',
       'Each hand has exactly two fingers, and the palms faced inward, not down.',
       'Both eyes face forward, so it judged distance the way a hawk does.',
-      'Young ones carried a coat of filaments that thinned with age. An adult kept a keratin row and little else.',
+      'Feather coverage in T. rex is uncertain. The juvenile down and low adult back ornaments here are reconstruction choices, not directly known features.',
       'A juvenile has a shallow snout and long legs. The deep boxy skull and the barrel chest arrive late.'
     ],
     checks:['Lips covering the teeth','Deep barrel torso','Two fingers, palms inward',
@@ -50,11 +50,11 @@ const SPECIES = {
     era:'Late Jurassic, 154-150 million years ago, North America',
     facts:[
       'The forelimbs run about 1.2 times the length of the hindlimbs, which is why the back slopes backward.',
-      'The neck was probably held near sixty degrees with a slight S-curve, not straight up like a mast.',
+      'Its habitual neck posture is debated. This sprite uses a raised, gently curved neck rather than treating one exact angle as established.',
       'A hump of tall vertebral spines over the shoulders anchored the neck muscles.',
       'Its nasal chambers formed a crest on the roof of a very small skull.',
       'The tail is short for a sauropod, and one big thumb claw sits on each forefoot.',
-      'The long neck and the sloping back are both adult traits. A hatchling is short-necked, big-headed and almost level.'
+      'The big-headed, short-necked hatchling is a stylized growth reconstruction; a complete B. altithorax hatchling series is not known.'
     ],
     checks:['Forelimbs longer than hindlimbs','Back sloping down to the hips','Shoulder hump at the neck base',
             'S-curved neck near sixty degrees','Nasal crest on the skull','Thumb claw on each forefoot',

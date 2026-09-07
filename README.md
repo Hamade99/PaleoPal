@@ -76,3 +76,39 @@ docs/
 ```
 
 Start with `docs/ARCHITECTURE.md`.
+
+## Progress and backups
+
+The dossier holds each animal's field journal and backup controls. Growth
+studies remain recoverable after adulthood; observations unlock headgear.
+Play tracks personal and weekly bests for the current species and growth
+stage. Weekly challenges change on Monday (UTC).
+
+Tap a habitat's small foreground object to explore it. Arriving records the
+habitat and grants a care benefit, at most once per thirty minutes per animal.
+
+Export a nest before moving devices. Import validates the file and preserves
+the current nest as a downloadable recovery copy. Storage failures appear on
+the case; a read failure disables automatic saving to protect existing data.
+
+## Checks
+
+The game still needs no Node dependencies to run. Development tests use Node
+22+ and Playwright:
+
+```sh
+npm ci
+npx playwright install chromium
+npm test
+npm run test:browser
+python build.py
+```
+
+The Node suite drives complete thirty-second rounds for competent and idle
+players across all species, hatchlings and adults, and three seeds. It also
+checks historical simulation, nested saves, records, rewards and art markers.
+The browser suite uses isolated storage, exercises backup controls and mobile
+screens, and bakes every species/stage/coat/pose for blank or clipped frames.
+Screenshots go to the system temporary directory under `paleopal-test-results`
+to avoid OneDrive locking generated files. Review the contact sheet as well:
+automated pixel checks cannot establish anatomical correctness.

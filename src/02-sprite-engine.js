@@ -226,7 +226,9 @@ const POSES = {
            legPhase: p,
            tail: .48*Math.sin(TAU*p + Math.PI/4)
          })),
-  eat:   [ {body:0, legPhase:0, jaw:1, droop:.7, tail:.3}, {body:0, legPhase:0, jaw:.12, droop:.7, tail:-.1} ],
+  get eat(){ return POSE_ART.eat; },
+  get wary(){ return POSE_ART.wary; },
+  get inspect(){ return POSE_ART.inspect; },
   /* Asleep is deep and slow and the eyes are shut. Ill is shallow, uneven and
      the eyes are open but hooded. The two used to share a lid and a droop,
      which is why an ill animal read as a sleeping one. */
@@ -234,7 +236,7 @@ const POSES = {
            body: -2.5 + .40*(1 - Math.cos(TAU*p)),
            legPhase: 0, droop: 1.5, tail: .1, eye: 1
          })),
-  cheer: [ {body:5, legPhase:.5, jaw:.8, tail:.9, eye:2}, {body:0, legPhase:0, jaw:.35, tail:-.7, eye:2} ],
+  get cheer(){ return POSE_ART.cheer; },
   sick:  poseCycle(4, p => ({
            body: -1.5 + .55*Math.sin(TAU*p),
            legPhase: 0,

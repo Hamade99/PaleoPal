@@ -32,18 +32,24 @@ inlined build.
 - **`G`** — the keeper. `{ v, pets[], active, coins, sound, lastDay, streak,
   lastTick, lastSeen }`. Coins and sound are shared across every animal.
 - **`S`** — the *active* pet, always `G.pets[G.active]`. Almost all game code
-  reads `S`. `simulateAll()` swaps `S` across the roster and restores it, which
-  is why per-pet functions can be written as if there were only one animal.
+  reads `S`. Simulation takes an explicit pet argument: `simulateAll()` calls
+  `simulate(pet, ms, online, historicalNow)` without swapping the active pet.
 
 Anything that persists lives on `G` and is serialised whole. Nothing derived is
 stored: stage, bond level and mood are all computed from raw values.
 
 ## Time
 
-The simulation runs on `Date.now()` deltas, never on frame time. Each turn of
-the loop drains `real - G.lastTick` in chunks of at most 5 minutes (10 on cold
-boot), capped at 12 hours live and 3 days on load. A focused tab, a throttled
-background tab and a closed tab therefore all produce the same drift.
+The simulation runs on `Date.now()` deltas, never on frame time.
+`advanceSimulation()` is shared by boot, resume and the live loop. It advances
+to minute boundaries, caps catch-up at three days, and passes the historical
+timestamp into sleep, exposure, illness and diary logic. Growth rates are the
+same for the active and inactive roster, including while the selected pet is
+an egg. Sub-minute live updates can still introduce small threshold-rounding
+differences; minute-by-minute and bulk catch-up are regression-tested together.
+
+Illness follows accumulated exposure to its cause. A per-pet seeded generator
+controls mess timing and placement; cosmetic randomness cannot change it.
 
 Frame time (`dt` from `requestAnimationFrame`) is used only for things that do
 not persist: particles, walking, animation timing, minigames.
@@ -75,6 +81,12 @@ those did not move.
 
 ## Rendering
 
+`stepPresentation()` updates blinks, pose clocks and emissions; `stepWorld()`
+advances clouds, flyers and motes. Drawing may populate art caches and hit-test
+geometry, but does not advance those animations. Feeding applies payment and
+nutrition together; the subsequent toss is presentation, so switching screens
+cannot lose a purchased meal.
+
 `drawScene()` runs every frame. If a screen is open it draws that and returns.
 Otherwise:
 
@@ -94,7 +106,8 @@ Otherwise:
 | Species anatomy, proportions, growth-stage shape | `src/species/<name>.js` |
 | Coat patterns | `paintPattern` in `src/species/registry.js` |
 | Field notes, coats, likes and dislikes, speed | `src/species/registry.js` |
-| Growth stage multipliers, gait, feet, hats, poses | `src/02-sprite-engine.js` |
+| Growth multipliers, pose data, proportions | `src/00-art.js` |
+| Gait, feet, pose generation and frame baking | `src/02-sprite-engine.js` |
 | Lighting, palettes, material list | `src/01-colour.js` |
 | Backdrop, weather, props, particles | `src/04-world.js` |
 | A habitat's palette, landmark, treeline or floor | its entry in `BIOMES`, `src/04-world.js` |
@@ -146,6 +159,41 @@ Anything in a habitat that moves has to be in `live`, because the backdrop is
 baked once per biome and phase and then cached — the volcano's smoke sat still
 for the whole life of this project for exactly that reason.
 
+`HABITAT_ART` owns distinct skyline points, horizon heights and interaction
+slots. Tapping the prop sends the active animal to that slot. On arrival,
+`visitHabitat()` records an observation and a small care benefit. Its persisted
+`habitatAt` timestamp imposes a shared thirty-minute cooldown per animal, so
+switching habitats or reloading cannot farm rewards.
+
+## Progression and games
+
+Each pet stores observation IDs in `journal` and scores in `records`. Growth
+studies are recovered through the current stage, so adopting an existing adult
+does not permanently miss juvenile entries. Four observations unlock the Fern
+sprig; ten unlock the Field cap. These rewards do not create coins.
+
+`GAMES` declares `start`, `update`, `draw`, `input` and `finish` for each game.
+A round retains its pet, starting stage, profile, seed and record key. Weekly
+seeds change on UTC Monday and use their own RNG. Completed rounds update
+personal and weekly bests separately for each game/species/stage. Exiting early
+pays earned points but cannot set records. Young animals move faster and jump
+higher; adults reach farther, recover faster, and run faster in River leap.
+Species add different speed and reach trade-offs.
+
+The three-seed controller checks average about 38-56 coins per competent
+thirty-second round after payout tuning. This is a reproducible balancing
+baseline, not a claim about human difficulty or long-term economy.
+
+## Save recovery
+
+`Store` propagates failures. The UI serializes saves, warns on write failure,
+and blocks automatic saving after read failure. Nested imported fields are
+validated; invalid versions/species are rejected with the original text intact.
+The dossier exports the current nest, imports validated JSON after confirmation,
+and downloads the recovery copy. Import writes the previous nest to the backup
+key before replacing the main save. Browser storage is not transactional:
+errors are surfaced rather than claiming an atomic multi-key operation.
+
 ## The art data
 
 Everything that can be changed without changing behaviour lives in one file,
@@ -162,6 +210,8 @@ Everything that can be changed without changing behaviour lives in one file,
   did. The pad is published as `canvas.pad`, because headgear hangs itself by
   the canvas's bottom edge and has to take it back off.
 - **`STAGE`** — the growth columns, shared by every species.
+- **`POSE_ART`** — authored eating, greeting, wary and inspection poses.
+- **`HABITAT_ART`** — skyline coordinates, horizons and interaction placement.
 - **`SPECIES_STAGE`** — one row per stage per species, for where a species at
   a given age departs from both the shared growth curve and its own adult
   proportions. Any key in a row *replaces* the value it names, whether that is

@@ -36,9 +36,9 @@ function drawBrachio(M, P){
 
   // neck near sixty degrees, S-curved, drooping slightly at the head end
   const nl = T_.neckLen*nM;
-  const n1 = [shX - 9,  shY - nl*.30];
-  const n2 = [shX - 19, shY - nl*.63];
-  const n3 = [shX - 23, shY - nl*.94 + dr*10];
+   const n1 = [shX - 9 - dr,  shY - nl*.30 + dr*2];
+   const n2 = [shX - 19 - dr*3, shY - nl*.63 + dr*5];
+   const n3 = [shX - 23 - dr*4, shY - nl*.94 + dr*8];
   /* The whole neck thickens with `bulk`, the head end included. Left at its
      adult width under a hatchling's oversized skull, the neck came out as a
      stick with a head on the end of it. */
@@ -61,15 +61,16 @@ function drawBrachio(M, P){
 
   /* Mandible. The sauropod jaw line is long and close to straight, running
      back to below the eye. */
-  const jHinge = [hx + 6*hM, hy + hh*.30], jawA = -jaw*.30;
+   const jHinge = [hx + 6*hM, hy + hh*.30], jawA = -jaw*.22;
+   const jawLength = sn + 6*hM;
   M.jaw.save(); M.jaw.translate(jHinge[0], jHinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[2,-hh*.06],[-sn*.42,-hh*.12],[-sn*.94,hh*.02],
-               [-sn*.88,hh*.34],[-sn*.30,hh*.46],[3,hh*.36]]);
+   blob(M.jaw, [[2,-hh*.06],[-jawLength*.42,-hh*.12],[-jawLength*.98,hh*.02],
+                      [-jawLength*.94,hh*.34],[-jawLength*.30,hh*.46],[3,hh*.36]]);
   M.jaw.restore();
   if (jaw > .06){
     const uTip = [hx - sn*.96, lipY - hh*.08];
-    const lTip = [jHinge[0] + (-sn*.90)*Math.cos(jawA) - (hh*.04)*Math.sin(jawA),
-                  jHinge[1] + (-sn*.90)*Math.sin(jawA) + (hh*.04)*Math.cos(jawA)];
+   const lTip = [jHinge[0] - jawLength*.98*Math.cos(jawA) - hh*.02*Math.sin(jawA),
+              jHinge[1] - jawLength*.98*Math.sin(jawA) + hh*.02*Math.cos(jawA)];
     M.mouth.beginPath();
     M.mouth.moveTo(jHinge[0], jHinge[1]);
     M.mouth.lineTo(uTip[0], uTip[1]);
@@ -88,10 +89,7 @@ function drawBrachio(M, P){
   const crTop = 1.10 + (T_.crestH-1.10)*cr, crBack = 0.85 + 0.85*cr;
   blob(M.crest, [[hx+2*hM,hy-hh*1.0],[hx-sn*.16,hy-hh*crTop],
                  [hx-sn*.62,hy-hh*crBack],[hx-sn*.6,hy-hh*.85]]);
-  /* Nares on the crest. As a filled block this read as a hole punched in a
-     tuft of hair; a notch bitten out of the crest's front edge reads as a
-     nostril. */
-  oval(M.mouth, hx - sn*.54, hy - hh*(crTop*.79), Math.max(.7,.9*hM), Math.max(.6,.7*hM));
+   oval(M.mouth, hx - sn*.82, hy - fh*.38, Math.max(.7,.9*hM), Math.max(.6,.7*hM));
 
   // the ventral countershading is painted from the spine by paintBelly
 

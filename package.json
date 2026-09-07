@@ -1,0 +1,12 @@
+{
+  "name": "paleopal-checks",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/simulation.test.cjs",
+    "test:browser": "playwright test",
+    "check": "npm test && npm run test:browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

@@ -26,10 +26,9 @@ this came from research during development rather than from memory.
   face read as a box with an eye on it.
 - **Ontogeny.** Juveniles are gracile and long-legged with a shallow, narrow
   snout; the deep skull, the thick neck and the barrel chest come late. The
-  lacrimal and postorbital ornament grows in with them. Juvenile tyrannosaurs
-  are reconstructed with substantial filamentous covering that reduces with
-  age, an adult keeping a keratin row and little else. All four are STAGE
-  columns: `muzzle`, `bulk`, `torso`, `fuzz`.
+  lacrimal and postorbital ornament grows in with them. Feather coverage in
+  T. rex is uncertain; the juvenile down and adult back ornaments here are
+  speculative. The shared columns are `muzzle`, `bulk`, `torso`, `fuzz`.
 
 ## Triceratops horridus
 
@@ -75,7 +74,8 @@ this came from research during development rather than from memory.
 
 - Forelimbs about **1.2× the hindlimbs**, which is where the sloping back comes
   from and what the animal is named for.
-- Neck held near **60°** with a slight S-curve, not vertical.
+- Habitual neck posture is debated. The raised, gently curved neck is a
+  reconstruction choice, not evidence for one precise habitual angle.
 - The jaw line is **long and close to straight**, running back to below the
   eye, and the muzzle is squared off in front where the spatulate teeth sat.
 - At about ten pixels of skull only three things can read: the crest
@@ -83,11 +83,9 @@ this came from research during development rather than from memory.
 - A **hump of tall neural spines** over the shoulders anchored the neck muscles.
 - Nasal chambers formed a **crest on the roof** of a very small skull.
 - Short tail for a sauropod, held clear of the ground.
-- **Ontogeny.** The forelimb-longer-than-hindlimb condition and the very long
-  neck are both ADULT traits and they arrive together. Sauropod growth series
-  give hatchlings a build much closer to square: short thick neck, large head,
-  level back. The nasal arch grows with the animal too. Held at adult
-  proportions from hatching, every stage is the adult at a different size.
+- **Ontogeny.** Shorter neck, larger head and a more level back distinguish
+  the stylized hatchling. A complete B. altithorax hatchling growth series is
+  not known; the exact proportions and nasal-arch growth are extrapolations.
 - **Manus**: metacarpals in fully vertical columns, digits so reduced they would
   not have been visible in life; the whole hand is a hoof, which is why sauropod
   forefoot prints are horseshoe-shaped. Brachiosaurids kept a short thumb claw.
@@ -143,6 +141,36 @@ this came from research during development rather than from memory.
   the coat painter did.
 - Countershading pattern varies with habitat lighting, which is why
   *Psittacosaurus* and *Sinosauropteryx* differ despite sharing fossil beds.
+
+## Reference check: September 2026
+
+The following images were visually inspected against the all-stage contact
+sheet. They are references, not assets included in the game:
+
+- [AMNH 5027 rex skull, multiple views](https://commons.wikimedia.org/wiki/File:Tyrannosaurus_rex_AMNH_5027_skull.png):
+  rear jaw hinge, deep posterior skull and a substantial muzzle. The lower jaw
+  now includes the hinge-to-snout offset; the adult muzzle is longer, with
+  separate juvenile overrides. Lipped closure follows the soft-tissue
+  interpretation discussed by Cullen et al. (2023), not the exposed teeth of a
+  mounted fossil. Happy poses close the mouth rather than exposing oversized
+  teeth through a tiny gape.
+- [Triceratops skull growth series](https://commons.wikimedia.org/wiki/File:Triceratops_ontogeny.jpg):
+  the frill remains part of the skull, horns change orientation, and the young
+  frill rim is more strongly scalloped. Those existing features were retained.
+  The relevant growth study is Horner and Goodwin (2006),
+  [doi:10.1098/rspb.2006.3643](https://doi.org/10.1098/rspb.2006.3643).
+- [Denver brachiosaur skull reconstruction](https://commons.wikimedia.org/wiki/File:Brachiosaurus_skull_cast_Denver_3.jpg):
+  high nasal arch and an elongated jaw reaching the muzzle. The lower jaw's
+  hinge offset is now included, with a smaller cropping gape. Neck droop is
+  distributed across several points rather than bending only its tip.
+  This is a reconstructed museum cast, not a complete articulated fossil.
+
+The soft nostril has moved toward the front of the brachiosaur muzzle; a high
+bony nasal opening does not establish a nostril on top of the arch. Its exact
+placement, eyelids, smiles, coats and growth proportions remain stylized.
+Sleep and illness are separate poses and marks, not claims about dinosaur
+facial expressions. No claim of exact reconstruction follows from a passing
+clipping test.
 
 ## Pixel art technique
 

@@ -15,16 +15,16 @@ const HOUR  = 3600e3, MIN = 60e3;
 /* ---------- storage: works as artifact, as a file, and inside a webview ---- */
 const Store = {
   async get(k){
-    if (window.storage) { try { const r = await window.storage.get(k); return r ? r.value : null; } catch(e){ return null; } }
-    try { return localStorage.getItem(k); } catch(e){ return null; }
+    if (window.storage) { const result = await window.storage.get(k); return result ? result.value : null; }
+    return localStorage.getItem(k);
   },
   async set(k,v){
-    if (window.storage) { try { await window.storage.set(k,v); return; } catch(e){ return; } }
-    try { localStorage.setItem(k,v); } catch(e){}
+    if (window.storage) return window.storage.set(k,v);
+    localStorage.setItem(k,v);
   },
   async del(k){
-    if (window.storage) { try { await window.storage.delete(k); return; } catch(e){ return; } }
-    try { localStorage.removeItem(k); } catch(e){}
+    if (window.storage) return window.storage.delete(k);
+    localStorage.removeItem(k);
   }
 };
 

@@ -72,7 +72,9 @@ function freshPet(){
     health:100, bond:6, vet:false,
     traits:{ appetite:0, tempo:0, social:0 },
     asleep:false, ills:[], treats:[], mess:[], log:[],
-    nightAwake:0, petBank:0, stageSeen:0, messTimer:0, wokeAt:0
+    nightAwake:0, petBank:0, stageSeen:0, messTimer:0, wokeAt:0,
+    exposure:{ bellyache:0, chill:0, mites:0, blues:0 }, simSeed:123456789,
+    journal:[], records:{}, habitatAt:0
   };
 }
 function freshGame(){
@@ -109,7 +111,8 @@ function loadSave(raw){
   try { o = JSON.parse(raw); } catch(e){ return fail('could not be read'); }
   if (!o || typeof o !== 'object') return fail('was not in a shape the game understands');
 
-  const from = o.v | 0;
+  if (!Number.isSafeInteger(o.v) || o.v < 0) return fail('had an invalid version');
+  const from = o.v;
   if (from > SAVE_VERSION) return fail('was written by a newer version of the game');
 
   let v = from;
@@ -121,29 +124,100 @@ function loadSave(raw){
     v = o.v | 0;
   }
 
-  if (!Array.isArray(o.pets) || !o.pets.length) return fail('had no animals in it');
+  if (!Array.isArray(o.pets) || !o.pets.length || o.pets.length > MAX_PETS) return fail('had an invalid nest size');
+  if (o.pets.some(p => !p || typeof p !== 'object' || Array.isArray(p) ||
+      (p.sp !== null && p.sp !== undefined && !Object.hasOwn(SPECIES, p.sp)))) return fail('contained an unknown animal');
 
   const g = Object.assign(freshGame(), o);
-  g.pets = o.pets.map(p => Object.assign(freshPet(), p));
+  delete g.awayText; delete g.loadWarning;
+  const number = (value, fallback, min=0, max=Number.MAX_SAFE_INTEGER) =>
+    Number.isFinite(value) ? clamp(value, min, max) : fallback;
+  const array = value => Array.isArray(value) ? value : [];
+  g.pets = o.pets.map(rawPet => {
+    const defaults = freshPet(), pet = Object.assign(freshPet(), rawPet);
+    pet.sp = rawPet.sp || null;
+    pet.name = typeof pet.name === 'string' ? pet.name.slice(0, 14) : '';
+    pet.needs = Object.fromEntries(Object.entries(defaults.needs).map(([key, value]) =>
+      [key, number(rawPet.needs?.[key], value, 0, 100)]));
+    pet.traits = Object.fromEntries(Object.keys(TRAITS).map(key =>
+      [key, Math.floor(number(rawPet.traits?.[key], 0, 0, TRAITS[key].length-1))]));
+    pet.exposure = Object.fromEntries(Object.keys(ILLS).map(key => [key, number(rawPet.exposure?.[key], 0, 0, 24)]));
+    for (const key of ['health','bond']) pet[key] = number(pet[key], defaults[key], 0, 100);
+    for (const key of ['born','growth','nightAwake','petBank','messTimer','wokeAt','habitatAt']) pet[key] = number(pet[key], defaults[key]);
+    pet.simSeed = number(pet.simSeed, defaults.simSeed, 1, 4294967295) >>> 0;
+    pet.stageSeen = Math.floor(number(pet.stageSeen, 0, 0, 3));
+    pet.asleep = pet.asleep === true; pet.vet = pet.vet === true;
+    pet.ills = array(pet.ills).filter(ill => ill && Object.hasOwn(ILLS, ill.id))
+      .filter((ill, index, list) => list.findIndex(other => other.id === ill.id) === index)
+      .map(ill => ({id:ill.id, since:number(ill.since, Date.now())}));
+    pet.treats = array(pet.treats).filter(Number.isFinite).slice(-20);
+    pet.mess = array(pet.mess).filter(mess => mess && Number.isFinite(mess.x)).slice(0,4).map(mess => ({x:clamp(mess.x, 28, W-28)}));
+    pet.log = array(pet.log).filter(entry => entry && typeof entry.txt === 'string' && Number.isFinite(entry.t)).slice(0,60)
+      .map(entry => ({t:entry.t,txt:entry.txt.slice(0,500)}));
+    pet.owned = array(pet.owned).filter(id => HAT_SHOP.some(hat => hat.id === id));
+    for (const slot of ['hat','face']) if (!HAT_SHOP.some(hat => hat.id === pet[slot] && hat.slot === (slot === 'hat' ? 'head' : 'face')) || !pet.owned.includes(pet[slot])) pet[slot] = null;
+    const skins = SKINS[pet.sp] || [];
+    pet.skinsOwned = [...new Set(['wild', ...array(pet.skinsOwned).filter(id => skins.some(skin => skin.id === id))])];
+    if (!pet.skinsOwned.includes(pet.skin)) pet.skin = 'wild';
+    delete pet.lastPetAt;
+    pet.journal = [...new Set(array(pet.journal).filter(id => journalEntries().some(entry => entry.id === id)))];
+    pet.records = {};
+    for (const [key, record] of Object.entries(rawPet.records || {})){
+      if (!/^(snack|forage|leap):(rex|trike|brachio):[0-3]$/.test(key) || !record || typeof record !== 'object') continue;
+      pet.records[key] = {best:Math.floor(number(record.best,0,0,1000)), weekly:Math.floor(number(record.weekly,0,0,1000)), week:Math.floor(number(record.week,0))};
+    }
+    pet.tally = {meals:Math.floor(number(rawPet.tally?.meals,0,0,999999))};
+    return pet;
+  });
+  g.coins = Math.floor(number(g.coins, 24, 0, 999999));
+  g.streak = Math.floor(number(g.streak, 0, 0, 99999));
+  g.lastTick = number(g.lastTick, Date.now(), 0, Date.now());
+  g.lastSeen = number(g.lastSeen, g.lastTick, 0, Date.now());
+  g.lastDay = typeof g.lastDay === 'string' ? g.lastDay : '';
+  g.sound = g.sound !== false; g.dev = g.dev === true;
+  g.biomesOwned = [...new Set(['valley', ...array(g.biomesOwned).filter(id => Object.hasOwn(BIOMES, id))])];
+  if (!g.biomesOwned.includes(g.biome)) g.biome = 'valley';
   g.active = clamp(o.active | 0, 0, g.pets.length - 1);
   g.v = SAVE_VERSION;
   return { game:g, why:null, keep:null, from };
 }
-const trait = k => TRAITS[k][S.traits[k]];
-const hatched = () => !!S && !!S.sp && !!S.born;
-const stageIdx = () => S.growth < GROWTH_GATES[0] ? 0 : S.growth < GROWTH_GATES[1] ? 1 : S.growth < GROWTH_GATES[2] ? 2 : 3;
+const trait = (k, pet = S) => TRAITS[k][pet.traits[k]];
+const hatched = (pet = S) => !!pet && !!pet.sp && !!pet.born;
+const stageIdx = (pet = S) => pet.growth < GROWTH_GATES[0] ? 0 : pet.growth < GROWTH_GATES[1] ? 1 : pet.growth < GROWTH_GATES[2] ? 2 : 3;
 const bondPips = () => clamp(Math.floor(S.bond/20), 0, 5);
 const ageDays  = () => (Date.now()-S.born)/86400e3;
-const hasIll   = id => S.ills.some(i => i.id === id);
-const isNight  = () => { const h = new Date().getHours(); return h >= BED_HOUR || h < WAKE_HOUR; };
+const hasIll   = (id, pet = S) => pet.ills.some(ill => ill.id === id);
+const isNight  = (now = Date.now()) => { const hour = new Date(now).getHours(); return hour >= BED_HOUR || hour < WAKE_HOUR; };
 
-function logEvent(txt){
-  S.log.unshift({ t:Date.now(), txt });
-  if (S.log.length > 60) S.log.length = 60;
+function logEvent(txt, pet = S, now = Date.now()){
+  pet.log.unshift({ t:now, txt });
+  if (pet.log.length > 60) pet.log.length = 60;
 }
-function careScore(){
-  const n = S.needs;
+function careScore(pet = S){
+  const n = pet.needs;
   return clamp((n.hunger + n.energy + n.hygiene + n.joy) / 400, 0, 1);
+}
+function journalEntries(){
+  return [
+    ...STAGE.map((stage,index) => ({id:'stage:'+index, title:stage.label+' study'})),
+    {id:'favourite',title:'Favourite meal'}, {id:'friend',title:'Trusted companion'},
+    ...['snack','forage','leap'].map(kind => ({id:'game:'+kind,title:kind === 'snack' ? 'Snack run' : kind === 'forage' ? 'Forage' : 'River leap'})),
+    ...Object.keys(BIOMES).map(id => ({id:'habitat:'+id,title:BIOMES[id].name || id}))
+  ];
+}
+function observePet(pet = S, event, now = Date.now()){
+  if (!hatched(pet)) return;
+  const entries = pet.journal || (pet.journal = []);
+  const add = id => { if (!entries.includes(id)) entries.push(id); };
+  for (let stage=0;stage<=stageIdx(pet);stage++) add('stage:'+stage);
+  if (event && journalEntries().some(entry => entry.id === event)) add(event);
+  if (pet.bond >= 60) add('friend');
+  for (const [count,hat] of [[4,'frond'],[10,'cap']]){
+    if (entries.length >= count && !pet.owned.includes(hat)){
+      pet.owned.push(hat);
+      logEvent('Field journal reward: '+HAT_SHOP.find(item => item.id === hat).name+'.',pet,now);
+    }
+  }
 }
 function moodOf(){
   if (!hatched()) return { key:'egg', line:'The egg is warm.' };
@@ -162,16 +236,27 @@ function moodOf(){
 }
 
 /* ------------------------------ the tick ---------------------------------- */
-function simulateAll(ms, online){
-  const keep = G.active;
-  for (let i=0;i<G.pets.length;i++){ S = G.pets[i]; simulate(ms, online && i === keep); }
-  S = G.pets[keep];
+function advanceSimulation(now, online){
+  let cursor = Math.max(G.lastTick, now - 3*24*HOUR);
+  while (cursor < now){
+    const end = Math.min(now, (Math.floor(cursor/MIN)+1)*MIN);
+    simulateAll(end-cursor, online && now-end < MIN, end);
+    cursor = end;
+  }
+  G.lastTick = Math.max(G.lastTick, now);
 }
-function simulate(ms, online){
-  if (!hatched() || ms <= 0) return;
-  const h = ms / HOUR, n = S.needs;
-  const tA = trait('appetite'), tT = trait('tempo'), tS = trait('social');
-  const asleep = S.asleep;
+function simulateAll(ms, online, now = Date.now()){
+  G.pets.forEach((pet, index) => simulate(pet, ms, online && index === G.active, now));
+}
+function simulationRandom(pet){
+  pet.simSeed = (Math.imul(pet.simSeed, 1664525) + 1013904223) >>> 0;
+  return pet.simSeed / 4294967296;
+}
+function simulate(pet, ms, online, now = Date.now()){
+  if (!hatched(pet) || ms <= 0) return;
+  const h = ms / HOUR, n = pet.needs;
+  const tA = trait('appetite', pet), tT = trait('tempo', pet), tS = trait('social', pet);
+  const asleep = pet.asleep;
 
   n.hunger  = clamp(n.hunger  - 7.5 * tA.hunger * h * (asleep ? .45 : 1), 0, 100);
   n.hygiene = clamp(n.hygiene - 4.0 * h * (asleep ? .5 : 1), 0, 100);
@@ -179,36 +264,39 @@ function simulate(ms, online){
   n.energy  = asleep ? clamp(n.energy + ENERGY_ASLEEP * h, 0, 100)
                      : clamp(n.energy - ENERGY_AWAKE * tT.energy * h, 0, 100);
 
-  if (!asleep && isNight()) S.nightAwake += h; else S.nightAwake = Math.max(0, S.nightAwake - h*.5);
+  if (!asleep && isNight(now-ms/2)) pet.nightAwake += h; else pet.nightAwake = Math.max(0, pet.nightAwake - h*.5);
 
-  const roll = perHour => Math.random() < 1 - Math.pow(1 - clamp(perHour,0,.95), h);
-  S.treats = S.treats.filter(t => Date.now() - t < HOUR);
-  if (!hasIll('bellyache') && S.treats.length >= 3 && roll(.6)) fallIll('bellyache');
-  if (!hasIll('chill')     && S.nightAwake > 2   && roll(.35)) fallIll('chill');
-  if (!hasIll('mites')     && n.hygiene < 20     && roll(.5))  fallIll('mites');
-  if (!hasIll('blues')     && n.joy < 15         && roll(.4))  fallIll('blues');
+  pet.treats = pet.treats.filter(time => now - time < HOUR);
+  const risks = { bellyache:pet.treats.length >= 3, chill:pet.nightAwake > 2, mites:n.hygiene < 20, blues:n.joy < 15 };
+  const limits = { bellyache:.25, chill:1, mites:2, blues:2.5 };
+  for (const id in risks){
+    pet.exposure[id] = risks[id] ? pet.exposure[id] + h : Math.max(0, pet.exposure[id] - h);
+    if (!hasIll(id, pet) && pet.exposure[id] >= limits[id]) fallIll(id, pet, now);
+  }
 
-  const ill = S.ills.length;
-  if (ill) S.health = clamp(S.health - 7 * ill * h, 0, 100);
-  else if (careScore() > .55) S.health = clamp(S.health + 9 * h, 0, 100);
-  else if (careScore() < .3)  S.health = clamp(S.health - 5 * h, 0, 100);
-  if (S.health <= 0 && !S.vet){ S.vet = true; S.asleep = true; logEvent(S.name + ' collapsed. It needs a vet.'); }
+  const ill = pet.ills.length;
+  if (ill) pet.health = clamp(pet.health - 7 * ill * h, 0, 100);
+  else if (careScore(pet) > .55) pet.health = clamp(pet.health + 9 * h, 0, 100);
+  else if (careScore(pet) < .3) pet.health = clamp(pet.health - 5 * h, 0, 100);
+  if (pet.health <= 0 && !pet.vet){ pet.vet = true; pet.asleep = true; logEvent(pet.name + ' collapsed. It needs a vet.', pet, now); }
 
   const worst = Math.min(n.hunger, n.energy, n.hygiene, n.joy);
-  if (worst < 15) S.bond = clamp(S.bond - 3 * h, 0, 100);
-  else if (careScore() > .75) S.bond = clamp(S.bond + 1.2 * tS.bond * h, 0, 100);
+  if (worst < 15) pet.bond = clamp(pet.bond - 3 * h, 0, 100);
+  else if (careScore(pet) > .75) pet.bond = clamp(pet.bond + 1.2 * tS.bond * h, 0, 100);
 
-  const cs = careScore();
-  const rate = S.vet ? 0 : cs > .6 ? 1 : cs > .35 ? .5 : .12;
-  S.growth += (ms/MIN) * rate * (online ? 1 : .55);
+  const cs = careScore(pet);
+  const rate = pet.vet ? 0 : cs > .6 ? 1 : cs > .35 ? .5 : .12;
+  pet.growth += (ms/MIN) * rate;
 
-  if (!asleep && !S.vet){
-    S.messTimer = (S.messTimer || rnd(18,32)*MIN) - ms;
-    if (S.messTimer <= 0 && S.mess.length < 4){
-      S.mess.push({ x: rnd(28, W-28) });
+  if (!asleep && !pet.vet){
+    pet.messTimer = (pet.messTimer || (18 + simulationRandom(pet)*14)*MIN) - ms;
+    if (pet.messTimer <= 0){
+      if (pet.mess.length < 4){
+      pet.mess.push({ x: 28 + simulationRandom(pet)*(W-56) });
       n.hygiene = clamp(n.hygiene - 11, 0, 100);
-      S.messTimer = rnd(22,40)*MIN;
       if (online){ say('Oops.'); SFX.pop(); }
+      }
+      pet.messTimer = (22 + simulationRandom(pet)*18)*MIN;
     }
   }
 
@@ -216,40 +304,60 @@ function simulate(ms, online){
      may take it back, so there is time to feed, wash and play — which is the
      only reason anyone wakes one. Running the tank right down still overrules
      that: at six energy it drops wherever it stands, grace or no grace. */
-  const sleepy = isNight();
-  const justWoken = Date.now() - (S.wokeAt || 0) < WAKE_GRACE;
-  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30 && !justWoken))) setSleep(true, online);
-  if (asleep && !S.vet && n.energy >= 99) setSleep(false, online);
-  if (asleep && !S.vet && !sleepy && n.energy > 72) setSleep(false, online);
+  const sleepy = isNight(now);
+  const justWoken = now - (pet.wokeAt || 0) < WAKE_GRACE;
+  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30 && !justWoken))) setSleep(true, online, pet);
+  if (asleep && !pet.vet && n.energy >= 99) setSleep(false, online, pet);
+  if (asleep && !pet.vet && !sleepy && n.energy > 72) setSleep(false, online, pet);
 
-  const st = stageIdx();
-  if (st !== S.stageSeen){
-    S.stageSeen = st;
-    logEvent(S.name + ' is now ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '.');
-    if (online){ say(S.name + ' grew into ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '!'); SFX.roar(); emit('heart', dino.x, GROUND-40, 8); }
+  const st = stageIdx(pet);
+  observePet(pet, undefined, now);
+  if (st !== pet.stageSeen){
+    pet.stageSeen = st;
+    logEvent(pet.name + ' is now ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '.', pet, now);
+    if (online){ say(pet.name + ' grew into ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '!'); SFX.roar(); emit('heart', dino.x, GROUND-40, 8); }
   }
 }
-function fallIll(id){
-  S.ills.push({ id, since: Date.now() });
-  logEvent(S.name + ' came down with ' + ILLS[id].name.toLowerCase() + '.');
+function fallIll(id, pet = S, now = Date.now()){
+  pet.ills.push({ id, since: now });
+  logEvent(pet.name + ' came down with ' + ILLS[id].name.toLowerCase() + '.', pet, now);
 }
-function setSleep(v, online){
-  if (S.asleep === v) return;
-  S.asleep = v;
+function setSleep(v, online, pet = S){
+  if (pet.asleep === v) return;
+  pet.asleep = v;
   if (v){ if (online){ say('Yawn.'); SFX.yawn(); } }
   else   { if (online){ say('Morning.'); } }
 }
 
 /* --------------------------- player actions -------------------------------- */
+function visitHabitat(now = Date.now()){
+  if (!hatched() || S.asleep || S.vet || mode !== 'live') return false;
+  const habitat = biomeId();
+  if (S.habitatAt && now-S.habitatAt < 30*MIN) return false;
+  S.habitatAt = now;
+  const benefits = {valley:['joy',8],lagoon:['hygiene',8],ashfall:['joy',8],gorge:['joy',8],boreal:['energy',5]};
+  const [need,gain] = benefits[habitat];
+  S.needs[need] = clamp(S.needs[need]+gain,0,100);
+  S.bond = clamp(S.bond+1,0,100);
+  observePet(S,'habitat:'+habitat,now);
+  logEvent('Explored '+BIOMES[habitat].name+'.',S,now);
+  anim.play('inspect',1400);
+  say({valley:'Fresh fern fronds.',lagoon:'Cool water, clean toes.',ashfall:'A smooth volcanic stone.',gorge:'Tracks beside the river.',boreal:'A quiet rest among the conifers.'}[habitat]);
+  refreshLight();
+  return true;
+}
+
 function feed(id){
   const f = FOODS.find(x => x.id === id), sp = SPECIES[S.sp];
+  if (!f || feedFX || mode !== 'live') return;
   if (G.coins < f.cost) return refuse('Not enough coins. Dig, or win it at the games.');
   if (S.asleep) return refuse(S.name + ' is asleep.');
   if (hasIll('bellyache')) return refuse(S.name + ' turns away from it. Settle the stomach first.');
   if (S.needs.hunger > 94) return refuse(S.name + ' is full.');
   G.coins -= f.cost;
+  swallow(id);
   closeScreen();                                  // back to the habitat to watch it land
-  tossFood(id);                                   // the food arcs in; effects land on the bite
+  tossFood(id);
   refreshLight();
 }
 function swallow(id){
@@ -262,6 +370,7 @@ function swallow(id){
   if (f.treat) S.treats.push(Date.now());
   S.tally = S.tally || {};
   S.tally.meals = (S.tally.meals || 0) + 1;
+  observePet(S, loved ? 'favourite' : undefined);
   say(loved ? 'Its favourite. Gone in one gulp.' : hated ? 'It eats it. Slowly. Resentfully.' : 'Nom.');
   refresh();
 }
@@ -281,15 +390,22 @@ function scrub(){
 /* `at` is the point in canvas units that was actually touched. Hearts used to
    come off a fixed spot above the sprite, which read as unrelated to the tap;
    they now rise from under the finger. */
+let lastPetAt = 0;
 function pet(at){
   if (!hatched() || S.asleep || S.vet) return;
   const now = performance.now();
-  if (now - (S.lastPetAt||0) < 320) return;
-  S.lastPetAt = now;
+  if (now - lastPetAt < 320) return;
+  lastPetAt = now;
   S.petBank++;
   const gain = clamp(1.1 - S.bond/160, .25, 1.1) * trait('social').bond;
   S.bond = clamp(S.bond + gain, 0, 100);
   S.needs.joy = clamp(S.needs.joy + 1.6, 0, 100);
+  const cautious = trait('social').id === 'shy' && S.bond < 40;
+  anim.play(cautious ? 'wary' : 'cheer', cautious ? 450 : 850);
+  dino.tx = clamp(dino.x + (cautious ? -dino.dir*8 : dino.dir*4),22,W-22);
+  dino.until = now + (cautious ? 1800 : 800);
+  if (S.petBank % 6 === 1) say(cautious ? 'A little space, then another look.' : trait('tempo').id === 'placid' ? 'Leans into your hand.' : 'A happy bounce.');
+  observePet();
   const hx = at ? at[0] : dino.x, hy = at ? at[1] : dinoTop - 4;
   emit('heart', hx - 3, hy - 6, 1, {vx:5, vy:-19, life:1000});
   SFX.purr();
@@ -348,6 +464,7 @@ function cure(remedyId, free){
   const r = REMEDIES.find(x => x.id === remedyId);
   if (!free) G.coins -= r.cost;
   S.ills = S.ills.filter(i => i.id !== r.cures);
+  S.exposure[r.cures] = 0;
   S.health = clamp(S.health + 30, 0, 100);
   S.bond = clamp(S.bond + 4, 0, 100);
   S.petBank = 0;

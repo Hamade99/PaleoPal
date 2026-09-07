@@ -102,9 +102,10 @@ function drawRex(M, P){
 
      −x is forward, so the jaw opens on a negative rotation. */
   const hinge = [hx + 12, hy + hh*.18], jawA = -jaw * .34;
+  const jawLength = sn + 12;
   M.jaw.save(); M.jaw.translate(hinge[0], hinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[2,-hh*.12],[-sn*.42,-dep(.42)*.10],[-sn*.90,fh*.06],
-               [-sn*.94,fh*.32],[-sn*.66,dep(.66)*.52],[-sn*.24,hh*.58],[2,hh*.46]]);
+  blob(M.jaw, [[2,-hh*.12],[-jawLength*.42,-dep(.42)*.10],[-jawLength*.96,fh*.06],
+               [-jawLength*.94,fh*.32],[-jawLength*.66,dep(.66)*.52],[-jawLength*.24,hh*.58],[2,hh*.46]]);
   M.jaw.restore();
   // pale chin, carried by the jaw rather than left floating under it
   M.belly.save(); M.belly.translate(hinge[0], hinge[1]); M.belly.rotate(jawA);
@@ -120,7 +121,7 @@ function drawRex(M, P){
        outward and swallowed the whole face. Straight edges, because the two
        margins it runs between are straight. */
     const uTip = [hx - sn*.91, lipTip - hh*.02];
-    const lTip = about([hx - sn*.88, hy + hh*.30], jawA, hinge);
+    const lTip = about([hinge[0] - jawLength*.96, hinge[1] + fh*.06], jawA, hinge);
     const gape = [hinge, uTip, lTip];
     M.mouth.beginPath();
     M.mouth.moveTo(gape[0][0], gape[0][1]);
