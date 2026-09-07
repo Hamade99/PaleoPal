@@ -291,8 +291,22 @@ function drawTrike(M, P){
   const crown = rot(fRx*.10, -fRy*.96);        // still the highest point, for `top`
   const roofBack = fx - fRx*.30*fc;            // where the frill leaves the skull
   const roofFront = ex + 5*hM;                 // the brow horn bases
+  /* Where the big pieces of this animal are, for the editor's Body tab to hang
+     handles on. They are read-only landmarks — dragging one writes the TUNE
+     numbers underneath it, never these — and they exist here because only the
+     draw function knows where it put anything. */
+  const parts = {
+    head:     [hx, hy],
+    frillTop: crown,
+    shoulder: [shX, withY],
+    back:     [5, backY],
+    hip:      [hipX, hipY],
+    rump:     [hipX-2, rumpY],
+    belly:    [6, bellyY],
+    tail:     [T(TL), hipY - 4*lM]
+  };
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
            hat:[roofFront + (roofBack - roofFront)*.52, hy - hh*1.12],
            hatW: (roofBack - roofFront)*1.05,
-           top: crown[1], spine };
+           top: crown[1], spine, parts };
 }

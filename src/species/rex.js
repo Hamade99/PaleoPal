@@ -234,8 +234,20 @@ function drawRex(M, P){
   /* Headgear sits on the skull roof behind the orbit — the flat over the
      braincase, not the muzzle and not the occiput. `hatW` spans about half the
      skull, which is as much of the roof as there is behind the eye. */
+  /* Where the big pieces of this animal are, for the editor's Body tab to hang
+     handles on. They are read-only landmarks — dragging one writes the TUNE
+     numbers underneath it, never these — and they exist here because only the
+     draw function knows where it put anything. */
+  const parts = {
+    head:     [hx, hy],
+    shoulder: [withX, withY],
+    back:     [0, backY],
+    hip:      [hipX, hipY],
+    belly:    [0, bellyY],
+    tail:     [T(TL), hipY - 6*lM]
+  };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
            hat:[hx - sn*.22, hy - hh*1.10], hatW: sn*.54,
-           top: hy - hh*1.18, spine };
+           top: hy - hh*1.18, spine, parts };
 }
 

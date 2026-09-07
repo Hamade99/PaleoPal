@@ -368,6 +368,12 @@ function bakeOnce(spId, stage, pose, eye, skinId){
     cv: t.cv, w: t.w, h: t.h,
     ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
     eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
+    /* The editor's Body tab hangs a drag handle on each of these. Converted
+       here with everything else, so a handle is in the same space as the
+       picture it sits on. */
+    parts: anchors.parts
+      ? Object.fromEntries(Object.entries(anchors.parts).map(([k, v]) => [k, conv(v)]))
+      : {},
     /* How wide the hat should be drawn, in screen pixels. The species says it,
        the way it already says how big the eye is, because the three skulls are
        nothing like each other: sized off `hs` alone a Brachiosaurus wore the

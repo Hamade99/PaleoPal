@@ -2537,6 +2537,12 @@ function bakeOnce(spId, stage, pose, eye, skinId){
     cv: t.cv, w: t.w, h: t.h,
     ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
     eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
+    /* The editor's Body tab hangs a drag handle on each of these. Converted
+       here with everything else, so a handle is in the same space as the
+       picture it sits on. */
+    parts: anchors.parts
+      ? Object.fromEntries(Object.entries(anchors.parts).map(([k, v]) => [k, conv(v)]))
+      : {},
     /* How wide the hat should be drawn, in screen pixels. The species says it,
        the way it already says how big the eye is, because the three skulls are
        nothing like each other: sized off `hs` alone a Brachiosaurus wore the
@@ -2926,9 +2932,21 @@ function drawRex(M, P){
   /* Headgear sits on the skull roof behind the orbit — the flat over the
      braincase, not the muzzle and not the occiput. `hatW` spans about half the
      skull, which is as much of the roof as there is behind the eye. */
+  /* Where the big pieces of this animal are, for the editor's Body tab to hang
+     handles on. They are read-only landmarks — dragging one writes the TUNE
+     numbers underneath it, never these — and they exist here because only the
+     draw function knows where it put anything. */
+  const parts = {
+    head:     [hx, hy],
+    shoulder: [withX, withY],
+    back:     [0, backY],
+    hip:      [hipX, hipY],
+    belly:    [0, bellyY],
+    tail:     [T(TL), hipY - 6*lM]
+  };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
            hat:[hx - sn*.22, hy - hh*1.10], hatW: sn*.54,
-           top: hy - hh*1.18, spine };
+           top: hy - hh*1.18, spine, parts };
 }
 
 
@@ -3225,10 +3243,24 @@ function drawTrike(M, P){
   const crown = rot(fRx*.10, -fRy*.96);        // still the highest point, for `top`
   const roofBack = fx - fRx*.30*fc;            // where the frill leaves the skull
   const roofFront = ex + 5*hM;                 // the brow horn bases
+  /* Where the big pieces of this animal are, for the editor's Body tab to hang
+     handles on. They are read-only landmarks — dragging one writes the TUNE
+     numbers underneath it, never these — and they exist here because only the
+     draw function knows where it put anything. */
+  const parts = {
+    head:     [hx, hy],
+    frillTop: crown,
+    shoulder: [shX, withY],
+    back:     [5, backY],
+    hip:      [hipX, hipY],
+    rump:     [hipX-2, rumpY],
+    belly:    [6, bellyY],
+    tail:     [T(TL), hipY - 4*lM]
+  };
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
            hat:[roofFront + (roofBack - roofFront)*.52, hy - hh*1.12],
            hatW: (roofBack - roofFront)*1.05,
-           top: crown[1], spine };
+           top: crown[1], spine, parts };
 }
 
 /* Brachiosaurus altithorax sprite
@@ -3360,10 +3392,22 @@ function drawBrachio(M, P){
      front slope is long and the back one drops away — so a hat centred on the
      highest pixel sits over the back slope and looks pushed off the edge, which
      is the complaint even though the arithmetic was centred. */
+  /* Where the big pieces of this animal are, for the editor's Body tab to hang
+     handles on. They are read-only landmarks — dragging one writes the TUNE
+     numbers underneath it, never these — and they exist here because only the
+     draw function knows where it put anything. */
+  const parts = {
+    head:     [hx, hy],
+    neck:     [n3[0], n3[1]],
+    shoulder: [shX, shY],
+    hip:      [hipX, hipY],
+    belly:    [0, shY + T_.bodyD*.5*lM],
+    tail:     [hipX + TL*tM, hipY + 10]
+  };
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
            hat:[(crestBack + crestFront)/2 - sn*.12, hy - hh*crTop*.97],
            hatW: (crestBack - crestFront)*1.05,
-           top: hy - hh*crTop, spine };
+           top: hy - hh*crTop, spine, parts };
 }
 
 

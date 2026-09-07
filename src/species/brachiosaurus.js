@@ -127,9 +127,21 @@ function drawBrachio(M, P){
      front slope is long and the back one drops away — so a hat centred on the
      highest pixel sits over the back slope and looks pushed off the edge, which
      is the complaint even though the arithmetic was centred. */
+  /* Where the big pieces of this animal are, for the editor's Body tab to hang
+     handles on. They are read-only landmarks — dragging one writes the TUNE
+     numbers underneath it, never these — and they exist here because only the
+     draw function knows where it put anything. */
+  const parts = {
+    head:     [hx, hy],
+    neck:     [n3[0], n3[1]],
+    shoulder: [shX, shY],
+    hip:      [hipX, hipY],
+    belly:    [0, shY + T_.bodyD*.5*lM],
+    tail:     [hipX + TL*tM, hipY + 10]
+  };
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
            hat:[(crestBack + crestFront)/2 - sn*.12, hy - hh*crTop*.97],
            hatW: (crestBack - crestFront)*1.05,
-           top: hy - hh*crTop, spine };
+           top: hy - hh*crTop, spine, parts };
 }
 

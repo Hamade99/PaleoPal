@@ -59,6 +59,7 @@
   <strong>PALEOPAL ART</strong>
   <button class="tab on" data-tab="pix">Pixels</button>
   <button class="tab" data-tab="species">Species</button>
+  <button class="tab" data-tab="body">Body</button>
   <button class="tab" data-tab="stages">Growth</button>
   <button class="tab" data-tab="coats">Coats</button>
   <button class="tab" data-tab="gear">Headgear</button>
@@ -101,6 +102,21 @@
     <div class="card"><h2>Proportions</h2><div id="spTune"></div></div>
     <div class="card"><h2>Colours</h2><div id="spCols"></div></div>
     <div class="card"><h2>Every stage</h2><div class="strip" id="spPreview"></div></div>
+  </div>
+</main>
+
+<main id="tab-body">
+  <p class="hint">The proportions as handles on the animal. Drag a green square: the hip
+  lengthens the legs, the head carries the neck with it, the tail tip lengthens the tail.
+  These write the same numbers the Species tab puts on sliders — this is another way in,
+  not another set of values. Pick an animation and press play to see it move while you work.</p>
+  <div class="cols">
+    <div class="card list" id="bodySp"></div>
+    <div class="card">
+      <div id="bodyStage" class="strip" style="margin-bottom:6px"></div>
+      <div id="bodyAnim" class="strip" style="margin-bottom:8px"></div>
+      <div id="bodyCanvas"></div>
+    </div>
   </div>
 </main>
 

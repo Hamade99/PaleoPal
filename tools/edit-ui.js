@@ -612,6 +612,216 @@ function gearPaint(){
 BUILD.gear = gearBuild;
 PAINT.gear = gearPaint;
 
+/* ---- tab: body -----------------------------------------------------------
+   The proportions as handles on the animal instead of as a column of sliders.
+   Drag the hip and the legs lengthen; drag the head and the neck follows it.
+   The sliders in the Species tab still edit the same numbers — this is another
+   way in, not another set of values.
+
+   A handle knows which TUNE keys it moves, and nothing else. How far a key has
+   to travel to move the handle one pixel is measured rather than worked out:
+   on pointer-down each key is nudged by one unit, the animal is re-baked, and
+   the distance the landmark shifted becomes the exchange rate for that drag.
+   Doing it that way means no table of signs and scales to get wrong, and it
+   keeps working when a draw function changes what a number does — which is
+   exactly what went wrong the last time placement was hand-derived.
+   -------------------------------------------------------------------------- */
+const PART_KEYS = {
+  rex: {
+    head:     { x:'neckLen',  y:'neckDrop' },
+    shoulder: { x:'shoulder', y:'withersH' },
+    back:     { y:'backH' },
+    hip:      { y:'hipH' },
+    belly:    { y:'bellyD' },
+    tail:     { x:'tailLen' }
+  },
+  trike: {
+    head:     { x:'neckLen',  y:'neckDrop' },
+    frillTop: { x:'frillTilt', y:'frillH' },
+    shoulder: { x:'shoulder', y:'withersH' },
+    back:     { y:'backH' },
+    rump:     { y:'rumpH' },
+    hip:      { y:'hipH' },
+    belly:    { y:'bellyD' },
+    tail:     { x:'tailLen' }
+  },
+  brachio: {
+    head:     { x:'shoulder', y:'neckLen' },
+    neck:     { y:'neckLen' },
+    shoulder: { y:'foreRatio' },
+    hip:      { y:'hindH' },
+    belly:    { y:'bodyD' },
+    tail:     { x:'tailLen' }
+  }
+};
+
+let bodySp = Object.keys(SPECIES)[0], bodyStage = 3;
+let bodyAnim = 'idle', bodyPlaying = false, bodyFrame = 0, bodyRAF = 0, bodyLast = 0;
+const BODY_Z = 4, BODY_PAD = 10;
+
+const bodyFrameOf = () =>
+  frameOf(bodySp, bodyStage, bodyAnim, bodyFrame, false, 'wild');
+
+/* One unit of `key` is worth this many pixels of movement at `part`. Measured,
+   not derived. Returns null when the key does not move the part at all, which
+   is how an axis gets marked undraggable rather than dividing by zero. */
+function bodyRate(part, key){
+  const tune = SPECIES[bodySp].tune;
+  /* Against the animal's own origin, not the canvas. A landmark is stored in
+     trimmed-canvas coordinates and the trim moves whenever the sprite changes
+     size, so measuring there had the box shifting under the measurement and
+     cancelling most of it — hipH came out at a seventh of its real effect, and
+     with the wrong sign. `ox`/`oy` put both bakes back on the same ground. */
+  const where = () => { const f = bodyFrameOf();
+                        const q = f.parts[part];
+                        return q ? [q[0] - f.ox, q[1] - f.oy] : null; };
+  const before = where();
+  const was = tune[key];
+  tune[key] = was + 1;
+  artChanged();
+  const after = where();
+  tune[key] = was;
+  artChanged();
+  if (!before || !after) return null;
+  return [after[0] - before[0], after[1] - before[1]];
+}
+
+function bodyStop(){ if (bodyRAF) cancelAnimationFrame(bodyRAF); bodyRAF = 0; }
+
+function bodyBuild(){
+  bodyStop();
+  pickList($('bodySp'), Object.keys(SPECIES), () => bodySp,
+           id => { bodySp = id; bodyBuild(); }, id => SPECIES[id].common);
+
+  const st = $('bodyStage'); st.innerHTML = '';
+  STAGE.forEach((s, i) => {
+    const b = mk('button', i === bodyStage ? 'on' : '', s.key);
+    b.onclick = () => { bodyStage = i; bodyBuild(); };
+    st.appendChild(b);
+  });
+
+  const an = $('bodyAnim'); an.innerHTML = '';
+  Object.keys(POSES).forEach(name => {
+    const b = mk('button', name === bodyAnim ? 'on' : '', name);
+    b.onclick = () => { bodyAnim = name; bodyFrame = 0; bodyBuild(); };
+    an.appendChild(b);
+  });
+  const play = mk('button', bodyPlaying ? 'on' : '', bodyPlaying ? 'stop' : 'play');
+  play.onclick = () => { bodyPlaying = !bodyPlaying; bodyBuild(); };
+  an.appendChild(play);
+
+  /* Built once, painted many times — the canvas carries the handles, and
+     replacing it mid-drag is the bug the hat tab already paid for. */
+  const host = $('bodyCanvas'); host.innerHTML = '';
+  const f0 = bodyFrameOf();
+  const c = mk('canvas');
+  c.width = (f0.cv.width + BODY_PAD*2) * BODY_Z;
+  c.height = (f0.cv.height + BODY_PAD*2) * BODY_Z;
+  c.style.cssText = 'image-rendering:pixelated;touch-action:none;cursor:crosshair;background:#131c1e';
+
+  const keysFor = () => PART_KEYS[bodySp] || {};
+  const at = e => {
+    const r = c.getBoundingClientRect();
+    return [(e.clientX - r.left) * (c.width / r.width) / BODY_Z - BODY_PAD,
+            (e.clientY - r.top)  * (c.height / r.height) / BODY_Z - BODY_PAD];
+  };
+  const nearest = pos => {
+    const parts = bodyFrameOf().parts;
+    let best = null, bd = 7;
+    for (const name in keysFor()){
+      const q = parts[name];
+      if (!q) continue;
+      const d = Math.hypot(q[0] - pos[0], q[1] - pos[1]);
+      if (d < bd){ bd = d; best = name; }
+    }
+    return best;
+  };
+
+  let drag = null;
+  c.onpointerdown = e => {
+    const name = nearest(at(e));
+    if (!name) return;
+    const map = keysFor()[name], tune = SPECIES[bodySp].tune;
+    const rx = map.x ? bodyRate(name, map.x) : null;
+    const ry = map.y ? bodyRate(name, map.y) : null;
+    drag = { name, map, x:e.clientX, y:e.clientY,
+             x0: map.x ? tune[map.x] : 0, y0: map.y ? tune[map.y] : 0,
+             rx, ry, css: c.getBoundingClientRect().width / c.width };
+    c.setPointerCapture(e.pointerId);
+    c.style.cursor = 'grabbing';
+  };
+  c.onpointermove = e => {
+    if (!drag){ c.style.cursor = nearest(at(e)) ? 'grab' : 'crosshair'; return; }
+    const tune = SPECIES[bodySp].tune;
+    const dx = (e.clientX - drag.x) / drag.css / BODY_Z;
+    const dy = (e.clientY - drag.y) / drag.css / BODY_Z;
+    // each key follows the axis it actually moves the landmark along
+    if (drag.map.x && drag.rx && Math.abs(drag.rx[0]) > 1e-4)
+      tune[drag.map.x] = +(drag.x0 + dx / drag.rx[0]).toFixed(2);
+    if (drag.map.y && drag.ry && Math.abs(drag.ry[1]) > 1e-4)
+      tune[drag.map.y] = +(drag.y0 + dy / drag.ry[1]).toFixed(2);
+    changed();
+  };
+  const drop = () => {
+    if (!drag) return;
+    drag = null; c.style.cursor = 'crosshair';
+    rebuild();
+  };
+  c.onpointerup = drop;
+  c.onpointercancel = drop;
+  host.appendChild(c);
+
+  const read = mk('div'); read.id = 'bodyRead';
+  read.style.cssText = 'color:var(--dim);font-size:11px;margin-top:4px';
+  host.appendChild(read);
+
+  bodyPaint();
+  if (bodyPlaying) bodyTick(0);
+}
+
+function bodyTick(now){
+  bodyRAF = requestAnimationFrame(bodyTick);
+  if (now - bodyLast < 110) return;
+  bodyLast = now;
+  bodyFrame = (bodyFrame + 1) % POSES[bodyAnim].length;
+  bodyPaint();
+}
+
+function bodyPaint(){
+  const c = $('bodyCanvas').querySelector('canvas');
+  if (!c) return;
+  const f = bodyFrameOf();
+  const g = c.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, c.width, c.height);
+  g.imageSmoothingEnabled = false;
+  g.scale(BODY_Z, BODY_Z);
+  g.drawImage(f.cv, BODY_PAD, BODY_PAD);
+
+  const map = PART_KEYS[bodySp] || {};
+  g.lineWidth = 1 / BODY_Z;
+  for (const name in map){
+    const q = f.parts[name];
+    if (!q) continue;
+    const x = q[0] + BODY_PAD, y = q[1] + BODY_PAD;
+    g.fillStyle = 'rgba(20,30,28,.75)';
+    g.fillRect(x - 2.5, y - 2.5, 5, 5);
+    g.fillStyle = '#8cb765';
+    g.fillRect(x - 1.5, y - 1.5, 3, 3);
+  }
+
+  const read = $('bodyRead');
+  if (read){
+    const tune = SPECIES[bodySp].tune;
+    read.textContent = Object.keys(map).map(n => {
+      const k = map[n];
+      return n + ' (' + [k.x, k.y].filter(Boolean).map(q => q + ' ' + tune[q]).join(', ') + ')';
+    }).join('   ·   ');
+  }
+}
+BUILD.body = bodyBuild;
+PAINT.body = bodyPaint;
+
 /* ---- go ------------------------------------------------------------------ */
 pixBuild();
 /* Say up front which kind of Save this is. Opened through tools/edit.cmd, Save
