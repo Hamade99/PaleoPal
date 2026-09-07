@@ -434,7 +434,7 @@ function shelfItems(which){
   if (which === 'hat'){
     return { items: HAT_SHOP, cols:6, cell:[14,13],
       art: (g, it, cx, cy) => thumb(g, hatArt(it.id), cx, cy, 14, 13),
-      own: it => S.owned.includes(it.id), worn: it => S[it.slot] === it.id,
+      own: it => S.owned.includes(it.id), worn: it => S[GEAR_FIELD[it.slot]] === it.id,
       note: it => it.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.',
       take:true, here:'worn' };
   }

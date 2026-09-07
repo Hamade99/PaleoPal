@@ -4732,6 +4732,14 @@ const HAT_SHOP = [
   { id:'hardhat', name:'Site helmet',  cost:130, slot:'head' },
   { id:'crown',   name:'Bone crown',   cost:200, slot:'head' }
 ];
+/* `slot` is where the thing sits on the animal; the pet stores it under a
+   different name, and the two are not the same word. Writing `S[slot]` put
+   every head hat in `S.head`, which nothing draws, nothing saves and the save
+   validator does not know about — so the five head hats could be bought and
+   paid for and never appeared, while the goggles worked, because `face` is the
+   one slot whose two names happen to match. One map, and everything that turns
+   a slot into a field goes through it. */
+const GEAR_FIELD = { head:'hat', face:'face' };
 const TRAITS = {
   appetite:[ {id:'greedy', name:'Bottomless', note:'Gets hungry fast and never says no.', hunger:1.35, foodJoy:1.0},
              {id:'picky',  name:'Particular', note:'Eats slowly, and only really enjoys its favourites.', hunger:.78, foodJoy:.7} ],
@@ -4845,7 +4853,10 @@ function loadSave(raw){
     pet.log = array(pet.log).filter(entry => entry && typeof entry.txt === 'string' && Number.isFinite(entry.t)).slice(0,60)
       .map(entry => ({t:entry.t,txt:entry.txt.slice(0,500)}));
     pet.owned = array(pet.owned).filter(id => HAT_SHOP.some(hat => hat.id === id));
-    for (const slot of ['hat','face']) if (!HAT_SHOP.some(hat => hat.id === pet[slot] && hat.slot === (slot === 'hat' ? 'head' : 'face')) || !pet.owned.includes(pet[slot])) pet[slot] = null;
+    for (const slot in GEAR_FIELD){
+      const field = GEAR_FIELD[slot];
+      if (!HAT_SHOP.some(hat => hat.id === pet[field] && hat.slot === slot) || !pet.owned.includes(pet[field])) pet[field] = null;
+    }
     const skins = SKINS[pet.sp] || [];
     pet.skinsOwned = [...new Set(['wild', ...array(pet.skinsOwned).filter(id => skins.some(skin => skin.id === id))])];
     if (!pet.skinsOwned.includes(pet.skin)) pet.skin = 'wild';
@@ -5180,7 +5191,7 @@ function vetVisit(){
   refresh();
 }
 function buyHat(id){
-  const h = HAT_SHOP.find(x => x.id === id), slot = h.slot;
+  const h = HAT_SHOP.find(x => x.id === id), slot = GEAR_FIELD[h.slot];
   if (S.owned.includes(id)){ S[slot] = S[slot] === id ? null : id; SFX.pop(); refresh(); return; }
   if (G.coins < h.cost) return refuse('Not enough coins.');
   G.coins -= h.cost; S.owned.push(id); S[slot] = id;
@@ -6693,7 +6704,7 @@ function shelfItems(which){
   if (which === 'hat'){
     return { items: HAT_SHOP, cols:6, cell:[14,13],
       art: (g, it, cx, cy) => thumb(g, hatArt(it.id), cx, cy, 14, 13),
-      own: it => S.owned.includes(it.id), worn: it => S[it.slot] === it.id,
+      own: it => S.owned.includes(it.id), worn: it => S[GEAR_FIELD[it.slot]] === it.id,
       note: it => it.slot === 'face' ? 'Sits across the eyes.' : 'Sits on the head.',
       take:true, here:'worn' };
   }
