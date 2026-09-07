@@ -6,16 +6,30 @@
    skull-and-frill unit carried forward of the shoulder rather than sitting on
    top of it.
 
-   That last point is the whole of this rewrite. The frill used to be built
-   around a point just in front of the withers, tipped back forty degrees, and
-   the body outline was run forward to meet it — so its lower half was buried
-   in the shoulder hump, its rim never cleared the back line, and the skull
-   appeared to be extruded out of the front of a lump. In side view a
-   ceratopsian is a head with an animal behind it: the shield stands clear
-   against the sky, there is a short thick neck under it, and the shoulder
-   starts behind that. The frill is anchored to the back of the skull now, the
-   skull is carried forward of the shoulder, and the body's nape stops short
-   so that neck is something you can see.
+   Rebuilt from the frame outwards after the previous animal was rejected as
+   awkward next to the other two. Six passes of moving control points on it had
+   changed nothing, and the reason showed up the moment the colour was stripped
+   off and the silhouettes were put side by side: on the rex you can name every
+   part from the outline alone, and on this one the frill ran straight into the
+   shoulder, so the whole top line from beak to tail tip was a single unbroken
+   lump. The notch of sky between the back of the frill and the shoulder is
+   what says Triceratops, and nothing else about the animal can make up for
+   its absence.
+
+   Three things follow from that, and they are the rewrite:
+
+     - the head is carried far enough forward, and the frill tipped back far
+       enough, to open that notch
+     - the neck is drawn on `head` rather than `skin`. The layer order is
+       skin, shield, head, so the frill used to be painted across the neck and
+       the animal read as a face with a plate leaning on it. Now the head unit
+       covers the shield's base and the shield stands behind it
+     - the barrel has three heights along the top and three along the bottom
+       instead of one each, and the shoulder and haunch are their own masses,
+       so the legs come out of an animal rather than out of a plank
+
+   The tail also lost a third of its length; it was carrying about as much of
+   the animal's area as the whole body.
 
    Growth follows Horner and Goodwin's series of ten skulls:
      - the frill is present and deeply scalloped from the start, and lengthens
@@ -29,76 +43,88 @@
 const TRI_HIND = { stride:.34, lift:.11, duty:.66, mt:.15, back:.2,  bend:1,  thigh:true,  foot:'column' };
 const TRI_FORE = { stride:.32, lift:.10, duty:.66, mt:.15, back:-.1, bend:-1, thigh:false, foot:'column' };
 function drawTrike(M, P){
-  const A = artFor('trike', P.stage), st = A.st;
+  const A = artFor('trike', P.stage), st = A.st, T_ = A.tune;
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const hF = st.horn, sM = st.snout, fM = st.frill, bend = st.hornBend;
   const bk = st.bulk, tor = st.torso;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+  const TL = T_.tailLen;
 
-  /* `torso` shortens the trunk in young animals and `bulk` deepens it. A
-     hatchling built on the adult's proportions came out long and thin on
-     stick legs — a scale model of an adult rather than a baby, which reads as
-     underfed rather than young. Babies are short-bodied and round. */
-  const T_ = A.tune, TL = T_.tailLen;
-  const hipX = T_.hipBack*tor, hipY = -T_.hipH*lM - bob;
-  const shX = -T_.shoulder*tor, shY = -(T_.hipH-3)*lM - bob;   // glenoid
-  const withY = hipY - T_.withersH*lM;         // tall neural spines: a shoulder hump
-  const backY = hipY - T_.backH*lM, bellyY = hipY + T_.bellyD*lM*bk;
+  /* The frame the animal hangs on. Three heights along the top — withers,
+     a dip, then the haunch — and three along the bottom — brisket, a slight
+     waist, then the flank. The old one had one height for the whole back and
+     one for the whole belly, which is a loaf with a head on it, and no amount
+     of moving the corners fixed that. */
+  const hipX  = T_.hipBack*tor, shX = -T_.shoulder*tor;
+  const hipY  = -T_.hipH*lM - bob;
+  const shY   = hipY + 2*lM;                       // glenoid, just under the hip
+  const withY = shY - T_.withersH*lM;              // shoulder hump: the high point
+  const backY = hipY - T_.backH*lM;                // mid back, below the withers
+  const rumpY = hipY - T_.rumpH*lM;                // rising again over the hip
+  const bellyY = hipY + T_.bellyD*lM*bk;
+  const chestY = hipY + T_.chestD*lM*bk;           // the chest hangs lower than the waist
   const T = d => hipX + d*tM;
 
-  legStep(M.far, hipX-7, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
-  legStep(M.far, shX-7,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE);
+  legStep(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
+  legStep(M.far, shX-6,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE);
 
-  /* One closed mass: nape, ribcage, hips and tail. The nape stops at the base
-     of the neck instead of running forward into the frill, so the neck is a
-     column with sky either side of it rather than a filled wedge. The tail
-     leaves the hips nearly as deep as the pelvis and tapers the whole way
-     out, which is what stops it reading as a stub bolted on the back. */
+  /* One closed mass: chest, barrel, hips and tail. The neck is deliberately
+     NOT in here — see below. */
   blob(M.skin, [
-    [shX-9,  withY+8*lM],                      // base of the neck
-    [shX-2,  withY],                           // shoulder hump
-    [8,      backY-1],                         // back
-    [hipX+4, backY+2],                         // hips
-    [T(TL*14/62), hipY-17*lM*bk+sw*1.5],         // tail base, still deep
-    [T(TL*30/62), hipY-13*lM+sw*3],
-    [T(TL*46/62), hipY-8.5*lM+sw*5],
-    [T(TL),     hipY-3*lM+sw*7],               // tail tip
-    [T(TL*60/62), hipY-0.5*lM+sw*7],
-    [T(TL*42/62), hipY+2*lM+sw*4],
-    [T(TL*22/62), hipY+6*lM*bk+sw*1.5],
-    [T(TL*5/62), hipY+10*lM*bk],
-    [hipX-6, bellyY],                          // belly
-    [2,      bellyY+2*lM],
-    [shX+3,  bellyY-1*lM],
-    [shX-8,  hipY+2*lM]                        // throat
+    [shX-9,       withY+9*lM],                     // front of the shoulder
+    [shX+1,       withY],                          // withers
+    [5,           backY],                          // mid back
+    [hipX-2,      rumpY],                          // haunch
+    [T(TL*13/62), hipY-T_.tailBase*lM*bk + sw*1.5],// the tail leaves the hips deep
+    [T(TL*30/62), hipY-T_.tailBase*.62*lM + sw*3],
+    [T(TL*46/62), hipY-T_.tailBase*.36*lM + sw*5],
+    [T(TL),       hipY-T_.tailBase*.10*lM + sw*7], // tip
+    [T(TL*58/62), hipY+1*lM + sw*7],
+    [T(TL*38/62), hipY+3.5*lM + sw*4],
+    [T(TL*16/62), hipY+5*lM*bk + sw*1.5],
+    [hipX+2,      hipY+5.75*lM*bk],                // under the haunch, no shelf
+    [hipX-6,      bellyY],                         // flank
+    [6,           bellyY - T_.waistD*lM],          // waist
+    [shX+7,       chestY],                         // deep chest
+    [shX-7,       chestY - T_.chestD*.55*lM],      // brisket
+    [shX-9,       withY+18*lM]                     // up the front of the shoulder
   ]);
 
-  /* The neck: short, thick and near horizontal, carrying the head forward of
-     the shoulder. Drawn on `skin`, so it merges with the body the way a neck
-     should — the boundary that has to read is the one behind the frill, and
-     the frill has a material of its own for exactly that. */
-  const nkX = shX - 7*nM, nkY = withY + 9*lM;
-  const hx = nkX - T_.neckLen*nM - 9*hM*sM, hy = nkY + 7*lM + dr*5;   // the jaw joint
+  /* Haunch and shoulder as their own rounded masses, on the same material so
+     they swell the outline without drawing a line across it. A quadruped this
+     size reads by its two big muscle groups; without them the legs look
+     pushed into a plank. */
+  oval(M.skin, hipX-6, hipY-6*lM, T_.haunchR*lM*bk, T_.haunchR*.82*lM*bk);
+  oval(M.skin, shX+5,  shY-6*lM,  T_.shoulderR*lM*bk, T_.shoulderR*.9*lM*bk);
+
+  /* The head is carried forward of the shoulder, at about shoulder height.
+     `neckLen` is the whole run from the glenoid to the occiput; the neck
+     starts a third of the way along it and the skull hangs off the rest. */
+  const nkX = shX - T_.neckLen*nM*.35, nkY = withY + T_.neckDrop*lM;
+  const hx = nkX - T_.neckLen*nM*.65 - 9*hM*sM, hy = nkY + 6*lM + dr*5;
   const sn = T_.headLen*hM*sM, hh = T_.headDepth*hM;
-  tube(M.skin, [[shX-2, nkY-2*lM],[nkX-4, nkY+1*lM],[hx+14*hM, hy-hh*.10]],
-       [T_.neckThick*lM*bk, T_.neckThick*13.5/15*lM*bk, 12*hM]);
 
-  /* Frill: a solid bone shield, anchored to the back of the skull roof and
-     opening up and back over the neck. Its rim stands clear of the back line
-     the whole way round — that separation is the entire silhouette of the
-     animal, and burying it in the shoulder is what made the old one read as a
-     hump of neck.
+  /* Frill: a shield standing behind the skull.
 
-     It rides STAGE.frill, not the horn column: a baby already has an obvious,
-     deeply scalloped frill and almost no horns. */
-  const fx = hx + 15*hM, fy = hy - hh*1.16;    // the base, on the skull roof
+     Drawn before the neck and the skull, both of which are on `head`, and the
+     layer order is skin, shield, head — so its lower margin is tucked behind
+     them and only the arc above and behind the skull roof shows. Painted the
+     other way round, which is how it was, the shield lies across the neck and
+     the animal reads as a face with a plate leaning on it.
+
+     What actually identifies this animal in silhouette is the notch of sky
+     between the back of the frill and the shoulder. Every version without that
+     notch read as one unbroken lump from beak to tail whatever else was done
+     to it, so the frill is tipped back hard and the head carried far enough
+     forward to open it. */
+  const fx = hx + 14*hM, fy = hy - hh*1.16;
   const fRx = T_.frillW*hM*fM, fRy = T_.frillH*hM*fM;
-  const fTilt = T_.frillTilt;                   // tipped back, but standing up
+  const fTilt = T_.frillTilt;
   const fc = Math.cos(fTilt), fs = Math.sin(fTilt);
   const rot = (px,py) => [fx + px*fc - py*fs, fy + px*fs + py*fc];
   const epi = T_.epi;
   const rim = [];
-  const A0 = Math.PI*1.10, A1 = Math.PI*2.02;   // front edge, over the crown, down the back
+  const A0 = Math.PI*1.06, A1 = Math.PI*1.94;   // front edge, over the crown, down the back
   /* The epoccipitals scallop the rim itself. Sixteen of them came out as a
      one-pixel sawtooth that read as fur; an adult shows five or six knobs in
      side profile, so the rim is stepped at that count instead. */
@@ -108,9 +134,9 @@ function drawTrike(M, P){
     const r = (i % 2) ? 1.0 : (1 - epi);
     rim.push(rot(Math.cos(a)*fRx*r, Math.sin(a)*fRy*r));
   }
-  rim.push(rot(fRx*.74, fRy*.34));              // rear-bottom corner, clear of the neck
-  rim.push(rot(fRx*.10, fRy*.44));              // bottom margin, behind the cheek
-  rim.push(rot(-fRx*.72, fRy*.30));             // front-bottom, where the skull joins
+  rim.push(rot(fRx*.80, fRy*.52));              // rear-bottom corner, behind the neck
+  rim.push(rot(fRx*.10, fRy*.60));              // bottom margin, behind the cheek
+  rim.push(rot(-fRx*.74, fRy*.34));             // front-bottom, where the skull joins
   blob(M.shield, rim);
   /* The epoccipitals as bone, not only as a step in the outline. They are
      separate ossifications that fuse to the margin, so they are the colour of
@@ -123,10 +149,13 @@ function drawTrike(M, P){
     oval(M.horn, q[0], q[1], (1.1 + epi*7)*hM*fM, (1.0 + epi*5.5)*hM*fM);
   }
 
+  /* The neck, on `head` rather than `skin`, so it covers the frill's base and
+     the two of them read as one head unit standing in front of the shield. */
+  tube(M.head, [[shX+2, withY+11*lM],[nkX-2, nkY+1*lM],[hx+14*hM, hy-hh*.10]],
+       [T_.neckThick*lM*bk, T_.neckThick*.94*lM*bk, 12*hM]);
+
   /* Skull: deep, boxy, and carried forward and below the frill base. It stops
-     at the oral margin, because the mandible has to live somewhere. The old
-     one was a long thin wedge — about half of this animal's head is frill,
-     and giving the skull the other half made it a snout on a stalk. */
+     at the oral margin, because the mandible has to live somewhere. */
   const lipY = hy + hh*.38;
   blob(M.head, [
     [hx+15*hM,   hy-hh*1.02],                   // back of the skull roof
@@ -227,24 +256,25 @@ function drawTrike(M, P){
      face. */
   blob(M.beak, [[hx-sn*.04, hy+hh*.60],[hx-sn*.28, hy+hh*.56],[hx-sn*.12, hy+hh*.90]]);
 
-  // low nubbin feature scales over the flank and tail base
-  for (const q of [[-2,-11],[10,-14],[22,-12],[15,-6],[32,-9],[2,-5],[41,-7]])
-    oval(M.crest, q[0], hipY + q[1]*lM, 1.7*lM, 1.2*lM);
+  /* Nubbin feature scales, kept to the flank where there is room for them.
+     Scattered over the whole animal they read as dirt rather than as skin. */
+  for (const q of [[6,-12],[18,-14],[30,-11],[13,-6]])
+    oval(M.crest, q[0], hipY + q[1]*lM, 1.6*lM, 1.1*lM);
 
   // the ventral countershading is painted from the spine by paintBelly
 
-  legStep(M.limb, hipX+2, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
-  legStep(M.limb, shX+4, shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
+  legStep(M.limb, hipX-1, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
+  legStep(M.limb, shX+3,  shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
 
   eyeAt(M, ex, ey, 3.4*hM, P.eye);
 
   /* Centreline for the coat painter: nape to tail tip, with the body's
      half-depth at each station so a band knows how far to run. */
   const spine = [
-    [shX-6,   withY+11*lM,  8*lM],   // base of the neck
-    [shX+4,   hipY-6*lM,   17*lM],   // shoulder
-    [10,      hipY-4*lM,   17*lM],
-    [hipX+2,  hipY-3*lM,   16*lM],   // hips
+    [shX-4,   withY+8*lM,   8*lM],   // base of the neck
+    [shX+5,   hipY-T_.backH*.75*lM, 16*lM],   // shoulder
+    [5,       hipY-T_.backH*.70*lM, 17*lM],
+    [hipX,    hipY-T_.rumpH*.72*lM, 16*lM],   // hips
     [T(TL*15/62), hipY-7*lM,   10*lM],   // tail base
     [T(TL*32/62), hipY-6*lM,    7*lM],
     [T(TL*48/62), hipY-4*lM,    4.5*lM],

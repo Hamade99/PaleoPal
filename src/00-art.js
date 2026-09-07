@@ -543,38 +543,45 @@ const STAGE = [
    -------------------------------------------------------------------------- */
 /*<data:REX_TUNE>*/
 const REX_TUNE = {
-  hipH:46,        // hip height above the ground, and so leg length
-  shoulder:18,    // how far forward of the hip the shoulder sits
-  backH:24,       // depth of the ribcage at the back
-  withersH:25,    // height of the withers above the hip
-  bellyD:9,       // how far the belly hangs below the hip line
-  neckLen:26,     // shoulder to occiput
-  neckDrop:10,    // how far the head sits below the withers
-  headLen:32,     // snout length
-  headDepth:15.5, // skull depth at the orbit
-  tailLen:72,     // hip to tail tip
-  tailBase:18,    // depth of the tail where it leaves the hips
-  armLen:11,      // upper arm
-  fuzzLen:5.2     // longest filament on a hatchling
+  hipH:46,
+  shoulder:18,
+  backH:24,
+  withersH:25,
+  bellyD:9,
+  neckLen:26,
+  neckDrop:10,
+  headLen:32,
+  headDepth:15.5,
+  tailLen:72,
+  tailBase:18,
+  armLen:11,
+  fuzzLen:5.2
 };
 /*</data>*/
 /*<data:TRI_TUNE>*/
 const TRI_TUNE = {
-  hipH:41,
-  shoulder:16,
-  hipBack:26,
-  withersH:25,
-  backH:20,
-  bellyD:14,
-  neckLen:20,
-  neckThick:15,
+  hipH:44,
+  shoulder:18,
+  hipBack:24,
+  withersH:19,
+  backH:17,
+  rumpH:19,
+  bellyD:13,
+  chestD:15,
+  waistD:1,
+  neckLen:37,
+  neckDrop:11,
+  neckThick:18.75,
   headLen:22.5,
   headDepth:10.5,
-  frillW:17,
-  frillH:22,
-  frillTilt:-.24,
+  frillW:15.6,
+  frillH:20.2,
+  frillTilt:-.6,
   hornLen:1.85,
-  tailLen:62,
+  tailLen:55,
+  tailBase:15,
+  haunchR:9.5,
+  shoulderR:9,
   epi:.08
 };
 /*</data>*/
@@ -814,9 +821,9 @@ function skinOf(spId, skinId){
    -------------------------------------------------------------------------- */
 /*<data:SPECIES_STAGE>*/
 const SPECIES_STAGE = {
-  rex:     [ {headLen:23}, {headLen:28}, {headLen:30}, {} ],
-  trike:   [ { epi:.22 }, { epi:.17 }, { epi:.12 }, {} ],
-  brachio: [ {}, {}, {}, {} ]
+  rex:[{ headLen:23 }, { headLen:28 }, { headLen:30 }, {  }],
+  trike:[{ epi:.22 }, { epi:.17 }, { epi:.12 }, {  }],
+  brachio:[{  }, {  }, {  }, {  }]
 };
 /*</data>*/
 
@@ -847,9 +854,39 @@ const SPECIES_STAGE = {
    -------------------------------------------------------------------------- */
 /*<data:GEAR_FIT>*/
 const GEAR_FIT = {
-  rex:     {},
-  trike:   { cone:{ dy:-2 }, hardhat:{ dx:4, s:1.18 }, crown:{ dx:4, s:1.15 } },
-  brachio: {}
+  rex:{
+    frond:{ dx:4.3, dy:-.9, at:{ subadult:{ dx:6.1, dy:-.9 } } },
+    cap:{ dx:4.4, dy:1.1, s:1.19 },
+    cone:{
+      dx:8.1,
+      dy:3.1,
+      s:1.28,
+      at:{
+        hatchling:{ dx:8.1, dy:-.3 },
+        juvenile:{ dx:8.4, dy:-1 },
+        subadult:{ dx:7.4, dy:-.7 },
+        adult:{ dx:7.2, dy:-.3 }
+      }
+    },
+    hardhat:{
+      at:{
+        hatchling:{ dx:6, dy:5.9, s:2.1 },
+        juvenile:{ dx:7, dy:1.7, s:1.29 },
+        subadult:{ dx:6.1, dy:-.5 },
+        adult:{ dx:7.5, dy:-.6, s:1.07 }
+      }
+    },
+    crown:{
+      at:{
+        hatchling:{ dx:5.9, dy:4.6, s:.65 },
+        juvenile:{ dx:8.8, s:1.12 },
+        subadult:{ dx:7, dy:.2 },
+        adult:{ dx:7.5, dy:-.6 }
+      }
+    }
+  },
+  trike:{  },
+  brachio:{  }
 };
 /*</data>*/
 
@@ -865,20 +902,98 @@ function gearFor(spId, hatId, stage){
 
 /*<data:HABITAT_ART>*/
 const HABITAT_ART = {
-  valley:{horizon:108,skyline:[[0,70],[25,63],[52,79],[96,54],[135,74],[183,64],[224,82]],slot:[38,140],item:'fern'},
-  lagoon:{horizon:98,skyline:[[0,94],[38,93],[49,85],[62,87],[74,94],[158,94],[171,90],[185,94],[224,94]],slot:[187,140],item:'fish'},
-  ashfall:{horizon:111,skyline:[[0,82],[27,69],[54,75],[73,60],[104,85],[157,73],[194,83],[224,70]],slot:[42,140],item:'rock'},
-  gorge:{horizon:104,skyline:[[0,58],[34,57],[43,74],[78,74],[84,101],[136,103],[146,68],[189,66],[200,54],[224,57]],slot:[185,140],item:'rock'},
-  boreal:{horizon:106,skyline:[[0,82],[21,60],[37,75],[66,44],[85,66],[115,52],[140,78],[168,49],[195,69],[224,55]],slot:[40,140],item:'cycad'}
+  valley:{
+    horizon:108,
+    skyline:[[0, 70], [25, 63], [52, 79], [96, 54], [135, 74], [183, 64], [224, 82]],
+    slot:[38, 140],
+    item:'fern'
+  },
+  lagoon:{
+    horizon:98,
+    skyline:[
+      [0, 94],
+      [38, 93],
+      [49, 85],
+      [62, 87],
+      [74, 94],
+      [158, 94],
+      [171, 90],
+      [185, 94],
+      [224, 94]
+    ],
+    slot:[187, 140],
+    item:'fish'
+  },
+  ashfall:{
+    horizon:111,
+    skyline:[
+      [0, 82],
+      [27, 69],
+      [54, 75],
+      [73, 60],
+      [104, 85],
+      [157, 73],
+      [194, 83],
+      [224, 70]
+    ],
+    slot:[42, 140],
+    item:'rock'
+  },
+  gorge:{
+    horizon:104,
+    skyline:[
+      [0, 58],
+      [34, 57],
+      [43, 74],
+      [78, 74],
+      [84, 101],
+      [136, 103],
+      [146, 68],
+      [189, 66],
+      [200, 54],
+      [224, 57]
+    ],
+    slot:[185, 140],
+    item:'rock'
+  },
+  boreal:{
+    horizon:106,
+    skyline:[
+      [0, 82],
+      [21, 60],
+      [37, 75],
+      [66, 44],
+      [85, 66],
+      [115, 52],
+      [140, 78],
+      [168, 49],
+      [195, 69],
+      [224, 55]
+    ],
+    slot:[40, 140],
+    item:'cycad'
+  }
 };
 /*</data>*/
 
 /*<data:POSE_ART>*/
 const POSE_ART = {
-  eat:[{body:0,legPhase:0,jaw:.7,droop:.45,tail:.18},{body:0,legPhase:0,jaw:0,droop:.45,tail:-.08}],
-  cheer:[{body:1.8,legPhase:0,jaw:0,tail:.35,eye:2},{body:0,legPhase:0,jaw:0,tail:-.18,eye:2}],
-  wary:[{body:-.5,legPhase:0,jaw:0,droop:-.2,tail:0},{body:0,legPhase:0,jaw:0,droop:0,tail:0}],
-  inspect:[{body:0,legPhase:0,jaw:0,droop:.45,tail:.1},{body:0,legPhase:0,jaw:0,droop:.7,tail:.1}]
+  eat:[
+    { body:0, legPhase:0, jaw:.7, droop:.45, tail:.18 },
+    { body:0, legPhase:0, jaw:0, droop:.45, tail:-.08 }
+  ],
+  cheer:[
+    { body:1.8, legPhase:0, jaw:0, tail:.35, eye:2 },
+    { body:0, legPhase:0, jaw:0, tail:-.18, eye:2 }
+  ],
+  wary:[
+    { body:-.5, legPhase:0, jaw:0, droop:-.2, tail:0 },
+    { body:0, legPhase:0, jaw:0, droop:0, tail:0 }
+  ],
+  inspect:[
+    { body:0, legPhase:0, jaw:0, droop:.45, tail:.1 },
+    { body:0, legPhase:0, jaw:0, droop:.7, tail:.1 }
+  ]
 };
 /*</data>*/
 
