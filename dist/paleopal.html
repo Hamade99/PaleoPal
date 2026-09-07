@@ -2221,8 +2221,32 @@ function eyeAt(M, x, y, r, state){
 const HATS = {};
 Object.defineProperty(HATS, 'get', { value:null });          // keep it a plain bag
 const HAT_IDS = Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
+/* A hat is hung by the bottom of its art, and the art is not the canvas. Every
+   hat is drawn in a 12x11 grid with its brim wherever the artist put it, so the
+   crown has two blank rows under it and the goggles five, and the outline pass
+   adds one more all round. Hanging by the canvas edge floated every hat that
+   distance above the skull — three pixels on a cap, five on the goggles, scaled
+   up with the animal — which is what made a worn hat read as a hovering object
+   rather than as headgear. Measure the last row that has ink in it once, at
+   bake time, and hang from that. `pixInvalidate()` drops HATS, so an edit in
+   the editor re-measures. */
 function hatArt(id){
-  if (!HATS[id]) HATS[id] = pixCanvas('hat.' + id, '#241d13');
+  if (!HATS[id]){
+    const c = pixCanvas('hat.' + id, '#241d13');
+    const d = readCtx(c).getImageData(0, 0, c.width, c.height).data;
+    let foot = 0, x0 = c.width, x1 = -1, seen = false;
+    for (let y = c.height - 1; y >= 0; y--){
+      let ink = false;
+      for (let x = 0; x < c.width; x++) if (d[(y*c.width + x)*4 + 3] > 0){
+        ink = true; if (x < x0) x0 = x; if (x > x1) x1 = x;
+      }
+      if (ink) seen = true; else if (!seen) foot++;
+    }
+    c.foot = foot;                    // blank rows below the art, canvas pad included
+    c.inkW = x1 >= x0 ? x1 - x0 + 1 : c.width;
+    c.inkCx = x1 >= x0 ? (x0 + x1 + 1)/2 : c.width/2;
+    HATS[id] = c;
+  }
   return HATS[id];
 }
 
@@ -2337,6 +2361,11 @@ function bakeOnce(spId, stage, pose, eye, skinId){
     cv: t.cv, w: t.w, h: t.h,
     ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
     eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
+    /* How wide the hat should be drawn, in screen pixels. The species says it,
+       the way it already says how big the eye is, because the three skulls are
+       nothing like each other: sized off `hs` alone a Brachiosaurus wore the
+       same cap as a rex four times its skull length. */
+    hatW: (anchors.hatW || 14) * k,
     eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head,
     clipped: touchedEdge(composed)
   };
@@ -2718,8 +2747,12 @@ function drawRex(M, P){
     [T(TL),     hipY - 6*lM,    2.0*lM]  // tail tip
   ];
 
+  /* Headgear sits on the skull roof behind the orbit — the flat over the
+     braincase, not the muzzle and not the occiput. `hatW` spans about half the
+     skull, which is as much of the roof as there is behind the eye. */
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
-           hat:[hx - sn*.10, hy - hh*1.14], top: hy - hh*1.18, spine };
+           hat:[hx - sn*.22, hy - hh*1.10], hatW: sn*.54,
+           top: hy - hh*1.18, spine };
 }
 
 
@@ -2976,11 +3009,20 @@ function drawTrike(M, P){
     [T(TL),     hipY-2*lM,    2.0*lM]  // tail tip
   ];
 
-  // headgear sits on the crown of the frill, which the tilt moves forward as
-  // well as up — the old anchor was still using the untilted top of the arc
-  const crown = rot(fRx*.10, -fRy*.96);
+  /* Headgear goes on the skull roof, not on the frill. The crown of the frill
+     is the highest point on the animal, which is why it was the anchor, but a
+     hat up there is a hat on a shield standing behind the head — it read as
+     hovering in the sky behind the animal, because that is where the top of the
+     frill is. The roof is the strip between the brow horns and the frill's
+     front edge, so the hat is placed along it and sized to it: far enough back
+     to clear the horns, far enough forward that the frill rises behind it. */
+  const crown = rot(fRx*.10, -fRy*.96);        // still the highest point, for `top`
+  const roofBack = fx - fRx*.30*fc;            // where the frill leaves the skull
+  const roofFront = ex + 5*hM;                 // the brow horn bases
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
-           hat:crown, top: crown[1], spine };
+           hat:[roofFront + (roofBack - roofFront)*.52, hy - hh*1.12],
+           hatW: (roofBack - roofFront)*1.05,
+           top: crown[1], spine };
 }
 
 /* Brachiosaurus altithorax sprite
@@ -3100,8 +3142,14 @@ function drawBrachio(M, P){
     [hipX + TL*tM,     hipY + 10,  1.5*lM]
   ];
 
+  /* Headgear goes over the nasal arch, which is the only thing on this skull
+     tall enough to hang a hat on. Centred on the crest's peak and dropped
+     slightly into it so it caps the hump rather than balancing on the point;
+     `hatW` is the crest's own span, so it covers what it is sitting on and
+     grows with the arch. */
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
-           hat:[hx - sn*.3, hy - hh*crTop], top: hy - hh*crTop, spine };
+           hat:[hx - sn*.18, hy - hh*crTop*.97], hatW: sn*.78 + 2*hM,
+           top: hy - hh*crTop, spine };
 }
 
 
@@ -5506,22 +5554,22 @@ function drawEgg(now){
 /* headgear rides the anchors the sprite hands back, so it sits on the skull or
    across the eyes rather than floating at a guessed offset */
 function drawGear(g, f, x, y, flip){
-  const place = (id, anchor, scale) => {
+  /* The anchor is where the hat touches the animal: the bottom of the ink lands
+     on it and the ink is centred over it. Both are measured off the baked art
+     rather than assumed, because a hat is drawn wherever it suits the artist
+     inside its 12x11 grid and none of them fill it. */
+  const place = (id, anchor, width) => {
     if (!id || !PIX['hat.' + id]) return;
-    /* pixCanvas leaves a pixel of margin for the outline. Horizontally it
-       cancels, because the hat is centred and the margin is on both sides;
-       vertically the hat is hung by its bottom edge, so that pixel has to come
-       back off or every hat rides one scaled pixel high. */
-    const art = hatArt(id), pad = (art.pad || 0) * scale,
+    const art = hatArt(id), scale = Math.max(.6, width / art.inkW),
           w = art.width * scale, hgt = art.height * scale;
     const ax = flip ? x + (f.ox - anchor[0]) : x - f.ox + anchor[0];
     const ay = y - f.oy + anchor[1];
     g.save(); g.translate(Math.round(ax), Math.round(ay));
     if (flip) g.scale(-1, 1);
-    g.drawImage(art, -w/2, -hgt + pad, w, hgt);
+    g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
     g.restore();
   };
-  place(S.hat, f.hat, Math.max(.6, f.hs * 1.55));
+  place(S.hat, f.hat, f.hatW);
   if (S.face && PIX['hat.' + S.face]){
     const art = hatArt(S.face), pad = art.pad || 0,
           scale = Math.max(.5, f.eyeR * 3.6 / (art.width - pad*2));

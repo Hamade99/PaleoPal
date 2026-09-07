@@ -251,9 +251,18 @@ function drawTrike(M, P){
     [T(TL),     hipY-2*lM,    2.0*lM]  // tail tip
   ];
 
-  // headgear sits on the crown of the frill, which the tilt moves forward as
-  // well as up — the old anchor was still using the untilted top of the arc
-  const crown = rot(fRx*.10, -fRy*.96);
+  /* Headgear goes on the skull roof, not on the frill. The crown of the frill
+     is the highest point on the animal, which is why it was the anchor, but a
+     hat up there is a hat on a shield standing behind the head — it read as
+     hovering in the sky behind the animal, because that is where the top of the
+     frill is. The roof is the strip between the brow horns and the frill's
+     front edge, so the hat is placed along it and sized to it: far enough back
+     to clear the horns, far enough forward that the frill rises behind it. */
+  const crown = rot(fRx*.10, -fRy*.96);        // still the highest point, for `top`
+  const roofBack = fx - fRx*.30*fc;            // where the frill leaves the skull
+  const roofFront = ex + 5*hM;                 // the brow horn bases
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
-           hat:crown, top: crown[1], spine };
+           hat:[roofFront + (roofBack - roofFront)*.52, hy - hh*1.12],
+           hatW: (roofBack - roofFront)*1.05,
+           top: crown[1], spine };
 }

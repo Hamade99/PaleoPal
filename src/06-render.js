@@ -197,22 +197,22 @@ function drawEgg(now){
 /* headgear rides the anchors the sprite hands back, so it sits on the skull or
    across the eyes rather than floating at a guessed offset */
 function drawGear(g, f, x, y, flip){
-  const place = (id, anchor, scale) => {
+  /* The anchor is where the hat touches the animal: the bottom of the ink lands
+     on it and the ink is centred over it. Both are measured off the baked art
+     rather than assumed, because a hat is drawn wherever it suits the artist
+     inside its 12x11 grid and none of them fill it. */
+  const place = (id, anchor, width) => {
     if (!id || !PIX['hat.' + id]) return;
-    /* pixCanvas leaves a pixel of margin for the outline. Horizontally it
-       cancels, because the hat is centred and the margin is on both sides;
-       vertically the hat is hung by its bottom edge, so that pixel has to come
-       back off or every hat rides one scaled pixel high. */
-    const art = hatArt(id), pad = (art.pad || 0) * scale,
+    const art = hatArt(id), scale = Math.max(.6, width / art.inkW),
           w = art.width * scale, hgt = art.height * scale;
     const ax = flip ? x + (f.ox - anchor[0]) : x - f.ox + anchor[0];
     const ay = y - f.oy + anchor[1];
     g.save(); g.translate(Math.round(ax), Math.round(ay));
     if (flip) g.scale(-1, 1);
-    g.drawImage(art, -w/2, -hgt + pad, w, hgt);
+    g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
     g.restore();
   };
-  place(S.hat, f.hat, Math.max(.6, f.hs * 1.55));
+  place(S.hat, f.hat, f.hatW);
   if (S.face && PIX['hat.' + S.face]){
     const art = hatArt(S.face), pad = art.pad || 0,
           scale = Math.max(.5, f.eyeR * 3.6 / (art.width - pad*2));

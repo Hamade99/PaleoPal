@@ -115,7 +115,13 @@ function drawBrachio(M, P){
     [hipX + TL*tM,     hipY + 10,  1.5*lM]
   ];
 
+  /* Headgear goes over the nasal arch, which is the only thing on this skull
+     tall enough to hang a hat on. Centred on the crest's peak and dropped
+     slightly into it so it caps the hump rather than balancing on the point;
+     `hatW` is the crest's own span, so it covers what it is sitting on and
+     grows with the arch. */
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
-           hat:[hx - sn*.3, hy - hh*crTop], top: hy - hh*crTop, spine };
+           hat:[hx - sn*.18, hy - hh*crTop*.97], hatW: sn*.78 + 2*hM,
+           top: hy - hh*crTop, spine };
 }
 

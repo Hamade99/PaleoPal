@@ -196,8 +196,32 @@ function eyeAt(M, x, y, r, state){
 const HATS = {};
 Object.defineProperty(HATS, 'get', { value:null });          // keep it a plain bag
 const HAT_IDS = Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
+/* A hat is hung by the bottom of its art, and the art is not the canvas. Every
+   hat is drawn in a 12x11 grid with its brim wherever the artist put it, so the
+   crown has two blank rows under it and the goggles five, and the outline pass
+   adds one more all round. Hanging by the canvas edge floated every hat that
+   distance above the skull — three pixels on a cap, five on the goggles, scaled
+   up with the animal — which is what made a worn hat read as a hovering object
+   rather than as headgear. Measure the last row that has ink in it once, at
+   bake time, and hang from that. `pixInvalidate()` drops HATS, so an edit in
+   the editor re-measures. */
 function hatArt(id){
-  if (!HATS[id]) HATS[id] = pixCanvas('hat.' + id, '#241d13');
+  if (!HATS[id]){
+    const c = pixCanvas('hat.' + id, '#241d13');
+    const d = readCtx(c).getImageData(0, 0, c.width, c.height).data;
+    let foot = 0, x0 = c.width, x1 = -1, seen = false;
+    for (let y = c.height - 1; y >= 0; y--){
+      let ink = false;
+      for (let x = 0; x < c.width; x++) if (d[(y*c.width + x)*4 + 3] > 0){
+        ink = true; if (x < x0) x0 = x; if (x > x1) x1 = x;
+      }
+      if (ink) seen = true; else if (!seen) foot++;
+    }
+    c.foot = foot;                    // blank rows below the art, canvas pad included
+    c.inkW = x1 >= x0 ? x1 - x0 + 1 : c.width;
+    c.inkCx = x1 >= x0 ? (x0 + x1 + 1)/2 : c.width/2;
+    HATS[id] = c;
+  }
   return HATS[id];
 }
 
@@ -312,6 +336,11 @@ function bakeOnce(spId, stage, pose, eye, skinId){
     cv: t.cv, w: t.w, h: t.h,
     ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
     eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
+    /* How wide the hat should be drawn, in screen pixels. The species says it,
+       the way it already says how big the eye is, because the three skulls are
+       nothing like each other: sized off `hs` alone a Brachiosaurus wore the
+       same cap as a rex four times its skull length. */
+    hatW: (anchors.hatW || 14) * k,
     eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head,
     clipped: touchedEdge(composed)
   };
