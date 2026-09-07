@@ -22,16 +22,30 @@ the default is the machine's locale, which is cp1252 on Windows, and it will
 quietly turn every `·` and `—` into mojibake.
 
 Open `index.html` for development, `dist/paleopal.html` to check the build.
-There is no test suite. After a change, open the page and confirm the console is
-clean; sprite changes need a visual check across all four growth stages, not
-just the adult.
+There is a test suite, added in session 14. `npm test` runs fifteen Node
+checks over the simulation — growth parity between the active pet and the
+roster, overnight catch-up, save validation and version handling, and that
+each `<data:NAME>` marker in `src/00-art.js` still matches the declaration it
+owns. `npm run test:browser` runs ten Playwright specs in Chromium that load
+the real page: console cleanliness at desktop and mobile sizes, every species
+and stage and coat and pose baking without clipping, the import and export
+paths, and each minigame drawing and taking input. `npm run check` runs both.
+Browsers come from `npx playwright install`, and results are written to the
+system temp directory because OneDrive locked an in-repo output directory.
+
+None of that replaces looking at the thing. After a change, open the page and
+confirm the console is clean; sprite changes need a visual check across all
+four growth stages, not just the adult, and the bake test only proves a sprite
+fits its box, not that it looks right.
 
 A minigame change needs playing, not reading. Drive it headless for full
 thirty-second rounds against a competent player and against a player who does
 nothing, for every species and at both ends of the growth range: if those two
 scores are close the game has no skill in it, and if the stages score the same
 then growth does not matter. That harness is what found that half of Bug hunt's
-quarry could not be caught by anyone.
+quarry could not be caught by anyone. It is a test now — "seeded games
+distinguish active and idle players for every species and age" — so run it
+rather than writing it again.
 
 ## House rules
 
@@ -97,15 +111,24 @@ quarry could not be caught by anyone.
   not the case — belongs in `src/00-art.js` behind its `<data:NAME>` markers,
   because that file is what `tools/editor.html` writes. Adding a hand-written
   `fillRect` sprite somewhere else puts it out of the owner's reach. After
-  changing any of it, call `artChanged()`: five caches hold baked results and
+  changing any of it, call `artChanged()`: seven caches hold baked results and
   forgetting one shows a stale sprite.
 - **The developer tools are a harness, not a cheat menu.** Anything added to
   `DEV` must write the same fields the simulation writes.
+- **Check a player-facing change along the player's path.** Setting state from
+  the console proves the renderer works and nothing else. All five head hats
+  could be bought, were charged for and showed as owned, and not one of them
+  ever reached the animal: the shop calls its slots `head` and `face`, a pet
+  stores them as `hat` and `face`, and `buyHat()` wrote `S[slot]`, so a cap
+  went into `S.head` — a field nothing draws, `save()` does not persist and the
+  save validator has never heard of. The goggles worked, because `face` is the
+  one slot whose two names happen to match, and that is precisely why the bug
+  lasted. A slot name is not a field name: go through `GEAR_FIELD`.
 
 ## Sprite work
 
-The whole pipeline is in `docs/SPRITE-PIPELINE.md`. Two traps that have already
-cost time:
+The whole pipeline is in `docs/SPRITE-PIPELINE.md`. Three traps that have
+already cost time:
 
 1. **The sprite faces −x.** A planted foot travels toward +x while the body
    advances. Getting the sign wrong makes the animal moonwalk in both
@@ -129,7 +152,11 @@ not by hand per species. `belly` and `mark` are masked to body pixels, so both
 can be drawn generously and let the mask trim them.
 
 Check art in `tools/sheet.html`, not by playing. Every species, stage and
-animation frame is on one page.
+animation frame is on one page — the animals, and only the animals. Headgear,
+the meter icons and the case buttons are not on it. Worn gear is `drawGear()`
+compositing a hat over a baked frame at anchors the species hands back, and the
+one place that composition exists is the running game, so a sheet that looks
+right says nothing about whether a hat sits on a head.
 
 Growth stages use separate `head` and `snout` multipliers. Do not merge them:
 young animals have large braincases and short muzzles, and applying one number
@@ -144,5 +171,13 @@ nothing derived: stage, bond level and mood are all computed.
 
 ## Before adding a feature
 
-Check `docs/ROADMAP.md`. Local notifications and the Capacitor wrap are the two
-things standing between this and an Android release; most other work is polish.
+`docs/ROADMAP.md` has the smaller open work; `docs/TODO.md` has the two
+long-horizon jobs and is the one to read first.
+
+Android is more than the Capacitor wrap. The frame loop runs at 60fps whatever
+is on screen, the back button has to close a screen rather than the app, the
+audio context needs a first tap before it will make a sound, local
+notifications are the reason to have a pet game on a phone at all, and `G.dev`
+still defaults to `true`. The other job is week two: an animal is adult after
+about four hours and then nothing accumulates, which is a design problem rather
+than an engineering one.
