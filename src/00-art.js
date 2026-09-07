@@ -503,7 +503,7 @@ const REX_TUNE = {
   bellyD:9,       // how far the belly hangs below the hip line
   neckLen:26,     // shoulder to occiput
   neckDrop:10,    // how far the head sits below the withers
-  headLen:23,     // snout length
+  headLen:32,     // snout length
   headDepth:15.5, // skull depth at the orbit
   tailLen:72,     // hip to tail tip
   tailBase:18,    // depth of the tail where it leaves the hips
@@ -653,9 +653,28 @@ function skinOf(spId, skinId){
    -------------------------------------------------------------------------- */
 /*<data:SPECIES_STAGE>*/
 const SPECIES_STAGE = {
-  rex:     [ {}, {}, {}, {} ],
+  rex:     [ {headLen:23}, {headLen:28}, {headLen:30}, {} ],
   trike:   [ { epi:.22 }, { epi:.17 }, { epi:.12 }, {} ],
   brachio: [ {}, {}, {}, {} ]
+};
+/*</data>*/
+
+/*<data:HABITAT_ART>*/
+const HABITAT_ART = {
+  valley:{horizon:108,skyline:[[0,70],[25,63],[52,79],[96,54],[135,74],[183,64],[224,82]],slot:[38,140],item:'fern'},
+  lagoon:{horizon:98,skyline:[[0,94],[38,93],[49,85],[62,87],[74,94],[158,94],[171,90],[185,94],[224,94]],slot:[187,140],item:'fish'},
+  ashfall:{horizon:111,skyline:[[0,82],[27,69],[54,75],[73,60],[104,85],[157,73],[194,83],[224,70]],slot:[42,140],item:'rock'},
+  gorge:{horizon:104,skyline:[[0,58],[34,57],[43,74],[78,74],[84,101],[136,103],[146,68],[189,66],[200,54],[224,57]],slot:[185,140],item:'rock'},
+  boreal:{horizon:106,skyline:[[0,82],[21,60],[37,75],[66,44],[85,66],[115,52],[140,78],[168,49],[195,69],[224,55]],slot:[40,140],item:'cycad'}
+};
+/*</data>*/
+
+/*<data:POSE_ART>*/
+const POSE_ART = {
+  eat:[{body:0,legPhase:0,jaw:.7,droop:.45,tail:.18},{body:0,legPhase:0,jaw:0,droop:.45,tail:-.08}],
+  cheer:[{body:1.8,legPhase:0,jaw:0,tail:.35,eye:2},{body:0,legPhase:0,jaw:0,tail:-.18,eye:2}],
+  wary:[{body:-.5,legPhase:0,jaw:0,droop:-.2,tail:0},{body:0,legPhase:0,jaw:0,droop:0,tail:0}],
+  inspect:[{body:0,legPhase:0,jaw:0,droop:.45,tail:.1},{body:0,legPhase:0,jaw:0,droop:.7,tail:.1}]
 };
 /*</data>*/
 

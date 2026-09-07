@@ -249,7 +249,7 @@ function refresh(){
   const d = ageDays();
   const age = d < 1 ? Math.max(1, Math.round(d*24)) + 'h old' : Math.floor(d) + (Math.floor(d) === 1 ? ' day old' : ' days old');
   $('dSub').textContent = st.label + ' ' + sp.common + ' · ' + age;
-  $('mood').innerHTML = S.name + ' <em>' + moodOf().line + '</em>';
+  $('mood').innerHTML = escapeHTML(S.name) + ' <em>' + escapeHTML(moodOf().line) + '</em>';
   const bondEl = $('bond');
   const pips = bondPips();
   if (bondEl.dataset.pips !== String(pips)){
@@ -298,10 +298,13 @@ function closeSheet(){
   closeScreen();
 }
 
+function escapeHTML(value){
+  return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+}
 function rowHTML(art, title, sub, right, attrs){
   const slot = art ? `<span class="art" data-art="${art}"></span>` : '';
   return `<button class="row" ${attrs||''}>${slot}
-    <span class="t"><b>${title}</b><small>${sub}</small></span><span class="px">${right||''}</span></button>`;
+    <span class="t"><b>${escapeHTML(title)}</b><small>${escapeHTML(sub)}</small></span><span class="px">${escapeHTML(right)}</span></button>`;
 }
 function mountArt(root){
   root.querySelectorAll('[data-art]').forEach(slot => {
@@ -323,9 +326,7 @@ function portrait(pet, size){
   const c = makeCv(size, size), g = readCtx(c);
   g.imageSmoothingEnabled = false;
   if (!pet.sp){ g.fillStyle = '#3a4a44'; g.fillRect(size/2-5, size/2-7, 10, 14); return c; }
-  const prev = S; S = pet;
-  const st = pet.born ? stageIdx() : 0;
-  S = prev;
+  const st = pet.born ? stageIdx(pet) : 0;
   const f = frameOf(pet.sp, st, 'idle', 0, false, pet.skin || 'wild');
   const sc = Math.min(size / f.w, size / f.h) * .92;
   g.drawImage(f.cv, (size - f.w*sc)/2, size - f.h*sc - 1, f.w*sc, f.h*sc);
@@ -340,6 +341,7 @@ const SHEETS = {
 
   vitals(b, sp){
     let html = '';
+    const petName = escapeHTML(S.name);
     const n = S.needs, hr = new Date().getHours();
     const untilBed = ((BED_HOUR - hr) + 24) % 24;
     const hoursLeft = (n.energy / (ENERGY_AWAKE * trait('tempo').energy)).toFixed(1);
@@ -351,8 +353,8 @@ const SHEETS = {
         <div class="stat"><b>Clean</b><span>${Math.round(n.hygiene)}%</span></div>
         <div class="stat"><b>Joy</b><span>${Math.round(n.joy)}%</span></div>
       </div>
-      <div class="log"><time>Energy</time>Falls about ${(ENERGY_AWAKE * trait('tempo').energy).toFixed(1)} points an hour awake, and comes back at ${ENERGY_ASLEEP} an hour asleep. At this level ${S.name} has roughly ${hoursLeft} waking hours left, and a full night takes about ${hoursFull} hours.</div>
-      <div class="log"><time>Sleep</time>${S.name} settles itself between ${BED_HOUR}:00 and ${WAKE_HOUR}:00, or any time energy drops under 6. It wakes on its own once rested. Bedtime is in about ${untilBed} hours. Keeping it up more than two hours past bedtime brings on a chill.</div>
+      <div class="log"><time>Energy</time>Falls about ${(ENERGY_AWAKE * trait('tempo').energy).toFixed(1)} points an hour awake, and comes back at ${ENERGY_ASLEEP} an hour asleep. At this level ${petName} has roughly ${hoursLeft} waking hours left, and a full night takes about ${hoursFull} hours.</div>
+      <div class="log"><time>Sleep</time>${petName} settles itself between ${BED_HOUR}:00 and ${WAKE_HOUR}:00, or any time energy drops under 6. It wakes on its own once rested. Bedtime is in about ${untilBed} hours. Keeping it up more than two hours past bedtime brings on a chill.</div>
       <div class="log"><time>Hunger</time>Falls about ${(7.5*trait('appetite').hunger).toFixed(1)} an hour. Under 22 it starts nosing at the dirt; at zero, health follows it down.</div>
       <div class="log"><time>Clean</time>Falls 4 an hour, and drops 11 more with every mess. Under 20 invites mites.</div>
       <div class="log"><time>Joy</time>Falls about ${(6*trait('tempo').joy*trait('social').lonely).toFixed(1)} an hour. Games, tricks and petting bring it back. Under 15 for long enough turns into the blues.</div>
@@ -370,7 +372,7 @@ const SHEETS = {
       b.innerHTML = `<h2>Field dossier</h2><p class="lede">Choose an egg first. Each species is drawn from its own skeleton, so the sprite shows what the notes claim.</p>`;
     } else {
       const t = ['appetite','tempo','social'].map(k => `<span class="trait">${trait(k).name}</span>`).join('');
-      html = `<h2>${S.name}</h2><p class="lede">${sp.name} · ${sp.era}</p>
+      html = `<h2>${escapeHTML(S.name)}</h2><p class="lede">${sp.name} · ${sp.era}</p>
         <div class="stats">
           <div class="stat"><b>Stage</b><span>${STAGE[stageIdx()].label}</span></div>
           <div class="stat"><b>Well-kept time</b><span>${Math.floor(S.growth)} min</span></div>
@@ -383,8 +385,11 @@ const SHEETS = {
         <p class="note" style="margin:10px 0 6px">Drawn on the sprite</p>
         ${sp.checks.map(c => `<div class="log">${c}</div>`).join('')}
         <div class="hr"></div>
+        <p class="note">Field journal · ${S.journal.length}/${journalEntries().length}</p>
+        ${journalEntries().map(entry => `<div class="log">${S.journal.includes(entry.id) ? 'Recorded' : 'Not yet observed'} · ${entry.title}</div>`).join('')}
+        <p class="note">Four studies: Fern sprig. Ten studies: Field cap.</p>
         <p class="note" style="margin-bottom:6px">Diary</p>
-        ${S.log.length ? S.log.slice(0,10).map(l => `<div class="log"><time>${new Date(l.t).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</time>${l.txt}</div>`).join('') : '<p class="note">Nothing has happened yet.</p>'}
+        ${S.log.length ? S.log.slice(0,10).map(l => `<div class="log"><time>${new Date(l.t).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</time>${escapeHTML(l.txt)}</div>`).join('') : '<p class="note">Nothing has happened yet.</p>'}
         <div class="hr"></div>
         ${rowHTML('', G.sound ? 'Sound on' : 'Sound off', 'Beeps, chomps and roars.', G.sound ? 'on' : 'off')}
         ${rowHTML('', 'Release ' + S.name, G.pets.length > 1 ? 'Removes this animal from the nest for good.' : 'You cannot release your only animal.', 'release', G.pets.length > 1 ? '' : 'disabled')}
@@ -401,9 +406,26 @@ const SHEETS = {
       rows[2].onclick = () => {
         if (!armedW){ armedW = true; rows[2].querySelector('.px').textContent = 'sure?'; setTimeout(()=>{armedW=false; if(openPanel==='dossier') renderSheet('dossier');}, 3000); return; }
         // a deliberate wipe clears the safety net too, which is what the row promises
-        Promise.all([Store.del(SAVE_KEY), Store.del(BACKUP_KEY)]).then(() => location.reload());
+        saveBlocked = true;
+        saveQueue.then(() => Promise.all([Store.del(SAVE_KEY), Store.del(BACKUP_KEY)]))
+          .then(() => location.reload()).catch(() => { saveBlocked = false; storageNotice('Reset failed. Your nest was not reset.'); });
       };
     }
+    const backup = document.createElement('div');
+    backup.innerHTML = rowHTML('', 'Export nest', 'Download a backup of this nest.', 'export') +
+      rowHTML('', 'Import nest', 'Replace this nest with a validated backup.', 'import') +
+      rowHTML('', 'Export recovery copy', 'The nest preserved before an import or unreadable-save recovery.', 'export');
+    const buttons = backup.querySelectorAll('button');
+    buttons[0].onclick = exportNest;
+    buttons[1].onclick = importNest;
+    buttons[2].onclick = async () => {
+      try {
+        const raw = await Store.get(saveBlocked ? SAVE_KEY : BACKUP_KEY);
+        if (!raw) return storageNotice('No recovery copy is stored on this device.');
+        exportText(raw, 'paleopal-recovery.json');
+      } catch(error){ storageNotice('The recovery copy could not be read. The stored data has not been changed.'); }
+    };
+    b.appendChild(backup);
   },
 
   /* Developer tools. Chips rather than rows: every control here is a single
@@ -456,16 +478,14 @@ const SHEETS = {
   },
 
   away(b, sp){
-    b.innerHTML = `<h2>While you were gone</h2><p class="lede">${G.awayText}</p>
+    b.innerHTML = `<h2>While you were gone</h2><p class="lede">${escapeHTML(G.awayText)}</p>
       ${rowHTML('', 'Back to the habitat', 'Pick up where you left off.', '')}`;
     b.querySelector('.row').onclick = closeSheet;
   },
 
   trouble(b, sp){
-    b.innerHTML = `<h2>Could not open your nest</h2><p class="lede">${G.loadWarning}</p>
-      <p class="note">Nothing was thrown away. The unreadable save is still on this
-      device under <code>${BACKUP_KEY}</code>, so a later build may be able to
-      recover it.</p>
+    b.innerHTML = `<h2>Could not open your nest</h2><p class="lede">${escapeHTML(G.loadWarning)}</p>
+      <p class="note">${saveBlocked ? 'The original remains at the main save key. Automatic saving is disabled.' : 'A copy of the original is stored at '+BACKUP_KEY+'.'}</p>
       ${rowHTML('', 'Start fresh', 'Choose a new egg and begin again.', '')}`;
     b.querySelector('.row').onclick = closeSheet;
   }
@@ -533,9 +553,7 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (mode === 'game'){
-    if (game.kind === 'snack') game.tx = mx;
-    if (game.kind === 'forage') tapForage(mx, my);
-    if (game.kind === 'leap')  leapJump();
+    gameInput({type:'point',x:mx,y:my});
     return;
   }
   /* A screen owns every tap while it is up: it is the whole display, so
@@ -546,6 +564,12 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (mode === 'live'){
+    const slot = HABITAT_ART[biomeId()].slot;
+    if (Math.abs(mx-slot[0]) < 14 && my > slot[1]-20 && my < slot[1]+8 && !S.asleep && !S.vet){
+      if (S.habitatAt && Date.now()-S.habitatAt < 30*MIN){ say('A quiet spot. More to discover later.'); return; }
+      habitatTarget = {pet:S,biome:biomeId()};
+      return;
+    }
     if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet([mx, my]); return; }
     if (bondPips() >= 2 && !S.asleep && !S.vet){
       dino.tx = clamp(mx, 22, W-22);
@@ -556,8 +580,7 @@ cv.addEventListener('pointerdown', e => {
 cv.addEventListener('pointermove', e => {
   const p = canvasPos(e); holdPos = p;
   if (mode === 'game' && game && e.buttons){
-    if (game.kind === 'snack') game.tx = p[0];
-    if (game.kind === 'forage') tapForage(p[0], p[1]);
+    gameInput({type:'point',x:p[0],y:p[1],move:true});
   }
 });
 window.addEventListener('pointerup', () => { holding = false; });
@@ -570,18 +593,12 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (mode === 'game' && game){
-    if (game.kind === 'snack'){
-      if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = true;
-      if (e.key === 'ArrowRight'|| e.key === 'd') game.kR = true;
-    }
-    if (game.kind === 'leap' && (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w')) leapJump();
+    if (['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key)) e.preventDefault();
+    gameInput({type:'key',key:e.key,down:true});
   }
 });
 window.addEventListener('keyup', e => {
-  if (mode === 'game' && game && game.kind === 'snack'){
-    if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = false;
-    if (e.key === 'ArrowRight'|| e.key === 'd') game.kR = false;
-  }
+  gameInput({type:'key',key:e.key,down:false});
 });
 
 /* ------------------------------ lifecycle --------------------------------- */
@@ -598,13 +615,55 @@ function hatch(){
   dino.digAt = performance.now() + 40e3;
   SFX.hatch(); emit('heart', W/2, GROUND-24, 8);
   logEvent(S.name + ' hatched.');
+  observePet();
   document.title = S.name + ' — Paleopal';
   say('Hello. Tap the name above to rename it.', 4200);
   refresh(); paintChrome(); save();
 }
 
-let saveAt = 0;
-function save(){ if (!G) return; G.lastSeen = Date.now(); Store.set(SAVE_KEY, JSON.stringify(G)); }
+let saveAt = 0, saveBlocked = false, saveQueue = Promise.resolve();
+function storageNotice(message){
+  $('storageStatus').textContent = message;
+  $('storageStatus').hidden = !message;
+}
+function save(){
+  if (!G || saveBlocked) return saveQueue;
+  G.lastSeen = Date.now();
+  const snapshot = JSON.stringify(G);
+  saveQueue = saveQueue.then(() => Store.set(SAVE_KEY, snapshot)).then(() => storageNotice(''))
+    .catch(() => storageNotice('Saving failed. Export your nest from the dossier before closing.'));
+  return saveQueue;
+}
+function exportNest(){
+  exportText(JSON.stringify(G, null, 2), 'paleopal-nest.json');
+}
+function exportText(raw, filename){
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(new Blob([raw], {type:'application/json'}));
+  link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function importNest(){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json,application/json';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const wasBlocked = saveBlocked;
+    if (file.size > 1024*1024) return storageNotice('Backup is too large (maximum 1 MB).');
+    try {
+      const loaded = loadSave(await file.text());
+      if (!loaded.game) return storageNotice('Import rejected: the backup ' + loaded.why + '.');
+      if (!confirm('Replace this nest with ' + loaded.game.pets.length + ' animal(s)? The current nest will be backed up.')) return;
+      saveBlocked = true;
+      await saveQueue;
+      await Store.set(BACKUP_KEY, JSON.stringify(G));
+      await Store.set(SAVE_KEY, JSON.stringify(loaded.game));
+      location.reload();
+    } catch(error){ saveBlocked = wasBlocked; storageNotice('Import could not be saved. The current nest remains open.'); }
+  };
+  input.click();
+}
 
 function awayReport(gapMs){
   const mins = Math.round(gapMs / MIN), bits = [];
@@ -642,15 +701,15 @@ function frame(now){
   if (G){
     const real = Date.now();
     if (real - G.lastTick > 500){
-      let left = Math.min(real - G.lastTick, 12*HOUR);
-      G.lastTick = real;
-      while (left > 0){ const chunk = Math.min(left, 5*MIN); simulateAll(chunk, true); left -= chunk; }
+      advanceSimulation(real, !document.hidden);
     }
   }
 
   if (G && hatched()) warmFrames(S.sp, stageIdx(), S.skin);
   stepBehaviour(dt, now);
   stepFeed(dt);
+  stepPresentation(dt, now);
+  stepWorld(dt, now);
   if (mode === 'game') stepGame(dt, now);
   stepParts(dt);
   if (holding && holdPos && mode === 'live' &&
@@ -668,27 +727,36 @@ async function boot(){
   fitScreen();
   fitCrown();
   G = freshGame();
-  const loaded = loadSave(await Store.get(SAVE_KEY));
+  let loaded;
+  try { loaded = loadSave(await Store.get(SAVE_KEY)); }
+  catch(error){
+    saveBlocked = true;
+    storageNotice('Storage is unavailable. Existing saves are protected. Export this session before closing, then reload to retry.');
+    loaded = {game:null};
+  }
   if (loaded.game){
     G = loaded.game;
     // an upgraded save is written back at once, so a crash before the next
     // autosave cannot leave the old shape sitting on disk
-    if (loaded.from !== SAVE_VERSION) await Store.set(SAVE_KEY, JSON.stringify(G));
+    if (loaded.from !== SAVE_VERSION) {
+      try { await Store.set(SAVE_KEY, JSON.stringify(G)); }
+      catch(error){ storageNotice('Upgraded nest could not be saved. Export a backup.'); }
+    }
   } else if (loaded.keep){
     // A save we cannot read is still the player's. Park it under the backup
     // key and tell them, rather than starting over in silence.
-    await Store.set(BACKUP_KEY, loaded.keep);
+    try { await Store.set(BACKUP_KEY, loaded.keep); }
+    catch(error){ saveBlocked = true; storageNotice('The unreadable save could not be backed up. Automatic saving is disabled.'); }
     G.loadWarning = 'Your saved nest ' + loaded.why + ', so this is a fresh start. ' +
                     'The old save has not been deleted.';
     console.warn('paleopal: save ' + loaded.why + '; kept a copy at ' + BACKUP_KEY);
   }
   S = G.pets[G.active];
+  const gap = clamp(Date.now() - G.lastTick, 0, 14*86400e3);
+  advanceSimulation(Date.now(), false);
   if (hatched()){
     mode = 'live';
-    const gap = clamp(Date.now() - (G.lastTick || Date.now()), 0, 14*86400e3);
     if (gap > 60e3){
-      let left = Math.min(gap, 3*86400e3);
-      while (left > 0){ const chunk = Math.min(left, 10*MIN); simulateAll(chunk, false); left -= chunk; }
       awayReport(gap);
       setTimeout(() => openSheet('away'), 500);
     }
@@ -700,6 +768,10 @@ async function boot(){
   refresh(); paintChrome();
   requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+document.addEventListener('visibilitychange', () => {
+  holding = false;
+  if (document.hidden) save();
+  else { advanceSimulation(Date.now(), false); lastFrame = performance.now(); }
+});
 window.addEventListener('pagehide', save);
 boot();

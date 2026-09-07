@@ -34,6 +34,7 @@
 <div id="out"></div>
 
 <script src="../src/00-core.js"></script>
+<script src="../src/00-art.js"></script>
 <script src="../src/01-colour.js"></script>
 <script src="../src/02-sprite-engine.js"></script>
 <script src="../src/species/rex.js"></script>
@@ -91,16 +92,16 @@ function build(){
     sec.appendChild(growth);
 
     if (showAnims){
-      for (const anim in POSES){
+      for (let stage=0;stage<STAGE.length;stage++) for (const anim in POSES){
         const row = document.createElement('div');
         row.className = 'strip';
         for (let i = 0; i < POSES[anim].length; i++){
-          const f = frameOf(spId, 3, anim, i, false, skin); frames++;
-          row.appendChild(cell(f.cv, anim + ' ' + i, sc));
+          const f = frameOf(spId, stage, anim, i, false, skin); frames++;
+          row.appendChild(cell(f.cv, STAGE[stage].key + ' ' + anim + ' ' + i, sc));
         }
         /* the blink is a separate bake, so it needs looking at too */
         if (anim === 'idle'){
-          const f = frameOf(spId, 3, 'idle', 0, true, skin); frames++;
+          const f = frameOf(spId, stage, 'idle', 0, true, skin); frames++;
           row.appendChild(cell(f.cv, 'blink', sc));
         }
         sec.appendChild(row);

@@ -775,7 +775,8 @@ function bakeBg(phase, bid){
   if (bgCache.has(key)) return bgCache.get(key);
   const B = BIOMES[bid] || BIOMES.valley;
   const S_ = skySpec(bid, phase), c = makeCv(W,H), g = readCtx(c);
-  const horizon = 108;
+  const habitat = HABITAT_ART[bid] || HABITAT_ART.valley;
+  const horizon = habitat.horizon;
 
   // dithered sky: five steps with a 4x4 ordered dither across each boundary
   for (let y=0;y<horizon;y++){
@@ -789,12 +790,12 @@ function bakeBg(phase, bid){
      furthest is nearly the colour of the sky it stands against: without a
      plane that close to the haze, the range began abruptly at a hard edge and
      the distance behind it read as painted card. */
-  ridge(g, { base:66, col: mixHex(S_.far, S_.low, .86), lit: mixHex(S_.far, S_.low, .92),
-             waves:[[.013,1.9,15],[.037,.8,7],[.006,3.1,9]] });
-  ridge(g, { base:74, col: mixHex(S_.far, S_.low, .68), lit: mixHex(S_.far, S_.low, .78),
-             waves:[[.019,.3,13],[.044,2.6,6]] });
-  ridge(g, { base:84, col: mixHex(S_.far, S_.low, .42), lit: mixHex(S_.far, S_.low, .62),
-             waves:[[.031,1.1,11],[.071,.4,5],[.013,2.2,7]] });
+  for (const [offset,haze] of [[-8,.86],[0,.68],[10,.42]]){
+    g.fillStyle = mixHex(S_.far,S_.low,haze);
+    g.beginPath(); g.moveTo(0,horizon);
+    for (const [pointX,pointY] of habitat.skyline) g.lineTo(pointX,pointY+offset);
+    g.lineTo(W,GROUND); g.lineTo(0,GROUND); g.closePath(); g.fill();
+  }
   /* A river out on the valley floor, between the far range and the near one.
      One flat band of sky colour lying down is the cheapest depth cue there
      is: everything above it is read as far away because the water proves
@@ -953,7 +954,20 @@ function drawCirrus(g, c, x, top, body){
   }
 }
 
-function drawClouds(g, phase, dt){
+function stepWorld(dt, now){
+  for (const cloud of CLOUDS){ cloud.x += cloud.v*dt/1000; if (cloud.x > W+cloud.w) cloud.x = -cloud.w; }
+  if (!flyer && now > flyerAt) flyer = {x:-14,y:rnd(18,54),v:rnd(26,40),p:0};
+  if (flyer){
+    flyer.x += flyer.v*dt/1000; flyer.p += dt;
+    if (flyer.x > W+14){ flyer = null; flyerAt = now+rnd(25,60)*1000; }
+  }
+  for (const mote of MOTES){
+    mote.x += mote.vx*dt/1000;
+    mote.y += Math.sin(mote.p+now/1400)*dt*.0048;
+    if (mote.x > W+2) mote.x = -2;
+  }
+}
+function drawClouds(g, phase){
   const S_ = skyOf(phase), night = phase === 'night';
   /* A cloud is white lit and grey shaded, but the underside takes its colour
      from the horizon it is being lit by — which at dawn and dusk means the
@@ -969,7 +983,6 @@ function drawClouds(g, phase, dt){
   const shade = night ? 'rgba(112,124,156,.28)' : mixHex(S_.low, '#46505f', .24);
   const base  = night ? 'rgba(84,94,128,.32)'   : mixHex(S_.low, '#46505f', .46);
   for (const c of CLOUDS){
-    c.x += c.v * dt/1000; if (c.x > W + c.w) c.x = -c.w;
     const x = Math.round(c.x);
     if (c.kind === 'cirrus') drawCirrus(g, c, x, top, body);
     else drawCumulus(g, c, x, top, body, shade, base);
@@ -992,11 +1005,8 @@ function drawSkyBody(g, phase, now){
     g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
   }
 }
-function drawFlyers(g, dt, now){
-  if (!flyer && now > flyerAt){ flyer = { x:-14, y: rnd(18,54), v: rnd(26,40), p:0 }; }
+function drawFlyers(g){
   if (!flyer) return;
-  flyer.x += flyer.v * dt/1000; flyer.p += dt;
-  if (flyer.x > W + 14){ flyer = null; flyerAt = now + rnd(25,60)*1000; return; }
   const up = Math.sin(flyer.p/130) > 0;
   g.fillStyle = 'rgba(40,48,54,.7)';
   const x = Math.round(flyer.x), y = Math.round(flyer.y);
@@ -1212,11 +1222,9 @@ function drawGrassLine(g, phase, now){
   }
 }
 
-function drawMotes(g, dt, phase){
+function drawMotes(g, phase){
   g.fillStyle = phase === 'night' ? 'rgba(190,205,235,.30)' : 'rgba(255,248,208,.45)';
   for (const m of MOTES){
-    m.x += m.vx * dt/1000; m.y += Math.sin(m.p + performance.now()/1400) * .08;
-    if (m.x > W+2) m.x = -2;
     g.fillRect(m.x|0, m.y|0, 1, 1);
   }
 }

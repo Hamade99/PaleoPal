@@ -433,6 +433,7 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
 </style>
 </head>
 <body>
+<div id="storageStatus" role="alert" hidden></div>
 <div id="app">
   <!-- The whole game sits inside one speckled egg-shaped case, the way a
        Tamagotchi does: a moulded shell, a bone bezel, a recessed screen, and
@@ -513,16 +514,16 @@ const HOUR  = 3600e3, MIN = 60e3;
 /* ---------- storage: works as artifact, as a file, and inside a webview ---- */
 const Store = {
   async get(k){
-    if (window.storage) { try { const r = await window.storage.get(k); return r ? r.value : null; } catch(e){ return null; } }
-    try { return localStorage.getItem(k); } catch(e){ return null; }
+    if (window.storage) { const result = await window.storage.get(k); return result ? result.value : null; }
+    return localStorage.getItem(k);
   },
   async set(k,v){
-    if (window.storage) { try { await window.storage.set(k,v); return; } catch(e){ return; } }
-    try { localStorage.setItem(k,v); } catch(e){}
+    if (window.storage) return window.storage.set(k,v);
+    localStorage.setItem(k,v);
   },
   async del(k){
-    if (window.storage) { try { await window.storage.delete(k); return; } catch(e){ return; } }
-    try { localStorage.removeItem(k); } catch(e){}
+    if (window.storage) return window.storage.delete(k);
+    localStorage.removeItem(k);
   }
 };
 
@@ -1171,7 +1172,7 @@ const REX_TUNE = {
   bellyD:9,       // how far the belly hangs below the hip line
   neckLen:26,     // shoulder to occiput
   neckDrop:10,    // how far the head sits below the withers
-  headLen:23,     // snout length
+  headLen:32,     // snout length
   headDepth:15.5, // skull depth at the orbit
   tailLen:72,     // hip to tail tip
   tailBase:18,    // depth of the tail where it leaves the hips
@@ -1321,9 +1322,28 @@ function skinOf(spId, skinId){
    -------------------------------------------------------------------------- */
 /*<data:SPECIES_STAGE>*/
 const SPECIES_STAGE = {
-  rex:     [ {}, {}, {}, {} ],
+  rex:     [ {headLen:23}, {headLen:28}, {headLen:30}, {} ],
   trike:   [ { epi:.22 }, { epi:.17 }, { epi:.12 }, {} ],
   brachio: [ {}, {}, {}, {} ]
+};
+/*</data>*/
+
+/*<data:HABITAT_ART>*/
+const HABITAT_ART = {
+  valley:{horizon:108,skyline:[[0,70],[25,63],[52,79],[96,54],[135,74],[183,64],[224,82]],slot:[38,140],item:'fern'},
+  lagoon:{horizon:98,skyline:[[0,94],[38,93],[49,85],[62,87],[74,94],[158,94],[171,90],[185,94],[224,94]],slot:[187,140],item:'fish'},
+  ashfall:{horizon:111,skyline:[[0,82],[27,69],[54,75],[73,60],[104,85],[157,73],[194,83],[224,70]],slot:[42,140],item:'rock'},
+  gorge:{horizon:104,skyline:[[0,58],[34,57],[43,74],[78,74],[84,101],[136,103],[146,68],[189,66],[200,54],[224,57]],slot:[185,140],item:'rock'},
+  boreal:{horizon:106,skyline:[[0,82],[21,60],[37,75],[66,44],[85,66],[115,52],[140,78],[168,49],[195,69],[224,55]],slot:[40,140],item:'cycad'}
+};
+/*</data>*/
+
+/*<data:POSE_ART>*/
+const POSE_ART = {
+  eat:[{body:0,legPhase:0,jaw:.7,droop:.45,tail:.18},{body:0,legPhase:0,jaw:0,droop:.45,tail:-.08}],
+  cheer:[{body:1.8,legPhase:0,jaw:0,tail:.35,eye:2},{body:0,legPhase:0,jaw:0,tail:-.18,eye:2}],
+  wary:[{body:-.5,legPhase:0,jaw:0,droop:-.2,tail:0},{body:0,legPhase:0,jaw:0,droop:0,tail:0}],
+  inspect:[{body:0,legPhase:0,jaw:0,droop:.45,tail:.1},{body:0,legPhase:0,jaw:0,droop:.7,tail:.1}]
 };
 /*</data>*/
 
@@ -1950,7 +1970,9 @@ const POSES = {
            legPhase: p,
            tail: .48*Math.sin(TAU*p + Math.PI/4)
          })),
-  eat:   [ {body:0, legPhase:0, jaw:1, droop:.7, tail:.3}, {body:0, legPhase:0, jaw:.12, droop:.7, tail:-.1} ],
+  get eat(){ return POSE_ART.eat; },
+  get wary(){ return POSE_ART.wary; },
+  get inspect(){ return POSE_ART.inspect; },
   /* Asleep is deep and slow and the eyes are shut. Ill is shallow, uneven and
      the eyes are open but hooded. The two used to share a lid and a droop,
      which is why an ill animal read as a sleeping one. */
@@ -1958,7 +1980,7 @@ const POSES = {
            body: -2.5 + .40*(1 - Math.cos(TAU*p)),
            legPhase: 0, droop: 1.5, tail: .1, eye: 1
          })),
-  cheer: [ {body:5, legPhase:.5, jaw:.8, tail:.9, eye:2}, {body:0, legPhase:0, jaw:.35, tail:-.7, eye:2} ],
+  get cheer(){ return POSE_ART.cheer; },
   sick:  poseCycle(4, p => ({
            body: -1.5 + .55*Math.sin(TAU*p),
            legPhase: 0,
@@ -2286,9 +2308,10 @@ function drawRex(M, P){
 
      −x is forward, so the jaw opens on a negative rotation. */
   const hinge = [hx + 12, hy + hh*.18], jawA = -jaw * .34;
+  const jawLength = sn + 12;
   M.jaw.save(); M.jaw.translate(hinge[0], hinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[2,-hh*.12],[-sn*.42,-dep(.42)*.10],[-sn*.90,fh*.06],
-               [-sn*.94,fh*.32],[-sn*.66,dep(.66)*.52],[-sn*.24,hh*.58],[2,hh*.46]]);
+  blob(M.jaw, [[2,-hh*.12],[-jawLength*.42,-dep(.42)*.10],[-jawLength*.96,fh*.06],
+               [-jawLength*.94,fh*.32],[-jawLength*.66,dep(.66)*.52],[-jawLength*.24,hh*.58],[2,hh*.46]]);
   M.jaw.restore();
   // pale chin, carried by the jaw rather than left floating under it
   M.belly.save(); M.belly.translate(hinge[0], hinge[1]); M.belly.rotate(jawA);
@@ -2304,7 +2327,7 @@ function drawRex(M, P){
        outward and swallowed the whole face. Straight edges, because the two
        margins it runs between are straight. */
     const uTip = [hx - sn*.91, lipTip - hh*.02];
-    const lTip = about([hx - sn*.88, hy + hh*.30], jawA, hinge);
+    const lTip = about([hinge[0] - jawLength*.96, hinge[1] + fh*.06], jawA, hinge);
     const gape = [hinge, uTip, lTip];
     M.mouth.beginPath();
     M.mouth.moveTo(gape[0][0], gape[0][1]);
@@ -2717,9 +2740,9 @@ function drawBrachio(M, P){
 
   // neck near sixty degrees, S-curved, drooping slightly at the head end
   const nl = T_.neckLen*nM;
-  const n1 = [shX - 9,  shY - nl*.30];
-  const n2 = [shX - 19, shY - nl*.63];
-  const n3 = [shX - 23, shY - nl*.94 + dr*10];
+   const n1 = [shX - 9 - dr,  shY - nl*.30 + dr*2];
+   const n2 = [shX - 19 - dr*3, shY - nl*.63 + dr*5];
+   const n3 = [shX - 23 - dr*4, shY - nl*.94 + dr*8];
   /* The whole neck thickens with `bulk`, the head end included. Left at its
      adult width under a hatchling's oversized skull, the neck came out as a
      stick with a head on the end of it. */
@@ -2742,15 +2765,16 @@ function drawBrachio(M, P){
 
   /* Mandible. The sauropod jaw line is long and close to straight, running
      back to below the eye. */
-  const jHinge = [hx + 6*hM, hy + hh*.30], jawA = -jaw*.30;
+   const jHinge = [hx + 6*hM, hy + hh*.30], jawA = -jaw*.22;
+   const jawLength = sn + 6*hM;
   M.jaw.save(); M.jaw.translate(jHinge[0], jHinge[1]); M.jaw.rotate(jawA);
-  blob(M.jaw, [[2,-hh*.06],[-sn*.42,-hh*.12],[-sn*.94,hh*.02],
-               [-sn*.88,hh*.34],[-sn*.30,hh*.46],[3,hh*.36]]);
+   blob(M.jaw, [[2,-hh*.06],[-jawLength*.42,-hh*.12],[-jawLength*.98,hh*.02],
+                      [-jawLength*.94,hh*.34],[-jawLength*.30,hh*.46],[3,hh*.36]]);
   M.jaw.restore();
   if (jaw > .06){
     const uTip = [hx - sn*.96, lipY - hh*.08];
-    const lTip = [jHinge[0] + (-sn*.90)*Math.cos(jawA) - (hh*.04)*Math.sin(jawA),
-                  jHinge[1] + (-sn*.90)*Math.sin(jawA) + (hh*.04)*Math.cos(jawA)];
+   const lTip = [jHinge[0] - jawLength*.98*Math.cos(jawA) - hh*.02*Math.sin(jawA),
+              jHinge[1] - jawLength*.98*Math.sin(jawA) + hh*.02*Math.cos(jawA)];
     M.mouth.beginPath();
     M.mouth.moveTo(jHinge[0], jHinge[1]);
     M.mouth.lineTo(uTip[0], uTip[1]);
@@ -2769,10 +2793,7 @@ function drawBrachio(M, P){
   const crTop = 1.10 + (T_.crestH-1.10)*cr, crBack = 0.85 + 0.85*cr;
   blob(M.crest, [[hx+2*hM,hy-hh*1.0],[hx-sn*.16,hy-hh*crTop],
                  [hx-sn*.62,hy-hh*crBack],[hx-sn*.6,hy-hh*.85]]);
-  /* Nares on the crest. As a filled block this read as a hole punched in a
-     tuft of hair; a notch bitten out of the crest's front edge reads as a
-     nostril. */
-  oval(M.mouth, hx - sn*.54, hy - hh*(crTop*.79), Math.max(.7,.9*hM), Math.max(.6,.7*hM));
+   oval(M.mouth, hx - sn*.82, hy - fh*.38, Math.max(.7,.9*hM), Math.max(.6,.7*hM));
 
   // the ventral countershading is painted from the spine by paintBelly
 
@@ -2820,7 +2841,7 @@ const SPECIES = {
       'Belly ribs called gastralia made the torso barrel-shaped rather than lean.',
       'Each hand has exactly two fingers, and the palms faced inward, not down.',
       'Both eyes face forward, so it judged distance the way a hawk does.',
-      'Young ones carried a coat of filaments that thinned with age. An adult kept a keratin row and little else.',
+      'Feather coverage in T. rex is uncertain. The juvenile down and low adult back ornaments here are reconstruction choices, not directly known features.',
       'A juvenile has a shallow snout and long legs. The deep boxy skull and the barrel chest arrive late.'
     ],
     checks:['Lips covering the teeth','Deep barrel torso','Two fingers, palms inward',
@@ -2855,11 +2876,11 @@ const SPECIES = {
     era:'Late Jurassic, 154-150 million years ago, North America',
     facts:[
       'The forelimbs run about 1.2 times the length of the hindlimbs, which is why the back slopes backward.',
-      'The neck was probably held near sixty degrees with a slight S-curve, not straight up like a mast.',
+      'Its habitual neck posture is debated. This sprite uses a raised, gently curved neck rather than treating one exact angle as established.',
       'A hump of tall vertebral spines over the shoulders anchored the neck muscles.',
       'Its nasal chambers formed a crest on the roof of a very small skull.',
       'The tail is short for a sauropod, and one big thumb claw sits on each forefoot.',
-      'The long neck and the sloping back are both adult traits. A hatchling is short-necked, big-headed and almost level.'
+      'The big-headed, short-necked hatchling is a stylized growth reconstruction; a complete B. altithorax hatchling series is not known.'
     ],
     checks:['Forelimbs longer than hindlimbs','Back sloping down to the hips','Shoulder hump at the neck base',
             'S-curved neck near sixty degrees','Nasal crest on the skull','Thumb claw on each forefoot',
@@ -3805,7 +3826,8 @@ function bakeBg(phase, bid){
   if (bgCache.has(key)) return bgCache.get(key);
   const B = BIOMES[bid] || BIOMES.valley;
   const S_ = skySpec(bid, phase), c = makeCv(W,H), g = readCtx(c);
-  const horizon = 108;
+  const habitat = HABITAT_ART[bid] || HABITAT_ART.valley;
+  const horizon = habitat.horizon;
 
   // dithered sky: five steps with a 4x4 ordered dither across each boundary
   for (let y=0;y<horizon;y++){
@@ -3819,12 +3841,12 @@ function bakeBg(phase, bid){
      furthest is nearly the colour of the sky it stands against: without a
      plane that close to the haze, the range began abruptly at a hard edge and
      the distance behind it read as painted card. */
-  ridge(g, { base:66, col: mixHex(S_.far, S_.low, .86), lit: mixHex(S_.far, S_.low, .92),
-             waves:[[.013,1.9,15],[.037,.8,7],[.006,3.1,9]] });
-  ridge(g, { base:74, col: mixHex(S_.far, S_.low, .68), lit: mixHex(S_.far, S_.low, .78),
-             waves:[[.019,.3,13],[.044,2.6,6]] });
-  ridge(g, { base:84, col: mixHex(S_.far, S_.low, .42), lit: mixHex(S_.far, S_.low, .62),
-             waves:[[.031,1.1,11],[.071,.4,5],[.013,2.2,7]] });
+  for (const [offset,haze] of [[-8,.86],[0,.68],[10,.42]]){
+    g.fillStyle = mixHex(S_.far,S_.low,haze);
+    g.beginPath(); g.moveTo(0,horizon);
+    for (const [pointX,pointY] of habitat.skyline) g.lineTo(pointX,pointY+offset);
+    g.lineTo(W,GROUND); g.lineTo(0,GROUND); g.closePath(); g.fill();
+  }
   /* A river out on the valley floor, between the far range and the near one.
      One flat band of sky colour lying down is the cheapest depth cue there
      is: everything above it is read as far away because the water proves
@@ -3983,7 +4005,20 @@ function drawCirrus(g, c, x, top, body){
   }
 }
 
-function drawClouds(g, phase, dt){
+function stepWorld(dt, now){
+  for (const cloud of CLOUDS){ cloud.x += cloud.v*dt/1000; if (cloud.x > W+cloud.w) cloud.x = -cloud.w; }
+  if (!flyer && now > flyerAt) flyer = {x:-14,y:rnd(18,54),v:rnd(26,40),p:0};
+  if (flyer){
+    flyer.x += flyer.v*dt/1000; flyer.p += dt;
+    if (flyer.x > W+14){ flyer = null; flyerAt = now+rnd(25,60)*1000; }
+  }
+  for (const mote of MOTES){
+    mote.x += mote.vx*dt/1000;
+    mote.y += Math.sin(mote.p+now/1400)*dt*.0048;
+    if (mote.x > W+2) mote.x = -2;
+  }
+}
+function drawClouds(g, phase){
   const S_ = skyOf(phase), night = phase === 'night';
   /* A cloud is white lit and grey shaded, but the underside takes its colour
      from the horizon it is being lit by — which at dawn and dusk means the
@@ -3999,7 +4034,6 @@ function drawClouds(g, phase, dt){
   const shade = night ? 'rgba(112,124,156,.28)' : mixHex(S_.low, '#46505f', .24);
   const base  = night ? 'rgba(84,94,128,.32)'   : mixHex(S_.low, '#46505f', .46);
   for (const c of CLOUDS){
-    c.x += c.v * dt/1000; if (c.x > W + c.w) c.x = -c.w;
     const x = Math.round(c.x);
     if (c.kind === 'cirrus') drawCirrus(g, c, x, top, body);
     else drawCumulus(g, c, x, top, body, shade, base);
@@ -4022,11 +4056,8 @@ function drawSkyBody(g, phase, now){
     g.beginPath(); g.arc(cx, cy, 7, 0, 7); g.fill();
   }
 }
-function drawFlyers(g, dt, now){
-  if (!flyer && now > flyerAt){ flyer = { x:-14, y: rnd(18,54), v: rnd(26,40), p:0 }; }
+function drawFlyers(g){
   if (!flyer) return;
-  flyer.x += flyer.v * dt/1000; flyer.p += dt;
-  if (flyer.x > W + 14){ flyer = null; flyerAt = now + rnd(25,60)*1000; return; }
   const up = Math.sin(flyer.p/130) > 0;
   g.fillStyle = 'rgba(40,48,54,.7)';
   const x = Math.round(flyer.x), y = Math.round(flyer.y);
@@ -4242,11 +4273,9 @@ function drawGrassLine(g, phase, now){
   }
 }
 
-function drawMotes(g, dt, phase){
+function drawMotes(g, phase){
   g.fillStyle = phase === 'night' ? 'rgba(190,205,235,.30)' : 'rgba(255,248,208,.45)';
   for (const m of MOTES){
-    m.x += m.vx * dt/1000; m.y += Math.sin(m.p + performance.now()/1400) * .08;
-    if (m.x > W+2) m.x = -2;
     g.fillRect(m.x|0, m.y|0, 1, 1);
   }
 }
@@ -4404,7 +4433,9 @@ function freshPet(){
     health:100, bond:6, vet:false,
     traits:{ appetite:0, tempo:0, social:0 },
     asleep:false, ills:[], treats:[], mess:[], log:[],
-    nightAwake:0, petBank:0, stageSeen:0, messTimer:0, wokeAt:0
+    nightAwake:0, petBank:0, stageSeen:0, messTimer:0, wokeAt:0,
+    exposure:{ bellyache:0, chill:0, mites:0, blues:0 }, simSeed:123456789,
+    journal:[], records:{}, habitatAt:0
   };
 }
 function freshGame(){
@@ -4441,7 +4472,8 @@ function loadSave(raw){
   try { o = JSON.parse(raw); } catch(e){ return fail('could not be read'); }
   if (!o || typeof o !== 'object') return fail('was not in a shape the game understands');
 
-  const from = o.v | 0;
+  if (!Number.isSafeInteger(o.v) || o.v < 0) return fail('had an invalid version');
+  const from = o.v;
   if (from > SAVE_VERSION) return fail('was written by a newer version of the game');
 
   let v = from;
@@ -4453,29 +4485,100 @@ function loadSave(raw){
     v = o.v | 0;
   }
 
-  if (!Array.isArray(o.pets) || !o.pets.length) return fail('had no animals in it');
+  if (!Array.isArray(o.pets) || !o.pets.length || o.pets.length > MAX_PETS) return fail('had an invalid nest size');
+  if (o.pets.some(p => !p || typeof p !== 'object' || Array.isArray(p) ||
+      (p.sp !== null && p.sp !== undefined && !Object.hasOwn(SPECIES, p.sp)))) return fail('contained an unknown animal');
 
   const g = Object.assign(freshGame(), o);
-  g.pets = o.pets.map(p => Object.assign(freshPet(), p));
+  delete g.awayText; delete g.loadWarning;
+  const number = (value, fallback, min=0, max=Number.MAX_SAFE_INTEGER) =>
+    Number.isFinite(value) ? clamp(value, min, max) : fallback;
+  const array = value => Array.isArray(value) ? value : [];
+  g.pets = o.pets.map(rawPet => {
+    const defaults = freshPet(), pet = Object.assign(freshPet(), rawPet);
+    pet.sp = rawPet.sp || null;
+    pet.name = typeof pet.name === 'string' ? pet.name.slice(0, 14) : '';
+    pet.needs = Object.fromEntries(Object.entries(defaults.needs).map(([key, value]) =>
+      [key, number(rawPet.needs?.[key], value, 0, 100)]));
+    pet.traits = Object.fromEntries(Object.keys(TRAITS).map(key =>
+      [key, Math.floor(number(rawPet.traits?.[key], 0, 0, TRAITS[key].length-1))]));
+    pet.exposure = Object.fromEntries(Object.keys(ILLS).map(key => [key, number(rawPet.exposure?.[key], 0, 0, 24)]));
+    for (const key of ['health','bond']) pet[key] = number(pet[key], defaults[key], 0, 100);
+    for (const key of ['born','growth','nightAwake','petBank','messTimer','wokeAt','habitatAt']) pet[key] = number(pet[key], defaults[key]);
+    pet.simSeed = number(pet.simSeed, defaults.simSeed, 1, 4294967295) >>> 0;
+    pet.stageSeen = Math.floor(number(pet.stageSeen, 0, 0, 3));
+    pet.asleep = pet.asleep === true; pet.vet = pet.vet === true;
+    pet.ills = array(pet.ills).filter(ill => ill && Object.hasOwn(ILLS, ill.id))
+      .filter((ill, index, list) => list.findIndex(other => other.id === ill.id) === index)
+      .map(ill => ({id:ill.id, since:number(ill.since, Date.now())}));
+    pet.treats = array(pet.treats).filter(Number.isFinite).slice(-20);
+    pet.mess = array(pet.mess).filter(mess => mess && Number.isFinite(mess.x)).slice(0,4).map(mess => ({x:clamp(mess.x, 28, W-28)}));
+    pet.log = array(pet.log).filter(entry => entry && typeof entry.txt === 'string' && Number.isFinite(entry.t)).slice(0,60)
+      .map(entry => ({t:entry.t,txt:entry.txt.slice(0,500)}));
+    pet.owned = array(pet.owned).filter(id => HAT_SHOP.some(hat => hat.id === id));
+    for (const slot of ['hat','face']) if (!HAT_SHOP.some(hat => hat.id === pet[slot] && hat.slot === (slot === 'hat' ? 'head' : 'face')) || !pet.owned.includes(pet[slot])) pet[slot] = null;
+    const skins = SKINS[pet.sp] || [];
+    pet.skinsOwned = [...new Set(['wild', ...array(pet.skinsOwned).filter(id => skins.some(skin => skin.id === id))])];
+    if (!pet.skinsOwned.includes(pet.skin)) pet.skin = 'wild';
+    delete pet.lastPetAt;
+    pet.journal = [...new Set(array(pet.journal).filter(id => journalEntries().some(entry => entry.id === id)))];
+    pet.records = {};
+    for (const [key, record] of Object.entries(rawPet.records || {})){
+      if (!/^(snack|forage|leap):(rex|trike|brachio):[0-3]$/.test(key) || !record || typeof record !== 'object') continue;
+      pet.records[key] = {best:Math.floor(number(record.best,0,0,1000)), weekly:Math.floor(number(record.weekly,0,0,1000)), week:Math.floor(number(record.week,0))};
+    }
+    pet.tally = {meals:Math.floor(number(rawPet.tally?.meals,0,0,999999))};
+    return pet;
+  });
+  g.coins = Math.floor(number(g.coins, 24, 0, 999999));
+  g.streak = Math.floor(number(g.streak, 0, 0, 99999));
+  g.lastTick = number(g.lastTick, Date.now(), 0, Date.now());
+  g.lastSeen = number(g.lastSeen, g.lastTick, 0, Date.now());
+  g.lastDay = typeof g.lastDay === 'string' ? g.lastDay : '';
+  g.sound = g.sound !== false; g.dev = g.dev === true;
+  g.biomesOwned = [...new Set(['valley', ...array(g.biomesOwned).filter(id => Object.hasOwn(BIOMES, id))])];
+  if (!g.biomesOwned.includes(g.biome)) g.biome = 'valley';
   g.active = clamp(o.active | 0, 0, g.pets.length - 1);
   g.v = SAVE_VERSION;
   return { game:g, why:null, keep:null, from };
 }
-const trait = k => TRAITS[k][S.traits[k]];
-const hatched = () => !!S && !!S.sp && !!S.born;
-const stageIdx = () => S.growth < GROWTH_GATES[0] ? 0 : S.growth < GROWTH_GATES[1] ? 1 : S.growth < GROWTH_GATES[2] ? 2 : 3;
+const trait = (k, pet = S) => TRAITS[k][pet.traits[k]];
+const hatched = (pet = S) => !!pet && !!pet.sp && !!pet.born;
+const stageIdx = (pet = S) => pet.growth < GROWTH_GATES[0] ? 0 : pet.growth < GROWTH_GATES[1] ? 1 : pet.growth < GROWTH_GATES[2] ? 2 : 3;
 const bondPips = () => clamp(Math.floor(S.bond/20), 0, 5);
 const ageDays  = () => (Date.now()-S.born)/86400e3;
-const hasIll   = id => S.ills.some(i => i.id === id);
-const isNight  = () => { const h = new Date().getHours(); return h >= BED_HOUR || h < WAKE_HOUR; };
+const hasIll   = (id, pet = S) => pet.ills.some(ill => ill.id === id);
+const isNight  = (now = Date.now()) => { const hour = new Date(now).getHours(); return hour >= BED_HOUR || hour < WAKE_HOUR; };
 
-function logEvent(txt){
-  S.log.unshift({ t:Date.now(), txt });
-  if (S.log.length > 60) S.log.length = 60;
+function logEvent(txt, pet = S, now = Date.now()){
+  pet.log.unshift({ t:now, txt });
+  if (pet.log.length > 60) pet.log.length = 60;
 }
-function careScore(){
-  const n = S.needs;
+function careScore(pet = S){
+  const n = pet.needs;
   return clamp((n.hunger + n.energy + n.hygiene + n.joy) / 400, 0, 1);
+}
+function journalEntries(){
+  return [
+    ...STAGE.map((stage,index) => ({id:'stage:'+index, title:stage.label+' study'})),
+    {id:'favourite',title:'Favourite meal'}, {id:'friend',title:'Trusted companion'},
+    ...['snack','forage','leap'].map(kind => ({id:'game:'+kind,title:kind === 'snack' ? 'Snack run' : kind === 'forage' ? 'Forage' : 'River leap'})),
+    ...Object.keys(BIOMES).map(id => ({id:'habitat:'+id,title:BIOMES[id].name || id}))
+  ];
+}
+function observePet(pet = S, event, now = Date.now()){
+  if (!hatched(pet)) return;
+  const entries = pet.journal || (pet.journal = []);
+  const add = id => { if (!entries.includes(id)) entries.push(id); };
+  for (let stage=0;stage<=stageIdx(pet);stage++) add('stage:'+stage);
+  if (event && journalEntries().some(entry => entry.id === event)) add(event);
+  if (pet.bond >= 60) add('friend');
+  for (const [count,hat] of [[4,'frond'],[10,'cap']]){
+    if (entries.length >= count && !pet.owned.includes(hat)){
+      pet.owned.push(hat);
+      logEvent('Field journal reward: '+HAT_SHOP.find(item => item.id === hat).name+'.',pet,now);
+    }
+  }
 }
 function moodOf(){
   if (!hatched()) return { key:'egg', line:'The egg is warm.' };
@@ -4494,16 +4597,27 @@ function moodOf(){
 }
 
 /* ------------------------------ the tick ---------------------------------- */
-function simulateAll(ms, online){
-  const keep = G.active;
-  for (let i=0;i<G.pets.length;i++){ S = G.pets[i]; simulate(ms, online && i === keep); }
-  S = G.pets[keep];
+function advanceSimulation(now, online){
+  let cursor = Math.max(G.lastTick, now - 3*24*HOUR);
+  while (cursor < now){
+    const end = Math.min(now, (Math.floor(cursor/MIN)+1)*MIN);
+    simulateAll(end-cursor, online && now-end < MIN, end);
+    cursor = end;
+  }
+  G.lastTick = Math.max(G.lastTick, now);
 }
-function simulate(ms, online){
-  if (!hatched() || ms <= 0) return;
-  const h = ms / HOUR, n = S.needs;
-  const tA = trait('appetite'), tT = trait('tempo'), tS = trait('social');
-  const asleep = S.asleep;
+function simulateAll(ms, online, now = Date.now()){
+  G.pets.forEach((pet, index) => simulate(pet, ms, online && index === G.active, now));
+}
+function simulationRandom(pet){
+  pet.simSeed = (Math.imul(pet.simSeed, 1664525) + 1013904223) >>> 0;
+  return pet.simSeed / 4294967296;
+}
+function simulate(pet, ms, online, now = Date.now()){
+  if (!hatched(pet) || ms <= 0) return;
+  const h = ms / HOUR, n = pet.needs;
+  const tA = trait('appetite', pet), tT = trait('tempo', pet), tS = trait('social', pet);
+  const asleep = pet.asleep;
 
   n.hunger  = clamp(n.hunger  - 7.5 * tA.hunger * h * (asleep ? .45 : 1), 0, 100);
   n.hygiene = clamp(n.hygiene - 4.0 * h * (asleep ? .5 : 1), 0, 100);
@@ -4511,36 +4625,39 @@ function simulate(ms, online){
   n.energy  = asleep ? clamp(n.energy + ENERGY_ASLEEP * h, 0, 100)
                      : clamp(n.energy - ENERGY_AWAKE * tT.energy * h, 0, 100);
 
-  if (!asleep && isNight()) S.nightAwake += h; else S.nightAwake = Math.max(0, S.nightAwake - h*.5);
+  if (!asleep && isNight(now-ms/2)) pet.nightAwake += h; else pet.nightAwake = Math.max(0, pet.nightAwake - h*.5);
 
-  const roll = perHour => Math.random() < 1 - Math.pow(1 - clamp(perHour,0,.95), h);
-  S.treats = S.treats.filter(t => Date.now() - t < HOUR);
-  if (!hasIll('bellyache') && S.treats.length >= 3 && roll(.6)) fallIll('bellyache');
-  if (!hasIll('chill')     && S.nightAwake > 2   && roll(.35)) fallIll('chill');
-  if (!hasIll('mites')     && n.hygiene < 20     && roll(.5))  fallIll('mites');
-  if (!hasIll('blues')     && n.joy < 15         && roll(.4))  fallIll('blues');
+  pet.treats = pet.treats.filter(time => now - time < HOUR);
+  const risks = { bellyache:pet.treats.length >= 3, chill:pet.nightAwake > 2, mites:n.hygiene < 20, blues:n.joy < 15 };
+  const limits = { bellyache:.25, chill:1, mites:2, blues:2.5 };
+  for (const id in risks){
+    pet.exposure[id] = risks[id] ? pet.exposure[id] + h : Math.max(0, pet.exposure[id] - h);
+    if (!hasIll(id, pet) && pet.exposure[id] >= limits[id]) fallIll(id, pet, now);
+  }
 
-  const ill = S.ills.length;
-  if (ill) S.health = clamp(S.health - 7 * ill * h, 0, 100);
-  else if (careScore() > .55) S.health = clamp(S.health + 9 * h, 0, 100);
-  else if (careScore() < .3)  S.health = clamp(S.health - 5 * h, 0, 100);
-  if (S.health <= 0 && !S.vet){ S.vet = true; S.asleep = true; logEvent(S.name + ' collapsed. It needs a vet.'); }
+  const ill = pet.ills.length;
+  if (ill) pet.health = clamp(pet.health - 7 * ill * h, 0, 100);
+  else if (careScore(pet) > .55) pet.health = clamp(pet.health + 9 * h, 0, 100);
+  else if (careScore(pet) < .3) pet.health = clamp(pet.health - 5 * h, 0, 100);
+  if (pet.health <= 0 && !pet.vet){ pet.vet = true; pet.asleep = true; logEvent(pet.name + ' collapsed. It needs a vet.', pet, now); }
 
   const worst = Math.min(n.hunger, n.energy, n.hygiene, n.joy);
-  if (worst < 15) S.bond = clamp(S.bond - 3 * h, 0, 100);
-  else if (careScore() > .75) S.bond = clamp(S.bond + 1.2 * tS.bond * h, 0, 100);
+  if (worst < 15) pet.bond = clamp(pet.bond - 3 * h, 0, 100);
+  else if (careScore(pet) > .75) pet.bond = clamp(pet.bond + 1.2 * tS.bond * h, 0, 100);
 
-  const cs = careScore();
-  const rate = S.vet ? 0 : cs > .6 ? 1 : cs > .35 ? .5 : .12;
-  S.growth += (ms/MIN) * rate * (online ? 1 : .55);
+  const cs = careScore(pet);
+  const rate = pet.vet ? 0 : cs > .6 ? 1 : cs > .35 ? .5 : .12;
+  pet.growth += (ms/MIN) * rate;
 
-  if (!asleep && !S.vet){
-    S.messTimer = (S.messTimer || rnd(18,32)*MIN) - ms;
-    if (S.messTimer <= 0 && S.mess.length < 4){
-      S.mess.push({ x: rnd(28, W-28) });
+  if (!asleep && !pet.vet){
+    pet.messTimer = (pet.messTimer || (18 + simulationRandom(pet)*14)*MIN) - ms;
+    if (pet.messTimer <= 0){
+      if (pet.mess.length < 4){
+      pet.mess.push({ x: 28 + simulationRandom(pet)*(W-56) });
       n.hygiene = clamp(n.hygiene - 11, 0, 100);
-      S.messTimer = rnd(22,40)*MIN;
       if (online){ say('Oops.'); SFX.pop(); }
+      }
+      pet.messTimer = (22 + simulationRandom(pet)*18)*MIN;
     }
   }
 
@@ -4548,40 +4665,60 @@ function simulate(ms, online){
      may take it back, so there is time to feed, wash and play — which is the
      only reason anyone wakes one. Running the tank right down still overrules
      that: at six energy it drops wherever it stands, grace or no grace. */
-  const sleepy = isNight();
-  const justWoken = Date.now() - (S.wokeAt || 0) < WAKE_GRACE;
-  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30 && !justWoken))) setSleep(true, online);
-  if (asleep && !S.vet && n.energy >= 99) setSleep(false, online);
-  if (asleep && !S.vet && !sleepy && n.energy > 72) setSleep(false, online);
+  const sleepy = isNight(now);
+  const justWoken = now - (pet.wokeAt || 0) < WAKE_GRACE;
+  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30 && !justWoken))) setSleep(true, online, pet);
+  if (asleep && !pet.vet && n.energy >= 99) setSleep(false, online, pet);
+  if (asleep && !pet.vet && !sleepy && n.energy > 72) setSleep(false, online, pet);
 
-  const st = stageIdx();
-  if (st !== S.stageSeen){
-    S.stageSeen = st;
-    logEvent(S.name + ' is now ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '.');
-    if (online){ say(S.name + ' grew into ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '!'); SFX.roar(); emit('heart', dino.x, GROUND-40, 8); }
+  const st = stageIdx(pet);
+  observePet(pet, undefined, now);
+  if (st !== pet.stageSeen){
+    pet.stageSeen = st;
+    logEvent(pet.name + ' is now ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '.', pet, now);
+    if (online){ say(pet.name + ' grew into ' + article(STAGE[st].label) + STAGE[st].label.toLowerCase() + '!'); SFX.roar(); emit('heart', dino.x, GROUND-40, 8); }
   }
 }
-function fallIll(id){
-  S.ills.push({ id, since: Date.now() });
-  logEvent(S.name + ' came down with ' + ILLS[id].name.toLowerCase() + '.');
+function fallIll(id, pet = S, now = Date.now()){
+  pet.ills.push({ id, since: now });
+  logEvent(pet.name + ' came down with ' + ILLS[id].name.toLowerCase() + '.', pet, now);
 }
-function setSleep(v, online){
-  if (S.asleep === v) return;
-  S.asleep = v;
+function setSleep(v, online, pet = S){
+  if (pet.asleep === v) return;
+  pet.asleep = v;
   if (v){ if (online){ say('Yawn.'); SFX.yawn(); } }
   else   { if (online){ say('Morning.'); } }
 }
 
 /* --------------------------- player actions -------------------------------- */
+function visitHabitat(now = Date.now()){
+  if (!hatched() || S.asleep || S.vet || mode !== 'live') return false;
+  const habitat = biomeId();
+  if (S.habitatAt && now-S.habitatAt < 30*MIN) return false;
+  S.habitatAt = now;
+  const benefits = {valley:['joy',8],lagoon:['hygiene',8],ashfall:['joy',8],gorge:['joy',8],boreal:['energy',5]};
+  const [need,gain] = benefits[habitat];
+  S.needs[need] = clamp(S.needs[need]+gain,0,100);
+  S.bond = clamp(S.bond+1,0,100);
+  observePet(S,'habitat:'+habitat,now);
+  logEvent('Explored '+BIOMES[habitat].name+'.',S,now);
+  anim.play('inspect',1400);
+  say({valley:'Fresh fern fronds.',lagoon:'Cool water, clean toes.',ashfall:'A smooth volcanic stone.',gorge:'Tracks beside the river.',boreal:'A quiet rest among the conifers.'}[habitat]);
+  refreshLight();
+  return true;
+}
+
 function feed(id){
   const f = FOODS.find(x => x.id === id), sp = SPECIES[S.sp];
+  if (!f || feedFX || mode !== 'live') return;
   if (G.coins < f.cost) return refuse('Not enough coins. Dig, or win it at the games.');
   if (S.asleep) return refuse(S.name + ' is asleep.');
   if (hasIll('bellyache')) return refuse(S.name + ' turns away from it. Settle the stomach first.');
   if (S.needs.hunger > 94) return refuse(S.name + ' is full.');
   G.coins -= f.cost;
+  swallow(id);
   closeScreen();                                  // back to the habitat to watch it land
-  tossFood(id);                                   // the food arcs in; effects land on the bite
+  tossFood(id);
   refreshLight();
 }
 function swallow(id){
@@ -4594,6 +4731,7 @@ function swallow(id){
   if (f.treat) S.treats.push(Date.now());
   S.tally = S.tally || {};
   S.tally.meals = (S.tally.meals || 0) + 1;
+  observePet(S, loved ? 'favourite' : undefined);
   say(loved ? 'Its favourite. Gone in one gulp.' : hated ? 'It eats it. Slowly. Resentfully.' : 'Nom.');
   refresh();
 }
@@ -4613,15 +4751,22 @@ function scrub(){
 /* `at` is the point in canvas units that was actually touched. Hearts used to
    come off a fixed spot above the sprite, which read as unrelated to the tap;
    they now rise from under the finger. */
+let lastPetAt = 0;
 function pet(at){
   if (!hatched() || S.asleep || S.vet) return;
   const now = performance.now();
-  if (now - (S.lastPetAt||0) < 320) return;
-  S.lastPetAt = now;
+  if (now - lastPetAt < 320) return;
+  lastPetAt = now;
   S.petBank++;
   const gain = clamp(1.1 - S.bond/160, .25, 1.1) * trait('social').bond;
   S.bond = clamp(S.bond + gain, 0, 100);
   S.needs.joy = clamp(S.needs.joy + 1.6, 0, 100);
+  const cautious = trait('social').id === 'shy' && S.bond < 40;
+  anim.play(cautious ? 'wary' : 'cheer', cautious ? 450 : 850);
+  dino.tx = clamp(dino.x + (cautious ? -dino.dir*8 : dino.dir*4),22,W-22);
+  dino.until = now + (cautious ? 1800 : 800);
+  if (S.petBank % 6 === 1) say(cautious ? 'A little space, then another look.' : trait('tempo').id === 'placid' ? 'Leans into your hand.' : 'A happy bounce.');
+  observePet();
   const hx = at ? at[0] : dino.x, hy = at ? at[1] : dinoTop - 4;
   emit('heart', hx - 3, hy - 6, 1, {vx:5, vy:-19, life:1000});
   SFX.purr();
@@ -4680,6 +4825,7 @@ function cure(remedyId, free){
   const r = REMEDIES.find(x => x.id === remedyId);
   if (!free) G.coins -= r.cost;
   S.ills = S.ills.filter(i => i.id !== r.cures);
+  S.exposure[r.cures] = 0;
   S.health = clamp(S.health + 30, 0, 100);
   S.bond = clamp(S.bond + 4, 0, 100);
   S.petBank = 0;
@@ -4892,7 +5038,25 @@ let dino = { x: W/2, dir: -1, tx: W/2, until: 0, walking:false, dig:0, digAt: 0,
 let dinoTop = GROUND - 40, dinoBox = [0,0,0,0];
 let egg = { cracks: 0, wob: 0 };
 let game = null, feedFX = null;
-let blinkAt = 0, blinking = false, zAt = 0;
+let habitatTarget = null;
+let blinkAt = 0, blinking = false, blinkUntil = 0, zAt = 0;
+
+function strideCycle(spId, stage){
+  const growth = artFor(spId, stage).st, species = SPECIES[spId];
+  return Math.max(3, species.strideBase * growth.limb * growth.s * species.scale);
+}
+
+function stepPresentation(dt, now){
+  egg.wob = Math.max(0, egg.wob - dt * .0036);
+  anim.t += dt;
+  if (mode !== 'live' || !hatched()) return;
+  if (now > blinkAt){ blinkUntil = now + 150; blinkAt = now + rnd(2400, 5200); }
+  blinking = now < blinkUntil;
+  for (const mess of S.mess) if (Math.random() < 1-Math.exp(-dt*.0006)) emit('stink', mess.x, GROUND-6, 1, {vy:-12, life:1000});
+  if (S.asleep && now > zAt){ zAt = now + 1100; emit('bubbleZ', dino.x - 10*dino.dir, dinoTop+2, 1, {vy:-13, vx:3, life:2100}); }
+  if (hasIll('chill') && Math.random() < 1-Math.exp(-dt*.00072)){ emit('spark', dino.x-14*dino.dir, dinoTop+8, 2, {col:'#cfe0e8'}); SFX.sneeze(); }
+  if (hasIll('mites') && Math.random() < 1-Math.exp(-dt*.0012)) emit('crumb', dino.x+rnd(-10,10), dinoTop+10, 1, {col:'#8a7350', vy:-6, g:40});
+}
 
 const anim = {
   name:'idle', frame:0, t:0, until:0,
@@ -4925,7 +5089,6 @@ function stepFeed(dt){
     feedFX.phase = 'bite'; feedFX.t = 0;
     anim.play('eat', 1500); SFX.chomp();
     emit('crumb', dino.x - 12*dino.dir, GROUND-26, 8, {vy:12, g:90, life:600});
-    swallow(feedFX.id);
   } else if (feedFX.phase === 'bite' && feedFX.t > 900){
     feedFX = null;
   }
@@ -4941,6 +5104,7 @@ function drawFeed(g, mouth){
 /* ------------------------------ behaviour --------------------------------- */
 function stepBehaviour(dt, now){
   if (mode !== 'live') return;
+  if (habitatTarget && (habitatTarget.pet !== S || habitatTarget.biome !== biomeId() || S.asleep || S.vet)) habitatTarget = null;
   const busy = feedFX || performance.now() < anim.until;
   const canMove = !S.asleep && !S.vet && !S.ills.length && !busy;
 
@@ -4960,7 +5124,17 @@ function stepBehaviour(dt, now){
   }
   if (!canMove){ dino.walking = false; return; }
 
-  if (now > dino.until){ dino.tx = rnd(26, W-26); dino.until = now + rnd(2600, 6500) / trait('tempo').speed; }
+  if (habitatTarget){
+    dino.tx = HABITAT_ART[habitatTarget.biome].slot[0];
+    dino.until = now + 2000;
+    if (Math.abs(dino.x-dino.tx) <= 4){ habitatTarget = null; visitHabitat(); return; }
+  }
+  if (now > dino.until){
+    const cautious = trait('social').id === 'shy' && S.bond < 40;
+    const radius = cautious ? 20 : trait('tempo').id === 'placid' ? 38 : W;
+    dino.tx = clamp(dino.x + rnd(-radius,radius),26,W-26);
+    dino.until = now + rnd(2600, 6500) / trait('tempo').speed;
+  }
   const d = dino.tx - dino.x;
   if (Math.abs(d) > 3){
     dino.walking = true; dino.dir = d > 0 ? 1 : -1;
@@ -4973,10 +5147,8 @@ function stepBehaviour(dt, now){
 }
 
 /* ------------------------------- draw ------------------------------------- */
-let lastSceneAt = 0;
 let screenLayout = null;
 function drawScene(now){
-  const dt = clamp(now - lastSceneAt, 0, 120); lastSceneAt = now;
 
   /* A screen replaces the view rather than sliding over it. On the device this
      copies there is one display and it shows one thing at a time; leaving the
@@ -5000,16 +5172,21 @@ function drawScene(now){
   // whatever this habitat has that moves: a plume, surf, a fall, an aurora
   const live = (BIOMES[biomeId()] || BIOMES.valley).live;
   if (live) live(ctx, phase, now);
-  drawClouds(ctx, phase, dt);
-  drawFlyers(ctx, dt, now);
+  drawClouds(ctx, phase);
+  drawFlyers(ctx);
   drawWater(ctx, phase, now);
   drawGrassLine(ctx, phase, now);
-  if (phase !== 'night') drawMotes(ctx, dt, phase);
+  if (phase !== 'night') drawMotes(ctx, phase);
 
   if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'game'){ drawGame(now, phase); return; }
-  drawLive(now, dt);
+  const habitat = HABITAT_ART[biomeId()];
+  ctx.save();
+  ctx.globalAlpha = S.habitatAt && Date.now()-S.habitatAt < 30*MIN ? .45 : 1;
+  drawItem(ctx, habitat.item, habitat.slot[0]-6, habitat.slot[1]-10, 1.5);
+  ctx.restore();
+  drawLive(now);
   drawFronds(ctx, phase, now);
   const tint = skyOf(phase).tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
@@ -5040,7 +5217,6 @@ function drawEggArt(g, cx, cy, spId, cracks){
 }
 function drawEgg(now){
   const wob = egg.wob > 0 ? Math.sin(now/40) * 2 : 0;
-  egg.wob = Math.max(0, egg.wob - .06);
   ctx.fillStyle = 'rgba(16,26,24,.5)';
   ctx.beginPath(); ctx.ellipse(W/2, GROUND + 1, 12, 3, 0, 0, 7); ctx.fill();
   drawEggArt(ctx, W/2 + wob, GROUND - 16, S.sp, egg.cracks);
@@ -5077,17 +5253,14 @@ function drawLive(now, dt){
     drawMess(ctx, m.x|0, GROUND - 1);
     const fx = m.x + Math.sin(now/280 + m.x) * 5, fy = GROUND - 12 + Math.cos(now/430 + m.x) * 2;
     ctx.fillStyle = '#2f2f2f'; ctx.fillRect(fx|0, fy|0, 1, 1);
-    if (Math.random() < .01) emit('stink', m.x, GROUND - 6, 1, {vy:-12, life:1000});
   }
-  if (now > blinkAt){ blinking = true; blinkAt = now + rnd(2400, 5200); setTimeout(() => blinking = false, 150); }
 
   const st = stageIdx(), a = anim.pick(), sp = SPECIES[S.sp];
   // real elapsed time, not an assumed sixty frames a second. On a 120Hz phone
   // the hardcoded 16 ran eat and cheer at double speed.
-  anim.t += dt;
   let fr;
   if (a === 'walk'){
-    const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
+    const cycle = strideCycle(S.sp, st);
     fr = Math.floor((dino.dist / cycle) * POSES.walk.length);
   } else {
     const fps = a === 'eat' ? 220 : a === 'cheer' ? 200 : 700;
@@ -5115,9 +5288,6 @@ function drawLive(now, dt){
   /* Zs on a clock rather than a two-percent chance per frame: at 120Hz that
      was twice as many as at 60, and either way it could go seconds without
      one, which is a poor signal for the state it is the signal for. */
-  if (S.asleep && now > zAt){ zAt = now + 1100; emit('bubbleZ', x + 10*(flip?-1:1), dinoTop + 2, 1, {vy:-13, vx:3, life:2100}); }
-  if (hasIll('chill') && Math.random() < .012){ emit('spark', x - 14*dino.dir, dinoTop + 8, 2, {col:'#cfe0e8'}); SFX.sneeze(); }
-  if (hasIll('mites') && Math.random() < .02) emit('crumb', x + rnd(-10,10), dinoTop + 10, 1, {col:'#8a7350', vy:-6, g:40});
   if (dino.dig > 0){ ctx.fillStyle='#8f6f4c'; ctx.fillRect(x - 16*dino.dir, GROUND-2, 6, 2); }
 
   if (S.asleep){ ctx.fillStyle = 'rgba(14,16,44,.28)'; ctx.fillRect(0, 0, W, H); }
@@ -5161,32 +5331,67 @@ function stateMark(g, x, top, now){
 
 /* ============================== MINIGAMES ================================== */
 const GAMES = {
-  snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:2 },
-  forage:{ name:'Forage',     blurb:'Food turns up around the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', pay:2 },
-  leap:  { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:3 }
+  snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:1,
+    start:() => ({x:W/2, tx:W/2, dir:-1, items:[], combo:0, spawn:.5, stun:0, kL:false, kR:false}),
+    update:stepSnack, draw:drawSnack, input:inputSnack, finish:finishRound },
+  forage:{ name:'Forage', blurb:'Food turns up around the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', pay:1,
+    start:() => ({x:W/2, tx:W/2, dir:-1, dist:0, walking:false, snap:0, finds:[], thief:null, thiefAt:4, chain:0, missed:0, spawn:.4}),
+    update:stepForage, draw:drawForage, input:(input) => { if (input.type === 'point') tapForage(input.x,input.y); }, finish:finishRound },
+  leap: { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:2,
+    start:() => ({obs:[], y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0}),
+    update:stepLeap, draw:drawLeap, input:(input) => { if ((input.type === 'point' && !input.move) || (input.down && [' ','ArrowUp','w'].includes(input.key))) leapJump(); }, finish:finishRound }
 };
-function startGame(kind){
+function challengeWeek(now = Date.now()){ return Math.floor((now - Date.UTC(1970,0,5))/(7*24*HOUR)); }
+function gameProfile(pet){
+  const stage = stageIdx(pet), reach = pet.sp === 'brachio' ? 5 : pet.sp === 'trike' ? 3 : 0;
+  return { speed:88-stage*6+(pet.sp === 'rex' ? 8 : pet.sp === 'brachio' ? -8 : 0),
+    reach:10+stage*4+reach, catch:11+stage*2, jump:148-stage*3-(pet.sp === 'brachio' ? 6 : 0), stun:800-stage*100,
+    runSpeed:78+stage*8+(pet.sp === 'rex' ? 6 : pet.sp === 'brachio' ? -6 : 0) };
+}
+function gameRandom(min=0, max=1){
+  game.seed = (Math.imul(game.seed,1664525)+1013904223) >>> 0;
+  return min + (max-min)*game.seed/4294967296;
+}
+function gamePick(items){ return items[Math.floor(gameRandom(0,items.length))]; }
+function inputSnack(input){
+  if (input.type === 'point') game.tx = clamp(input.x,18,W-18);
+  if (['ArrowLeft','a'].includes(input.key)) game.kL = input.down;
+  if (['ArrowRight','d'].includes(input.key)) game.kR = input.down;
+  if (input.type === 'key' && !input.down) game.tx = game.x;
+}
+function gameInput(input){ if (game) GAMES[game.kind].input(input); }
+function startGame(kind, seed){
+  if (!Object.hasOwn(GAMES,kind) || game) return;
   if (S.asleep) return refuse(S.name + ' is asleep.');
   if (S.vet) return refuse(S.name + ' is in no state to play.');
   if (S.needs.energy < 12) return refuse('Too tired to run around.');
   closeSheet();
   mode = 'game'; feedFX = null;
-  if (kind === 'snack') game = { kind, x:W/2, tx:W/2, dir:-1, items:[], score:0, combo:0, left:30, spawn:.5, stun:0, kL:false, kR:false };
-  if (kind === 'forage') game = { kind, x:W/2, tx:W/2, dir:-1, dist:0, walking:false,
-                                  snap:0, finds:[], thief:null, thiefAt:rnd(3,6),
-                                  score:0, chain:0, missed:0, left:30, spawn:.4 };
-  if (kind === 'leap')  game = { kind, obs:[], score:0, left:30, y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0 };
+  const week = challengeWeek();
+  game = Object.assign({kind, score:0, left:30, pet:S, week, profile:gameProfile(S),
+    recordKey:kind+':'+S.sp+':'+stageIdx(S), seed:seed ?? (week*97+Object.keys(GAMES).indexOf(kind)+1)}, GAMES[kind].start());
+  if (kind === 'leap') game.speed = game.profile.runSpeed;
   say(GAMES[kind].blurb.split('.')[0] + '.');
   paintChrome();
 }
+function finishRound(round){
+  if (round.left > 0) return;
+  const records = round.pet.records || (round.pet.records = {});
+  const previous = records[round.recordKey] || {best:0, week:round.week, weekly:0};
+  records[round.recordKey] = {best:Math.max(previous.best,round.score), week:round.week,
+    weekly:Math.max(previous.week === round.week ? previous.weekly : 0,round.score)};
+  observePet(round.pet, 'game:'+round.kind);
+}
 function endGame(){
   if (!game) return;
+  const player = game.pet;
+  GAMES[game.kind].finish(game);
   const g = GAMES[game.kind], earned = game.score * g.pay;
   G.coins += earned;
-  S.needs.joy = clamp(S.needs.joy + Math.min(34, game.score * 2.4), 0, 100);
-  S.needs.energy = clamp(S.needs.energy - 7, 0, 100);
-  S.bond = clamp(S.bond + (game.score > 8 ? 3 : 1), 0, 100);
-  if (game.score > 8) logEvent('A good run at ' + g.name.toLowerCase() + ': ' + game.score + '.');
+  player.needs.joy = clamp(player.needs.joy + Math.min(34, game.score * 2.4), 0, 100);
+  player.needs.energy = clamp(player.needs.energy - 7, 0, 100);
+  player.bond = clamp(player.bond + (game.score > 8 ? 3 : 1), 0, 100);
+  if (game.score > 8) logEvent('A good run at ' + g.name.toLowerCase() + ': ' + game.score + '.', player);
   say(game.score ? 'Scored ' + game.score + '. That is ' + earned + ' coins.' : 'Nothing scored. Next time.');
   if (game.score) SFX.coin();
   game = null; mode = 'live';
@@ -5194,16 +5399,13 @@ function endGame(){
 }
 function stepGame(dt, now){
   if (!game) return;
-  game.left -= dt/1000;
-  if (game.left <= 0) return endGame();
-  if (game.kind === 'snack') return stepSnack(dt, now);
-  if (game.kind === 'forage') return stepForage(dt, now);
-  if (game.kind === 'leap')  return stepLeap(dt, now);
+  const elapsed = Math.min(dt,game.left*1000);
+  game.left = Math.max(0,game.left-elapsed/1000);
+  GAMES[game.kind].update(elapsed, now);
+  if (game.left <= 0) endGame();
 }
 function drawGame(now, phase){
-  if (game.kind === 'snack') drawSnack(now);
-  if (game.kind === 'forage') drawForage(now);
-  if (game.kind === 'leap')  drawLeap(now);
+  GAMES[game.kind].draw(now);
   drawParts(ctx);
   ctx.fillStyle = 'rgba(16,22,24,.78)'; ctx.fillRect(0, 0, W, 9);
   ctx.fillStyle = game.left < 6 ? '#c2603c' : '#7ea55f';
@@ -5217,8 +5419,9 @@ function gameSprite(anim2, frame, scaleTo){
 /* ------ snack run ------ */
 function stepSnack(dt, now){
   let vx = 0;
-  if (game.kL) vx -= 110; if (game.kR) vx += 110;
-  if (!vx) vx = clamp((game.tx - game.x) * 7, -135, 135);
+  const speed = game.profile.speed * 1.6;
+  if (game.kL) vx -= speed; if (game.kR) vx += speed;
+  if (!vx) vx = clamp((game.tx - game.x) * 7, -speed, speed);
   if (now < game.stun) vx = 0;
   /* Which way it is facing comes from which way it is actually moving. It used
      to come from `tx < x`, which is inverted — the sprite is drawn facing −x,
@@ -5230,16 +5433,16 @@ function stepSnack(dt, now){
   game.x = clamp(game.x + vx * dt/1000, 18, W-18);
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
-    game.spawn = rnd(.42, .72);
-    const sp = SPECIES[S.sp], rock = Math.random() < .22;
-    game.items.push({ x: rnd(16, W-16), y: 4, vy: rnd(44, 62), id: rock ? 'rock' : pick(sp.likes.concat(['berry','fern'])), rock });
+    game.spawn = gameRandom(.42, .72);
+    const sp = SPECIES[game.pet.sp], rock = gameRandom() < .22;
+    game.items.push({ x: gameRandom(16, W-16), y: 4, vy: gameRandom(44, 62), id: rock ? 'rock' : gamePick(sp.likes), rock });
   }
   const mouthY = GROUND - 34;
   for (const it of game.items){
     it.y += it.vy * dt/1000;
-    if (it.y > mouthY - 6 && it.y < mouthY + 22 && Math.abs(it.x - game.x) < 15){
+    if (it.y > mouthY - 6 && it.y < mouthY + 22 && Math.abs(it.x - game.x) < game.profile.catch){
       it.dead = true;
-      if (it.rock){ game.combo = 0; game.stun = now + 750; SFX.bonk(); emit('spark', game.x, mouthY, 4, {col:'#e8c352'}); }
+      if (it.rock){ game.combo = 0; game.stun = now + game.profile.stun; SFX.bonk(); emit('spark', game.x, mouthY, 4, {col:'#e8c352'}); }
       else { game.combo++; game.score += game.combo >= 5 ? 2 : 1; SFX.chomp(); emit('spark', it.x, it.y, 3); }
     }
     if (it.y > GROUND){ it.dead = true; if (!it.rock) game.combo = 0; }
@@ -5287,7 +5490,7 @@ function drawSnack(now){
    stage and the animal's own speed all decide whether you make it.
    -------------------------------------------------------------------------- */
 const FORAGE_H = 50;                           // drawn sprite height in the pen
-const FORAGE_LIFE = 4600;                      // how long a find sits before it spoils
+const FORAGE_LIFE = 3600;                      // how long a find sits before it spoils
 
 function forageSprite(now){
   const snapping = now < game.snap;
@@ -5296,7 +5499,7 @@ function forageSprite(now){
   if (!game.walking) return gameSprite('idle', Math.floor(now/700), FORAGE_H);
   // one sprite stride to one stride of ground, the same rule the habitat uses
   const probe = gameSprite('walk', 0, FORAGE_H);
-  const cycle = Math.max(3, sp.strideBase * STAGE[st].limb * STAGE[st].s * sp.scale);
+  const cycle = strideCycle(S.sp, st);
   const frame = Math.floor((game.dist / probe.sc) / cycle * POSES.walk.length);
   return gameSprite('walk', frame, FORAGE_H);
 }
@@ -5305,17 +5508,17 @@ function forageSprite(now){
    of one that is already there. */
 function forageSlot(){
   for (let tries=0; tries<12; tries++){
-    const x = rnd(18, W-18);
+    const x = gameRandom(18, W-18);
     if (game.finds.every(f => Math.abs(f.x - x) > 26)) return x;
   }
-  return rnd(18, W-18);
+  return gameRandom(18, W-18);
 }
 
 function stepForage(dt, now){
   const sec = dt / 1000;
 
   // run toward the last place the player pointed
-  const speed = 54 + stageIdx() * 11;
+  const speed = game.profile.speed;
   const d = game.tx - game.x;
   if (Math.abs(d) > 1.5){
     const step = clamp(d, -speed*sec, speed*sec);
@@ -5328,9 +5531,9 @@ function stepForage(dt, now){
   // new finds
   game.spawn -= sec;
   if (game.spawn <= 0 && game.finds.length < 5){
-    game.spawn = rnd(.95, 1.55);
+    game.spawn = gameRandom(.6, 1.05);
     // what turns up is what this species eats, and nothing else
-    game.finds.push({ x: forageSlot(), id: pick(SPECIES[S.sp].likes), age: 0 });
+    game.finds.push({ x: forageSlot(), id: gamePick(SPECIES[game.pet.sp].likes), age: 0 });
   }
   for (const f of game.finds){
     f.age += dt;
@@ -5352,17 +5555,17 @@ function stepForage(dt, now){
     const dir = goal > t.x ? 1 : -1;
     t.x += dir * 74 * sec;
     if (!t.carry && Math.abs(t.x - t.mark.x) < 3){
-      if (t.mark.dead){ game.thief = null; game.thiefAt = rnd(2.2, 4.2); }
+      if (t.mark.dead){ game.thief = null; game.thiefAt = gameRandom(2.2, 4.2); }
       else { t.mark.dead = true; t.carry = true; game.missed++; game.chain = 0; SFX.pop(); }
     } else if (t.carry && (t.x < -12 || t.x > W+12)){
-      game.thief = null; game.thiefAt = rnd(2.2, 4.2);
+      game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
     }
   }
 
   /* Reach. A horizontal distance along the ground, because everything here is
      on the ground — the old game measured to a mouth anchor thirty pixels up
      and then spawned half its quarry on the floor. */
-  const reach = 12 + stageIdx() * 2;
+  const reach = game.profile.reach;
   for (const f of game.finds){
     if (f.dead) continue;
     if (Math.abs(f.x - game.x) < reach){
@@ -5371,7 +5574,7 @@ function stepForage(dt, now){
       game.score += game.chain >= 4 ? 2 : 1;
       game.snap = now + 260;
       if (game.thief && game.thief.mark === f && !game.thief.carry){
-        game.thief = null; game.thiefAt = rnd(2.2, 4.2);    // beaten to it
+        game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
       }
       SFX.chomp();
       emit('spark', f.x, GROUND - 4, 4, {col:'#cfe0a8'});
@@ -5380,7 +5583,7 @@ function stepForage(dt, now){
   }
   game.finds = game.finds.filter(f => !f.dead);
   if (game.thief && game.thief.mark.dead && !game.thief.carry){
-    game.thief = null; game.thiefAt = rnd(2.2, 4.2);
+    game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
   }
 }
 
@@ -5500,21 +5703,21 @@ const LEAP_KINDS = ['log','rock','water','log','rock'];
 
 function stepLeap(dt, now){
   game.run += dt/1000 * game.speed;
-  game.speed = Math.min(140, game.speed + dt/1000 * 3);
+  game.speed = Math.min(game.profile.runSpeed+45, game.speed + dt/1000 * 3);
   game.vy += 340 * dt/1000;
   game.y = Math.min(0, game.y + game.vy * dt/1000);
   if (game.y === 0) game.vy = 0;
   game.spawn -= dt/1000;
   if (game.spawn <= 0){
-    game.spawn = rnd(.85, 1.5) * (110 / game.speed);
-    game.obs.push({ x: W + 14, kind: pick(LEAP_KINDS), hit:false, past:false });
+    game.spawn = Math.max(.95,gameRandom(1.1, 1.7) * 110/game.speed);
+    game.obs.push({ x: W + 14, kind: gamePick(LEAP_KINDS), hit:false, past:false });
   }
   for (const o of game.obs){
     o.x -= game.speed * dt/1000;
     const cfg = LEAP_OBS[o.kind];
     if (!o.hit && Math.abs(o.x - 54) < cfg.half && game.y > -cfg.clear){
       o.hit = true; game.speed = Math.max(70, game.speed * .7);
-      game.stun = now + 500; SFX.bonk();
+      game.stun = now + game.profile.stun; SFX.bonk();
       if (o.kind === 'water') emit('spark', 54, GROUND-2, 8, {col:'#9fd2e0', vy:-30, g:150});
       else emit('crumb', 54, GROUND-8, 6, {col:'#9b7a52', vy:-20, g:120});
     }
@@ -5529,7 +5732,7 @@ function stepLeap(dt, now){
 function leapJump(){
   if (!game || game.kind !== 'leap') return;
   if (game.y < -1) return;
-  game.vy = -136; SFX.purr();
+  game.vy = -game.profile.jump; SFX.purr();
 }
 
 /* The track, overdrawn so the habitat props do not sit still behind a running
@@ -5979,11 +6182,12 @@ SCREENS.play = {
             { on: screenState.pick === L.keys.length, dim: !trickReady,
               rightCol: trickReady ? SC.moss : SC.dim });
     const pick = screenState.pick;
-    const note = pick < L.keys.length ? GAMES[L.keys[pick]].blurb
+    const record = pick < L.keys.length ? S.records[L.keys[pick]+':'+S.sp+':'+stageIdx()] : null;
+    const note = pick < L.keys.length ? 'Best '+(record?.best || 0)+' / Week '+(record?.week === challengeWeek() ? record.weekly : 0)+'\n'+GAMES[L.keys[pick]].blurb
                : trickReady ? 'A quick burst of joy, and it costs nothing.'
                             : 'Unlocks at three bond hearts. Petting is what builds them.';
     caption(g, L.rows.bottom + 3, '', '', null, note);
-    L.act = actionBar(g, pick < L.keys.length ? 'START' : 'ASK',
+    L.act = actionBar(g, pick < L.keys.length ? 'WEEKLY CHALLENGE' : 'ASK',
                       SC.moss, pick === L.keys.length && !trickReady);
     L.close = frame.close;
   },
@@ -6534,7 +6738,7 @@ function refresh(){
   const d = ageDays();
   const age = d < 1 ? Math.max(1, Math.round(d*24)) + 'h old' : Math.floor(d) + (Math.floor(d) === 1 ? ' day old' : ' days old');
   $('dSub').textContent = st.label + ' ' + sp.common + ' · ' + age;
-  $('mood').innerHTML = S.name + ' <em>' + moodOf().line + '</em>';
+  $('mood').innerHTML = escapeHTML(S.name) + ' <em>' + escapeHTML(moodOf().line) + '</em>';
   const bondEl = $('bond');
   const pips = bondPips();
   if (bondEl.dataset.pips !== String(pips)){
@@ -6583,10 +6787,13 @@ function closeSheet(){
   closeScreen();
 }
 
+function escapeHTML(value){
+  return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+}
 function rowHTML(art, title, sub, right, attrs){
   const slot = art ? `<span class="art" data-art="${art}"></span>` : '';
   return `<button class="row" ${attrs||''}>${slot}
-    <span class="t"><b>${title}</b><small>${sub}</small></span><span class="px">${right||''}</span></button>`;
+    <span class="t"><b>${escapeHTML(title)}</b><small>${escapeHTML(sub)}</small></span><span class="px">${escapeHTML(right)}</span></button>`;
 }
 function mountArt(root){
   root.querySelectorAll('[data-art]').forEach(slot => {
@@ -6608,9 +6815,7 @@ function portrait(pet, size){
   const c = makeCv(size, size), g = readCtx(c);
   g.imageSmoothingEnabled = false;
   if (!pet.sp){ g.fillStyle = '#3a4a44'; g.fillRect(size/2-5, size/2-7, 10, 14); return c; }
-  const prev = S; S = pet;
-  const st = pet.born ? stageIdx() : 0;
-  S = prev;
+  const st = pet.born ? stageIdx(pet) : 0;
   const f = frameOf(pet.sp, st, 'idle', 0, false, pet.skin || 'wild');
   const sc = Math.min(size / f.w, size / f.h) * .92;
   g.drawImage(f.cv, (size - f.w*sc)/2, size - f.h*sc - 1, f.w*sc, f.h*sc);
@@ -6625,6 +6830,7 @@ const SHEETS = {
 
   vitals(b, sp){
     let html = '';
+    const petName = escapeHTML(S.name);
     const n = S.needs, hr = new Date().getHours();
     const untilBed = ((BED_HOUR - hr) + 24) % 24;
     const hoursLeft = (n.energy / (ENERGY_AWAKE * trait('tempo').energy)).toFixed(1);
@@ -6636,8 +6842,8 @@ const SHEETS = {
         <div class="stat"><b>Clean</b><span>${Math.round(n.hygiene)}%</span></div>
         <div class="stat"><b>Joy</b><span>${Math.round(n.joy)}%</span></div>
       </div>
-      <div class="log"><time>Energy</time>Falls about ${(ENERGY_AWAKE * trait('tempo').energy).toFixed(1)} points an hour awake, and comes back at ${ENERGY_ASLEEP} an hour asleep. At this level ${S.name} has roughly ${hoursLeft} waking hours left, and a full night takes about ${hoursFull} hours.</div>
-      <div class="log"><time>Sleep</time>${S.name} settles itself between ${BED_HOUR}:00 and ${WAKE_HOUR}:00, or any time energy drops under 6. It wakes on its own once rested. Bedtime is in about ${untilBed} hours. Keeping it up more than two hours past bedtime brings on a chill.</div>
+      <div class="log"><time>Energy</time>Falls about ${(ENERGY_AWAKE * trait('tempo').energy).toFixed(1)} points an hour awake, and comes back at ${ENERGY_ASLEEP} an hour asleep. At this level ${petName} has roughly ${hoursLeft} waking hours left, and a full night takes about ${hoursFull} hours.</div>
+      <div class="log"><time>Sleep</time>${petName} settles itself between ${BED_HOUR}:00 and ${WAKE_HOUR}:00, or any time energy drops under 6. It wakes on its own once rested. Bedtime is in about ${untilBed} hours. Keeping it up more than two hours past bedtime brings on a chill.</div>
       <div class="log"><time>Hunger</time>Falls about ${(7.5*trait('appetite').hunger).toFixed(1)} an hour. Under 22 it starts nosing at the dirt; at zero, health follows it down.</div>
       <div class="log"><time>Clean</time>Falls 4 an hour, and drops 11 more with every mess. Under 20 invites mites.</div>
       <div class="log"><time>Joy</time>Falls about ${(6*trait('tempo').joy*trait('social').lonely).toFixed(1)} an hour. Games, tricks and petting bring it back. Under 15 for long enough turns into the blues.</div>
@@ -6655,7 +6861,7 @@ const SHEETS = {
       b.innerHTML = `<h2>Field dossier</h2><p class="lede">Choose an egg first. Each species is drawn from its own skeleton, so the sprite shows what the notes claim.</p>`;
     } else {
       const t = ['appetite','tempo','social'].map(k => `<span class="trait">${trait(k).name}</span>`).join('');
-      html = `<h2>${S.name}</h2><p class="lede">${sp.name} · ${sp.era}</p>
+      html = `<h2>${escapeHTML(S.name)}</h2><p class="lede">${sp.name} · ${sp.era}</p>
         <div class="stats">
           <div class="stat"><b>Stage</b><span>${STAGE[stageIdx()].label}</span></div>
           <div class="stat"><b>Well-kept time</b><span>${Math.floor(S.growth)} min</span></div>
@@ -6668,8 +6874,11 @@ const SHEETS = {
         <p class="note" style="margin:10px 0 6px">Drawn on the sprite</p>
         ${sp.checks.map(c => `<div class="log">${c}</div>`).join('')}
         <div class="hr"></div>
+        <p class="note">Field journal · ${S.journal.length}/${journalEntries().length}</p>
+        ${journalEntries().map(entry => `<div class="log">${S.journal.includes(entry.id) ? 'Recorded' : 'Not yet observed'} · ${entry.title}</div>`).join('')}
+        <p class="note">Four studies: Fern sprig. Ten studies: Field cap.</p>
         <p class="note" style="margin-bottom:6px">Diary</p>
-        ${S.log.length ? S.log.slice(0,10).map(l => `<div class="log"><time>${new Date(l.t).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</time>${l.txt}</div>`).join('') : '<p class="note">Nothing has happened yet.</p>'}
+        ${S.log.length ? S.log.slice(0,10).map(l => `<div class="log"><time>${new Date(l.t).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</time>${escapeHTML(l.txt)}</div>`).join('') : '<p class="note">Nothing has happened yet.</p>'}
         <div class="hr"></div>
         ${rowHTML('', G.sound ? 'Sound on' : 'Sound off', 'Beeps, chomps and roars.', G.sound ? 'on' : 'off')}
         ${rowHTML('', 'Release ' + S.name, G.pets.length > 1 ? 'Removes this animal from the nest for good.' : 'You cannot release your only animal.', 'release', G.pets.length > 1 ? '' : 'disabled')}
@@ -6686,9 +6895,26 @@ const SHEETS = {
       rows[2].onclick = () => {
         if (!armedW){ armedW = true; rows[2].querySelector('.px').textContent = 'sure?'; setTimeout(()=>{armedW=false; if(openPanel==='dossier') renderSheet('dossier');}, 3000); return; }
         // a deliberate wipe clears the safety net too, which is what the row promises
-        Promise.all([Store.del(SAVE_KEY), Store.del(BACKUP_KEY)]).then(() => location.reload());
+        saveBlocked = true;
+        saveQueue.then(() => Promise.all([Store.del(SAVE_KEY), Store.del(BACKUP_KEY)]))
+          .then(() => location.reload()).catch(() => { saveBlocked = false; storageNotice('Reset failed. Your nest was not reset.'); });
       };
     }
+    const backup = document.createElement('div');
+    backup.innerHTML = rowHTML('', 'Export nest', 'Download a backup of this nest.', 'export') +
+      rowHTML('', 'Import nest', 'Replace this nest with a validated backup.', 'import') +
+      rowHTML('', 'Export recovery copy', 'The nest preserved before an import or unreadable-save recovery.', 'export');
+    const buttons = backup.querySelectorAll('button');
+    buttons[0].onclick = exportNest;
+    buttons[1].onclick = importNest;
+    buttons[2].onclick = async () => {
+      try {
+        const raw = await Store.get(saveBlocked ? SAVE_KEY : BACKUP_KEY);
+        if (!raw) return storageNotice('No recovery copy is stored on this device.');
+        exportText(raw, 'paleopal-recovery.json');
+      } catch(error){ storageNotice('The recovery copy could not be read. The stored data has not been changed.'); }
+    };
+    b.appendChild(backup);
   },
 
   /* Developer tools. Chips rather than rows: every control here is a single
@@ -6741,16 +6967,14 @@ const SHEETS = {
   },
 
   away(b, sp){
-    b.innerHTML = `<h2>While you were gone</h2><p class="lede">${G.awayText}</p>
+    b.innerHTML = `<h2>While you were gone</h2><p class="lede">${escapeHTML(G.awayText)}</p>
       ${rowHTML('', 'Back to the habitat', 'Pick up where you left off.', '')}`;
     b.querySelector('.row').onclick = closeSheet;
   },
 
   trouble(b, sp){
-    b.innerHTML = `<h2>Could not open your nest</h2><p class="lede">${G.loadWarning}</p>
-      <p class="note">Nothing was thrown away. The unreadable save is still on this
-      device under <code>${BACKUP_KEY}</code>, so a later build may be able to
-      recover it.</p>
+    b.innerHTML = `<h2>Could not open your nest</h2><p class="lede">${escapeHTML(G.loadWarning)}</p>
+      <p class="note">${saveBlocked ? 'The original remains at the main save key. Automatic saving is disabled.' : 'A copy of the original is stored at '+BACKUP_KEY+'.'}</p>
       ${rowHTML('', 'Start fresh', 'Choose a new egg and begin again.', '')}`;
     b.querySelector('.row').onclick = closeSheet;
   }
@@ -6818,9 +7042,7 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (mode === 'game'){
-    if (game.kind === 'snack') game.tx = mx;
-    if (game.kind === 'forage') tapForage(mx, my);
-    if (game.kind === 'leap')  leapJump();
+    gameInput({type:'point',x:mx,y:my});
     return;
   }
   /* A screen owns every tap while it is up: it is the whole display, so
@@ -6831,6 +7053,12 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (mode === 'live'){
+    const slot = HABITAT_ART[biomeId()].slot;
+    if (Math.abs(mx-slot[0]) < 14 && my > slot[1]-20 && my < slot[1]+8 && !S.asleep && !S.vet){
+      if (S.habitatAt && Date.now()-S.habitatAt < 30*MIN){ say('A quiet spot. More to discover later.'); return; }
+      habitatTarget = {pet:S,biome:biomeId()};
+      return;
+    }
     if (mx >= dinoBox[0] - 4 && mx <= dinoBox[2] + 4 && my >= dinoBox[1] - 4){ holding = true; pet([mx, my]); return; }
     if (bondPips() >= 2 && !S.asleep && !S.vet){
       dino.tx = clamp(mx, 22, W-22);
@@ -6841,8 +7069,7 @@ cv.addEventListener('pointerdown', e => {
 cv.addEventListener('pointermove', e => {
   const p = canvasPos(e); holdPos = p;
   if (mode === 'game' && game && e.buttons){
-    if (game.kind === 'snack') game.tx = p[0];
-    if (game.kind === 'forage') tapForage(p[0], p[1]);
+    gameInput({type:'point',x:p[0],y:p[1],move:true});
   }
 });
 window.addEventListener('pointerup', () => { holding = false; });
@@ -6855,18 +7082,12 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (mode === 'game' && game){
-    if (game.kind === 'snack'){
-      if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = true;
-      if (e.key === 'ArrowRight'|| e.key === 'd') game.kR = true;
-    }
-    if (game.kind === 'leap' && (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w')) leapJump();
+    if (['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key)) e.preventDefault();
+    gameInput({type:'key',key:e.key,down:true});
   }
 });
 window.addEventListener('keyup', e => {
-  if (mode === 'game' && game && game.kind === 'snack'){
-    if (e.key === 'ArrowLeft' || e.key === 'a') game.kL = false;
-    if (e.key === 'ArrowRight'|| e.key === 'd') game.kR = false;
-  }
+  gameInput({type:'key',key:e.key,down:false});
 });
 
 /* ------------------------------ lifecycle --------------------------------- */
@@ -6883,13 +7104,55 @@ function hatch(){
   dino.digAt = performance.now() + 40e3;
   SFX.hatch(); emit('heart', W/2, GROUND-24, 8);
   logEvent(S.name + ' hatched.');
+  observePet();
   document.title = S.name + ' — Paleopal';
   say('Hello. Tap the name above to rename it.', 4200);
   refresh(); paintChrome(); save();
 }
 
-let saveAt = 0;
-function save(){ if (!G) return; G.lastSeen = Date.now(); Store.set(SAVE_KEY, JSON.stringify(G)); }
+let saveAt = 0, saveBlocked = false, saveQueue = Promise.resolve();
+function storageNotice(message){
+  $('storageStatus').textContent = message;
+  $('storageStatus').hidden = !message;
+}
+function save(){
+  if (!G || saveBlocked) return saveQueue;
+  G.lastSeen = Date.now();
+  const snapshot = JSON.stringify(G);
+  saveQueue = saveQueue.then(() => Store.set(SAVE_KEY, snapshot)).then(() => storageNotice(''))
+    .catch(() => storageNotice('Saving failed. Export your nest from the dossier before closing.'));
+  return saveQueue;
+}
+function exportNest(){
+  exportText(JSON.stringify(G, null, 2), 'paleopal-nest.json');
+}
+function exportText(raw, filename){
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(new Blob([raw], {type:'application/json'}));
+  link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function importNest(){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json,application/json';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const wasBlocked = saveBlocked;
+    if (file.size > 1024*1024) return storageNotice('Backup is too large (maximum 1 MB).');
+    try {
+      const loaded = loadSave(await file.text());
+      if (!loaded.game) return storageNotice('Import rejected: the backup ' + loaded.why + '.');
+      if (!confirm('Replace this nest with ' + loaded.game.pets.length + ' animal(s)? The current nest will be backed up.')) return;
+      saveBlocked = true;
+      await saveQueue;
+      await Store.set(BACKUP_KEY, JSON.stringify(G));
+      await Store.set(SAVE_KEY, JSON.stringify(loaded.game));
+      location.reload();
+    } catch(error){ saveBlocked = wasBlocked; storageNotice('Import could not be saved. The current nest remains open.'); }
+  };
+  input.click();
+}
 
 function awayReport(gapMs){
   const mins = Math.round(gapMs / MIN), bits = [];
@@ -6927,15 +7190,15 @@ function frame(now){
   if (G){
     const real = Date.now();
     if (real - G.lastTick > 500){
-      let left = Math.min(real - G.lastTick, 12*HOUR);
-      G.lastTick = real;
-      while (left > 0){ const chunk = Math.min(left, 5*MIN); simulateAll(chunk, true); left -= chunk; }
+      advanceSimulation(real, !document.hidden);
     }
   }
 
   if (G && hatched()) warmFrames(S.sp, stageIdx(), S.skin);
   stepBehaviour(dt, now);
   stepFeed(dt);
+  stepPresentation(dt, now);
+  stepWorld(dt, now);
   if (mode === 'game') stepGame(dt, now);
   stepParts(dt);
   if (holding && holdPos && mode === 'live' &&
@@ -6953,27 +7216,36 @@ async function boot(){
   fitScreen();
   fitCrown();
   G = freshGame();
-  const loaded = loadSave(await Store.get(SAVE_KEY));
+  let loaded;
+  try { loaded = loadSave(await Store.get(SAVE_KEY)); }
+  catch(error){
+    saveBlocked = true;
+    storageNotice('Storage is unavailable. Existing saves are protected. Export this session before closing, then reload to retry.');
+    loaded = {game:null};
+  }
   if (loaded.game){
     G = loaded.game;
     // an upgraded save is written back at once, so a crash before the next
     // autosave cannot leave the old shape sitting on disk
-    if (loaded.from !== SAVE_VERSION) await Store.set(SAVE_KEY, JSON.stringify(G));
+    if (loaded.from !== SAVE_VERSION) {
+      try { await Store.set(SAVE_KEY, JSON.stringify(G)); }
+      catch(error){ storageNotice('Upgraded nest could not be saved. Export a backup.'); }
+    }
   } else if (loaded.keep){
     // A save we cannot read is still the player's. Park it under the backup
     // key and tell them, rather than starting over in silence.
-    await Store.set(BACKUP_KEY, loaded.keep);
+    try { await Store.set(BACKUP_KEY, loaded.keep); }
+    catch(error){ saveBlocked = true; storageNotice('The unreadable save could not be backed up. Automatic saving is disabled.'); }
     G.loadWarning = 'Your saved nest ' + loaded.why + ', so this is a fresh start. ' +
                     'The old save has not been deleted.';
     console.warn('paleopal: save ' + loaded.why + '; kept a copy at ' + BACKUP_KEY);
   }
   S = G.pets[G.active];
+  const gap = clamp(Date.now() - G.lastTick, 0, 14*86400e3);
+  advanceSimulation(Date.now(), false);
   if (hatched()){
     mode = 'live';
-    const gap = clamp(Date.now() - (G.lastTick || Date.now()), 0, 14*86400e3);
     if (gap > 60e3){
-      let left = Math.min(gap, 3*86400e3);
-      while (left > 0){ const chunk = Math.min(left, 10*MIN); simulateAll(chunk, false); left -= chunk; }
       awayReport(gap);
       setTimeout(() => openSheet('away'), 500);
     }
@@ -6985,7 +7257,11 @@ async function boot(){
   refresh(); paintChrome();
   requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+document.addEventListener('visibilitychange', () => {
+  holding = false;
+  if (document.hidden) save();
+  else { advanceSimulation(Date.now(), false); lastFrame = performance.now(); }
+});
 window.addEventListener('pagehide', save);
 boot();
 

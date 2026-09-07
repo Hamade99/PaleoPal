@@ -258,11 +258,12 @@ SCREENS.play = {
             { on: screenState.pick === L.keys.length, dim: !trickReady,
               rightCol: trickReady ? SC.moss : SC.dim });
     const pick = screenState.pick;
-    const note = pick < L.keys.length ? GAMES[L.keys[pick]].blurb
+    const record = pick < L.keys.length ? S.records[L.keys[pick]+':'+S.sp+':'+stageIdx()] : null;
+    const note = pick < L.keys.length ? 'Best '+(record?.best || 0)+' / Week '+(record?.week === challengeWeek() ? record.weekly : 0)+'\n'+GAMES[L.keys[pick]].blurb
                : trickReady ? 'A quick burst of joy, and it costs nothing.'
                             : 'Unlocks at three bond hearts. Petting is what builds them.';
     caption(g, L.rows.bottom + 3, '', '', null, note);
-    L.act = actionBar(g, pick < L.keys.length ? 'START' : 'ASK',
+    L.act = actionBar(g, pick < L.keys.length ? 'WEEKLY CHALLENGE' : 'ASK',
                       SC.moss, pick === L.keys.length && !trickReady);
     L.close = frame.close;
   },

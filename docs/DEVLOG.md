@@ -1103,6 +1103,40 @@ data, which is the same job again one level deeper, and is worth doing once the
 
 ---
 
+## Session 13 - Simulation, progression and reference-backed pose checks
+
+The owner approved the architecture/gameplay review and requested particular
+care with incorrect faces and poses. This pass kept the plain-script runtime.
+
+- Shared historical catch-up uses explicit pet arguments and equal growth
+  rates across the roster. Exposure-based illness and per-pet mess RNG no
+  longer depend on cosmetic random draws.
+- Save validation covers nested fields, versions, species and equipment.
+  Failures are visible; read failures protect the existing save. Import,
+  export and downloadable recovery copies have isolated browser tests.
+- Presentation and world updates moved out of draw functions. Payment and
+  nutrition are applied together before the feeding animation.
+- Field journals recover prior growth studies, unlock two non-coin rewards,
+  and record favourite meals, trust, completed games and habitat exploration.
+  Shy low-bond greetings use a wary pose; trusted greetings close the mouth.
+- Minigames now declare a common lifecycle and have separate seeded RNG,
+  species/stage profiles, weekly challenges and personal bests. Full rounds
+  cover three seeds, every species and hatchling/adult players, including idle
+  controls. Aggregate growth differences are tested. Payouts were reduced to
+  keep the higher-scoring Forage pace from doubling income unchecked.
+- Rex and brachiosaur jaw lengths had omitted the offset behind the snout.
+  Their corrected endpoints, restrained gapes, distributed neck droop and
+  rex muzzle growth were checked against skull references and all-stage
+  sheets. Uncertain feather and neck-posture claims were qualified.
+- Resolved `artFor()` limb values drive stride timing. Habitat skyline and
+  interaction placement are data; each habitat visit has a persistent
+  thirty-minute cooldown and a journal entry.
+- Added Node regressions and Playwright browser/art checks. Generated browser
+  artifacts live outside OneDrive after it locked a test-output directory.
+
+The browser tests are not substitutes for human difficulty testing, a complete
+long-term economy study, or peer review of anatomical reconstructions.
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.
