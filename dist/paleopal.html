@@ -1517,9 +1517,16 @@ const SPECIES_STAGE = {
    species, an absent hat or an absent field all mean "no change", so this
    table only ever says the things that are not already right.
 
-   The Gear tab in `tools/editor.html` writes this by dragging the hat around
-   on the animal, which is the only sane way to set numbers whose whole meaning
-   is where something looks right.
+   `at` is the exception to that inheritance, one growth stage at a time, and
+   it is the same arrangement `SPECIES_STAGE` has for proportions: the fit on
+   the hat is what that hat does on that animal at every age, and a row under
+   `at` is where one age departs from it. Sizes are what usually need it — a
+   crown in proportion on an adult skull is a bucket on a hatchling, and the
+   two heads are not the same shape, only the same animal later.
+
+   The Gear tab in `tools/editor.html` writes all of it by dragging the hat
+   around on the animal, which is the only sane way to set numbers whose whole
+   meaning is where something looks right.
    -------------------------------------------------------------------------- */
 /*<data:GEAR_FIT>*/
 const GEAR_FIT = {
@@ -1528,6 +1535,16 @@ const GEAR_FIT = {
   brachio: {}
 };
 /*</data>*/
+
+/* The one place a fit is resolved: the hat's own row, then whatever the stage
+   overrides on top of it. Read through this rather than reaching into
+   GEAR_FIT, the same way everything reads proportions through artFor(). */
+function gearFor(spId, hatId, stage){
+  const base = (GEAR_FIT[spId] || {})[hatId] || {};
+  const at = (base.at || {})[(STAGE[stage] || {}).key] || {};
+  const pick = k => (at[k] !== undefined ? at[k] : base[k]);
+  return { dx: pick('dx') || 0, dy: pick('dy') || 0, s: pick('s') || 1 };
+}
 
 /*<data:HABITAT_ART>*/
 const HABITAT_ART = {
@@ -2282,10 +2299,10 @@ function drawGear(g, f, x, y, flip, hatId, spId){
      own scale and a fit made on an adult holds on a hatchling, and they are
      applied before the flip so they stay on the same end of the head when the
      animal turns round. */
-  const fit = (GEAR_FIT[spId] || {})[hatId] || {};
-  const art = hatArt(hatId), scale = Math.max(.6, f.hatW * (fit.s || 1) / art.inkW),
+  const fit = gearFor(spId, hatId, f.stage);
+  const art = hatArt(hatId), scale = Math.max(.6, f.hatW * fit.s / art.inkW),
         w = art.width * scale, hgt = art.height * scale;
-  const hx = f.hat[0] + (fit.dx || 0) * f.k, hy = f.hat[1] + (fit.dy || 0) * f.k;
+  const hx = f.hat[0] + fit.dx * f.k, hy = f.hat[1] + fit.dy * f.k;
   const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
   const ay = y - f.oy + hy;
   g.save(); g.translate(Math.round(ax), Math.round(ay));
@@ -2410,7 +2427,7 @@ function bakeOnce(spId, stage, pose, eye, skinId){
        nothing like each other: sized off `hs` alone a Brachiosaurus wore the
        same cap as a rex four times its skull length. */
     hatW: (anchors.hatW || 14) * k,
-    eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head,
+    eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head, stage,
     clipped: touchedEdge(composed)
   };
 }

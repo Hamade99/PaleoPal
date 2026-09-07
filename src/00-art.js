@@ -834,9 +834,16 @@ const SPECIES_STAGE = {
    species, an absent hat or an absent field all mean "no change", so this
    table only ever says the things that are not already right.
 
-   The Gear tab in `tools/editor.html` writes this by dragging the hat around
-   on the animal, which is the only sane way to set numbers whose whole meaning
-   is where something looks right.
+   `at` is the exception to that inheritance, one growth stage at a time, and
+   it is the same arrangement `SPECIES_STAGE` has for proportions: the fit on
+   the hat is what that hat does on that animal at every age, and a row under
+   `at` is where one age departs from it. Sizes are what usually need it — a
+   crown in proportion on an adult skull is a bucket on a hatchling, and the
+   two heads are not the same shape, only the same animal later.
+
+   The Gear tab in `tools/editor.html` writes all of it by dragging the hat
+   around on the animal, which is the only sane way to set numbers whose whole
+   meaning is where something looks right.
    -------------------------------------------------------------------------- */
 /*<data:GEAR_FIT>*/
 const GEAR_FIT = {
@@ -845,6 +852,16 @@ const GEAR_FIT = {
   brachio: {}
 };
 /*</data>*/
+
+/* The one place a fit is resolved: the hat's own row, then whatever the stage
+   overrides on top of it. Read through this rather than reaching into
+   GEAR_FIT, the same way everything reads proportions through artFor(). */
+function gearFor(spId, hatId, stage){
+  const base = (GEAR_FIT[spId] || {})[hatId] || {};
+  const at = (base.at || {})[(STAGE[stage] || {}).key] || {};
+  const pick = k => (at[k] !== undefined ? at[k] : base[k]);
+  return { dx: pick('dx') || 0, dy: pick('dy') || 0, s: pick('s') || 1 };
+}
 
 /*<data:HABITAT_ART>*/
 const HABITAT_ART = {

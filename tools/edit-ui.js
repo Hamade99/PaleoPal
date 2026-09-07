@@ -442,23 +442,44 @@ PAINT.habitat = bioPaint;
    rather than the renderer precisely so this can, because a preview that
    places the hat its own way is free to be wrong in a way the game is not.
    -------------------------------------------------------------------------- */
-let gearSp = Object.keys(SPECIES)[0], gearHat = null, gearStage = 3;
+let gearSp = Object.keys(SPECIES)[0], gearHat = null, gearStage = -1;
 const GEAR_Z = 5, GEAR_PAD = 16;   // a hat rides above the frame's own box
 
 const gearHats = () => Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
-/* Written only when something is actually set, so the table keeps saying just
-   the exceptions instead of filling up with rows of zeroes. */
-function gearFit(make){
+const gearShown = () => gearStage < 0 ? STAGE.length - 1 : gearStage;   // base previews on the adult
+
+/* The row being edited: the hat's own, or one stage's override of it.
+   `make` is false for reading, so looking at a hat never writes one. */
+function gearRow(make){
   const byHat = GEAR_FIT[gearSp] || (make ? (GEAR_FIT[gearSp] = {}) : null);
   if (!byHat) return null;
-  return byHat[gearHat] || (make ? (byHat[gearHat] = {}) : null);
+  const hat = byHat[gearHat] || (make ? (byHat[gearHat] = {}) : null);
+  if (!hat || gearStage < 0) return hat;
+  const at = hat.at || (make ? (hat.at = {}) : null);
+  if (!at) return null;
+  const key = STAGE[gearStage].key;
+  return at[key] || (make ? (at[key] = {}) : null);
 }
+/* What the animal is actually wearing right now, whoever said so. */
+const gearEff = () => gearFor(gearSp, gearHat, gearShown());
+
+/* Anything that says nothing is deleted, so the table keeps listing only the
+   exceptions instead of filling with zeroes and empty rows. */
 function gearTidy(){
-  const fit = gearFit(false);
-  if (!fit) return;
-  for (const k of ['dx','dy']) if (fit[k] === 0) delete fit[k];
-  if (fit.s === 1) delete fit.s;
-  if (!Object.keys(fit).length) delete GEAR_FIT[gearSp][gearHat];
+  const hat = (GEAR_FIT[gearSp] || {})[gearHat];
+  if (!hat) return;
+  const strip = o => {
+    if (!o) return;
+    for (const k of ['dx','dy']) if (!o[k]) delete o[k];
+    if (o.s === 1) delete o.s;
+  };
+  strip(hat);
+  for (const k in hat.at || {}){
+    strip(hat.at[k]);
+    if (!Object.keys(hat.at[k]).length) delete hat.at[k];
+  }
+  if (hat.at && !Object.keys(hat.at).length) delete hat.at;
+  if (!Object.keys(hat).length) delete GEAR_FIT[gearSp][gearHat];
 }
 
 function gearBuild(){
@@ -470,31 +491,49 @@ function gearBuild(){
            id => { gearSp = id; gearBuild(); }, id => SPECIES[id].common);
   pickList($('gearHat'), hats, () => gearHat, id => { gearHat = id; gearBuild(); });
 
+  /* Every stage, or one of them. The base row is what this hat does on this
+     animal at any age; a stage is where that age wants something else, and a
+     stage that has said something is marked, so which ones are pinned is
+     visible without clicking through all four. */
   const row = $('gearStageRow'); row.innerHTML = '';
-  STAGE.forEach((st, i) => {
-    const b = mk('button', i === gearStage ? 'on' : '', st.key);
+  const hat = (GEAR_FIT[gearSp] || {})[gearHat] || {};
+  const mkBtn = (i, label, pinned) => {
+    const b = mk('button', i === gearStage ? 'on' : '', label + (pinned ? ' *' : ''));
     b.onclick = () => { gearStage = i; gearBuild(); };
     row.appendChild(b);
-  });
+  };
+  mkBtn(-1, 'all stages', false);
+  STAGE.forEach((st, i) => mkBtn(i, st.key, !!(hat.at || {})[st.key]));
 
   const nums = $('gearNums'); nums.innerHTML = '';
-  slider(nums, 'size', () => (gearFit(false) || {}).s || 1,
-         v => { gearFit(true).s = v; gearTidy(); }, .4, 2.5, .01);
+  slider(nums, 'size', () => gearEff().s,
+         v => { gearRow(true).s = v; gearTidy(); }, .4, 2.5, .01);
   const read = mk('div'); read.id = 'gearRead';
   read.style.cssText = 'color:var(--dim);font-size:11px;margin:4px 0';
   nums.appendChild(read);
-  const reset = mk('button', 'clear', 'Reset this hat to the species default');
-  reset.onclick = () => { if (GEAR_FIT[gearSp]) delete GEAR_FIT[gearSp][gearHat]; rebuild(); };
+
+  const reset = mk('button', 'clear',
+    gearStage < 0 ? 'Reset this hat everywhere'
+                  : 'Clear ' + STAGE[gearStage].key + ' - back to all stages');
+  reset.onclick = () => {
+    const h = (GEAR_FIT[gearSp] || {})[gearHat];
+    if (h){
+      if (gearStage < 0) delete GEAR_FIT[gearSp][gearHat];
+      else if (h.at) delete h.at[STAGE[gearStage].key];
+      gearTidy();
+    }
+    rebuild();
+  };
   nums.appendChild(reset);
 
   /* The canvas is built here and only here. It is a control, not a preview:
      `changed()` runs PAINT on every pointer move, and the first version of this
-     tab rebuilt the canvas there — which removes the element the pointer has
+     tab rebuilt the canvas there - which removes the element the pointer has
      captured, so the drag died after about five pixels and the hat crawled.
      Same trap the sliders hit, one tab over. PAINT redraws into this canvas;
      it never replaces it. */
   const host = $('gearCanvas'); host.innerHTML = '';
-  const f0 = frameOf(gearSp, gearStage, 'idle', 0, false, 'wild');
+  const f0 = frameOf(gearSp, gearShown(), 'idle', 0, false, 'wild');
   const c = mk('canvas');
   c.width = (f0.cv.width + GEAR_PAD*2) * GEAR_Z;
   c.height = (f0.cv.height + GEAR_PAD*2) * GEAR_Z;
@@ -502,25 +541,22 @@ function gearBuild(){
 
   /* A drag moves the pointer in CSS pixels and the offsets are in sprite
      units, so the movement is divided by the zoom, by the animal's own scale,
-     and by whatever the layout has done to the canvas — drag on a hatchling
+     and by whatever the layout has done to the canvas - drag on a hatchling
      and on an adult and the hat lands under the pointer both times. */
   let from = null;
-  const perUnit = () => {
-    const f = frameOf(gearSp, gearStage, 'idle', 0, false, 'wild');
-    const r = c.getBoundingClientRect();
-    return (r.width / c.width) * GEAR_Z * f.k;
-  };
   c.onpointerdown = e => {
-    const fit = gearFit(true);
-    from = { x:e.clientX, y:e.clientY, dx:fit.dx || 0, dy:fit.dy || 0, per:perUnit() };
+    const fit = gearEff(), f = frameOf(gearSp, gearShown(), 'idle', 0, false, 'wild');
+    const r = c.getBoundingClientRect();
+    from = { x:e.clientX, y:e.clientY, dx:fit.dx, dy:fit.dy,
+             per: (r.width / c.width) * GEAR_Z * f.k };
     c.setPointerCapture(e.pointerId);
     c.style.cursor = 'grabbing';
   };
   c.onpointermove = e => {
     if (!from) return;
-    const fit = gearFit(true);
-    fit.dx = Math.round((from.dx + (e.clientX - from.x) / from.per) * 10) / 10;
-    fit.dy = Math.round((from.dy + (e.clientY - from.y) / from.per) * 10) / 10;
+    const target = gearRow(true);
+    target.dx = Math.round((from.dx + (e.clientX - from.x) / from.per) * 10) / 10;
+    target.dy = Math.round((from.dy + (e.clientY - from.y) / from.per) * 10) / 10;
     changed();                       // repaint only: BUILD here would kill the drag
   };
   const drop = () => {
@@ -537,7 +573,7 @@ function gearBuild(){
 function gearPaint(){
   const c = $('gearCanvas').querySelector('canvas');
   if (!c) return;
-  const f = frameOf(gearSp, gearStage, 'idle', 0, false, 'wild');
+  const f = frameOf(gearSp, gearShown(), 'idle', 0, false, 'wild');
   const g = c.getContext('2d');
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, c.width, c.height);
@@ -546,13 +582,20 @@ function gearPaint(){
   g.drawImage(f.cv, GEAR_PAD, GEAR_PAD);
   drawGear(g, f, GEAR_PAD + f.ox, GEAR_PAD + f.oy, false, gearHat, gearSp);
 
-  const fit = gearFit(false) || {};
+  const eff = gearEff(), own = gearRow(false) || {};
   const read = $('gearRead');
-  if (read) read.textContent =
-    'dx ' + (fit.dx || 0) + '   dy ' + (fit.dy || 0) + '   size ' + (fit.s || 1) +
-    (Object.keys(fit).length ? '' : '   (species default)');
+  if (read){
+    const mark = k => own[k] !== undefined ? '' : '*';
+    read.textContent =
+      'dx ' + eff.dx + mark('dx') +
+      '   dy ' + eff.dy + mark('dy') +
+      '   size ' + eff.s + mark('s') +
+      (gearStage < 0 ? '        (star = species default)'
+                     : '        (star = inherited from all stages)');
+  }
 
   const pv = $('gearPreview'); pv.innerHTML = '';
+  const at = (((GEAR_FIT[gearSp] || {})[gearHat] || {}).at) || {};
   STAGE.forEach((st, i) => {
     const sf = frameOf(gearSp, i, 'idle', 0, false, 'wild');
     const cc = mk('canvas');
@@ -561,7 +604,9 @@ function gearPaint(){
     gg.imageSmoothingEnabled = false;
     gg.drawImage(sf.cv, GEAR_PAD, GEAR_PAD);
     drawGear(gg, sf, GEAR_PAD + sf.ox, GEAR_PAD + sf.oy, false, gearHat, gearSp);
-    pv.appendChild(shot(cc, 2, st.key));
+    const cell = shot(cc, 2, st.key + (at[st.key] ? ' *' : ''));
+    if (i === gearShown()) cell.style.outline = '2px solid var(--moss)';
+    pv.appendChild(cell);
   });
 }
 BUILD.gear = gearBuild;

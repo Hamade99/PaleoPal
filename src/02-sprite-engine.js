@@ -245,10 +245,10 @@ function drawGear(g, f, x, y, flip, hatId, spId){
      own scale and a fit made on an adult holds on a hatchling, and they are
      applied before the flip so they stay on the same end of the head when the
      animal turns round. */
-  const fit = (GEAR_FIT[spId] || {})[hatId] || {};
-  const art = hatArt(hatId), scale = Math.max(.6, f.hatW * (fit.s || 1) / art.inkW),
+  const fit = gearFor(spId, hatId, f.stage);
+  const art = hatArt(hatId), scale = Math.max(.6, f.hatW * fit.s / art.inkW),
         w = art.width * scale, hgt = art.height * scale;
-  const hx = f.hat[0] + (fit.dx || 0) * f.k, hy = f.hat[1] + (fit.dy || 0) * f.k;
+  const hx = f.hat[0] + fit.dx * f.k, hy = f.hat[1] + fit.dy * f.k;
   const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
   const ay = y - f.oy + hy;
   g.save(); g.translate(Math.round(ax), Math.round(ay));
@@ -373,7 +373,7 @@ function bakeOnce(spId, stage, pose, eye, skinId){
        nothing like each other: sized off `hs` alone a Brachiosaurus wore the
        same cap as a rex four times its skull length. */
     hatW: (anchors.hatW || 14) * k,
-    eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head,
+    eyeR: (anchors.eyeR || 3) * k, k, hs: k * st.head, stage,
     clipped: touchedEdge(composed)
   };
 }
