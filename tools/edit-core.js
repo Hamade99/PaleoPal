@@ -105,7 +105,7 @@ let templateText = null, fileHandle = null;
 /* One hook on the window, so the editor's own state can be reached from a
    console or a test harness. Everything else stays in the lexical scope it
    shares with the game's modules. */
-window.EDIT = { LIVE, rewrite: t => rewrite(t), template: () => templateText };
+window.EDIT = { LIVE, rewrite: t => rewrite(t), template: () => templateText, launcherPresent };
 
 /* A save keeps everything outside the markers, so it needs the file's current
    text before it can write a word. Fetching that text is the only thing here
@@ -209,6 +209,17 @@ async function warmTemplate(){
    Nothing has to detect it. A plain static server answers 501 to a POST and a
    file:// page cannot POST at all, so anything other than a clean 200 just
    falls through to the browser's own machinery below. */
+/* Is this page being served by tools/edit.py, or was it just opened? The
+   difference decides whether Save writes src/00-art.js or opens a file dialog,
+   and the editor should say which before you press it rather than after. */
+async function launcherPresent(){
+  if (location.protocol === 'file:') return false;
+  try {
+    const r = await fetch('/save', { method:'GET' });
+    return r.ok && (await r.text()).trim() === 'paleopal-editor';
+  } catch (e){ return false; }
+}
+
 async function saveToLauncher(text){
   if (location.protocol === 'file:') return null;
   let r;

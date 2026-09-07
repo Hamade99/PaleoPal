@@ -44,6 +44,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(ROOT), **kw)
 
+    def do_GET(self):
+        # A health check, so the page can tell whether it was opened through
+        # this launcher or just double-clicked. Without it the editor cannot
+        # know that Save is about to degrade into a file dialog, and the first
+        # anyone hears of it is the dialog.
+        if self.path.split("?")[0] == "/save":
+            self.reply(200, "paleopal-editor")
+            return
+        super().do_GET()
+
     def do_POST(self):
         if self.path.split("?")[0] != "/save":
             self.send_error(404, "nothing here but /save")

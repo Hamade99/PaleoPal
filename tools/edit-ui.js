@@ -569,5 +569,16 @@ PAINT.gear = gearPaint;
 
 /* ---- go ------------------------------------------------------------------ */
 pixBuild();
-warmTemplate().then(() => note('Ready. Edits are live; Save writes src/00-art.js.'))
+/* Say up front which kind of Save this is. Opened through tools/edit.cmd, Save
+   writes src/00-art.js and there is nothing to do afterwards; opened any other
+   way there is no /save to talk to, and Save degrades into a file dialog that
+   hands you a copy to move by hand. Both are fine, but finding out which one
+   you have at the moment a dialog appears is not. */
+warmTemplate()
+  .then(() => EDIT.launcherPresent())
+  .then(live => live
+    ? note('Ready. Save writes src/00-art.js.')
+    : note('Not launched through tools/edit.cmd — Save will ask you for a file '
+         + 'instead of writing src/00-art.js. Close this and run tools/edit.cmd '
+         + '(or: python tools/edit.py).', true))
   .catch(e => note(e.message, true));
