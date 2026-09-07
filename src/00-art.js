@@ -561,6 +561,7 @@ const REX_TUNE = {
 /*<data:TRI_TUNE>*/
 const TRI_TUNE = {
   hipH:44,
+  shoulderDrop:2,
   shoulder:18,
   hipBack:24,
   withersH:19,

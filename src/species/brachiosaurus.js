@@ -132,11 +132,14 @@ function drawBrachio(M, P){
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
   const parts = {
+    snout:    [hx - sn, hy],
+    jaw:      [hx - sn*.44, lipY + hh*.02],
     head:     [hx, hy],
+    crest:    [hx - sn*.16, hy - hh*crTop],
     neck:     [n3[0], n3[1]],
     shoulder: [shX, shY],
     hip:      [hipX, hipY],
-    belly:    [0, shY + T_.bodyD*.5*lM],
+    belly:    [8*tor, shY + 8 + T_.bodyD*.5*lM],
     tail:     [hipX + TL*tM, hipY + 10]
   };
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],

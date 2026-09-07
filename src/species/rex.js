@@ -239,11 +239,15 @@ function drawRex(M, P){
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
   const parts = {
+    snout:    [hx - sn, hy],
+    jaw:      [hx - sn*.46, lipMid],
     head:     [hx, hy],
     shoulder: [withX, withY],
     back:     [0, backY],
     hip:      [hipX, hipY],
     belly:    [0, bellyY],
+    arm:      [ax - T_.armLen*lM, ay + T_.armLen*lM],
+    tailBase: [T(TL*23/72), hipY - T_.tailBase*lM*bk],
     tail:     [T(TL), hipY - 6*lM]
   };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],

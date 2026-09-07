@@ -614,66 +614,91 @@ PAINT.gear = gearPaint;
 
 /* ---- tab: body -----------------------------------------------------------
    The proportions as handles on the animal instead of as a column of sliders.
-   Drag the hip and the legs lengthen; drag the head and the neck follows it.
    The sliders in the Species tab still edit the same numbers — this is another
    way in, not another set of values.
 
-   A handle knows which TUNE keys it moves, and nothing else. How far a key has
-   to travel to move the handle one pixel is measured rather than worked out:
-   on pointer-down each key is nudged by one unit, the animal is re-baked, and
-   the distance the landmark shifted becomes the exchange rate for that drag.
-   Doing it that way means no table of signs and scales to get wrong, and it
-   keeps working when a draw function changes what a number does — which is
-   exactly what went wrong the last time placement was hand-derived.
+   Three things this tab has to get right, all of which the first version got
+   wrong:
+
+   The animal must not move while you drag it. A frame is trimmed to its own
+   ink, so the moment a proportion changes the box around the animal changes
+   size — lengthen the tail and the frame goes from 145 pixels wide to 162.
+   Drawn into the corner of the canvas that shift lands on the animal, which
+   slid out from under the pointer and made the whole thing feel broken. So the
+   canvas is a fixed size and the animal is pinned by its own ground origin:
+   whatever happens to the box, the feet stay where they are.
+
+   A handle must move one thing. Dragging a square that rotated the frill on
+   one axis and resized it on the other is two tools sharing a button.
+
+   And you must be able to see what you are about to grab. Handles are named on
+   hover, the list beside the canvas selects them, and the selected one is the
+   only one a drag can move — so two landmarks a few pixels apart stop fighting
+   over the pointer.
    -------------------------------------------------------------------------- */
 const PART_KEYS = {
   rex: {
-    head:     { x:'neckLen',  y:'neckDrop' },
-    shoulder: { x:'shoulder', y:'withersH' },
-    back:     { y:'backH' },
-    hip:      { y:'hipH' },
-    belly:    { y:'bellyD' },
-    tail:     { x:'tailLen' }
+    snout:    { x:'headLen',   note:'snout length' },
+    jaw:      { y:'headDepth', note:'skull depth' },
+    head:     { x:'neckLen', y:'neckDrop', note:'where the head is carried' },
+    shoulder: { x:'shoulder', y:'withersH', note:'shoulder position and hump' },
+    back:     { y:'backH',     note:'depth of the ribcage' },
+    hip:      { y:'hipH',      note:'hip height, and so leg length' },
+    belly:    { y:'bellyD',    note:'how far the belly hangs' },
+    arm:      { x:'armLen',    note:'arm length' },
+    tailBase: { y:'tailBase',  note:'depth of the tail at the hips' },
+    tail:     { x:'tailLen',   note:'tail length' }
   },
   trike: {
-    head:     { x:'neckLen',  y:'neckDrop' },
-    frillTop: { x:'frillTilt', y:'frillH' },
-    shoulder: { x:'shoulder', y:'withersH' },
-    back:     { y:'backH' },
-    rump:     { y:'rumpH' },
-    hip:      { y:'hipH' },
-    belly:    { y:'bellyD' },
-    tail:     { x:'tailLen' }
+    snout:    { x:'headLen',   note:'snout length' },
+    jaw:      { y:'headDepth', note:'skull depth' },
+    head:     { x:'neckLen', y:'neckDrop', note:'where the head is carried' },
+    frill:    { y:'frillH',    note:'frill height' },
+    shoulder: { x:'shoulder', y:'withersH', note:'shoulder position and hump' },
+    foreleg:  { y:'shoulderDrop', note:'front leg length' },
+    back:     { y:'backH',     note:'mid back' },
+    rump:     { y:'rumpH',     note:'haunch over the hip' },
+    hip:      { x:'hipBack', y:'hipH', note:'hip position, and back leg length' },
+    haunch:   { y:'haunchR',   note:'thigh mass' },
+    chest:    { y:'chestD',    note:'depth of the chest' },
+    belly:    { y:'bellyD',    note:'how far the belly hangs' },
+    tailBase: { y:'tailBase',  note:'depth of the tail at the hips' },
+    tail:     { x:'tailLen',   note:'tail length' }
   },
   brachio: {
-    head:     { x:'shoulder', y:'neckLen' },
-    neck:     { y:'neckLen' },
-    shoulder: { y:'foreRatio' },
-    hip:      { y:'hindH' },
-    belly:    { y:'bodyD' },
-    tail:     { x:'tailLen' }
+    snout:    { x:'headLen',   note:'snout length' },
+    jaw:      { y:'headDepth', note:'skull depth' },
+    crest:    { y:'crestH',    note:'nasal arch' },
+    neck:     { y:'neckLen',   note:'neck length' },
+    head:     { x:'shoulder',  note:'how far forward the head reaches' },
+    shoulder: { y:'foreRatio', note:'how much longer the front legs are' },
+    hip:      { x:'hipBack', y:'hindH', note:'hip position, and leg length' },
+    belly:    { y:'bodyD',     note:'depth of the barrel' },
+    tail:     { x:'tailLen',   note:'tail length' }
   }
 };
 
-let bodySp = Object.keys(SPECIES)[0], bodyStage = 3;
+let bodySp = Object.keys(SPECIES)[0], bodyStage = 3, bodyPart = null, bodyHover = null;
 let bodyAnim = 'idle', bodyPlaying = false, bodyFrame = 0, bodyRAF = 0, bodyLast = 0;
-const BODY_Z = 4, BODY_PAD = 10;
+/* A fixed stage in sprite units, and where the animal's feet go on it. Nothing
+   here is derived from the frame, which is the whole point. */
+const BODY_Z = 4, BODY_W = 200, BODY_H = 128, BODY_OX = 78, BODY_OY = 112;
 
-const bodyFrameOf = () =>
-  frameOf(bodySp, bodyStage, bodyAnim, bodyFrame, false, 'wild');
+const bodyFrameOf = () => frameOf(bodySp, bodyStage, bodyAnim, bodyFrame, false, 'wild');
+const bodyKeys = () => PART_KEYS[bodySp] || {};
+/* A landmark in canvas units, pinned to the origin rather than to the box. */
+function bodyAt(name, f){
+  f = f || bodyFrameOf();
+  const q = f.parts[name];
+  return q ? [BODY_OX + q[0] - f.ox, BODY_OY + q[1] - f.oy] : null;
+}
 
-/* One unit of `key` is worth this many pixels of movement at `part`. Measured,
-   not derived. Returns null when the key does not move the part at all, which
-   is how an axis gets marked undraggable rather than dividing by zero. */
+/* One unit of `key` is worth this many pixels at `part`. Measured, not derived:
+   nudge the key, re-bake, see how far the landmark went. Against the animal's
+   own origin, because the trimmed box moves whenever the sprite changes size. */
 function bodyRate(part, key){
   const tune = SPECIES[bodySp].tune;
-  /* Against the animal's own origin, not the canvas. A landmark is stored in
-     trimmed-canvas coordinates and the trim moves whenever the sprite changes
-     size, so measuring there had the box shifting under the measurement and
-     cancelling most of it — hipH came out at a seventh of its real effect, and
-     with the wrong sign. `ox`/`oy` put both bakes back on the same ground. */
-  const where = () => { const f = bodyFrameOf();
-                        const q = f.parts[part];
+  const where = () => { const f = bodyFrameOf(); const q = f.parts[part];
                         return q ? [q[0] - f.ox, q[1] - f.oy] : null; };
   const before = where();
   const was = tune[key];
@@ -690,10 +715,16 @@ function bodyStop(){ if (bodyRAF) cancelAnimationFrame(bodyRAF); bodyRAF = 0; }
 
 function bodyBuild(){
   bodyStop();
+  const keys = bodyKeys();
+  if (bodyPart && !keys[bodyPart]) bodyPart = null;
+
   pickList($('bodySp'), Object.keys(SPECIES), () => bodySp,
-           id => { bodySp = id; bodyBuild(); }, id => SPECIES[id].common);
+           id => { bodySp = id; bodyPart = null; bodyBuild(); }, id => SPECIES[id].common);
+  pickList($('bodyPart'), Object.keys(keys), () => bodyPart,
+           id => { bodyPart = (bodyPart === id ? null : id); bodyBuild(); });
 
   const st = $('bodyStage'); st.innerHTML = '';
+  st.appendChild(mk('span', 'lbl', 'stage'));
   STAGE.forEach((s, i) => {
     const b = mk('button', i === bodyStage ? 'on' : '', s.key);
     b.onclick = () => { bodyStage = i; bodyBuild(); };
@@ -701,35 +732,42 @@ function bodyBuild(){
   });
 
   const an = $('bodyAnim'); an.innerHTML = '';
+  an.appendChild(mk('span', 'lbl', 'pose'));
   Object.keys(POSES).forEach(name => {
     const b = mk('button', name === bodyAnim ? 'on' : '', name);
     b.onclick = () => { bodyAnim = name; bodyFrame = 0; bodyBuild(); };
     an.appendChild(b);
   });
-  const play = mk('button', bodyPlaying ? 'on' : '', bodyPlaying ? 'stop' : 'play');
-  play.onclick = () => { bodyPlaying = !bodyPlaying; bodyBuild(); };
-  an.appendChild(play);
 
-  /* Built once, painted many times — the canvas carries the handles, and
-     replacing it mid-drag is the bug the hat tab already paid for. */
+  /* The play control was the ninth button in the pose row, in the same style,
+     labelled "play" — which is indistinguishable from a pose called play. It
+     gets its own row and says what it does. */
+  const pl = $('bodyPlay'); pl.innerHTML = '';
+  const b = mk('button', bodyPlaying ? 'on' : '',
+               bodyPlaying ? '■  stop animation' : '▶  play animation');
+  b.style.minWidth = '150px';
+  b.onclick = () => { bodyPlaying = !bodyPlaying; bodyBuild(); };
+  pl.appendChild(b);
+  pl.appendChild(mk('span', 'lbl',
+    POSES[bodyAnim].length > 1 ? POSES[bodyAnim].length + ' frames'
+                               : 'this pose is a single frame'));
+
+  /* Built here and only here: PAINT redraws into it, never replaces it. */
   const host = $('bodyCanvas'); host.innerHTML = '';
-  const f0 = bodyFrameOf();
   const c = mk('canvas');
-  c.width = (f0.cv.width + BODY_PAD*2) * BODY_Z;
-  c.height = (f0.cv.height + BODY_PAD*2) * BODY_Z;
+  c.width = BODY_W * BODY_Z; c.height = BODY_H * BODY_Z;
   c.style.cssText = 'image-rendering:pixelated;touch-action:none;cursor:crosshair;background:#131c1e';
 
-  const keysFor = () => PART_KEYS[bodySp] || {};
   const at = e => {
     const r = c.getBoundingClientRect();
-    return [(e.clientX - r.left) * (c.width / r.width) / BODY_Z - BODY_PAD,
-            (e.clientY - r.top)  * (c.height / r.height) / BODY_Z - BODY_PAD];
+    return [(e.clientX - r.left) * (c.width / r.width) / BODY_Z,
+            (e.clientY - r.top)  * (c.height / r.height) / BODY_Z];
   };
   const nearest = pos => {
-    const parts = bodyFrameOf().parts;
-    let best = null, bd = 7;
-    for (const name in keysFor()){
-      const q = parts[name];
+    const f = bodyFrameOf();
+    let best = null, bd = 6;
+    for (const name in bodyKeys()){
+      const q = bodyAt(name, f);
       if (!q) continue;
       const d = Math.hypot(q[0] - pos[0], q[1] - pos[1]);
       if (d < bd){ bd = d; best = name; }
@@ -739,23 +777,31 @@ function bodyBuild(){
 
   let drag = null;
   c.onpointerdown = e => {
-    const name = nearest(at(e));
-    if (!name) return;
-    const map = keysFor()[name], tune = SPECIES[bodySp].tune;
-    const rx = map.x ? bodyRate(name, map.x) : null;
-    const ry = map.y ? bodyRate(name, map.y) : null;
+    /* A selected part owns the pointer. Nothing selected: grab what is under
+       it and select that, so the next drag is unambiguous. */
+    const name = bodyPart || nearest(at(e));
+    if (!name || !bodyKeys()[name]) return;
+    bodyPart = name;
+    const map = bodyKeys()[name], tune = SPECIES[bodySp].tune;
     drag = { name, map, x:e.clientX, y:e.clientY,
              x0: map.x ? tune[map.x] : 0, y0: map.y ? tune[map.y] : 0,
-             rx, ry, css: c.getBoundingClientRect().width / c.width };
+             rx: map.x ? bodyRate(name, map.x) : null,
+             ry: map.y ? bodyRate(name, map.y) : null,
+             css: c.getBoundingClientRect().width / c.width };
     c.setPointerCapture(e.pointerId);
     c.style.cursor = 'grabbing';
+    bodyPaint();
   };
   c.onpointermove = e => {
-    if (!drag){ c.style.cursor = nearest(at(e)) ? 'grab' : 'crosshair'; return; }
+    if (!drag){
+      const h = nearest(at(e));
+      if (h !== bodyHover){ bodyHover = h; bodyPaint(); }
+      c.style.cursor = h ? 'grab' : 'crosshair';
+      return;
+    }
     const tune = SPECIES[bodySp].tune;
     const dx = (e.clientX - drag.x) / drag.css / BODY_Z;
     const dy = (e.clientY - drag.y) / drag.css / BODY_Z;
-    // each key follows the axis it actually moves the landmark along
     if (drag.map.x && drag.rx && Math.abs(drag.rx[0]) > 1e-4)
       tune[drag.map.x] = +(drag.x0 + dx / drag.rx[0]).toFixed(2);
     if (drag.map.y && drag.ry && Math.abs(drag.ry[1]) > 1e-4)
@@ -769,10 +815,11 @@ function bodyBuild(){
   };
   c.onpointerup = drop;
   c.onpointercancel = drop;
+  c.onpointerleave = () => { if (!drag && bodyHover){ bodyHover = null; bodyPaint(); } };
   host.appendChild(c);
 
   const read = mk('div'); read.id = 'bodyRead';
-  read.style.cssText = 'color:var(--dim);font-size:11px;margin-top:4px';
+  read.style.cssText = 'color:var(--dim);font-size:11px;margin-top:5px;min-height:15px';
   host.appendChild(read);
 
   bodyPaint();
@@ -796,27 +843,36 @@ function bodyPaint(){
   g.clearRect(0, 0, c.width, c.height);
   g.imageSmoothingEnabled = false;
   g.scale(BODY_Z, BODY_Z);
-  g.drawImage(f.cv, BODY_PAD, BODY_PAD);
 
-  const map = PART_KEYS[bodySp] || {};
-  g.lineWidth = 1 / BODY_Z;
-  for (const name in map){
-    const q = f.parts[name];
+  // the ground the animal stands on, so a leg-length change reads as one
+  g.fillStyle = '#1c2a2c';
+  g.fillRect(0, BODY_OY, BODY_W, BODY_H - BODY_OY);
+  // pinned by its own origin: the box may resize, the feet may not move
+  g.drawImage(f.cv, BODY_OX - f.ox, BODY_OY - f.oy);
+
+  const keys = bodyKeys();
+  for (const name in keys){
+    const q = bodyAt(name, f);
     if (!q) continue;
-    const x = q[0] + BODY_PAD, y = q[1] + BODY_PAD;
-    g.fillStyle = 'rgba(20,30,28,.75)';
-    g.fillRect(x - 2.5, y - 2.5, 5, 5);
-    g.fillStyle = '#8cb765';
-    g.fillRect(x - 1.5, y - 1.5, 3, 3);
+    const on = name === bodyPart, hot = name === bodyHover;
+    const r = on ? 3 : 2.5;
+    g.fillStyle = 'rgba(16,26,24,.8)';
+    g.fillRect(q[0] - r, q[1] - r, r*2, r*2);
+    g.fillStyle = on ? '#e0ac48' : hot ? '#cfe0a8' : '#8cb765';
+    g.fillRect(q[0] - r + 1, q[1] - r + 1, r*2 - 2, r*2 - 2);
   }
 
   const read = $('bodyRead');
   if (read){
+    const name = bodyPart || bodyHover;
     const tune = SPECIES[bodySp].tune;
-    read.textContent = Object.keys(map).map(n => {
-      const k = map[n];
-      return n + ' (' + [k.x, k.y].filter(Boolean).map(q => q + ' ' + tune[q]).join(', ') + ')';
-    }).join('   ·   ');
+    if (!name) read.textContent = 'Hover a handle to name it, click to select. A selected handle is the only one a drag moves.';
+    else {
+      const k = keys[name];
+      read.textContent = name + ' — ' + k.note + '   ·   '
+        + [k.x, k.y].filter(Boolean).map(q => q + ' ' + tune[q]).join('   ')
+        + (bodyPart === name ? '   (selected — click it in the list again to release)' : '');
+    }
   }
 }
 BUILD.body = bodyBuild;

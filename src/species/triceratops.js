@@ -57,7 +57,7 @@ function drawTrike(M, P){
      of moving the corners fixed that. */
   const hipX  = T_.hipBack*tor, shX = -T_.shoulder*tor;
   const hipY  = -T_.hipH*lM - bob;
-  const shY   = hipY + 2*lM;                       // glenoid, just under the hip
+  const shY   = hipY + T_.shoulderDrop*lM;          // glenoid: how far the front leg is shorter
   const withY = shY - T_.withersH*lM;              // shoulder hump: the high point
   const backY = hipY - T_.backH*lM;                // mid back, below the withers
   const rumpY = hipY - T_.rumpH*lM;                // rising again over the hip
@@ -296,13 +296,20 @@ function drawTrike(M, P){
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
   const parts = {
+    snout:    [hx - sn, hy],
+    jaw:      [hx - sn*.38, lipY + hh*.06],
     head:     [hx, hy],
-    frillTop: crown,
+    frill:    crown,
+    neck:     [nkX, nkY],
     shoulder: [shX, withY],
+    foreleg:  [shX, shY],
     back:     [5, backY],
-    hip:      [hipX, hipY],
     rump:     [hipX-2, rumpY],
+    hip:      [hipX, hipY],
+    haunch:   [hipX-6, hipY-6*lM],
+    chest:    [shX+7, chestY],
     belly:    [6, bellyY],
+    tailBase: [T(TL*13/62), hipY - T_.tailBase*lM*bk],
     tail:     [T(TL), hipY - 4*lM]
   };
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],

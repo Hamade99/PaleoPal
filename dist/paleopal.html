@@ -1244,6 +1244,7 @@ const REX_TUNE = {
 /*<data:TRI_TUNE>*/
 const TRI_TUNE = {
   hipH:44,
+  shoulderDrop:2,
   shoulder:18,
   hipBack:24,
   withersH:19,
@@ -2937,11 +2938,15 @@ function drawRex(M, P){
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
   const parts = {
+    snout:    [hx - sn, hy],
+    jaw:      [hx - sn*.46, lipMid],
     head:     [hx, hy],
     shoulder: [withX, withY],
     back:     [0, backY],
     hip:      [hipX, hipY],
     belly:    [0, bellyY],
+    arm:      [ax - T_.armLen*lM, ay + T_.armLen*lM],
+    tailBase: [T(TL*23/72), hipY - T_.tailBase*lM*bk],
     tail:     [T(TL), hipY - 6*lM]
   };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
@@ -3009,7 +3014,7 @@ function drawTrike(M, P){
      of moving the corners fixed that. */
   const hipX  = T_.hipBack*tor, shX = -T_.shoulder*tor;
   const hipY  = -T_.hipH*lM - bob;
-  const shY   = hipY + 2*lM;                       // glenoid, just under the hip
+  const shY   = hipY + T_.shoulderDrop*lM;          // glenoid: how far the front leg is shorter
   const withY = shY - T_.withersH*lM;              // shoulder hump: the high point
   const backY = hipY - T_.backH*lM;                // mid back, below the withers
   const rumpY = hipY - T_.rumpH*lM;                // rising again over the hip
@@ -3248,13 +3253,20 @@ function drawTrike(M, P){
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
   const parts = {
+    snout:    [hx - sn, hy],
+    jaw:      [hx - sn*.38, lipY + hh*.06],
     head:     [hx, hy],
-    frillTop: crown,
+    frill:    crown,
+    neck:     [nkX, nkY],
     shoulder: [shX, withY],
+    foreleg:  [shX, shY],
     back:     [5, backY],
-    hip:      [hipX, hipY],
     rump:     [hipX-2, rumpY],
+    hip:      [hipX, hipY],
+    haunch:   [hipX-6, hipY-6*lM],
+    chest:    [shX+7, chestY],
     belly:    [6, bellyY],
+    tailBase: [T(TL*13/62), hipY - T_.tailBase*lM*bk],
     tail:     [T(TL), hipY - 4*lM]
   };
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
@@ -3397,11 +3409,14 @@ function drawBrachio(M, P){
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
   const parts = {
+    snout:    [hx - sn, hy],
+    jaw:      [hx - sn*.44, lipY + hh*.02],
     head:     [hx, hy],
+    crest:    [hx - sn*.16, hy - hh*crTop],
     neck:     [n3[0], n3[1]],
     shoulder: [shX, shY],
     hip:      [hipX, hipY],
-    belly:    [0, shY + T_.bodyD*.5*lM],
+    belly:    [8*tor, shY + 8 + T_.bodyD*.5*lM],
     tail:     [hipX + TL*tM, hipY + 10]
   };
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],

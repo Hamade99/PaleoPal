@@ -16,6 +16,7 @@
   .tab{background:var(--panel);color:var(--dim);border:1px solid var(--line);
        padding:6px 14px;cursor:pointer;font:inherit}
   .tab.on{background:#2c4a3c;color:var(--bone);border-color:var(--moss)}
+  .lbl{color:var(--dim);font-size:11px;margin-right:6px;align-self:center}
   #save{margin-left:auto;background:#2f6b49;color:var(--bone);border:1px solid var(--moss);
         padding:6px 16px;cursor:pointer;font:inherit}
   #msg{margin-left:12px;color:var(--dim)}
@@ -106,15 +107,18 @@
 </main>
 
 <main id="tab-body">
-  <p class="hint">The proportions as handles on the animal. Drag a green square: the hip
-  lengthens the legs, the head carries the neck with it, the tail tip lengthens the tail.
-  These write the same numbers the Species tab puts on sliders — this is another way in,
-  not another set of values. Pick an animation and press play to see it move while you work.</p>
+  <p class="hint">The proportions as handles on the animal. Hover a square to name it, click
+  to select, then drag — a selected handle is the only one a drag moves, so two landmarks
+  close together stop fighting over the pointer. Each handle moves one thing. The animal is
+  pinned by its feet, so it will not wander while you work on it. These write the same
+  numbers the Species tab puts on sliders: another way in, not another set of values.</p>
   <div class="cols">
     <div class="card list" id="bodySp"></div>
+    <div class="card list" id="bodyPart"></div>
     <div class="card">
-      <div id="bodyStage" class="strip" style="margin-bottom:6px"></div>
-      <div id="bodyAnim" class="strip" style="margin-bottom:8px"></div>
+      <div id="bodyStage" class="strip" style="margin-bottom:5px"></div>
+      <div id="bodyAnim" class="strip" style="margin-bottom:5px"></div>
+      <div id="bodyPlay" class="strip" style="margin-bottom:8px"></div>
       <div id="bodyCanvas"></div>
     </div>
   </div>
