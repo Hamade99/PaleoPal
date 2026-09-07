@@ -827,11 +827,16 @@ const SPECIES_STAGE = {
    not want the identical spot, and that difference is taste, not anatomy, so
    it lives here as data rather than in the draw functions.
 
-   `dx` moves it toward the tail, `dy` moves it up, both in sprite units, so
+   `dx` moves it toward the tail and `dy` moves it down the screen, so a hat
+   that should ride higher takes a negative `dy`. Both are in sprite units, so
    they scale with the animal and a fit made on an adult still holds on a
    hatchling. `s` multiplies the width the species asked for. An absent
    species, an absent hat or an absent field all mean "no change", so this
    table only ever says the things that are not already right.
+
+   The Gear tab in `tools/editor.html` writes this by dragging the hat around
+   on the animal, which is the only sane way to set numbers whose whole meaning
+   is where something looks right.
    -------------------------------------------------------------------------- */
 /*<data:GEAR_FIT>*/
 const GEAR_FIT = {

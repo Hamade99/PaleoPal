@@ -61,6 +61,7 @@
   <button class="tab" data-tab="species">Species</button>
   <button class="tab" data-tab="stages">Growth</button>
   <button class="tab" data-tab="coats">Coats</button>
+  <button class="tab" data-tab="gear">Headgear</button>
   <button class="tab" data-tab="habitat">Habitats</button>
   <button id="save">Save</button>
   <span id="msg"></span>
@@ -118,6 +119,27 @@
     <div class="card list" id="coatList"></div>
     <div class="card"><h2>Colours</h2><div id="coatCols"></div></div>
     <div class="card"><h2>Worn</h2><div class="strip" id="coatPreview"></div></div>
+  </div>
+</main>
+
+<main id="tab-gear">
+  <p class="hint">Drag the hat onto the animal. The species decides roughly where on the
+  skull headgear belongs; this is where one particular hat wants to sit on one
+  particular animal. Offsets are in sprite units and scale with the animal, so a fit
+  made here holds at every growth stage — the strip underneath is the check.</p>
+  <div class="cols">
+    <div class="card list" id="gearSp"></div>
+    <div class="card list" id="gearHat"></div>
+    <div class="card">
+      <h2>Drag to place</h2>
+      <div id="gearStageRow" class="strip" style="margin-bottom:8px"></div>
+      <div id="gearCanvas"></div>
+      <div id="gearNums"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h2>Every stage, with this fit</h2>
+    <div class="strip" id="gearPreview"></div>
   </div>
 </main>
 

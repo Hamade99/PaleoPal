@@ -194,35 +194,6 @@ function drawEgg(now){
   drawEggArt(ctx, W/2 + wob, GROUND - 16, S.sp, egg.cracks);
 }
 
-/* headgear rides the anchors the sprite hands back, so it sits on the skull or
-   across the eyes rather than floating at a guessed offset */
-function drawGear(g, f, x, y, flip){
-  /* The anchor is where the hat touches the animal: the bottom of the ink lands
-     on it and the ink is centred over it. Both are measured off the baked art
-     rather than assumed, because a hat is drawn wherever it suits the artist
-     inside its 12x11 grid and none of them fill it. */
-  const place = (id, anchor, width) => {
-    if (!id || !PIX['hat.' + id]) return;
-    /* The species puts the anchor on the right part of the skull; `GEAR_FIT`
-       is where one particular hat on one particular animal says that is not
-       quite it. Its nudges are in sprite units, so they are multiplied by the
-       animal's own scale and a fit made on an adult holds on a hatchling, and
-       they are applied before the flip so they stay on the same end of the
-       head when the animal turns round. */
-    const fit = (GEAR_FIT[S.sp] || {})[id] || {};
-    const art = hatArt(id), scale = Math.max(.6, width * (fit.s || 1) / art.inkW),
-          w = art.width * scale, hgt = art.height * scale;
-    const hx = anchor[0] + (fit.dx || 0) * f.k, hy = anchor[1] + (fit.dy || 0) * f.k;
-    const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
-    const ay = y - f.oy + hy;
-    g.save(); g.translate(Math.round(ax), Math.round(ay));
-    if (flip) g.scale(-1, 1);
-    g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
-    g.restore();
-  };
-  place(S.hat, f.hat, f.hatW);
-}
-
 function drawLive(now, dt){
   for (const m of S.mess){
     drawMess(ctx, m.x|0, GROUND - 1);
@@ -255,7 +226,7 @@ function drawLive(now, dt){
 
   dinoTop = y - f.oy;
   dinoBox = flip ? [x - (f.w - f.ox), dinoTop, x + f.ox, y] : [x - f.ox, dinoTop, x - f.ox + f.w, y];
-  drawGear(ctx, f, x, y, flip);
+  drawGear(ctx, f, x, y, flip, S.hat, S.sp);
 
   const mouth = [flip ? x + (f.ox - f.mouth[0]) : x - f.ox + f.mouth[0], y - f.oy + f.mouth[1]];
   drawFeed(ctx, mouth);

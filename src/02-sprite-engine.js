@@ -224,6 +224,39 @@ function hatArt(id){
   return HATS[id];
 }
 
+/* Headgear rides the anchors the sprite hands back, so it sits on the skull
+   rather than floating at a guessed offset.
+
+   It takes the hat and the species as arguments instead of reading `S`, which
+   is what lets the editor draw a preview by calling this rather than by
+   reimplementing it. A preview that recomputes placement its own way is a
+   preview that can disagree with the game, and an editor that teaches you the
+   wrong thing about your own edit is worse than no editor. */
+function drawGear(g, f, x, y, flip, hatId, spId){
+  if (!hatId || !PIX['hat.' + hatId]) return;
+  /* The anchor is where the hat touches the animal: the bottom of the ink lands
+     on it and the ink is centred over it. Both are measured off the baked art
+     rather than assumed, because a hat is drawn wherever it suits the artist
+     inside its 12x11 grid and none of them fill it.
+
+     The species puts the anchor on the right part of the skull; `GEAR_FIT` is
+     where one particular hat on one particular animal says that is not quite
+     it. Its nudges are in sprite units, so they are multiplied by the animal's
+     own scale and a fit made on an adult holds on a hatchling, and they are
+     applied before the flip so they stay on the same end of the head when the
+     animal turns round. */
+  const fit = (GEAR_FIT[spId] || {})[hatId] || {};
+  const art = hatArt(hatId), scale = Math.max(.6, f.hatW * (fit.s || 1) / art.inkW),
+        w = art.width * scale, hgt = art.height * scale;
+  const hx = f.hat[0] + (fit.dx || 0) * f.k, hy = f.hat[1] + (fit.dy || 0) * f.k;
+  const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
+  const ay = y - f.oy + hy;
+  g.save(); g.translate(Math.round(ax), Math.round(ay));
+  if (flip) g.scale(-1, 1);
+  g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
+  g.restore();
+}
+
 /* ---------------------------- frame baking -------------------------------- */
 /* Walk and idle are generated rather than typed out, because the only reason
    they were six frames and two frames was that a bake cost eight milliseconds

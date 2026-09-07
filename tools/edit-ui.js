@@ -428,6 +428,145 @@ function bioPaint(){
 BUILD.habitat = bioBuild;
 PAINT.habitat = bioPaint;
 
+/* ---- tab: headgear -------------------------------------------------------
+   Placing a hat is a judgement about where it looks right, and no number is
+   that judgement — you can only see it. So the control is the animal: drag the
+   hat onto its head and the offsets fall out of where you dropped it.
+
+   Nothing here knows what hats exist. The list is whatever `PIX` holds under
+   `hat.`, read at build time, and the species list is whatever `SPECIES` holds,
+   so drawing a new hat in the Pixels tab is the whole of adding one — it turns
+   up here on its own with no fit and the species' default placement.
+
+   The preview calls the game's own `drawGear()`. It is in the sprite engine
+   rather than the renderer precisely so this can, because a preview that
+   places the hat its own way is free to be wrong in a way the game is not.
+   -------------------------------------------------------------------------- */
+let gearSp = Object.keys(SPECIES)[0], gearHat = null, gearStage = 3;
+const GEAR_Z = 5, GEAR_PAD = 16;   // a hat rides above the frame's own box
+
+const gearHats = () => Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
+/* Written only when something is actually set, so the table keeps saying just
+   the exceptions instead of filling up with rows of zeroes. */
+function gearFit(make){
+  const byHat = GEAR_FIT[gearSp] || (make ? (GEAR_FIT[gearSp] = {}) : null);
+  if (!byHat) return null;
+  return byHat[gearHat] || (make ? (byHat[gearHat] = {}) : null);
+}
+function gearTidy(){
+  const fit = gearFit(false);
+  if (!fit) return;
+  for (const k of ['dx','dy']) if (fit[k] === 0) delete fit[k];
+  if (fit.s === 1) delete fit.s;
+  if (!Object.keys(fit).length) delete GEAR_FIT[gearSp][gearHat];
+}
+
+function gearBuild(){
+  const hats = gearHats();
+  if (!hats.length){ $('gearCanvas').textContent = 'No headgear in PIX yet.'; return; }
+  if (!hats.includes(gearHat)) gearHat = hats[0];
+
+  pickList($('gearSp'), Object.keys(SPECIES), () => gearSp,
+           id => { gearSp = id; gearBuild(); }, id => SPECIES[id].common);
+  pickList($('gearHat'), hats, () => gearHat, id => { gearHat = id; gearBuild(); });
+
+  const row = $('gearStageRow'); row.innerHTML = '';
+  STAGE.forEach((st, i) => {
+    const b = mk('button', i === gearStage ? 'on' : '', st.key);
+    b.onclick = () => { gearStage = i; gearBuild(); };
+    row.appendChild(b);
+  });
+
+  const nums = $('gearNums'); nums.innerHTML = '';
+  slider(nums, 'size', () => (gearFit(false) || {}).s || 1,
+         v => { gearFit(true).s = v; gearTidy(); }, .4, 2.5, .01);
+  const read = mk('div'); read.id = 'gearRead';
+  read.style.cssText = 'color:var(--dim);font-size:11px;margin:4px 0';
+  nums.appendChild(read);
+  const reset = mk('button', 'clear', 'Reset this hat to the species default');
+  reset.onclick = () => { if (GEAR_FIT[gearSp]) delete GEAR_FIT[gearSp][gearHat]; rebuild(); };
+  nums.appendChild(reset);
+
+  /* The canvas is built here and only here. It is a control, not a preview:
+     `changed()` runs PAINT on every pointer move, and the first version of this
+     tab rebuilt the canvas there — which removes the element the pointer has
+     captured, so the drag died after about five pixels and the hat crawled.
+     Same trap the sliders hit, one tab over. PAINT redraws into this canvas;
+     it never replaces it. */
+  const host = $('gearCanvas'); host.innerHTML = '';
+  const f0 = frameOf(gearSp, gearStage, 'idle', 0, false, 'wild');
+  const c = mk('canvas');
+  c.width = (f0.cv.width + GEAR_PAD*2) * GEAR_Z;
+  c.height = (f0.cv.height + GEAR_PAD*2) * GEAR_Z;
+  c.style.cssText = 'image-rendering:pixelated;touch-action:none;cursor:grab;background:#131c1e';
+
+  /* A drag moves the pointer in CSS pixels and the offsets are in sprite
+     units, so the movement is divided by the zoom, by the animal's own scale,
+     and by whatever the layout has done to the canvas — drag on a hatchling
+     and on an adult and the hat lands under the pointer both times. */
+  let from = null;
+  const perUnit = () => {
+    const f = frameOf(gearSp, gearStage, 'idle', 0, false, 'wild');
+    const r = c.getBoundingClientRect();
+    return (r.width / c.width) * GEAR_Z * f.k;
+  };
+  c.onpointerdown = e => {
+    const fit = gearFit(true);
+    from = { x:e.clientX, y:e.clientY, dx:fit.dx || 0, dy:fit.dy || 0, per:perUnit() };
+    c.setPointerCapture(e.pointerId);
+    c.style.cursor = 'grabbing';
+  };
+  c.onpointermove = e => {
+    if (!from) return;
+    const fit = gearFit(true);
+    fit.dx = Math.round((from.dx + (e.clientX - from.x) / from.per) * 10) / 10;
+    fit.dy = Math.round((from.dy + (e.clientY - from.y) / from.per) * 10) / 10;
+    changed();                       // repaint only: BUILD here would kill the drag
+  };
+  const drop = () => {
+    if (!from) return;
+    from = null; c.style.cursor = 'grab';
+    gearTidy(); rebuild();           // the pointer is gone, so controls may move
+  };
+  c.onpointerup = drop;
+  c.onpointercancel = drop;
+  host.appendChild(c);
+  gearPaint();
+}
+
+function gearPaint(){
+  const c = $('gearCanvas').querySelector('canvas');
+  if (!c) return;
+  const f = frameOf(gearSp, gearStage, 'idle', 0, false, 'wild');
+  const g = c.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, c.width, c.height);
+  g.imageSmoothingEnabled = false;
+  g.scale(GEAR_Z, GEAR_Z);
+  g.drawImage(f.cv, GEAR_PAD, GEAR_PAD);
+  drawGear(g, f, GEAR_PAD + f.ox, GEAR_PAD + f.oy, false, gearHat, gearSp);
+
+  const fit = gearFit(false) || {};
+  const read = $('gearRead');
+  if (read) read.textContent =
+    'dx ' + (fit.dx || 0) + '   dy ' + (fit.dy || 0) + '   size ' + (fit.s || 1) +
+    (Object.keys(fit).length ? '' : '   (species default)');
+
+  const pv = $('gearPreview'); pv.innerHTML = '';
+  STAGE.forEach((st, i) => {
+    const sf = frameOf(gearSp, i, 'idle', 0, false, 'wild');
+    const cc = mk('canvas');
+    cc.width = sf.cv.width + GEAR_PAD*2; cc.height = sf.cv.height + GEAR_PAD;
+    const gg = cc.getContext('2d');
+    gg.imageSmoothingEnabled = false;
+    gg.drawImage(sf.cv, GEAR_PAD, GEAR_PAD);
+    drawGear(gg, sf, GEAR_PAD + sf.ox, GEAR_PAD + sf.oy, false, gearHat, gearSp);
+    pv.appendChild(shot(cc, 2, st.key));
+  });
+}
+BUILD.gear = gearBuild;
+PAINT.gear = gearPaint;
+
 /* ---- go ------------------------------------------------------------------ */
 pixBuild();
 warmTemplate().then(() => note('Ready. Edits are live; Save writes src/00-art.js.'))

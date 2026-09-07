@@ -1510,11 +1510,16 @@ const SPECIES_STAGE = {
    not want the identical spot, and that difference is taste, not anatomy, so
    it lives here as data rather than in the draw functions.
 
-   `dx` moves it toward the tail, `dy` moves it up, both in sprite units, so
+   `dx` moves it toward the tail and `dy` moves it down the screen, so a hat
+   that should ride higher takes a negative `dy`. Both are in sprite units, so
    they scale with the animal and a fit made on an adult still holds on a
    hatchling. `s` multiplies the width the species asked for. An absent
    species, an absent hat or an absent field all mean "no change", so this
    table only ever says the things that are not already right.
+
+   The Gear tab in `tools/editor.html` writes this by dragging the hat around
+   on the animal, which is the only sane way to set numbers whose whole meaning
+   is where something looks right.
    -------------------------------------------------------------------------- */
 /*<data:GEAR_FIT>*/
 const GEAR_FIT = {
@@ -2254,6 +2259,39 @@ function hatArt(id){
     HATS[id] = c;
   }
   return HATS[id];
+}
+
+/* Headgear rides the anchors the sprite hands back, so it sits on the skull
+   rather than floating at a guessed offset.
+
+   It takes the hat and the species as arguments instead of reading `S`, which
+   is what lets the editor draw a preview by calling this rather than by
+   reimplementing it. A preview that recomputes placement its own way is a
+   preview that can disagree with the game, and an editor that teaches you the
+   wrong thing about your own edit is worse than no editor. */
+function drawGear(g, f, x, y, flip, hatId, spId){
+  if (!hatId || !PIX['hat.' + hatId]) return;
+  /* The anchor is where the hat touches the animal: the bottom of the ink lands
+     on it and the ink is centred over it. Both are measured off the baked art
+     rather than assumed, because a hat is drawn wherever it suits the artist
+     inside its 12x11 grid and none of them fill it.
+
+     The species puts the anchor on the right part of the skull; `GEAR_FIT` is
+     where one particular hat on one particular animal says that is not quite
+     it. Its nudges are in sprite units, so they are multiplied by the animal's
+     own scale and a fit made on an adult holds on a hatchling, and they are
+     applied before the flip so they stay on the same end of the head when the
+     animal turns round. */
+  const fit = (GEAR_FIT[spId] || {})[hatId] || {};
+  const art = hatArt(hatId), scale = Math.max(.6, f.hatW * (fit.s || 1) / art.inkW),
+        w = art.width * scale, hgt = art.height * scale;
+  const hx = f.hat[0] + (fit.dx || 0) * f.k, hy = f.hat[1] + (fit.dy || 0) * f.k;
+  const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
+  const ay = y - f.oy + hy;
+  g.save(); g.translate(Math.round(ax), Math.round(ay));
+  if (flip) g.scale(-1, 1);
+  g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
+  g.restore();
 }
 
 /* ---------------------------- frame baking -------------------------------- */
@@ -5575,35 +5613,6 @@ function drawEgg(now){
   drawEggArt(ctx, W/2 + wob, GROUND - 16, S.sp, egg.cracks);
 }
 
-/* headgear rides the anchors the sprite hands back, so it sits on the skull or
-   across the eyes rather than floating at a guessed offset */
-function drawGear(g, f, x, y, flip){
-  /* The anchor is where the hat touches the animal: the bottom of the ink lands
-     on it and the ink is centred over it. Both are measured off the baked art
-     rather than assumed, because a hat is drawn wherever it suits the artist
-     inside its 12x11 grid and none of them fill it. */
-  const place = (id, anchor, width) => {
-    if (!id || !PIX['hat.' + id]) return;
-    /* The species puts the anchor on the right part of the skull; `GEAR_FIT`
-       is where one particular hat on one particular animal says that is not
-       quite it. Its nudges are in sprite units, so they are multiplied by the
-       animal's own scale and a fit made on an adult holds on a hatchling, and
-       they are applied before the flip so they stay on the same end of the
-       head when the animal turns round. */
-    const fit = (GEAR_FIT[S.sp] || {})[id] || {};
-    const art = hatArt(id), scale = Math.max(.6, width * (fit.s || 1) / art.inkW),
-          w = art.width * scale, hgt = art.height * scale;
-    const hx = anchor[0] + (fit.dx || 0) * f.k, hy = anchor[1] + (fit.dy || 0) * f.k;
-    const ax = flip ? x + (f.ox - hx) : x - f.ox + hx;
-    const ay = y - f.oy + hy;
-    g.save(); g.translate(Math.round(ax), Math.round(ay));
-    if (flip) g.scale(-1, 1);
-    g.drawImage(art, -art.inkCx * scale, -(art.height - art.foot) * scale, w, hgt);
-    g.restore();
-  };
-  place(S.hat, f.hat, f.hatW);
-}
-
 function drawLive(now, dt){
   for (const m of S.mess){
     drawMess(ctx, m.x|0, GROUND - 1);
@@ -5636,7 +5645,7 @@ function drawLive(now, dt){
 
   dinoTop = y - f.oy;
   dinoBox = flip ? [x - (f.w - f.ox), dinoTop, x + f.ox, y] : [x - f.ox, dinoTop, x - f.ox + f.w, y];
-  drawGear(ctx, f, x, y, flip);
+  drawGear(ctx, f, x, y, flip, S.hat, S.sp);
 
   const mouth = [flip ? x + (f.ox - f.mouth[0]) : x - f.ox + f.mouth[0], y - f.oy + f.mouth[1]];
   drawFeed(ctx, mouth);
