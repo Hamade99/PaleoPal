@@ -308,7 +308,7 @@ function matsFor(spId, skinId){
     const k = skinOf(spId, skinId);
     matCache.set(key, buildMaterials(Object.assign({}, SPECIES[spId].spec, {
       skin:k.skin, belly:k.belly, crest:k.crest, mark:k.mark
-    })));
+    }), inksFor(spId)));
   }
   return matCache.get(key);
 }
@@ -335,7 +335,7 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
      past the cap; the loop ends when growBake() says there is no more room. */
   let out = null;
   for (let attempt = 0; attempt < 6; attempt++){
-    out = bakeOnce(spId, stage, pose, eye, skinId);
+    out = bakeOnce(spId, stage, pose, eye, skinId, anim, idx % poses.length);
     if (!out.clipped || !growBake()) break;
   }
   delete out.clipped;
@@ -344,10 +344,79 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   return out;
 }
 
-function bakeOnce(spId, stage, pose, eye, skinId){
+/* Put the hand-drawn units for this species and stage onto their layers, in
+   place of what the draw function just painted there.
+
+   Two passes, and the order matters. A drawing says which material each of its
+   pixels is, so one grid can write to layers other than its own unit's — a
+   skull drawn with its own teeth puts pixels on `horn`. Clearing each layer
+   just before stamping it would therefore wipe pixels an earlier unit had
+   already put down, so every replaced layer is emptied first and only then is
+   anything drawn.
+
+   The whole thing runs with the transform off. The layer contexts arrive
+   translated to the origin and scaled by the animal's size, which is right for
+   the shapes the species draws in local units and wrong for a grid: one grid
+   pixel is meant to be one baked pixel, and pushing it through that scale
+   would resample the drawing and lose the very thing that makes it pixel art.
+   The anchor is converted by hand instead — the same arithmetic bakeOnce uses
+   on the anchors it hands back — which is also why BAKE_CX and BAKE_G are read
+   here rather than cached: growBake moves them between attempts. */
+function stampParts(M, spId, stage, anchors, k, anim, frame){
+  const drawn = partsFor(spId, stage, anim, frame);
+  const units = Object.keys(drawn);
+  if (!units.length) return;
+  for (const name of LAYERS){ M[name].save(); M[name].setTransform(1, 0, 0, 1, 0, 0); }
+
+  for (const unit of units) M[PART_UNITS[unit].layer].clearRect(0, 0, BAKE_W, BAKE_H);
+
+  for (const unit of units){
+    const p = drawn[unit];
+    /* Where the drawing hangs. The landmark comes from the draw function and
+       so has already been moved by the pose, which is the whole reason a
+       stamped part breathes and walks instead of sitting still. */
+    let a = null;
+    for (const name of PART_UNITS[unit].at){
+      const q = anchors.parts && anchors.parts[name];
+      if (q){ a = q; break; }
+    }
+    if (!a) continue;
+    const ax = Math.round(BAKE_CX + a[0]*k) - (p.ox || 0);
+    const ay = Math.round(BAKE_G  + a[1]*k) - (p.oy || 0);
+    for (let r = 0; r < p.rows.length; r++){
+      const row = p.rows[r];
+      for (let c = 0; c < row.length; c++){
+        const li = PART_CH.indexOf(row[c]);        // a space is -1, and nothing
+        if (li < 0 || li >= LAYERS.length) continue;
+        M[LAYERS[li]].fillRect(ax + c, ay + r, 1, 1);
+      }
+    }
+  }
+  for (const name of LAYERS) M[name].restore();
+}
+
+/* One species, one stage, one pose, painted onto fresh material layers and
+   stopped there — before anything is stamped over it and before it is
+   composed. It is its own function because the editor's Draw tab needs exactly
+   this: to show what a drawing is replacing, and to size a new drawing to the
+   shape it replaces. Sharing it with the baker is the point. Two copies of
+   this setup would drift, and the one in the editor would be the one that
+   quietly stopped matching the game. */
+function drawLayers(spId, stage, pose, eye){
   const sp = SPECIES[spId], A = artFor(spId, stage), st = A.st, k = st.s * sp.scale;
+  const inks = inksFor(spId);
   const canvases = [], M = {};
-  for (const name of LAYERS){
+  /* A painting colour the species has not been given gets no canvas and a
+     hole in the array, which the compositor skips. Anything that tries to
+     paint on it lands in a one-pixel bin instead of throwing — a grid can
+     outlive the colour it was drawn with, and a stale character is not a
+     reason to stop baking the animal. */
+  const bin = readCtx(makeCv(1, 1));
+  for (let i = 0; i < LAYERS.length; i++){
+    const name = LAYERS[i];
+    if (i >= INK_FIRST && i < INK_FIRST + INKS && !inks[i - INK_FIRST]){
+      canvases.push(null); M[name] = bin; continue;
+    }
     const c = makeCv(BAKE_W, BAKE_H), g = readCtx(c);
     g.fillStyle = '#000';
     g.translate(BAKE_CX, BAKE_G); g.scale(k, k);
@@ -355,6 +424,21 @@ function bakeOnce(spId, stage, pose, eye, skinId){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
+  /* Anything added to this animal through the rig, drawn against the joints
+     the species just published. It lands on the same material layers, so a
+     horn added here is lit and outlined as a horn without anything
+     downstream being told it exists. */
+  drawRigParts(M, spId, anchors.joints, P);
+  return { canvases, M, k, anchors };
+}
+
+function bakeOnce(spId, stage, pose, eye, skinId, anim, frame){
+  const sp = SPECIES[spId], st = artFor(spId, stage).st;
+  const { canvases, M, k, anchors } = drawLayers(spId, stage, pose, eye);
+  // Anything drawn by hand replaces what was just computed for it, before the
+  // countershading and the coat go on — both are masked to body pixels, so
+  // they should trim to the drawing rather than to the shape it replaced.
+  stampParts(M, spId, stage, anchors, k, anim, frame);
   // Countershading and the coat both ride the body the draw function just laid
   // down, never a path computed alongside it — the same rule the surface
   // detail follows. Belly first: the coat is masked to stop where it starts.

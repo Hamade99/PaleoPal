@@ -1296,6 +1296,150 @@ long-term economy study, or peer review of anatomical reconstructions.
 
 ---
 
+## Session 15 — drawing by hand, and a world wider than the screen
+
+**Owner's request.** Three things: let body parts be drawn by hand in the
+editor rather than only the small icons; let backdrops be drawn the same way;
+and make the world bigger than the 224x168 screen so it opens out as the animal
+grows, reaching full size at adult.
+
+**The plan was written twice.** The first draft was written from the request
+and was wrong in four load-bearing places, each of which would have cost a
+rebuild. They are recorded in `docs/PLAN-DRAW-AND-ZOOM.md` rather than deleted,
+because each is a trap that is cheap to fall into twice:
+
+| It assumed | The code says |
+| --- | --- |
+| A material layer is a picture in colours | `composeSprite` reads it as a binary mask at alpha 118 and takes every colour from the ramp |
+| A static part is fine because "the animation handles poses" | Poses are consumed *inside* `sp.draw()`; a replaced eye layer makes ill and asleep the same picture again |
+| Centre the crop in the bigger backdrop | The ground line then sits at 76.7% of the height where the screen needs 83.3%, floating the animal 11px above the grass at adult |
+| Fall back to `ctx.scale()` on the world | `W`, `H` and `GROUND` are `const`, and the painters are per-pixel `fillRect(x,y,1,1)` loops that a fractional scale turns to mush |
+
+**Hand-drawn parts.** `PART_PIX`, keyed `species|unit|stage`, one character per
+pixel naming a *material* rather than a colour. A unit is one material layer's
+worth of geometry, because that is the granularity the layer canvases already
+have — `body` is the whole trunk, since the house rule says draw neck, ribcage,
+hips and tail as one blob and there is no way to lift the hip out of the middle
+of it. Drawings are stamped at device resolution onto the anchor the draw
+function returns, which is the same trick that keeps a hat on a skull: the
+anchor has already been moved by the pose, so a stamped part breathes and
+walks. A unit with no drawing stays procedural, and that absence is the whole
+animation strategy — draw the head, let the gait solver keep the legs.
+
+The load-bearing test is that a drawing traced off the procedural shape bakes
+back to a byte-identical picture. It is only true if the anchor, the origin and
+the grid alignment are all exact, and while it was off by one the symptom on
+screen was simply a part that looked slightly wrongly drawn.
+
+**A wider world.** 280x210, and an *extension* rather than a magnification:
+today's picture sits inside it unmoved at its old coordinates. One
+`g.translate(28, 35)` at the top of `bakeBg()` and every literal in
+`04-world.js` goes on meaning what it meant — the volcano, the falls, all 81
+references to `GROUND`. Only the loops that run the full width had to widen,
+and since they are functions of x, including their `hash1` detail, the extra
+scenery generates itself and matches. Skylines gained points at -28 and 252;
+about four new boulders, plants or trees went into each margin by hand.
+
+The view is four crops of that one canvas, one per growth stage, anchored on
+the ground line rather than centred so the grass stays under the animal's feet.
+The widths were chosen so every number is a whole pixel: `sh` divisible by six
+makes `sy` integral and by three makes `sw` integral. The hatchling crop is
+scale 1.0 over the old picture, so a newly hatched animal sees exactly what the
+game drew before any of this existed, and the egg and the minigames take that
+crop unconditionally.
+
+**What the zoom costs, having looked at it.** Three of the four views are a
+non-integer reduction, which with smoothing off drops rows and columns. The
+prediction that the sky dither would suffer was right and understated: a 4x4
+Bayer pattern reduced by 0.8 is not banded, it is largely *erased*, because the
+set pixels land on dropped columns. The upper sky goes flat and the dither
+survives as a clumpy band lower down. At 4x it is obvious; at 1x, behind clouds
+and a speech bubble, it reads as a cleaner sky, and it was left alone. If it
+ever needs fixing, the honest options are a 2x2 dither cell (which changes
+today's picture too) or painting the sky in screen space under a world baked
+with a transparent sky, where nothing can reduce it.
+
+**Hand-drawn backdrops, and the first second art file.** `BG_PIX` in
+`src/00-bg-art.js`. These are real colours — nothing about a backdrop goes
+through the compositor — at 280x210, which is 59,000 characters each, about a
+sixth of the built game per habitat. Owner accepted that cost for the control.
+"Art is data, in one file" exists so the editor can reach everything it owns; a
+second file it also writes, with the same markers and the same save path, keeps
+that while leaving the growth columns readable instead of buried under a
+thousand lines of pixel rows. `tools/edit.py` now takes `?file=` and looks the
+name up in a table rather than joining it onto a path, so nothing outside those
+two can be written.
+
+A drawing composites *over* the computed habitat rather than instead of it, so
+anywhere left blank the generated scene still shows and a patch and a whole
+backdrop are the same feature. One base drawing serves all four times of day,
+washed toward each one's sky — crude next to a procedural night, which is what
+the `biome|phase` key is for on the day one earns it. `quiet` lets a drawing
+switch off the live elements its own ground disagrees with.
+
+**Both editors trace before they draw.** Nobody paints a torso, let alone
+59,000 pixels, from an empty grid. Both tabs seed from the computed version and
+let you push it around; the backdrop trace quantises to 62 colours and moves
+1.8% of pixels doing it.
+
+**Painting with a colour, after the fact.** Owner pushed back on materials
+being the only palette, with the right example: a detail on a Triceratops
+frill. No material on that animal is rust-red, and inventing one would be a lie
+about what the frill is made of — the dossier rule, applied to the sprite. So a
+species can now carry up to eight colours of its own, in `ink0`..`ink7`, which
+sit just above the coat because a marking covers the surface and passes behind
+the horns, the teeth and the eye. They are ordinary materials in every other
+respect: each takes a ramp and the lighting pass, so a painted band is lit by
+the same sun. `lit: 0` gives the flat sticker, for the few things that really
+are flat, and is the same mechanism the pupil and the glint already used.
+
+The cost had to be nothing for a species that uses none, because the
+compositor's every pass is per-pixel over the whole box and eight idle layers
+would have been half as much again on every bake in the game. `drawLayers`
+leaves a hole in the canvas array for an undefined colour and `composeSprite`
+skips it, so an animal with no colours of its own allocates the same fifteen
+canvases it always did. That is asserted rather than assumed.
+
+**A frozen foreleg, and what it was.** Owner reported the Triceratops walking
+with its front leg still, and suspected the zoom or the colour work. It was
+neither. Every baked frame in the game was hashed against the pre-change build:
+the only differences were the six parts the owner had themselves drawn and
+saved, and their own earlier retune of `headLen` and `frillH`. The cause was
+`trike|limb|3` — the near legs, drawn as one picture. Measured, the drawn legs
+travelled 0px across the walk where the solved ones travel 11, and since the
+far legs were never overridden they kept stepping, which is what made it read
+as one leg rather than both.
+
+This was documented behaviour and it was still wrong. A part that only
+translates is the truth for a skull or a frill and a lie for a leg. So a key
+may now carry a pose and a frame — `trike|limb|3|walk|7` — and beats the plain
+key where it exists. Only `walk` needs them, because every other pose leaves
+`legPhase` at zero, so thirteen drawings cover a species rather than the
+twenty-six a naive reading would demand.
+
+The button is the feature. "Trace every frame of walk" measures one grid off
+the widest reach of the whole cycle, so a swing cannot run off the edge of a
+frame's box, and fills all twelve from the gait solver. What comes out is
+twelve legs that already step correctly, to be edited rather than invented —
+which is the difference between a minute and an afternoon, and therefore the
+difference between the feature existing and not.
+
+Worth recording about the diagnosis: two different attempts to measure the
+fault in a number both said nothing was wrong, because both measured the
+finished sprite, where the far legs go on stepping whatever the near ones do.
+A side-by-side picture of the walk cycle showed it immediately. The test now
+measures the near-leg layer after stamping, which is the only place the fault
+is visible as a quantity.
+
+**Not done.** The middle two crops may be too close together to notice while
+the step into adult is too large — that wants playing, not measuring. A
+hand-drawn `body` only translates, it does not flex, and whether that reads as
+alive is unknown until someone draws one. The eye is deliberately not drawable:
+five pose states, and the difference between a shut lid and a hooded one is the
+only thing separating asleep from ill.
+
+---
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

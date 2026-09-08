@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Run the art editor as a tool instead of as a web page.
 
-The editor's job is to write src/00-art.js, and a browser will only let a page
+The editor's job is to write src/00-art.js and src/00-bg-art.js, and a browser
+will only let a page
 write a file through the File System Access API, which is Chrome and Edge only.
 Firefox has none of it and Mozilla has declined to add it, so in Firefox the
 editor can hand you a download and nothing better.
 
 So the writing moves out of the browser. This serves the project folder on a
 free port, opens the editor, and answers POST /save by writing src/00-art.js
-itself. No file dialog, no permission prompt, nothing to move afterwards, and
+itself, choosing which by the ?file= on the request. No file dialog, no
+permission prompt, nothing to move afterwards, and
 every browser behaves the same way.
 
     python tools/edit.py                  # your default browser
@@ -25,20 +27,26 @@ import sys
 import threading
 import webbrowser
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
-TARGET = ROOT / "src" / "00-art.js"
 PAGE = "/tools/editor.html"
+
+# The files the editor may write, and the markers each one must still contain
+# to be recognisable as itself. Nothing else can be written, whatever the
+# request says: the name is looked up in here rather than joined onto a path,
+# so "?file=../../something" finds no entry and is refused.
+TARGETS = {
+    "00-art.js": (ROOT / "src" / "00-art.js",
+                  ("/*<data:PIX>*/", "/*</data>*/", "/*<data:STAGE>*/")),
+    "00-bg-art.js": (ROOT / "src" / "00-bg-art.js",
+                     ("/*<data:BG_PIX>*/", "/*</data>*/")),
+}
+DEFAULT = "00-art.js"
 
 # The editor sends the whole file. The real one is about 30 KB; the ceiling is
 # only here so a confused request cannot make us read an unbounded body.
 MAX_BODY = 8 * 1024 * 1024
-
-# What a real 00-art.js must contain. Checked before anything is written,
-# because the one thing this tool must never do is truncate the file it exists
-# to edit — a save that arrives empty or half-formed is refused, not applied.
-REQUIRED = ("/*<data:PIX>*/", "/*</data>*/", "/*<data:STAGE>*/")
-
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
@@ -58,6 +66,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?")[0] != "/save":
             self.send_error(404, "nothing here but /save")
             return
+        name = parse_qs(urlparse(self.path).query).get("file", [DEFAULT])[0]
+        if name not in TARGETS:
+            self.reply(400, "Save refused: %r is not a file this writes." % name)
+            return
+        target, required = TARGETS[name]
         try:
             length = int(self.headers.get("Content-Length", 0))
         except ValueError:
@@ -73,23 +86,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.reply(400, "Save refused: not UTF-8.")
             return
 
-        missing = [m for m in REQUIRED if m not in text]
+        missing = [m for m in required if m not in text]
         if missing:
-            self.reply(400, "Save refused: %s missing." % ", ".join(missing))
+            self.reply(400, "Save refused: %s missing from %s." % (", ".join(missing), name))
             return
 
         # UTF-8 and LF, explicitly, both for the same reason as in build.py:
         # the default encoding here is cp1252 and the default newline is CRLF,
         # and either one silently rewrites the whole file.
         try:
-            with open(TARGET, "w", encoding="utf-8", newline="") as f:
+            with open(target, "w", encoding="utf-8", newline="") as f:
                 f.write(text)
         except OSError as e:
             self.reply(500, "Could not write the file: %s" % e)
             return
 
-        print("  saved  %s  (%d bytes)" % (TARGET.name, len(text)), flush=True)
-        self.reply(200, "Saved to src/00-art.js. Reload the game to see it.")
+        print("  saved  %s  (%d bytes)" % (name, len(text)), flush=True)
+        self.reply(200, "Saved to src/%s. Reload the game to see it." % name)
 
     def reply(self, code, message):
         payload = message.encode("utf-8")
@@ -114,8 +127,9 @@ def main():
     ap.add_argument("-p", "--port", type=int, default=0, help="port (default: any free one)")
     args = ap.parse_args()
 
-    if not TARGET.exists():
-        sys.exit("Cannot find %s — run this from inside the project." % TARGET)
+    for path, _ in TARGETS.values():
+        if not path.exists():
+            sys.exit("Cannot find %s — run this from inside the project." % path)
 
     # Port 0 asks the OS for a free one, so a second copy of this, or anything
     # else already sitting on 8000, is not an error you have to think about.
@@ -124,7 +138,8 @@ def main():
 
     print("Paleopal art editor")
     print("  serving %s" % ROOT)
-    print("  writing %s" % TARGET)
+    for path, _ in TARGETS.values():
+        print("  writing %s" % path)
     print("  %s" % url)
     print("  Ctrl+C to stop.", flush=True)
 

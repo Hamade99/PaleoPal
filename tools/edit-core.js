@@ -10,7 +10,18 @@
    patch a value out of the middle of a working source file is an editor that
    will eventually corrupt one. */
 
-const DATA_FILE = '../src/00-art.js';
+/* Two files now, and only two. Backdrops are 280x210 characters each and would
+   bury everything else in 00-art.js, so they have a file of their own with the
+   same markers, written the same way. Everything here works a file at a time;
+   the only thing that knows there is more than one is the loop in saveData. */
+const DATA_FILES = [
+  { path: '../src/00-art.js',    name: '00-art.js',
+    blocks: ['PIX','PART_PIX','PART_MATS','RIG_PARTS','STAGE','SPECIES_STAGE','POSE_ART','HABITAT_ART','GEAR_FIT',
+             'REX_TUNE','TRI_TUNE','BRA_TUNE',
+             'REX_SPEC','TRI_SPEC','BRA_SPEC','SKINS','BIOME_ART'] },
+  { path: '../src/00-bg-art.js', name: '00-bg-art.js', blocks: ['BG_PIX'] }
+];
+const fileOf = name => DATA_FILES.find(f => f.blocks.indexOf(name) >= 0);
 
 /* ---- pretty-printing values back to JavaScript --------------------------- */
 
@@ -66,6 +77,44 @@ function jsPIX(pix){
   return out.join('\n');
 }
 
+/* A backdrop is the PIX format at scene size: a palette and 210 rows of 280
+   characters. The palette goes on one line however long it gets, and the rows
+   one per line, for the same reason PIX does it — the file is meant to stay
+   something a person can open. `quiet` is written only when it has anything in
+   it, so a backdrop that suppresses nothing does not carry an empty list. */
+function jsBG_PIX(pix){
+  const out = ['const BG_PIX = {'];
+  for (const id in pix){
+    const p = pix[id];
+    let head = "  " + q(id) + ": { w:" + p.w + ", h:" + p.h;
+    if (p.quiet && p.quiet.length) head += ", quiet:[" + p.quiet.map(q).join(',') + "]";
+    out.push(head + ',');
+    out.push("    pal:[" + p.pal.map(q).join(',') + "], rows:[");
+    out.push(p.rows.map(r => "      " + q(r.padEnd(p.w))).join(',\n'));
+    out.push("    ] },");
+  }
+  out.push('};');
+  return out.join('\n');
+}
+
+/* A hand-drawn part is rows too, but of material characters rather than
+   palette indices, so there is no palette line and the origin is always
+   written — it is the anchor the drawing hangs from, and a part with it at
+   0,0 is a part hanging by its top-left corner, which is a thing someone
+   might mean. */
+function jsPART_PIX(pix){
+  const out = ['const PART_PIX = {'];
+  for (const id in pix){
+    const p = pix[id];
+    out.push("  " + q(id) + ": { w:" + p.w + ", h:" + p.h
+             + ", ox:" + (p.ox||0) + ", oy:" + (p.oy||0) + ", rows:[");
+    out.push(p.rows.map(r => "    " + q(r.padEnd(p.w))).join(',\n'));
+    out.push("  ] },");
+  }
+  out.push('};');
+  return out.join('\n');
+}
+
 /* ---- the file ------------------------------------------------------------ */
 
 /* Named here rather than looked up on `window`, because a top-level `const`
@@ -73,24 +122,39 @@ function jsPIX(pix){
    property of the window — `window.PIX` is undefined while `PIX` is right
    there. Listing them also means a block that stops being editable fails
    loudly at load instead of silently saving stale text. */
-const LIVE = { PIX, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, GEAR_FIT,
+const LIVE = { PIX, PART_PIX, PART_MATS, RIG_PARTS, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, GEAR_FIT,
                REX_TUNE, TRI_TUNE, BRA_TUNE,
-               REX_SPEC, TRI_SPEC, BRA_SPEC, SKINS, BIOME_ART };
+               REX_SPEC, TRI_SPEC, BRA_SPEC, SKINS, BIOME_ART, BG_PIX };
 const BLOCKS = Object.keys(LIVE);
+
+/* Every block has to be claimed by exactly one file, or a save quietly drops
+   it. Checked at load rather than at save, because the moment to find out that
+   a new block was added to LIVE and nowhere else is not while writing over the
+   file it belongs in. */
+(() => {
+  const owned = [].concat(...DATA_FILES.map(f => f.blocks));
+  const stray = BLOCKS.filter(n => owned.indexOf(n) < 0);
+  const ghost = owned.filter(n => BLOCKS.indexOf(n) < 0);
+  if (stray.length) throw new Error('no file owns: ' + stray.join(', '));
+  if (ghost.length) throw new Error('claimed but not live: ' + ghost.join(', '));
+})();
 
 function blockText(name){
   if (name === 'PIX') return jsPIX(PIX);
+  if (name === 'PART_PIX') return jsPART_PIX(PART_PIX);
+  if (name === 'BG_PIX') return jsBG_PIX(BG_PIX);
   return 'const ' + name + ' = ' + js(LIVE[name], 0) + ';';
 }
 
 /* Replace each marked region and leave everything else — the file is mostly
    explanation, and the explanation is the part worth keeping. */
-function rewrite(template){
+function rewrite(template, file){
+  file = file || DATA_FILES[0];
   let out = template;
-  for (const name of BLOCKS){
+  for (const name of file.blocks){
     const open = '/*<data:' + name + '>*/', close = '/*</data>*/';
     const a = out.indexOf(open);
-    if (a < 0) throw new Error('no <data:' + name + '> marker — is that file really src/00-art.js?');
+    if (a < 0) throw new Error('no <data:' + name + '> marker — is that file really src/' + file.name + '?');
     const b = out.indexOf(close, a);
     if (b < 0) throw new Error('unclosed marker for ' + name);
     out = out.slice(0, a + open.length) + '\n' + blockText(name) + '\n' + out.slice(b);
@@ -100,12 +164,17 @@ function rewrite(template){
 
 /* ---- reading and writing it ---------------------------------------------- */
 
-let templateText = null, fileHandle = null;
+/* Per file, not global: each has its own cached text and its own handle, so a
+   browser that has been given permission to write one is not asked again for
+   the other, and a failure on one does not lose the other's. */
+DATA_FILES.forEach(f => { f.text = null; f.handle = null; });
 
 /* One hook on the window, so the editor's own state can be reached from a
    console or a test harness. Everything else stays in the lexical scope it
    shares with the game's modules. */
-window.EDIT = { LIVE, rewrite: t => rewrite(t), template: () => templateText, launcherPresent };
+window.EDIT = { LIVE, DATA_FILES,
+                rewrite: (t, f) => rewrite(t, f || DATA_FILES[0]),
+                template: () => DATA_FILES[0].text, launcherPresent };
 
 /* A save keeps everything outside the markers, so it needs the file's current
    text before it can write a word. Fetching that text is the only thing here
@@ -146,7 +215,7 @@ function idb(run){
 /* Recalled at load and not on the click. A browser opens a file dialog only
    while the click that asked for it is still fresh, and waiting on storage
    first is a good way to spend that. */
-const recalled = idb(s => s.get('art'));
+const recalled = Promise.all(DATA_FILES.map(f => idb(s => s.get(f.name))));
 
 async function allowed(h){
   if (!h || !h.queryPermission) return !!h;
@@ -158,10 +227,11 @@ async function allowed(h){
 /* Firefox has no writable handles at all. There the file comes in through an
    <input>, which a `file://` page is allowed to use, and goes back out as a
    download to be moved into src/ by hand. */
-function askForFile(){
+function askForFile(file){
   return new Promise((resolve, reject) => {
     const i = document.createElement('input');
     i.type = 'file'; i.accept = '.js';
+    i.title = 'Choose ' + file.name;
     i.oncancel = () => reject(Object.assign(new Error('Save cancelled.'),
                                             { name: 'AbortError' }));
     i.onchange = () => i.files[0] ? resolve(i.files[0])
@@ -183,22 +253,23 @@ function askForFile(){
    `no-store` because the fetch is the read: a 200-from-cache is exactly the
    stale copy this is here to avoid. Only the file:// path caches, because
    there a re-read means another file dialog. */
-async function loadTemplate(){
+async function loadTemplate(file){
   if (location.protocol === 'file:'){
-    if (!templateText) templateText = await (await askForFile()).text();
-    return templateText;
+    if (!file.text) file.text = await (await askForFile(file)).text();
+    return file.text;
   }
-  const r = await fetch(DATA_FILE, { cache: 'no-store' });
-  if (!r.ok) throw new Error('could not read ' + DATA_FILE + ' (' + r.status + ')');
-  templateText = await r.text();
-  return templateText;
+  const r = await fetch(file.path, { cache: 'no-store' });
+  if (!r.ok) throw new Error('could not read ' + file.path + ' (' + r.status + ')');
+  file.text = await r.text();
+  return file.text;
 }
 
 /* At load, warm the template only where that is free. Over http:// it is a
    fetch; on a `file://` page it would be a file dialog in the face before the
    editor has even been looked at, so there it waits for Save. */
 async function warmTemplate(){
-  if (location.protocol !== 'file:') await loadTemplate();
+  if (location.protocol !== 'file:')
+    for (const f of DATA_FILES) await loadTemplate(f);
 }
 
 /* The launcher, tools/edit.py, answers POST /save by writing the file itself.
@@ -220,59 +291,81 @@ async function launcherPresent(){
   } catch (e){ return false; }
 }
 
-async function saveToLauncher(text){
+async function saveToLauncher(text, file){
   if (location.protocol === 'file:') return null;
   let r;
   try {
-    r = await fetch('/save', { method: 'POST', body: text,
-                               headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+    r = await fetch('/save?file=' + encodeURIComponent(file.name), {
+      method: 'POST', body: text,
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
   } catch (e){ return null; }
   const said = (await r.text()).trim();
   if (!r.ok) throw new Error(said || ('save endpoint said ' + r.status));
   return said || 'Saved.';
 }
 
-/* Save straight over src/00-art.js. Three ways, best first: the launcher, then
-   a writable handle asked for once, then a download to move by hand. */
-async function saveData(){
+/* One file, straight over the source. Three ways, best first: the launcher,
+   then a writable handle asked for once, then a download to move by hand. */
+async function saveFile(file, index){
   if (location.protocol !== 'file:'){
-    const text = rewrite(await loadTemplate());
-    const done = await saveToLauncher(text);
-    if (done){ templateText = text; return done; }
+    const text = rewrite(await loadTemplate(file), file);
+    const done = await saveToLauncher(text, file);
+    if (done){ file.text = text; return done; }
   }
   if (canWrite()){
     try {
-      if (!fileHandle){
-        const kept = await recalled;
-        if (kept && await allowed(kept)) fileHandle = kept;
+      if (!file.handle){
+        const kept = (await recalled)[index];
+        if (kept && await allowed(kept)) file.handle = kept;
       }
-      if (!fileHandle){
-        fileHandle = await window.showSaveFilePicker({
-          id: 'paleopalArt',            // reopens in the folder used last time
-          suggestedName: '00-art.js',
+      if (!file.handle){
+        file.handle = await window.showSaveFilePicker({
+          id: 'paleopal_' + file.name.replace(/\W/g, '_'),   // reopens where it was
+          suggestedName: file.name,
           types: [{ description: 'JavaScript', accept: { 'text/javascript': ['.js'] } }]
         });
-        idb(s => s.put(fileHandle, 'art'));
+        idb(s => s.put(file.handle, file.name));
       }
-      const text = rewrite(await (await fileHandle.getFile()).text());
-      const w = await fileHandle.createWritable();
+      const text = rewrite(await (await file.handle.getFile()).text(), file);
+      const w = await file.handle.createWritable();
       await w.write(text); await w.close();
-      templateText = text;                       // the markers moved with it
-      return 'Saved to ' + fileHandle.name + '.';
+      file.text = text;                          // the markers moved with it
+      return 'Saved to ' + file.handle.name + '.';
     } catch (e){
-      fileHandle = null;
+      file.handle = null;
       if (e.name === 'AbortError') return 'Save cancelled.';
       if (/marker/.test(e.message)) throw e;     // wrong file picked; say so
       // anything else: fall through to the download
     }
   }
   let text;
-  try { text = rewrite(await loadTemplate()); }
+  try { text = rewrite(await loadTemplate(file), file); }
   catch (e){ if (e.name === 'AbortError') return 'Save cancelled.'; throw e; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
-  a.download = '00-art.js';
+  a.download = file.name;
   a.click();
   URL.revokeObjectURL(a.href);
-  return 'Downloaded 00-art.js — move it into src/ over the old one.';
+  return 'Downloaded ' + file.name + ' — move it into src/ over the old one.';
+}
+
+/* Both files, in order, skipping any second file that has nothing in it.
+
+   A backdrop file with no backdrops in it is the common case and will be for a
+   long time. Rewriting it would produce the bytes it already holds, so nothing
+   is lost by leaving it alone — and something real is gained: without this, a
+   browser on the file-dialog path asks for a second file, and hands over a
+   second download, every single time anyone saves a sprite. That is the kind
+   of ceremony that makes a Save button something you hesitate over. The moment
+   the file has a backdrop in it, it saves like anything else. */
+const fileEmpty = file =>
+  file.blocks.every(n => { const v = LIVE[n]; return v && !Object.keys(v).length; });
+
+async function saveData(){
+  const said = [];
+  for (let i = 0; i < DATA_FILES.length; i++){
+    if (i > 0 && fileEmpty(DATA_FILES[i])) continue;
+    said.push(await saveFile(DATA_FILES[i], i));
+  }
+  return said.join('  ');
 }

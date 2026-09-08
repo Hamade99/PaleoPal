@@ -156,14 +156,52 @@ test('weekly challenge RNG is independent of cosmetic randomness', () => {
   `),true);
 });
 
+/* Both art files, and every block claimed by exactly one of them. A block the
+   editor holds live but no file claims is written nowhere and silently lost on
+   the next save, which is why edit-core checks the other direction at load. */
 test('art data markers match the declaration they own', () => {
-  const source=fs.readFileSync(path.join(__dirname,'../src/00-art.js'),'utf8');
   const names=[];
-  for (const match of source.matchAll(/\/\*<data:(\w+)>\*\/\s*const (\w+)/g)) {
-    assert.equal(match[1],match[2]); names.push(match[1]);
+  for (const file of ['00-art.js','00-bg-art.js']) {
+    const source=fs.readFileSync(path.join(__dirname,'../src',file),'utf8');
+    const found=[];
+    for (const match of source.matchAll(/\/\*<data:(\w+)>\*\/\s*const (\w+)/g)) {
+      assert.equal(match[1],match[2],file+' marker names its own declaration');
+      found.push(match[1]);
+    }
+    assert.ok(found.length,file+' has marked data blocks');
+    names.push(...found);
   }
-  assert.equal(names.length,new Set(names).size);
-  assert.ok(names.includes('HABITAT_ART') && names.includes('POSE_ART'));
+  assert.equal(names.length,new Set(names).size,'no block is claimed twice');
+  for (const required of ['HABITAT_ART','POSE_ART','PART_PIX','BG_PIX'])
+    assert.ok(names.includes(required),required+' is editable');
+
+  const core=fs.readFileSync(path.join(__dirname,'../tools/edit-core.js'),'utf8');
+  for (const name of names)
+    assert.ok(core.includes("'"+name+"'"),name+' is claimed by a file in DATA_FILES');
+});
+
+/* Every crop has to be 4:3 and has to put the world's ground line on the
+   screen's, or the animal walks above or below the grass at that stage. The
+   numbers are also required to be whole: a fractional source rect samples on
+   half pixels and softens the entire backdrop rather than only reducing it. */
+test('every background crop is 4:3, whole-pixel, and lands on the ground line', () => {
+  const core=fs.readFileSync(path.join(__dirname,'../src/00-core.js'),'utf8');
+  const read=name=>Number(new RegExp(name+'\\s*=\\s*(-?\\d+)').exec(core)[1]);
+  const W=read('const W'),H=read('H'),GROUND=read('GROUND'),BG_W=read('const BG_W'),BG_H=read('BG_H');
+  const BG_G=GROUND+read('const BG_PAD_X = 28, BG_PAD_Y');
+  const crops=JSON.parse('['+/const BG_CROP = \[([^\]]*(?:\][^\]]*)*?)\n\];/.exec(core)[1]
+    .replace(/\/\/[^\n]*/g,'').replace(/\s+/g,'').replace(/,$/,'')+']');
+  assert.equal(crops.length,4);
+  assert.equal(BG_G,175);
+  crops.forEach(([sx,sy,sw,sh],i)=>{
+    assert.ok([sx,sy,sw,sh].every(Number.isInteger),'stage '+i+' crop is whole pixels');
+    assert.equal(sw*H,sh*W,'stage '+i+' crop is 4:3');
+    assert.equal((BG_G-sy)*H/sh,GROUND,'stage '+i+' puts the ground line at GROUND');
+    assert.equal(sx*2+sw,BG_W,'stage '+i+' crop is horizontally centred');
+    assert.ok(sx>=0&&sy>=0&&sx+sw<=BG_W&&sy+sh<=BG_H,'stage '+i+' crop is inside the world');
+  });
+  assert.deepEqual(crops[0],[BG_W-W>>1,BG_H-H-7,W,H],"the hatchling sees today's picture at 1:1");
+  assert.deepEqual(crops[3],[0,0,BG_W,BG_H],'the adult sees all of it');
 });
 
 test('version values cannot wrap into the current version', () => {

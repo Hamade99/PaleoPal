@@ -119,6 +119,12 @@ function stepBehaviour(dt, now){
 }
 
 /* ------------------------------- draw ------------------------------------- */
+
+/* The egg, the choosing screen and the minigames are laid out in screen space
+   against GROUND and tuned to it, so they always take the closest crop — which
+   is the view they were built in, at the scale they were built at. */
+const bgStage = () => mode === 'live' ? stageIdx() : 0;
+
 let screenLayout = null;
 function drawScene(now){
 
@@ -132,26 +138,36 @@ function drawScene(now){
     return;
   }
   const phase = skyPhase(new Date());
-  ctx.drawImage(bakeBg(phase), 0, 0);
+  const [sx, sy, sw, sh] = BG_CROP[bgStage()];
+  ctx.drawImage(bakeBg(phase), sx, sy, sw, sh, 0, 0, W, H);
 
-  if (phase === 'night'){
+  /* Everything below is drawn live over the backdrop and knows nothing about
+     it, which is what makes the place move. A hand-drawn backdrop can name the
+     ones it would rather do without — its own ground may disagree with blades
+     growing out of it — and `quiet` is that list. Empty for every procedural
+     habitat, so this costs nothing until someone paints one. */
+  const hush = bgQuiet(biomeId(), phase);
+  const on = name => hush.indexOf(name) < 0;
+
+  if (phase === 'night' && on('stars')){
     for (const s of STARS){
       const tw = Math.sin(now/520 + s.p);
       if (tw > .15){ ctx.fillStyle = tw > .8 ? '#ffffff' : 'rgba(232,228,200,.8)'; ctx.fillRect(s.x|0, s.y|0, 1, 1); }
     }
   }
-  drawSkyBody(ctx, phase, now);
+  if (on('sky')) drawSkyBody(ctx, phase, now);
   // whatever this habitat has that moves: a plume, surf, a fall, an aurora
   const live = (BIOMES[biomeId()] || BIOMES.valley).live;
-  if (live) live(ctx, phase, now);
-  drawClouds(ctx, phase);
-  drawFlyers(ctx);
-  drawWater(ctx, phase, now);
-  drawGrassLine(ctx, phase, now);
-  if (phase !== 'night') drawMotes(ctx, phase);
+  if (live && on('live')) live(ctx, phase, now);
+  if (on('clouds')) drawClouds(ctx, phase);
+  if (on('flyers')) drawFlyers(ctx);
+  if (on('water')) drawWater(ctx, phase, now);
+  if (on('grass')) drawGrassLine(ctx, phase, now);
+  if (phase !== 'night' && on('motes')) drawMotes(ctx, phase);
+  const fronds = (g, p, n) => { if (on('fronds')) drawFronds(g, p, n); };
 
-  if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
-  if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
+  if (mode === 'choose'){ drawChoose(now); fronds(ctx, phase, now); return; }
+  if (mode === 'egg'){ drawEgg(now); fronds(ctx, phase, now); return; }
   if (mode === 'game'){ drawGame(now, phase); return; }
   const habitat = HABITAT_ART[biomeId()];
   ctx.save();
@@ -159,7 +175,7 @@ function drawScene(now){
   drawItem(ctx, habitat.item, habitat.slot[0]-6, habitat.slot[1]-10, 1.5);
   ctx.restore();
   drawLive(now);
-  drawFronds(ctx, phase, now);
+  fronds(ctx, phase, now);
   const tint = skyOf(phase).tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
 }

@@ -518,6 +518,67 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
    ========================================================================== */
 
 const W = 224, H = 168, GROUND = 140;
+
+/* The world is bigger than the screen, and growing up reveals it.
+
+   Not a magnification of the old backdrop — an extension of it. Today's
+   picture sits inside the larger one unmoved, at its old coordinates, with
+   more scenery drawn around the outside; the view starts cropped to it and
+   pulls back a notch at each growth spurt until the whole world is on screen
+   at adult.
+
+   The ground line is what fixes every number here. It has to land at the same
+   fraction of the height in the world as it does on the screen, or the animal
+   — which is drawn in screen space and never moves — would leave the grass as
+   the view pulled back. 140/168 is 175/210, and that single constraint gives
+   the padding: 28 columns each side, 35 rows of sky above, 7 of ground below.
+
+   The painters keep working in the old coordinates. bakeBg translates by the
+   padding once and every literal position in 04-world.js stays exactly as it
+   was written — the volcano, the falls, every boulder, every skyline point.
+   Only the loops that run the full width have to widen, and since they are all
+   functions of x, including their hash1 detail, the extra width generates
+   itself and matches what is already there.
+
+   Scaling the painters instead was tried on paper and does not survive this
+   file: the sky dither, the grass, the dirt and the cliffs are per-pixel
+   fillRect(x, y, 1, 1) loops, and at a fractional scale those become
+   fractional rects that antialias into mush. */
+const BG_W = 280, BG_H = 210;                    // the world, 4:3 like the screen
+const BG_PAD_X = 28, BG_PAD_Y = 35;              // where today's picture sits in it
+const BG_G = GROUND + BG_PAD_Y;                  // 175 — the ground line, in world space
+/* The world's edges in the painters' own coordinates, where today's picture is
+   still 0..W and 0..H. */
+const BG_L = -BG_PAD_X, BG_R = W + BG_PAD_X;     // -28 … 252
+const BG_T = -BG_PAD_Y, BG_B = BG_H - BG_PAD_Y;  // -35 … 175
+const BG_SPAN = BG_R - BG_L;                     // 280, for the full-width fills
+
+/* How much of the world is on screen, one crop per growth stage.
+
+   Every crop is 4:3, so nothing stretches, and every one is anchored on the
+   ground line instead of being centred: the animal is drawn in screen space
+   and never moves, so the grass has to stay under its feet at all four. That
+   is what fixes `sy` — (BG_G - sy) * H/sh has to come out at GROUND — and the
+   widths were then picked so that every number here is a whole pixel. `sh`
+   divisible by six makes `sy` integral and by three makes `sw` integral; miss
+   that and the crop samples on half-pixels, which softens the whole backdrop
+   instead of only reducing it.
+
+   The reduction is real and was accepted for the sake of seeing the world:
+   with smoothing off this drops rows and columns, about one in ten at juvenile
+   and one in five at adult, and what suffers is the one-pixel detail — the lit
+   top edge of the grass, the specular on the river, the ordered dither in the
+   sky. The hatchling crop is scale 1.0 over the old picture, so a newly
+   hatched animal sees exactly what the game drew before any of this existed.
+
+   Here rather than in the renderer because the editor draws these as guides
+   over a backdrop being painted, and the editor does not load the renderer. */
+const BG_CROP = [
+  [28, 35, 224, 168],        // hatchling  1.000 — today's picture, untouched
+  [16, 20, 248, 186],        // juvenile   0.903
+  [ 8, 10, 264, 198],        // subadult   0.848
+  [ 0,  0, 280, 210]         // adult      0.800 — the whole world
+];
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const lerp  = (a,b,t) => a + (b-a)*t;
 const rnd   = (a,b) => a + Math.random()*(b-a);
@@ -1104,6 +1165,393 @@ const PIX = {
 };
 /*</data>*/
 
+/* ==========================================================================
+   HAND-DRAWN PARTS
+   A species' draw function paints shapes onto fifteen material-layer canvases
+   and the compositor turns those into pixels. This is the way to bypass one of
+   those shapes and put a drawing there instead.
+
+   The thing to understand first, because it decides the format: a material
+   layer is NOT a picture in colours. composeSprite reads each layer as a
+   binary mask — alpha over 118 claims the pixel for that layer — and every
+   colour in the finished sprite comes from that material's ramp, run through
+   the lighting pass and the outline. Nothing ever reads a colour off a layer.
+
+   So a drawing here says which MATERIAL each pixel is, not what colour it is.
+   One character per pixel: a space is nothing, and 0-9 then a-e index into
+   LAYERS. Draw with materials and the shading, the internal edges and the
+   outline all come back for free — and the pipeline's rules still apply, so
+   two touching pixels of one material merge into a region with no edge between
+   them, exactly as a mandible painted onto `head` was invisible until
+   session 9.
+
+   Keyed species|unit|stage. A unit is one material layer's worth of geometry,
+   because that is the granularity the canvases already have — `body` is the
+   whole trunk, since the house rule says to draw neck, ribcage, hips and tail
+   as one closed blob and there is no way to replace the hip out of the middle
+   of it. PART_UNITS below is the list.
+
+   Stage is in the key because a drawing is stamped at device resolution — one
+   grid pixel is one baked pixel — and so does not scale with the animal.
+   Scaling hand-drawn pixels would destroy the grid. Four stages is four
+   drawings, which is the honest price of drawing rather than computing.
+
+   `ox`/`oy` are where the anchor sits inside the grid, the same convention PIX
+   uses. The anchor itself comes from the draw function, after the pose has
+   been applied, which is what makes a stamped part rise with the breath and
+   travel with the walk instead of sitting at a guessed offset. It is the same
+   mechanism that keeps a hat on a skull.
+
+   Empty by default: every unit with no entry here stays procedural, and that
+   absence IS the fallback. Draw the head by hand and leave the legs to the
+   gait solver, and the animal still walks. */
+/*<data:PART_PIX>*/
+const PART_PIX = {
+  'rex|mouth|3': { w:42, h:18, ox:17, oy:14, rows:[
+    '                                          ',
+    '                                          ',
+    '                                          ',
+    '       h                                  ',
+    '       hh                                 ',
+    '                                          ',
+    '                                          ',
+    '                                          ',
+    '                                          ',
+    '                                          ',
+    '                                          ',
+    ' hhhh                                     ',
+    '      hhhh               hhhhh            ',
+    '           hhhhhhhhhhhhhhh                ',
+    '                                          ',
+    '                                          ',
+    '                                          ',
+    '                                          '
+  ] },
+  'trike|body|3': { w:114, h:46, ox:32, oy:6, rows:[
+    '                                                                                                                  ',
+    '                                                                                                                  ',
+    '                                                                                                                  ',
+    '                                                                                                                  ',
+    '           111111111111                                                                                           ',
+    '          1111111111111111111       11111111111111111                                                             ',
+    '         1111111111111111111111111111111111111111111111111                                                        ',
+    '        11111111111111111111111111111111111111111111111111111                                                     ',
+    '       1111111111111111111111111111111111111111111111111111111111                                                 ',
+    '      11111111111111111111111111111111111111111111111111111111111111                                              ',
+    '      11111111111111111111111111111111111111111111111111111111111111111                                           ',
+    '     1111111111111111111111111111111111111111111111111111111111111111111111                                       ',
+    '     1111111111111111111111111111111111111111111111111111111111111111111111111                                    ',
+    '    111111111111111111111111111111111111111111111111111111111111111111111111111111                                ',
+    '    11111111111111111111111111111111111111111111111111111111111111111111111111111111111                           ',
+    '    1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                      ',
+    '    1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                ',
+    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111           ',
+    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111       ',
+    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111    ',
+    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111     ',
+    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111          ',
+    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                 ',
+    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111                            ',
+    '     11111111111111111111111111111111111111111111111        1111111111                                            ',
+    '      11111111111111111111111111111111111111111111                                                                ',
+    '       111111111111111111111111111111111111111111                                                                 ',
+    '       111111111111111111111111111111111111111111                                                                 ',
+    '          11111111111111111111111111111111111111                                                                  ',
+    '           1111111111111111111111111111111111111                                                                  ',
+    '           111111111111111111111111111111111111                                                                   ',
+    '            11111111111111111111111111111111111                                                                   ',
+    '            11111111111111111111111111111111111                                                                   ',
+    '             1111111111111111111111111111111111                                                                   ',
+    '              11111111111111111111111111111111                                                                    ',
+    '              11111111111111111111111111111111                                                                    ',
+    '               1111111111111111111111111111111                                                                    ',
+    '               111111111111111111111111111111                                                                     ',
+    '                11111111111111111111111111111                                                                     ',
+    '                1111111111111111111111111111                                                                      ',
+    '                  1111111111111111111111111                                                                       ',
+    '                                       11                                                                         ',
+    '                                                                                                                  ',
+    '                                                                                                                  ',
+    '                                                                                                                  ',
+    '                                                                                                                  '
+  ] },
+  'trike|crest|3': { w:31, h:17, ox:-41, oy:9, rows:[
+    '                               ',
+    '                               ',
+    '                               ',
+    '                               ',
+    '               g               ',
+    '              ggg              ',
+    '    gg                         ',
+    '    gg                   gg    ',
+    '                         gg    ',
+    '                               ',
+    '                               ',
+    '          gg                   ',
+    '          gg                   ',
+    '                               ',
+    '                               ',
+    '                               ',
+    '                               '
+  ] },
+  'trike|shield|3': { w:38, h:37, ox:12, oy:5, rows:[
+    '                                      ',
+    '                                      ',
+    '                                      ',
+    '                                      ',
+    '              333                     ',
+    '             333333                   ',
+    '           33333333333                ',
+    '        33333333333333333             ',
+    '       3333333333333333333            ',
+    '       33333333333333333333           ',
+    '      3333333333333333333333          ',
+    '      33333333333333333333333         ',
+    '      33333333333333333333333         ',
+    '      333333333333333333333333        ',
+    '      333333333333333333333333        ',
+    '     33333333333333333333333333       ',
+    '     33333333333333333333333333       ',
+    '    3333333333333333333333333333      ',
+    '    3333333333333333333333333333      ',
+    '    3333333333333333333333333333      ',
+    '    33333333333333333333333333333     ',
+    '     3333333333333333333333333333     ',
+    '     33333333333333333333333333333    ',
+    '      3333333333333333333333333333    ',
+    '      3333333333333333333333333333    ',
+    '       333333333333333333333333333    ',
+    '       333333333333333333333333333    ',
+    '        3333333333333333333333333     ',
+    '         33333333333333333333333      ',
+    '         3333333333333333333333       ',
+    '          3333333333333333333         ',
+    '           333333333333333            ',
+    '             333333333                ',
+    '                                      ',
+    '                                      ',
+    '                                      ',
+    '                                      '
+  ] },
+  'trike|horn|3': { w:90, h:86, ox:33, oy:35, rows:[
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                         i                                                ',
+    '                                        iii                                               ',
+    '                                        iii                                               ',
+    '                                                                                          ',
+    '          ii                                                                              ',
+    '    i      ii                   ii                 ii                                     ',
+    '     ii     iii                 iii                ii                                     ',
+    '      iii    iiii                i                                                        ',
+    '       iii    iiiii                                                                       ',
+    '        iiii   iiiiii                                                                     ',
+    '          iiii  iiiiii                                                                    ',
+    '           iiii   iiiiii                                                                  ',
+    '            iiiii  iiiiii                                                                 ',
+    '             iiiiii iiiiiii                                                               ',
+    '              iiiiii iiiiiii                                                              ',
+    '               iiiiii iiiiiiii                                                            ',
+    '                iiiiii iiiiiiii                                                           ',
+    '                 iiiiii iiiiiiii                                                          ',
+    '                 iiiiiiiiiiiiiiii                                                         ',
+    '                  iiiiiiiiiiiiiiii                                                        ',
+    '                  iiiiiiiiiiiiiiiii                                                       ',
+    '              ii   iiiiiiiiiiiiiiii                                                       ',
+    '               i   iiiiiiiiiiiiiiii                                                       ',
+    '               ii  iiiiiiiiiiiiiiii                                                       ',
+    '               iii  iiiii  iiiiiiii                                                       ',
+    '               iii         iiiiiiii                                                       ',
+    '                iii          iiiii                                                        ',
+    '                iiii                                                                      ',
+    '                iiii                                                                      ',
+    '                 ii                                                                       ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                            iii                           ',
+    '                                                          ii ii                           ',
+    '                                                          iii                      iii    ',
+    '                                                                                  i ii    ',
+    '                                                                                iii       ',
+    '                                                                                 ii       ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          ',
+    '                                                                                          '
+  ] },
+};
+/*</data>*/
+
+/* Parts added to an animal's skeleton.
+
+   A part is a shape, a material, and a list of points measured in some joint's
+   own units. That is all it is, and that is the point: the compositor, the
+   growth columns, the gait solver and the pose table were never told how many
+   parts an animal has, so adding one costs a row here and nothing anywhere
+   else. It turns with the joint it names, scales with it through the four
+   growth stages, and is lit and outlined like anything else made of that
+   material.
+
+   The joints a species publishes are listed in its own file — the Triceratops
+   has `skull`, `jaw`, `frill`, `brow`, `hip`, `withers`, `tail0`..`tail3` and
+   the rest. `skull` measures x in snout lengths and y in head depths, so a
+   point on the face stays on the face at every age without four copies of it
+   being stored.
+
+     { layer:'horn', kind:'tube', v:[['skull',-.2,-.4],['skull',-.3,-1.1]],
+       w:[3, .6] }
+
+   `kind` is `blob`, `tube` or `oval` — the same three primitives the species
+   files have always drawn with. `w` is tube widths, in the joint's y units.
+   `r` is oval radii, in the joint's x and y units. `stage` pins a part to one
+   growth stage; leave it out and the part is there at every age. `off` keeps a
+   part in the file without drawing it.
+
+   Empty by default. This is the additive half of moving the animals out of
+   code and into data, and it is deliberately the half built first: if a fourth
+   horn can be added here and it turns, grows and lights correctly with no code
+   written for it, then converting the shapes that already exist is mechanical.
+   See docs/ARCHITECTURE-REVIEW.md. */
+/*<data:RIG_PARTS>*/
+const RIG_PARTS = {
+};
+/*</data>*/
+
+/* Which material layer each drawable unit replaces, and which of the draw
+   function's landmarks it hangs from.
+
+   The landmark names are not the same across the three species — a rex has
+   `back`, a brachiosaur does not; a trike calls its frill `frill` and a
+   brachiosaur calls its crest `crest` — so each unit lists what it would like
+   in order of preference and takes the first one the species actually returns.
+   All three provide `head`, `jaw`, `snout` and `shoulder`, so the last entry
+   in each list always lands.
+
+   `belly` and `mark` are absent because they are not drawn, they are masks
+   painted from the spine afterwards. The three eye layers are absent because
+   eyeAt has five states and the difference between a shut lid and an open but
+   hooded eye is the only thing on the whole sprite separating asleep from ill;
+   a static grid would make them the same picture again. */
+const PART_UNITS = {
+  body:   { layer:'skin',   at:['back','shoulder'], note:'the whole trunk: neck, ribcage, hips, tail' },
+  head:   { layer:'head',   at:['head'],            note:'the skull' },
+  jaw:    { layer:'jaw',    at:['jaw','head'],      note:'the lower jaw' },
+  shield: { layer:'shield', at:['frill','head'],    note:'frill or plate' },
+  crest:  { layer:'crest',  at:['crest','head'],    note:'crest' },
+  horn:   { layer:'horn',   at:['head'],            note:'horns, claws and teeth' },
+  beak:   { layer:'beak',   at:['snout','head'],    note:'beak or rostral' },
+  mouth:  { layer:'mouth',  at:['jaw','head'],      note:'the gape behind the teeth' },
+  limb:   { layer:'limb',   at:['shoulder'],        note:'near-side legs and arms — will not walk' },
+  far:    { layer:'far',    at:['shoulder'],        note:'far-side legs — will not walk' }
+};
+/* The colours a species can be painted with by hand, on top of the materials
+   it already has.
+
+   The material list is the honest palette for anything that is *made of*
+   something — skin, bone, keratin, the inside of a mouth — and it is what
+   makes a hand-drawn part sit in the animal instead of on it. But it cannot
+   say "a rust-red band across this frill", because no material on a
+   Triceratops is rust-red, and inventing one as a material would be a lie
+   about what the frill is.
+
+   So a species can also be given up to eight colours of its own. They are
+   ordinary materials once defined — each gets a ramp and takes the lighting
+   pass, so a painted band is lit by the same sun as everything else — and they
+   sit just above the coat in the paint order, because a marking covers the
+   surface and passes behind the horns, the teeth and the eye.
+
+   `lit` is how much light the colour takes. 1 is shaded like skin. 0 is flat,
+   which is the whole of the difference between a marking and a sticker, and is
+   worth having for the few things that really are flat: a glint, a wet
+   highlight, a painted-on scar.
+
+   Empty by default. A species with no colours here costs nothing at all — the
+   baker never allocates their canvases and the compositor never looks at
+   them. */
+/*<data:PART_MATS>*/
+const PART_MATS = {  };
+/*</data>*/
+
+/* One character per entry in LAYERS, ink slots included. */
+const PART_CH = '0123456789abcdefghijklm';
+const inksFor = spId => PART_MATS[spId] || [];
+
+/* A part can also be drawn once per frame of one pose, and that is the only
+   way a hand-drawn leg walks.
+
+   A drawing is a fixed picture, so a unit stamped at an anchor travels but does
+   not bend. For a head or a frill that is the whole truth — those really are
+   rigid and the pose only moves them. For a leg it is not: the gait solves new
+   joint positions every frame, and a leg that cannot bend does not step. Drawn
+   as one picture, the near legs sat still while the far ones walked.
+
+   So a key may carry a pose and a frame on the end, and the frame-specific
+   drawing wins where one exists. Only walking actually needs them — every
+   other pose leaves `legPhase` at zero, so the plain key covers the lot — and
+   the editor seeds all twelve off the gait solver rather than asking anyone to
+   draw a leg from nothing twelve times.
+
+       trike|limb|3            every pose
+       trike|limb|3|walk|7     that one frame of the walk */
+function partsFor(spId, stage, anim, frame){
+  const out = {};
+  for (const unit in PART_UNITS){
+    const key = spId + '|' + unit + '|' + stage;
+    const p = (anim !== undefined && PART_PIX[key + '|' + anim + '|' + frame]) || PART_PIX[key];
+    if (p) out[unit] = p;
+  }
+  return out;
+}
+/* Every key that belongs to one unit at one stage, the per-frame ones with it.
+   The editor clears by unit, and a "back to procedural" that left twelve walk
+   frames behind would look like it had not worked. */
+function partKeys(spId, unit, stage){
+  const stem = spId + '|' + unit + '|' + stage;
+  return Object.keys(PART_PIX).filter(k => k === stem || k.slice(0, stem.length + 1) === stem + '|');
+}
+
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
 
@@ -1256,10 +1704,10 @@ const TRI_TUNE = {
   neckLen:20.73,
   neckDrop:3.65,
   neckThick:18.75,
-  headLen:22.5,
+  headLen:20.85,
   headDepth:10.5,
   frillW:15.6,
-  frillH:20.84,
+  frillH:20.2,
   frillTilt:-.47,
   hornLen:1.85,
   tailLen:70.16,
@@ -1539,7 +1987,7 @@ const SPECIES_STAGE = {
 /*<data:GEAR_FIT>*/
 const GEAR_FIT = {
   rex:{
-    frond:{ dx:4.3, dy:-.9, at:{ subadult:{ dx:6.1, dy:-.9 } } },
+    frond:{ dx:4.1, dy:-.4, at:{ subadult:{ dx:6.1, dy:-.9 } } },
     cap:{ dx:4.4, dy:1.1, s:1.19 },
     cone:{
       dx:8.1,
@@ -1588,13 +2036,28 @@ function gearFor(spId, hatId, stage){
 const HABITAT_ART = {
   valley:{
     horizon:108,
-    skyline:[[0, 70], [25, 63], [52, 79], [96, 54], [135, 74], [183, 64], [224, 82]],
+    skyline:[
+      [-28, 73],
+      [-12, 61],
+      [0, 70],
+      [25, 63],
+      [52, 79],
+      [96, 54],
+      [135, 74],
+      [183, 64],
+      [224, 82],
+      [243, 65],
+      [252, 74]
+    ],
     slot:[38, 140],
     item:'fern'
   },
   lagoon:{
     horizon:98,
     skyline:[
+      [-28, 94],
+      [-17, 88],
+      [-7, 94],
       [0, 94],
       [38, 93],
       [49, 85],
@@ -1603,7 +2066,10 @@ const HABITAT_ART = {
       [158, 94],
       [171, 90],
       [185, 94],
-      [224, 94]
+      [224, 94],
+      [237, 91],
+      [246, 94],
+      [252, 94]
     ],
     slot:[187, 140],
     item:'fish'
@@ -1611,6 +2077,8 @@ const HABITAT_ART = {
   ashfall:{
     horizon:111,
     skyline:[
+      [-28, 71],
+      [-11, 84],
       [0, 82],
       [27, 69],
       [54, 75],
@@ -1618,7 +2086,9 @@ const HABITAT_ART = {
       [104, 85],
       [157, 73],
       [194, 83],
-      [224, 70]
+      [224, 70],
+      [239, 81],
+      [252, 67]
     ],
     slot:[42, 140],
     item:'rock'
@@ -1626,6 +2096,8 @@ const HABITAT_ART = {
   gorge:{
     horizon:104,
     skyline:[
+      [-28, 61],
+      [-15, 54],
       [0, 58],
       [34, 57],
       [43, 74],
@@ -1635,7 +2107,9 @@ const HABITAT_ART = {
       [146, 68],
       [189, 66],
       [200, 54],
-      [224, 57]
+      [224, 57],
+      [241, 51],
+      [252, 60]
     ],
     slot:[185, 140],
     item:'rock'
@@ -1643,6 +2117,8 @@ const HABITAT_ART = {
   boreal:{
     horizon:106,
     skyline:[
+      [-28, 63],
+      [-11, 80],
       [0, 82],
       [21, 60],
       [37, 75],
@@ -1652,7 +2128,9 @@ const HABITAT_ART = {
       [140, 78],
       [168, 49],
       [195, 69],
-      [224, 55]
+      [224, 55],
+      [237, 73],
+      [252, 48]
     ],
     slot:[40, 140],
     item:'cycad'
@@ -1929,8 +2407,103 @@ function artChanged(){
   if (typeof matCache   !== 'undefined') matCache.clear();
   if (typeof warmQueue  !== 'undefined') warmQueue.length = 0;
   if (typeof bgCache    !== 'undefined') bgCache.clear();
+  if (typeof bgPixCache !== 'undefined') bgPixCache.clear();
   if (typeof skyCache   !== 'undefined') skyCache.clear();
   stageCache.clear();
+}
+
+/* ==========================================================================
+   HAND-DRAWN BACKDROPS
+   A habitat painted pixel by pixel, in place of the one bakeBg computes.
+
+   This is a second art file, and the only one. "Art is data, in one file"
+   exists so that everything the editor owns is somewhere the editor can write,
+   and a second file it also writes — same `<data:NAME>` markers, same save
+   path — keeps that. What it does not keep is 00-art.js at a readable size: a
+   backdrop is 280x210 characters, so five of them would bury the growth
+   columns and the proportions under a thousand lines of pixel rows. The built
+   dist/paleopal.html is still one file; only the source splits.
+
+   Unlike PART_PIX these are real colours, not materials. Nothing about a
+   backdrop goes through composeSprite — there is no lighting pass and no ramp
+   to name — so the pixels are simply the picture, in the same palette-and-rows
+   format PIX uses. The alphabet is longer because a scene needs more colours
+   than an icon: 62 of them, and beyond that the editor snaps to the nearest.
+
+   Keyed by biome, with `biome|phase` for a phase that has a drawing of its
+   own. That is the fallback order, and the reason for it: a drawing is fixed
+   pixels, and the four times of day are fixed pixels tinted, which is crude
+   next to the procedural night that recolours itself from skySpec. If one
+   habitat ends up deserving a real night sky, it gets a `valley|night` entry
+   and the base one goes on serving the other three.
+
+   `quiet` is the other half of hand-drawing a scene. The plume, the surf, the
+   aurora, the grass blades and the rest are drawn live over the backdrop and
+   know nothing about it, which is mostly right — they are what makes the place
+   move. But a hand-drawn ground will not necessarily agree with the blades
+   growing out of it, so a drawing can name the live elements it would rather
+   do without.
+   ========================================================================== */
+/*<data:BG_PIX>*/
+const BG_PIX = {
+};
+/*</data>*/
+
+/* Sixty-two, in the order the editor allocates them. A space is a hole, which
+   for a backdrop means the procedural bake still shows through — so a partial
+   drawing is a patch over a computed scene rather than a scene with a gap. */
+const BG_CH = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/* The drawing for a habitat at a time of day, or nothing. The phase-specific
+   entry wins; otherwise the base drawing serves every phase and takes a wash. */
+function bgArtFor(bid, phase){
+  return BG_PIX[bid + '|' + phase] || BG_PIX[bid] || null;
+}
+const bgQuiet = (bid, phase) => {
+  const a = bgArtFor(bid, phase);
+  return a && a.quiet ? a.quiet : [];
+};
+
+/* How far a base drawing is pushed toward the phase's own low sky colour when
+   it is standing in for a time of day it was not drawn for. Day is the drawing
+   as painted. Night is heavy, because a daylit scene shown at night with a
+   light touch reads as a bug rather than as evening.
+
+   This is the crude part, and it is crude on purpose: the alternative is four
+   drawings per habitat at four times the file size, which is what the
+   `biome|phase` key is there for on the day one of them earns it. */
+const BG_PHASE_MIX = { day: 0, dawn: .20, dusk: .26, night: .50 };
+
+const bgPixCache = new Map();
+function bgPixCanvas(bid, phase){
+  const art = bgArtFor(bid, phase);
+  if (!art) return null;
+  const key = bid + '|' + phase;
+  if (bgPixCache.has(key)) return bgPixCache.get(key);
+  const w = art.w || BG_W, h = art.h || BG_H;
+  const c = makeCv(w, h), g = readCtx(c);
+  for (let y = 0; y < h; y++){
+    const row = art.rows[y] || '';
+    for (let x = 0; x < row.length; x++){
+      const i = BG_CH.indexOf(row[x]);           // a space is -1, and left clear
+      if (i < 0) continue;
+      g.fillStyle = art.pal[i] || '#ff00ff';
+      g.fillRect(x, y, 1, 1);
+    }
+  }
+  /* The wash, inside the drawing only. `source-atop` so that a partial drawing
+     tints its own pixels and not the transparent ones it is letting through. */
+  const mix = BG_PIX[bid + '|' + phase] ? 0 : (BG_PHASE_MIX[phase] || 0);
+  if (mix > 0){
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.globalAlpha = mix;
+    g.fillStyle = skySpec(bid, phase).low;
+    g.fillRect(0, 0, w, h);
+    g.restore();
+  }
+  bgPixCache.set(key, c);
+  return c;
 }
 
 /* ==========================================================================
@@ -2013,19 +2586,35 @@ function mixCol(a, b, t){
    near-white blobs stuck on the front of a tan face with nothing dividing
    them from the horn sheaths above. A species that does not set `spec.beak`
    gets its horn colour here and nothing changes for it. */
-const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
+/* `ink0`..`ink7` are the eight colours a species can be given to be painted
+   with by hand, and they sit here — directly above the coat and below every
+   structure that stands in front of the body — because that is what a painted
+   detail is. A stripe across a frill or a blaze down a snout is a marking on
+   the animal's surface, so it covers the surface and passes behind the horns,
+   the beak, the teeth and the eye, exactly as a coat pattern does.
+
+   They are ordinary materials in every other way: each carries a ramp built
+   from its own colour and takes the same lighting pass, which is what stops a
+   painted detail reading as a sticker. A species that defines none of them
+   costs nothing — bakeOnce never allocates a canvas for an undefined ink and
+   the compositor skips it. */
+const INKS = 8;
+const INK_NAMES = Array.from({length: INKS}, (_, i) => 'ink' + i);
+const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark']
+  .concat(INK_NAMES, ['crest','mouth','horn','beak','sclera','pupil','glint']);
 const BODY_TOP    = LAYERS.indexOf('head');
 const BELLY_LAYER = LAYERS.indexOf('belly');
 const MARK_LAYER  = LAYERS.indexOf('mark');
+const INK_FIRST   = LAYERS.indexOf('ink0');
 /* Countershading belongs to the trunk, the skull and the jaw. It is kept off
    the limbs — near-side limbs carry their own lit ramp and far-side limbs are
    held back in shade, and letting the belly claim either bleached every leg to
    the same cream as the underside. */
 const BELLY_OK = LAYERS.map(n => n === 'skin' || n === 'shield' || n === 'jaw' || n === 'head');
 
-function buildMaterials(spec){
+function buildMaterials(spec, inks){
   const skin = ramp(spec.skin), horn = ramp(spec.horn, {spread:.12, shift:14});
-  return {
+  const out = {
     /* Far-side limbs. Two steps down with the contrast raised turned them
        into a black mass slung under the body that read as shadow rather than
        as legs, which on the four-legged animals is half the sprite. */
@@ -2057,6 +2646,17 @@ function buildMaterials(spec){
     glint:  { r: ramp('#fffdf2', {spread:.04}),  lit:0 },
     outline: spec.outline
   };
+  /* The species' own painting colours. `lit` is how much of the light this
+     colour takes: 1 is shaded like skin, and 0 is flat — which is the whole of
+     what "a sticker rather than a marking" means, and is how the pupil and the
+     glint are already done. A colour nobody defined stays absent, and every
+     pass that would have touched it skips it. */
+  (inks || []).forEach((ink, i) => {
+    if (!ink || i >= INKS) return;
+    out[INK_NAMES[i]] = { r: ramp(ink.col, {spread: ink.spread || .19}),
+                          lit: ink.lit === undefined ? 1 : ink.lit };
+  });
+  return out;
 }
 
 /* ---------- composite the layers, light them, draw a selective outline ----- */
@@ -2079,6 +2679,11 @@ function composeSprite(layerCanvases, mats, w, h){
     if (y < y0) y0 = y; if (y > y1) y1 = y;
   };
   for (let li=0; li<LAYERS.length; li++){
+    /* A hole in the array is a painting colour this species does not have.
+       Every pass here is per-pixel over the whole box, so skipping the eight
+       unused ink slots is the difference between this costing nothing and
+       costing half as much again on every bake in the game. */
+    if (!layerCanvases[li]) continue;
     const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
     if (li === MARK_LAYER){
       // a coat rides the body, and stops where the countershading starts
@@ -2166,6 +2771,184 @@ function composeSprite(layerCanvases, mats, w, h){
   }
   og.putImageData(img,0,0);
   return out;
+}
+
+/* ==========================================================================
+   THE RIG
+   An animal as a skeleton and a list of parts, instead of as a function.
+
+   Why this exists, in one line: every shape in this game is a list of points
+   that gets hard-quantised into pixels *afterwards*, which means a part can be
+   moved, scaled and re-lit for nothing. An ordinary pixel-art game cannot rig
+   its sprites, because rotating a bitmap tears it. This one always could, and
+   the shapes were simply trapped inside three hundred lines of arithmetic
+   working out where to put them.
+
+   So the arithmetic keeps its job and loses everything else. A species now
+   computes **joints** — named frames, each with an origin, a scale and a
+   rotation, all of them still driven by the growth columns and the pose — and
+   everything hanging off those joints is data.
+
+     joint   { x, y, sx, sy, rot }      where a thing is, how big, which way
+     vertex  [ joint, ox, oy ]          a point, in that joint's own units
+     part    { layer, kind, v, ... }    a shape, on a material, made of points
+
+   A vertex naming a joint is the whole trick. Bind every vertex of a shape to
+   one joint and you have a rigid part that follows the skull. Bind the
+   vertices of one shape to *different* joints and you have a body that
+   stretches between the shoulder and the hip as they move. Same format, and
+   the second case is what a torso is.
+
+   Adding a part is adding a row. It animates because its joint animates, it
+   grows because its joint scales, it lights because the compositor never knew
+   the difference. That is the whole point: nothing downstream can tell how
+   many parts there are.
+
+   Not everything wants to be data. A row of epoccipitals generated from a
+   count, a leg solved by inverse kinematics, an eye with five states — those
+   are functions of something, and a function is the honest way to write them.
+   A rig therefore holds both: data parts, and code parts that run in the same
+   ordered list so the paint order stays one list rather than two.
+   ========================================================================== */
+
+/* Where a vertex actually lands. The joint's scale is applied before its
+   rotation, so a part squashes with its joint and then turns with it — a frill
+   tipped back is a tipped frill, not a sheared one. */
+function rigAt(joints, v){
+  const j = joints[v[0]];
+  if (!j) return [0, 0];
+  const x = v[1] * (j.sx === undefined ? 1 : j.sx);
+  const y = v[2] * (j.sy === undefined ? 1 : j.sy);
+  if (!j.rot) return [j.x + x, j.y + y];
+  const c = Math.cos(j.rot), s = Math.sin(j.rot);
+  return [j.x + x*c - y*s, j.y + x*s + y*c];
+}
+/* How big one unit of a joint is on the canvas, for radii, which have a size
+   in each direction. */
+const rigScale = (joints, name) => {
+  const j = joints[name] || {};
+  return [j.sx === undefined ? 1 : j.sx, j.sy === undefined ? 1 : j.sy];
+};
+/* A tube's width has a size but no direction, so it needs a scale of its own
+   and cannot borrow either axis.
+
+   This was got wrong the first time and the way it failed is worth keeping.
+   Widths were scaled by the joint's y unit, which on the skull is *head
+   depth* — about twenty pixels on an adult. A width of 7, meant as seven
+   pixels of horn, came out as a hundred and forty: a disc that swallowed the
+   animal, grew the bake box until it hit its cap, and then vanished entirely
+   at adult size because by then it was clipped away on every side. The lesson
+   is that a joint's axes describe where things are, not how thick they are,
+   and a rig needs to say both. */
+const rigWidth = (joints, name) => {
+  const j = joints[name] || {};
+  return j.sw !== undefined ? j.sw : (j.sy === undefined ? 1 : j.sy);
+};
+
+/* Draw one part. `kind` is which primitive: the same three the species files
+   have always used, because the primitives were never the problem. */
+function rigPart(M, joints, p){
+  const g = M[p.layer];
+  if (!g) return;
+  const pts = p.v.map(v => rigAt(joints, v));
+  if (p.kind === 'oval'){
+    const [sx, sy] = rigScale(joints, p.v[0][0]);
+    const j = joints[p.v[0][0]] || {};
+    oval(g, pts[0][0], pts[0][1], p.r[0]*sx, p.r[1]*sy, null, j.rot || 0);
+    return;
+  }
+  if (p.kind === 'tube'){
+    /* A width belongs to the vertex it is measured at, so it scales with that
+       vertex's own joint. A neck that thins toward the skull is one tube whose
+       far end is measured in skull units. */
+    const w = p.w.map((n, i) => n * rigWidth(joints, p.v[i][0]));
+    tube(g, pts, w);
+    return;
+  }
+  blob(g, pts);
+}
+
+/* The whole animal: joints first, then every part in order. A code part is
+   handed the joints and the pose and draws whatever it likes onto the same
+   layers — the ordering is shared, so a generated row of knobs still sits
+   between the two data parts it belongs between. */
+function drawRig(M, P, rig){
+  const joints = rig.joints(P);
+  for (const part of rig.parts){
+    if (typeof part === 'function') part(M, joints, P);
+    else rigPart(M, joints, part);
+  }
+  return joints;
+}
+
+/* --------------------------- added parts ---------------------------------
+   The conversion, taken from the additive end first.
+
+   A species still draws itself the way it always has. What it now also does is
+   publish its joints — which it had all along, as local variables with names
+   like `hx` and `hipY`, computed and then thrown away. Anything in RIG_PARTS
+   is drawn against those joints afterwards.
+
+   That is deliberately the smaller half of the job and deliberately the half
+   worth doing first, because it is the half that proves the idea. Adding a
+   fourth horn is adding a row to a list; if that horn turns with the skull,
+   grows through four stages and takes the light like the other three without a
+   line of code being written for it, then the model holds and converting the
+   forty-one shapes that already exist is mechanical afterwards. If it does
+   not, almost nothing has been spent finding out.
+   -------------------------------------------------------------------------- */
+/* ---------------------------- growing up ----------------------------------
+   A part is defined once and is right at every age, because its points are in
+   joint units and the joints already scale. That is the default and it should
+   stay the default: a horn described as "half a head-depth above the brow"
+   means the same thing on a hatchling and on an adult, and nobody has to keep
+   four copies of it in step.
+
+   Two things that default cannot say, and both of them matter:
+
+   **A stage that genuinely differs.** Not bigger — different. A juvenile's
+   horn curves back where an adult's recurves forward, and no single number
+   scales one into the other. `at` overrides the points for one stage and
+   leaves the rest inheriting, which is the same shape `GEAR_FIT` and
+   `SPECIES_STAGE` already use for exactly this problem. Overriding one field
+   overrides only that field.
+
+   **A part that is not there at some ages.** The house rule is that growing up
+   changes what an animal *has*, not only how big it is. `stages` is that: a
+   brow horn that arrives at subadult is `stages:[2,3]`, a juvenile's coat of
+   fuzz that goes away is `stages:[0,1]`. Absent means every age, which is what
+   almost everything wants.
+
+   It is a list rather than a from/to range because the editor shows it as four
+   buttons you switch on and off, and a control should store what it looks
+   like. A range would also quietly forbid the animal that has a thing, loses
+   it, and grows it back — which is not hypothetical for display structures.
+
+   So inheritance is kept, per-stage escape exists, and features can arrive and
+   leave — without four copies of anything that did not need them. */
+function rigForStage(part, stage){
+  const over = part.at && part.at[STAGE[stage] && STAGE[stage].key];
+  return over ? Object.assign({}, part, over) : part;
+}
+function rigShows(part, stage){
+  return !part.off && (!part.stages || part.stages.indexOf(stage) >= 0);
+}
+
+function drawRigParts(M, spId, joints, P){
+  if (!joints) return;
+  const parts = RIG_PARTS[spId];
+  if (!parts) return;
+  for (const part of parts){
+    if (!rigShows(part, P.stage)) continue;
+    rigPart(M, joints, rigForStage(part, P.stage));
+  }
+}
+
+/* Where a part's points land on the finished sprite, for the editor to hang
+   handles on. It runs the same arithmetic the bake does, from the same joints,
+   so a handle cannot end up somewhere the pixel is not. */
+function rigOutline(joints, part){
+  return part.v.map(v => rigAt(joints, v));
 }
 
 /* ==========================================================================
@@ -2478,7 +3261,7 @@ function matsFor(spId, skinId){
     const k = skinOf(spId, skinId);
     matCache.set(key, buildMaterials(Object.assign({}, SPECIES[spId].spec, {
       skin:k.skin, belly:k.belly, crest:k.crest, mark:k.mark
-    })));
+    }), inksFor(spId)));
   }
   return matCache.get(key);
 }
@@ -2505,7 +3288,7 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
      past the cap; the loop ends when growBake() says there is no more room. */
   let out = null;
   for (let attempt = 0; attempt < 6; attempt++){
-    out = bakeOnce(spId, stage, pose, eye, skinId);
+    out = bakeOnce(spId, stage, pose, eye, skinId, anim, idx % poses.length);
     if (!out.clipped || !growBake()) break;
   }
   delete out.clipped;
@@ -2514,10 +3297,79 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   return out;
 }
 
-function bakeOnce(spId, stage, pose, eye, skinId){
+/* Put the hand-drawn units for this species and stage onto their layers, in
+   place of what the draw function just painted there.
+
+   Two passes, and the order matters. A drawing says which material each of its
+   pixels is, so one grid can write to layers other than its own unit's — a
+   skull drawn with its own teeth puts pixels on `horn`. Clearing each layer
+   just before stamping it would therefore wipe pixels an earlier unit had
+   already put down, so every replaced layer is emptied first and only then is
+   anything drawn.
+
+   The whole thing runs with the transform off. The layer contexts arrive
+   translated to the origin and scaled by the animal's size, which is right for
+   the shapes the species draws in local units and wrong for a grid: one grid
+   pixel is meant to be one baked pixel, and pushing it through that scale
+   would resample the drawing and lose the very thing that makes it pixel art.
+   The anchor is converted by hand instead — the same arithmetic bakeOnce uses
+   on the anchors it hands back — which is also why BAKE_CX and BAKE_G are read
+   here rather than cached: growBake moves them between attempts. */
+function stampParts(M, spId, stage, anchors, k, anim, frame){
+  const drawn = partsFor(spId, stage, anim, frame);
+  const units = Object.keys(drawn);
+  if (!units.length) return;
+  for (const name of LAYERS){ M[name].save(); M[name].setTransform(1, 0, 0, 1, 0, 0); }
+
+  for (const unit of units) M[PART_UNITS[unit].layer].clearRect(0, 0, BAKE_W, BAKE_H);
+
+  for (const unit of units){
+    const p = drawn[unit];
+    /* Where the drawing hangs. The landmark comes from the draw function and
+       so has already been moved by the pose, which is the whole reason a
+       stamped part breathes and walks instead of sitting still. */
+    let a = null;
+    for (const name of PART_UNITS[unit].at){
+      const q = anchors.parts && anchors.parts[name];
+      if (q){ a = q; break; }
+    }
+    if (!a) continue;
+    const ax = Math.round(BAKE_CX + a[0]*k) - (p.ox || 0);
+    const ay = Math.round(BAKE_G  + a[1]*k) - (p.oy || 0);
+    for (let r = 0; r < p.rows.length; r++){
+      const row = p.rows[r];
+      for (let c = 0; c < row.length; c++){
+        const li = PART_CH.indexOf(row[c]);        // a space is -1, and nothing
+        if (li < 0 || li >= LAYERS.length) continue;
+        M[LAYERS[li]].fillRect(ax + c, ay + r, 1, 1);
+      }
+    }
+  }
+  for (const name of LAYERS) M[name].restore();
+}
+
+/* One species, one stage, one pose, painted onto fresh material layers and
+   stopped there — before anything is stamped over it and before it is
+   composed. It is its own function because the editor's Draw tab needs exactly
+   this: to show what a drawing is replacing, and to size a new drawing to the
+   shape it replaces. Sharing it with the baker is the point. Two copies of
+   this setup would drift, and the one in the editor would be the one that
+   quietly stopped matching the game. */
+function drawLayers(spId, stage, pose, eye){
   const sp = SPECIES[spId], A = artFor(spId, stage), st = A.st, k = st.s * sp.scale;
+  const inks = inksFor(spId);
   const canvases = [], M = {};
-  for (const name of LAYERS){
+  /* A painting colour the species has not been given gets no canvas and a
+     hole in the array, which the compositor skips. Anything that tries to
+     paint on it lands in a one-pixel bin instead of throwing — a grid can
+     outlive the colour it was drawn with, and a stale character is not a
+     reason to stop baking the animal. */
+  const bin = readCtx(makeCv(1, 1));
+  for (let i = 0; i < LAYERS.length; i++){
+    const name = LAYERS[i];
+    if (i >= INK_FIRST && i < INK_FIRST + INKS && !inks[i - INK_FIRST]){
+      canvases.push(null); M[name] = bin; continue;
+    }
     const c = makeCv(BAKE_W, BAKE_H), g = readCtx(c);
     g.fillStyle = '#000';
     g.translate(BAKE_CX, BAKE_G); g.scale(k, k);
@@ -2525,6 +3377,21 @@ function bakeOnce(spId, stage, pose, eye, skinId){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
+  /* Anything added to this animal through the rig, drawn against the joints
+     the species just published. It lands on the same material layers, so a
+     horn added here is lit and outlined as a horn without anything
+     downstream being told it exists. */
+  drawRigParts(M, spId, anchors.joints, P);
+  return { canvases, M, k, anchors };
+}
+
+function bakeOnce(spId, stage, pose, eye, skinId, anim, frame){
+  const sp = SPECIES[spId], st = artFor(spId, stage).st;
+  const { canvases, M, k, anchors } = drawLayers(spId, stage, pose, eye);
+  // Anything drawn by hand replaces what was just computed for it, before the
+  // countershading and the coat go on — both are masked to body pixels, so
+  // they should trim to the drawing rather than to the shape it replaced.
+  stampParts(M, spId, stage, anchors, k, anim, frame);
   // Countershading and the coat both ride the body the draw function just laid
   // down, never a path computed alongside it — the same rule the surface
   // detail follows. Belly first: the coat is masked to stop where it starts.
@@ -2937,6 +3804,31 @@ function drawRex(M, P){
      handles on. They are read-only landmarks — dragging one writes the TUNE
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
+  /* The skeleton, published — see src/02-rig.js. Every one of these already
+     existed as a local variable, computed from the growth columns and the pose
+     and then thrown away. Each carries its own units: `skull` measures x in
+     snout lengths and y in head depths, so a part put on the face stays on the
+     face at every age. `sw` is thickness, which is neither axis — a tube width
+     scaled by head depth comes out twenty times too fat. */
+  const joints = {
+    hip:      { x: hipX,  y: hipY,   sx: 1, sy: lM, sw: lM },
+    back:     { x: 0,     y: backY,  sx: 1, sy: lM, sw: lM },
+    withers:  { x: withX, y: withY,  sx: 1, sy: lM, sw: lM },
+    shoulder: { x: withX, y: withY,  sx: 1, sy: lM, sw: lM*bk },
+    belly:    { x: 0,     y: bellyY, sx: 1, sy: lM, sw: lM },
+    throat:   { x: withX, y: throatY, sx: 1, sy: lM, sw: lM },
+    neck:     { x: (withX+hx)/2, y: (withY+hy)/2, sx: 1, sy: lM, sw: lM*bk },
+    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
+    snout:    { x: hx - sn, y: hy,   sx: sn, sy: fh, sw: hM },
+    jaw:      { x: hinge[0], y: hinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
+    brow:     { x: ex,    y: ey,     sx: hM, sy: hh, sw: hM*bw },
+    eye:      { x: ex,    y: ey,     sx: hM, sy: hM, sw: hM },
+    arm:      { x: ax,    y: ay,     sx: lM, sy: lM, sw: lM },
+    tail0:    { x: T(TL*23/72), y: hipY + sw*2, sx: tM, sy: lM, sw: lM },
+    tail1:    { x: T(TL*44/72), y: hipY + sw*5, sx: tM, sy: lM, sw: lM },
+    tail2:    { x: T(TL),       y: hipY + sw*9, sx: tM, sy: lM, sw: lM }
+  };
+
   const parts = {
     snout:    [hx - sn, hy],
     jaw:      [hx - sn*.46, lipMid],
@@ -2951,7 +3843,7 @@ function drawRex(M, P){
   };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
            hat:[hx - sn*.22, hy - hh*1.10], hatW: sn*.54,
-           top: hy - hh*1.18, spine, parts };
+           top: hy - hh*1.18, spine, parts, joints };
 }
 
 
@@ -3252,6 +4144,39 @@ function drawTrike(M, P){
      handles on. They are read-only landmarks — dragging one writes the TUNE
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
+  /* The skeleton, published.
+     Every one of these already existed as a local variable — `hx`, `hipY`,
+     `fTilt` — computed from the growth columns and the pose and then thrown
+     away when the function returned. Handing them out is what lets a part be
+     data: a shape bound to `skull` turns when the skull turns and scales when
+     it scales, and nothing has to be told how.
+
+     Each carries its own units, and that is the load-bearing detail. `skull`
+     measures x in snout lengths and y in head depths, so a point on the face
+     stays on the face at every growth stage without anybody storing four
+     copies of it. `frill` carries the tilt as well, so a shape bound to it is
+     tipped with the shield rather than sheared across it. */
+  const joints = {
+    hip:      { x: hipX,  y: hipY,   sx: 1,  sy: lM, sw: lM },
+    rump:     { x: hipX,  y: rumpY,  sx: 1,  sy: lM, sw: lM },
+    haunch:   { x: hipX-6, y: hipY-6*lM, sx: lM*bk, sy: lM*bk, sw: lM*bk },
+    back:     { x: 0,     y: backY,  sx: 1,  sy: lM, sw: lM },
+    withers:  { x: shX,   y: withY,  sx: 1,  sy: lM, sw: lM },
+    shoulder: { x: shX,   y: shY,    sx: 1,  sy: lM, sw: lM },
+    chest:    { x: shX,   y: chestY, sx: 1,  sy: lM, sw: lM },
+    belly:    { x: 0,     y: bellyY, sx: 1,  sy: lM, sw: lM },
+    neck:     { x: nkX,   y: nkY,    sx: 1,  sy: lM, sw: lM*bk },
+    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
+    jaw:      { x: jHinge[0], y: jHinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
+    frill:    { x: fx,    y: fy,     sx: fRx, sy: fRy, sw: hM*fM, rot: fTilt },
+    brow:     { x: ex,    y: ey,     sx: hM, sy: hh, sw: hM*(.40 + .60*hF) },
+    eye:      { x: ex,    y: ey,     sx: hM, sy: hM, sw: hM },
+    tail0:    { x: T(TL*13/62), y: hipY + sw*1.5, sx: tM, sy: lM*bk, sw: lM*bk },
+    tail1:    { x: T(TL*30/62), y: hipY + sw*3,   sx: tM, sy: lM, sw: lM },
+    tail2:    { x: T(TL*46/62), y: hipY + sw*5,   sx: tM, sy: lM, sw: lM },
+    tail3:    { x: T(TL),       y: hipY + sw*7,   sx: tM, sy: lM, sw: lM }
+  };
+
   const parts = {
     snout:    [hx - sn, hy],
     jaw:      [hx - sn*.38, lipY + hh*.06],
@@ -3272,7 +4197,7 @@ function drawTrike(M, P){
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
            hat:[roofFront + (roofBack - roofFront)*.52, hy - hh*1.12],
            hatW: (roofBack - roofFront)*1.05,
-           top: crown[1], spine, parts };
+           top: crown[1], spine, parts, joints };
 }
 
 /* Brachiosaurus altithorax sprite
@@ -3408,6 +4333,28 @@ function drawBrachio(M, P){
      handles on. They are read-only landmarks — dragging one writes the TUNE
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
+  /* The skeleton, published — see src/02-rig.js. `n1`..`n3` are the neck
+     stations the S-curve already runs through, so a part hung on the neck
+     rides the curve rather than a straight line between its ends. */
+  const joints = {
+    hip:      { x: hipX,  y: hipY,   sx: 1, sy: lM, sw: lM },
+    shoulder: { x: shX,   y: shY,    sx: 1, sy: lM, sw: lM*bk },
+    // the shoulder hump, where the oval on `skin` actually sits
+    withers:  { x: shX + 2, y: shY - 6*lM, sx: 1, sy: lM, sw: lM*bk },
+    belly:    { x: 0,     y: shY + T_.bodyD*.5*lM, sx: 1, sy: lM, sw: lM },
+    neck0:    { x: n1[0], y: n1[1],  sx: 1, sy: lM, sw: lM*bk },
+    neck1:    { x: n2[0], y: n2[1],  sx: 1, sy: lM, sw: lM*bk },
+    neck2:    { x: n3[0], y: n3[1],  sx: 1, sy: lM, sw: lM*bk },
+    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
+    snout:    { x: hx - sn, y: hy,   sx: sn, sy: fh, sw: hM },
+    jaw:      { x: jHinge[0], y: jHinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
+    crest:    { x: (crestBack+crestFront)/2, y: hy - hh*crTop, sx: hM, sy: hh, sw: hM*cr },
+    eye:      { x: hx - sn*.48, y: hy - hh*.3, sx: hM, sy: hM, sw: hM },
+    tail0:    { x: hipX + TL*.33*tM, y: hipY + sw*2, sx: tM, sy: lM, sw: lM },
+    tail1:    { x: hipX + TL*.66*tM, y: hipY + sw*5, sx: tM, sy: lM, sw: lM },
+    tail2:    { x: hipX + TL*tM,     y: hipY + sw*8, sx: tM, sy: lM, sw: lM }
+  };
+
   const parts = {
     snout:    [hx - sn, hy],
     jaw:      [hx - sn*.44, lipY + hh*.02],
@@ -3422,7 +4369,7 @@ function drawBrachio(M, P){
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
            hat:[(crestBack + crestFront)/2 - sn*.12, hy - hh*crTop*.97],
            hatW: (crestBack - crestFront)*1.05,
-           top: hy - hh*crTop, spine, parts };
+           top: hy - hh*crTop, spine, parts, joints };
 }
 
 
@@ -3758,8 +4705,11 @@ const MOTES = Array.from({length:14}, () => ({x:rnd(0,W), y:rnd(40,GROUND-6), vx
 /* --------------------------- baked backdrop -------------------------------- */
 const bgCache = new Map();
 function ridge(g, cfg){
-  // integer-column heightfield: no antialiasing, so the silhouette stays crisp
-  for (let x=0;x<W;x++){
+  // integer-column heightfield: no antialiasing, so the silhouette stays crisp.
+  // Runs the width of the world rather than the width of the screen — it is a
+  // function of x, so the hills either side of the old picture are the same
+  // hills carried on.
+  for (let x=BG_L;x<BG_R;x++){
     let h = cfg.base;
     for (const w of cfg.waves) h += Math.sin(x*w[0] + w[1]) * w[2];
     h = Math.round(h);
@@ -4096,10 +5046,10 @@ function drawSeaStacks(g, S_){
   for (let y=HZ;y<SHORE;y++){
     const t = (y - HZ) / (SHORE - HZ);
     g.fillStyle = mixHex(sea, seaNear, t);
-    g.fillRect(0, y, W, 1);
+    g.fillRect(BG_L, y, BG_SPAN, 1);
     if ((y % 3) === 0){                                   // catch light on the swell
       g.fillStyle = seaLit;
-      for (let x=(y*13)%9; x<W; x+=9 + (y%5)) g.fillRect(x, y, 2 + (y%3), 1);
+      for (let x=BG_L+(y*13)%9; x<BG_R; x+=9 + (y%5)) g.fillRect(x, y, 2 + (y%3), 1);
     }
   }
   /* The stacks stand IN the water, so they are based on the waterline at the
@@ -4137,7 +5087,7 @@ function drawFalls(g, S_){
      first version banded it on a fixed period, which came out as courses of
      masonry — a cliff is bedded, but the beds are uneven and they are broken
      by joints running down through them. */
-  for (let x=100;x<W;x++){
+  for (let x=100;x<BG_R;x++){
     const u = clamp((x - 100) / 40, 0, 1);
     const top = Math.round(84 - u*58 + hash1(x*.9)*3 + Math.sin(x*.061)*4);
     /* A joint is a short break in a few beds, not a stripe from the sky to
@@ -4199,7 +5149,7 @@ function drawGlacier(g, S_){
   const iceShd  = mixHex('#7ba7c6', S_.low, .18);
   const iceDeep = mixHex('#3f7ba6', S_.low, .12);
   const x0 = 86, foot = 106;
-  for (let x=x0;x<W;x++){
+  for (let x=x0;x<BG_R;x++){
     const u = (x - x0) / (W - x0);
     // a broken top edge: two long waves and a short one, so no two seracs match
     const top = Math.round(74 - u*16
@@ -4226,8 +5176,8 @@ function drawGlacier(g, S_){
     }
   }
   // the calving face at the foot: undercut, and bluest where it meets the moraine
-  g.fillStyle = iceDeep; g.fillRect(x0, foot, W - x0, 3);
-  g.fillStyle = iceShd;  g.fillRect(x0, foot + 3, W - x0, 1);
+  g.fillStyle = iceDeep; g.fillRect(x0, foot, BG_R - x0, 3);
+  g.fillStyle = iceShd;  g.fillRect(x0, foot + 3, BG_R - x0, 1);
   /* No rock shoulder. A dark block butted against the left end of the ice
      read as a chimney standing in a snowfield; the front running out of the
      haze on its own is what a glacier looks like from a valley floor. */
@@ -4247,13 +5197,13 @@ function valleyTrees(g, S_){
      hedge into a wood. */
   const body = mixHex(S_.tree, S_.low, .18), lit = mixHex(S_.tree, S_.low, .38);
   const farBody = mixHex(S_.tree, S_.low, .32), farLit = mixHex(S_.tree, S_.low, .46);
-  [[52,15],[62,11],[150,13],[162,17],[172,12],[100,10]]
+  [[-18,13],[52,15],[62,11],[150,13],[162,17],[172,12],[100,10],[238,14]]
     .forEach(t => conifer(g, t[0], GROUND-4, t[1], farBody, farLit));   // back rank, hazed
-  [[14,26],[26,19],[38,23],[196,24],[208,17],[184,20],[120,15],[132,21]]
+  [[-24,21],[-9,25],[14,26],[26,19],[38,23],[196,24],[208,17],[184,20],[120,15],[132,21],[231,18],[246,23]]
     .forEach(t => conifer(g, t[0], GROUND-2, t[1], body, lit));
-  [[8,26],[46,21],[142,23],[216,19]]
+  [[-16,23],[8,26],[46,21],[142,23],[216,19],[240,25]]
     .forEach(t => araucaria(g, t[0], GROUND-2, t[1], body, lit));
-  [[33,12],[128,10],[203,11],[70,9]]
+  [[-4,11],[33,12],[128,10],[203,11],[70,9],[227,10],[250,12]]
     .forEach(t => treeFern(g, t[0], GROUND-1, t[1], body, lit));
 }
 function valleyFloor(g, S_){
@@ -4262,6 +5212,8 @@ function valleyFloor(g, S_){
   boulder(g, 68, GROUND+2, 17, 10, rockCol, rockLit, rockShd);
   boulder(g, 78, GROUND+2, 9, 6, rockCol, rockLit, rockShd);
   boulder(g, 133, GROUND+1, 12, 7, rockCol, rockLit, rockShd);
+  boulder(g, -15, GROUND+2, 13, 8, rockCol, rockLit, rockShd);
+  boulder(g, 243, GROUND+1, 10, 6, rockCol, rockLit, rockShd);
   const logCol = mixHex(S_.dirt,'#000000',.18), logLit = mixHex(S_.dirt, S_.low,.34),
         logShd = mixHex(S_.dirt,'#000000',.44);
   fallenLog(g, 92, GROUND+2, 34, logCol, logLit, logShd);
@@ -4270,6 +5222,8 @@ function valleyFloor(g, S_){
   cycadPlant(g, 32, GROUND+2, 22, plCol, plLit, plShd);
   cycadPlant(g, 116, GROUND+1, 15, plCol, plLit, plShd);
   cycadPlant(g, 190, GROUND+3, 19, plCol, plLit, plShd);
+  cycadPlant(g, -6, GROUND+3, 20, plCol, plLit, plShd);
+  cycadPlant(g, 232, GROUND+2, 17, plCol, plLit, plShd);
   waterHole(g, S_, 142, 212, 11);
   reeds(g, 138, GROUND+8, 5, plShd, plLit);
   reeds(g, 205, GROUND+8, 4, plShd, plLit);
@@ -4278,45 +5232,47 @@ function valleyFloor(g, S_){
 function lagoonTrees(g, S_){
   const body = mixHex(S_.tree, S_.low, .16), lit = mixHex(S_.tree, S_.low, .40),
         shd = mixHex(S_.tree,'#000000',.30);
-  [[16,30],[30,22],[196,27],[210,20],[92,18]]
+  [[-20,26],[-5,19],[16,30],[30,22],[196,27],[210,20],[92,18],[234,28],[248,21]]
     .forEach(t => palmoid(g, t[0], GROUND-2, t[1], body, lit, shd));
-  [[46,11],[74,9],[168,12],[120,8]]
+  [[-13,10],[46,11],[74,9],[168,12],[120,8],[241,11]]
     .forEach(t => treeFern(g, t[0], GROUND-1, t[1], body, lit));
 }
 function lagoonFloor(g, S_){
   // wet sand: a darker strip where the water has been, running the width
   g.fillStyle = mixHex(S_.dirt, S_.water, .30);
-  for (let x=0;x<W;x++){
+  for (let x=BG_L;x<BG_R;x++){
     const y = GROUND + 9 + Math.round(Math.sin(x*.045 + 1.2)*2.5 + Math.sin(x*.13)*1.2);
-    g.fillRect(x, y, 1, H - y);
+    g.fillRect(x, y, 1, BG_B - y);
   }
   const rockCol = mixHex(S_.mid,'#000000',.16), rockLit = mixHex(S_.mid, S_.low,.44),
         rockShd = mixHex(S_.mid,'#000000',.42);
   boulder(g, 58, GROUND+3, 13, 7, rockCol, rockLit, rockShd);
   boulder(g, 172, GROUND+2, 10, 5, rockCol, rockLit, rockShd);
+  boulder(g, -17, GROUND+3, 12, 6, rockCol, rockLit, rockShd);
+  boulder(g, 240, GROUND+2, 9, 5, rockCol, rockLit, rockShd);
   // driftwood, bleached
   const dw = mixHex(S_.dirt, '#ffffff', .30);
   fallenLog(g, 96, GROUND+4, 30, dw, mixHex(dw,'#ffffff',.3), mixHex(dw,'#000000',.35));
   // shells and weed along the strand line
   for (let i=0;i<22;i++){
-    const x = (rnd(4,W-6))|0, y = (GROUND+5+rnd(0,10))|0;
+    const x = (rnd(BG_L+4,BG_R-6))|0, y = (GROUND+5+rnd(0,10))|0;
     g.fillStyle = mixHex(S_.dirt,'#ffffff',.55); g.fillRect(x,y,2,1); g.fillRect(x,y-1,1,1);
   }
   for (let i=0;i<9;i++){
-    const x = (rnd(6,W-8))|0, y = (GROUND+12+rnd(0,10))|0;
+    const x = (rnd(BG_L+6,BG_R-8))|0, y = (GROUND+12+rnd(0,10))|0;
     g.fillStyle = mixHex(S_.tree,'#000000',.20); g.fillRect(x,y,4,1); g.fillRect(x+2,y+1,3,1);
   }
 }
 
 function ashTrees(g, S_){
   const col = mixHex(S_.tree, S_.low, .10), lit = mixHex(S_.tree, S_.low, .34);
-  [[14,24],[27,15],[40,20],[62,12],[186,22],[199,14],[212,19],[92,16],[104,10],[160,13]]
+  [[-22,21],[-9,13],[14,24],[27,15],[40,20],[62,12],[186,22],[199,14],[212,19],[92,16],[104,10],[160,13],[233,23],[246,15]]
     .forEach(t => snag(g, t[0], GROUND-2, t[1], col, lit));
 }
 function ashFloor(g, S_){
   // drifts of ash, banked where the wind put them
   const drift = mixHex(S_.dirt, '#ffffff', .22);
-  for (let x=0;x<W;x++){
+  for (let x=BG_L;x<BG_R;x++){
     const h = 2 + Math.round(2.4*Math.abs(Math.sin(x*.037 + .8)) + 1.6*Math.abs(Math.sin(x*.11)));
     g.fillStyle = drift; g.fillRect(x, GROUND+4, 1, h);
   }
@@ -4325,6 +5281,8 @@ function ashFloor(g, S_){
   boulder(g, 50, GROUND+2, 15, 9, rockCol, rockLit, rockShd);
   boulder(g, 148, GROUND+2, 11, 6, rockCol, rockLit, rockShd);
   boulder(g, 200, GROUND+1, 9, 5, rockCol, rockLit, rockShd);
+  boulder(g, -13, GROUND+2, 14, 8, rockCol, rockLit, rockShd);
+  boulder(g, 238, GROUND+3, 11, 6, rockCol, rockLit, rockShd);
   const logCol = mixHex(S_.dirt,'#000000',.42);
   fallenLog(g, 78, GROUND+3, 30, logCol, mixHex(logCol,S_.low,.20), mixHex(logCol,'#000000',.4));
   // half-buried bone, which is what an ash flat preserves
@@ -4335,11 +5293,11 @@ function ashFloor(g, S_){
 function gorgeTrees(g, S_){
   const body = mixHex(S_.tree, S_.low, .12), lit = mixHex(S_.tree, S_.low, .34);
   const farBody = mixHex(S_.tree, S_.low, .30), farLit = mixHex(S_.tree, S_.low, .44);
-  [[10,30],[22,24],[34,28],[48,22],[62,26],[76,20]]
+  [[-24,27],[-12,22],[10,30],[22,24],[34,28],[48,22],[62,26],[76,20]]
     .forEach(t => conifer(g, t[0], GROUND-3, t[1], farBody, farLit));
-  [[6,25],[30,21],[58,23],[84,19]]
+  [[-18,24],[6,25],[30,21],[58,23],[84,19]]
     .forEach(t => araucaria(g, t[0], GROUND-2, t[1], body, lit));
-  [[18,14],[42,12],[68,13],[92,11],[100,9]]
+  [[-6,12],[18,14],[42,12],[68,13],[92,11],[100,9]]
     .forEach(t => treeFern(g, t[0], GROUND-1, t[1], body, lit));
 }
 function gorgeFloor(g, S_){
@@ -4354,11 +5312,13 @@ function gorgeFloor(g, S_){
   cycadPlant(g, 22, GROUND+3, 24, plCol, plLit, plShd);
   cycadPlant(g, 78, GROUND+2, 18, plCol, plLit, plShd);
   cycadPlant(g, 128, GROUND+4, 21, plCol, plLit, plShd);
+  cycadPlant(g, -10, GROUND+3, 22, plCol, plLit, plShd);
+  boulder(g, 242, GROUND+2, 12, 7, rockCol, rockLit, rockShd);
   // the stream running out of the plunge pool, along the front
-  for (let x=0;x<W;x++){
+  for (let x=BG_L;x<BG_R;x++){
     const y = GROUND + 14 + Math.round(Math.sin(x*.028 + 2.1)*3);
-    g.fillStyle = mixHex(S_.water,'#000000',.28); g.fillRect(x, y, 1, H - y);
-    g.fillStyle = S_.water; g.fillRect(x, y, 1, Math.max(1, H - y - 3));
+    g.fillStyle = mixHex(S_.water,'#000000',.28); g.fillRect(x, y, 1, BG_B - y);
+    g.fillStyle = S_.water; g.fillRect(x, y, 1, Math.max(1, BG_B - y - 3));
     g.fillStyle = mixHex(S_.water,'#ffffff',.34); g.fillRect(x, y, 1, 1);
   }
   reeds(g, 12, GROUND+13, 6, plShd, plLit);
@@ -4369,15 +5329,15 @@ function borealTrees(g, S_){
   const body = mixHex(S_.tree, S_.low, .14), lit = mixHex(S_.tree, S_.low, .34);
   const snow = mixHex('#eef4f8', S_.low, .22);
   const farBody = mixHex(S_.tree, S_.low, .40), farLit = mixHex(S_.tree, S_.low, .52);
-  [[46,14],[58,11],[70,16],[196,13],[208,10]]
+  [[-16,13],[46,14],[58,11],[70,16],[196,13],[208,10],[236,15]]
     .forEach(t => spireConifer(g, t[0], GROUND-4, t[1], farBody, farLit, snow));
-  [[10,30],[22,24],[34,28],[86,22],[100,26],[184,25],[214,21],[120,19]]
+  [[-25,26],[-11,21],[10,30],[22,24],[34,28],[86,22],[100,26],[184,25],[214,21],[120,19],[229,27],[245,22]]
     .forEach(t => spireConifer(g, t[0], GROUND-2, t[1], body, lit, snow));
 }
 function borealFloor(g, S_){
   // wind-packed snow: drifts with a lit crest and a blue shadow behind each
   const lit = mixHex(S_.grass, '#ffffff', .45), shd = mixHex(S_.grass, '#4d86ad', .34);
-  for (let x=0;x<W;x++){
+  for (let x=BG_L;x<BG_R;x++){
     const h = 3 + Math.round(3.2*Math.abs(Math.sin(x*.031 + 1.7)) + 1.8*Math.abs(Math.sin(x*.094)));
     g.fillStyle = shd; g.fillRect(x, GROUND+4, 1, h + 2);
     g.fillStyle = lit; g.fillRect(x, GROUND+4, 1, 1);
@@ -4386,6 +5346,8 @@ function borealFloor(g, S_){
         rockShd = mixHex(S_.mid,'#000000',.44);
   boulder(g, 56, GROUND+2, 15, 8, rockCol, rockLit, rockShd);
   boulder(g, 150, GROUND+3, 11, 6, rockCol, rockLit, rockShd);
+  boulder(g, -14, GROUND+2, 13, 7, rockCol, rockLit, rockShd);
+  boulder(g, 241, GROUND+3, 10, 5, rockCol, rockLit, rockShd);
   // caps of snow on top of them, which is the whole reason they read as cold
   g.fillStyle = lit;
   g.fillRect(50, GROUND-6, 13, 2); g.fillRect(146, GROUND-3, 9, 2);
@@ -4427,17 +5389,24 @@ function bakeBg(phase, bid){
   const key = bid + '|' + phase;
   if (bgCache.has(key)) return bgCache.get(key);
   const B = BIOMES[bid] || BIOMES.valley;
-  const S_ = skySpec(bid, phase), c = makeCv(W,H), g = readCtx(c);
+  const S_ = skySpec(bid, phase), c = makeCv(BG_W, BG_H), g = readCtx(c);
+  /* The one line that makes the world bigger. Everything below, and every
+     literal coordinate in every painter this calls, goes on meaning what it
+     always meant; the extra scenery is what now fits outside it. */
+  g.translate(BG_PAD_X, BG_PAD_Y);
   const habitat = HABITAT_ART[bid] || HABITAT_ART.valley;
   const horizon = habitat.horizon;
 
-  // dithered sky: five steps with a 4x4 ordered dither across each boundary
-  for (let y=0;y<horizon;y++){
-    const f = (y/horizon) * 4, i = Math.floor(f), fr = f - i;
+  /* Dithered sky: five steps with a 4x4 ordered dither across each boundary.
+     The gradient still runs from the top of the old picture, not from the top
+     of the world — the extra rows above are more of the highest band, which is
+     what more sky over the same landscape looks like. */
+  for (let y=BG_T;y<horizon;y++){
+    const f = (Math.max(0, y)/horizon) * 4, i = Math.floor(f), fr = f - i;
     const a = mixHex(S_.top, S_.low, clamp(i/4,0,1)), b = mixHex(S_.top, S_.low, clamp((i+1)/4,0,1));
-    for (let x=0;x<W;x++){ g.fillStyle = (BAYER[y&3][x&3]/16 < fr) ? b : a; g.fillRect(x,y,1,1); }
+    for (let x=BG_L;x<BG_R;x++){ g.fillStyle = (BAYER[y&3][x&3]/16 < fr) ? b : a; g.fillRect(x,y,1,1); }
   }
-  g.fillStyle = S_.low; g.fillRect(0, horizon, W, GROUND - horizon + 2);
+  g.fillStyle = S_.low; g.fillRect(BG_L, horizon, BG_SPAN, GROUND - horizon + 2);
 
   /* Four depth planes, each flatter and lighter than the one in front. The
      furthest is nearly the colour of the sky it stands against: without a
@@ -4445,9 +5414,9 @@ function bakeBg(phase, bid){
      the distance behind it read as painted card. */
   for (const [offset,haze] of [[-8,.86],[0,.68],[10,.42]]){
     g.fillStyle = mixHex(S_.far,S_.low,haze);
-    g.beginPath(); g.moveTo(0,horizon);
+    g.beginPath(); g.moveTo(BG_L,horizon);
     for (const [pointX,pointY] of habitat.skyline) g.lineTo(pointX,pointY+offset);
-    g.lineTo(W,GROUND); g.lineTo(0,GROUND); g.closePath(); g.fill();
+    g.lineTo(BG_R,GROUND); g.lineTo(BG_L,GROUND); g.closePath(); g.fill();
   }
   /* A river out on the valley floor, between the far range and the near one.
      One flat band of sky colour lying down is the cheapest depth cue there
@@ -4456,7 +5425,7 @@ function bakeBg(phase, bid){
      landmark, or it runs straight across the landmark's flank. */
   if (bid !== 'lagoon'){
     const riv = mixHex(S_.water, S_.low, .62);
-    for (let x=0;x<W;x++){
+    for (let x=BG_L;x<BG_R;x++){
       const top = 92 + Math.round(Math.sin(x*.021 + 1.4)*2.5 + Math.sin(x*.055)*1.2);
       const dep = 3 + Math.round(Math.sin(x*.03 + 2.2)*1.4);
       g.fillStyle = riv; g.fillRect(x, top, 1, dep);
@@ -4475,27 +5444,41 @@ function bakeBg(phase, bid){
 
   // ground: lit grass edge, then dithered dirt
   const grassLit = mixHex(S_.grass, S_.low, .40), grassDark = mixHex(S_.grass, '#000000', .32);
-  for (let x=0;x<W;x++){                                    // tufted, not a ruled line
+  for (let x=BG_L;x<BG_R;x++){                              // tufted, not a ruled line
     const t = (Math.sin(x*.7) > .3 ? 1 : 0) + (Math.sin(x*.31 + 2) > .55 ? 1 : 0) + (Math.sin(x*1.3+1) > .8 ? 1 : 0);
     g.fillStyle = S_.grass; g.fillRect(x, GROUND-1-t, 1, 5+t);
     g.fillStyle = grassLit; g.fillRect(x, GROUND-1-t, 1, 1);
   }
-  g.fillStyle = grassDark; g.fillRect(0, GROUND+3, W, 1);
+  g.fillStyle = grassDark; g.fillRect(BG_L, GROUND+3, BG_SPAN, 1);
+  /* The dirt runs to the bottom of the world, not to the bottom of the old
+     picture, but its gradient still ends where it used to — the extra rows are
+     the far end of the same band rather than a restart of it. */
   const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.22), d2 = mixHex(S_.dirt,S_.low,.22);
-  for (let y=GROUND+4;y<H;y++) for (let x=0;x<W;x++){
-    const t = (y-GROUND-4)/(H-GROUND-4);
+  for (let y=GROUND+4;y<BG_B;y++) for (let x=BG_L;x<BG_R;x++){
+    const t = clamp((y-GROUND-4)/(H-GROUND-4), 0, 1);
     g.fillStyle = (BAYER[y&3][x&3]/16 < t*.75) ? d1 : d0; g.fillRect(x,y,1,1);
   }
-  for (let i=0;i<26;i++){                                   // pebbles
-    const x = (rnd(2,W-4))|0, y = (GROUND+6+rnd(0,H-GROUND-9))|0;
+  for (let i=0;i<33;i++){                                   // pebbles
+    const x = (rnd(BG_L+2,BG_R-4))|0, y = (GROUND+6+rnd(0,BG_B-GROUND-9))|0;
     g.fillStyle = d1; g.fillRect(x,y,2,2); g.fillStyle = d2; g.fillRect(x,y,1,1);
   }
-  for (let i=0;i<16;i++){                                   // ground cover
-    const x = (rnd(4,W-4))|0, y = (GROUND+5+rnd(0,H-GROUND-10))|0;
+  for (let i=0;i<20;i++){                                   // ground cover
+    const x = (rnd(BG_L+4,BG_R-4))|0, y = (GROUND+5+rnd(0,BG_B-GROUND-10))|0;
     g.fillStyle = mixHex(S_.grass,'#000000',.15); g.fillRect(x,y,1,3);
     g.fillRect(x-1,y+1,1,2); g.fillRect(x+1,y+1,1,2);
   }
   if (B.floor) B.floor(g, S_);
+
+  /* A hand-drawn backdrop goes on last, over everything that was computed.
+     Over and not instead of: a drawing that covers all 280x210 hides the lot,
+     and one that does not lets the generated scene through where it is blank,
+     so a patch and a whole scene are the same feature with the same data.
+
+     The transform is dropped for it, because a drawing is in world pixels —
+     it was painted on this canvas, not in the painters' coordinates. */
+  const drawn = bgPixCanvas(bid, phase);
+  if (drawn){ g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(drawn, 0, 0); g.restore(); }
+
   bgCache.set(key, c);
   return c;
 }
@@ -5759,6 +6742,12 @@ function stepBehaviour(dt, now){
 }
 
 /* ------------------------------- draw ------------------------------------- */
+
+/* The egg, the choosing screen and the minigames are laid out in screen space
+   against GROUND and tuned to it, so they always take the closest crop — which
+   is the view they were built in, at the scale they were built at. */
+const bgStage = () => mode === 'live' ? stageIdx() : 0;
+
 let screenLayout = null;
 function drawScene(now){
 
@@ -5772,26 +6761,36 @@ function drawScene(now){
     return;
   }
   const phase = skyPhase(new Date());
-  ctx.drawImage(bakeBg(phase), 0, 0);
+  const [sx, sy, sw, sh] = BG_CROP[bgStage()];
+  ctx.drawImage(bakeBg(phase), sx, sy, sw, sh, 0, 0, W, H);
 
-  if (phase === 'night'){
+  /* Everything below is drawn live over the backdrop and knows nothing about
+     it, which is what makes the place move. A hand-drawn backdrop can name the
+     ones it would rather do without — its own ground may disagree with blades
+     growing out of it — and `quiet` is that list. Empty for every procedural
+     habitat, so this costs nothing until someone paints one. */
+  const hush = bgQuiet(biomeId(), phase);
+  const on = name => hush.indexOf(name) < 0;
+
+  if (phase === 'night' && on('stars')){
     for (const s of STARS){
       const tw = Math.sin(now/520 + s.p);
       if (tw > .15){ ctx.fillStyle = tw > .8 ? '#ffffff' : 'rgba(232,228,200,.8)'; ctx.fillRect(s.x|0, s.y|0, 1, 1); }
     }
   }
-  drawSkyBody(ctx, phase, now);
+  if (on('sky')) drawSkyBody(ctx, phase, now);
   // whatever this habitat has that moves: a plume, surf, a fall, an aurora
   const live = (BIOMES[biomeId()] || BIOMES.valley).live;
-  if (live) live(ctx, phase, now);
-  drawClouds(ctx, phase);
-  drawFlyers(ctx);
-  drawWater(ctx, phase, now);
-  drawGrassLine(ctx, phase, now);
-  if (phase !== 'night') drawMotes(ctx, phase);
+  if (live && on('live')) live(ctx, phase, now);
+  if (on('clouds')) drawClouds(ctx, phase);
+  if (on('flyers')) drawFlyers(ctx);
+  if (on('water')) drawWater(ctx, phase, now);
+  if (on('grass')) drawGrassLine(ctx, phase, now);
+  if (phase !== 'night' && on('motes')) drawMotes(ctx, phase);
+  const fronds = (g, p, n) => { if (on('fronds')) drawFronds(g, p, n); };
 
-  if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
-  if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
+  if (mode === 'choose'){ drawChoose(now); fronds(ctx, phase, now); return; }
+  if (mode === 'egg'){ drawEgg(now); fronds(ctx, phase, now); return; }
   if (mode === 'game'){ drawGame(now, phase); return; }
   const habitat = HABITAT_ART[biomeId()];
   ctx.save();
@@ -5799,7 +6798,7 @@ function drawScene(now){
   drawItem(ctx, habitat.item, habitat.slot[0]-6, habitat.slot[1]-10, 1.5);
   ctx.restore();
   drawLive(now);
-  drawFronds(ctx, phase, now);
+  fronds(ctx, phase, now);
   const tint = skyOf(phase).tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
 }

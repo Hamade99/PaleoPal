@@ -238,6 +238,31 @@ function drawRex(M, P){
      handles on. They are read-only landmarks — dragging one writes the TUNE
      numbers underneath it, never these — and they exist here because only the
      draw function knows where it put anything. */
+  /* The skeleton, published — see src/02-rig.js. Every one of these already
+     existed as a local variable, computed from the growth columns and the pose
+     and then thrown away. Each carries its own units: `skull` measures x in
+     snout lengths and y in head depths, so a part put on the face stays on the
+     face at every age. `sw` is thickness, which is neither axis — a tube width
+     scaled by head depth comes out twenty times too fat. */
+  const joints = {
+    hip:      { x: hipX,  y: hipY,   sx: 1, sy: lM, sw: lM },
+    back:     { x: 0,     y: backY,  sx: 1, sy: lM, sw: lM },
+    withers:  { x: withX, y: withY,  sx: 1, sy: lM, sw: lM },
+    shoulder: { x: withX, y: withY,  sx: 1, sy: lM, sw: lM*bk },
+    belly:    { x: 0,     y: bellyY, sx: 1, sy: lM, sw: lM },
+    throat:   { x: withX, y: throatY, sx: 1, sy: lM, sw: lM },
+    neck:     { x: (withX+hx)/2, y: (withY+hy)/2, sx: 1, sy: lM, sw: lM*bk },
+    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
+    snout:    { x: hx - sn, y: hy,   sx: sn, sy: fh, sw: hM },
+    jaw:      { x: hinge[0], y: hinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
+    brow:     { x: ex,    y: ey,     sx: hM, sy: hh, sw: hM*bw },
+    eye:      { x: ex,    y: ey,     sx: hM, sy: hM, sw: hM },
+    arm:      { x: ax,    y: ay,     sx: lM, sy: lM, sw: lM },
+    tail0:    { x: T(TL*23/72), y: hipY + sw*2, sx: tM, sy: lM, sw: lM },
+    tail1:    { x: T(TL*44/72), y: hipY + sw*5, sx: tM, sy: lM, sw: lM },
+    tail2:    { x: T(TL),       y: hipY + sw*9, sx: tM, sy: lM, sw: lM }
+  };
+
   const parts = {
     snout:    [hx - sn, hy],
     jaw:      [hx - sn*.46, lipMid],
@@ -252,6 +277,6 @@ function drawRex(M, P){
   };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
            hat:[hx - sn*.22, hy - hh*1.10], hatW: sn*.54,
-           top: hy - hh*1.18, spine, parts };
+           top: hy - hh*1.18, spine, parts, joints };
 }
 
