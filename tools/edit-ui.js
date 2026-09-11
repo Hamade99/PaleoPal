@@ -130,7 +130,19 @@ function pickList(host, ids, current, onPick, labelOf){
 
 /* ---- tab: pixels --------------------------------------------------------- */
 let pixId = Object.keys(PIX)[0], pixPen = 0, painting = 0;
-const PIX_Z = 22;
+/* Zoom is per sprite, not a constant. A twelve-pixel icon wants every cell the
+   size of a thumbnail; the case is 96x160 and at the same zoom would be a grid
+   two thousand pixels across. Both axes are checked, because the case is far
+   taller than it is wide and only fitting the width would still run it off the
+   bottom of the window. */
+const pixZoom = p => Math.max(2, Math.min(22, Math.floor(Math.min(760 / p.w, 820 / p.h))));
+
+/* The case is the one sprite whose size is a contract. The game's boxes are
+   fractions of a 96x160 grid, and the recess, the key plates and the head are
+   at cells the layout relies on, so it cannot be resized from here. */
+const CASE_ID = 'case', CASE_W = 96, CASE_H = 160;
+const CASE_CELLS = { recess:[14,65,68,52], screenBox:[8,43,80,80], keys:[5,130,15,22], keyStep:18,
+                     head:[5,14,86,19], glass:[20,70,56,42] };
 
 function pixBuild(){
   const p = PIX[pixId];
@@ -159,8 +171,13 @@ function pixBuild(){
   p.pal.forEach((c, i) => colourRow(sw, PIX_CH[i], () => p.pal[i],
     v => { p.pal[i] = v; pal.children[i].style.background = v; }));
   const size = mk('div'); size.style.marginTop = '8px';
-  slider(size, 'width', () => p.w, v => pixResize(p, v, p.h), 4, 32, 1);
-  slider(size, 'height', () => p.h, v => pixResize(p, p.w, v), 4, 32, 1);
+  if (pixId === CASE_ID){
+    size.appendChild(mk('div', 'lblnote', CASE_W + ' x ' + CASE_H + ', fixed.'));
+    size.lastChild.style.cssText = 'color:#8fa39a;font-size:11px';
+  } else {
+    slider(size, 'width', () => p.w, v => pixResize(p, v, p.h), 4, 32, 1);
+    slider(size, 'height', () => p.h, v => pixResize(p, p.w, v), 4, 32, 1);
+  }
   sw.appendChild(size);
 
   pixPaint();
@@ -168,6 +185,7 @@ function pixBuild(){
 
 function pixPaint(){
   const p = PIX[pixId];
+  const PIX_Z = pixZoom(p);
   const cv = $('pixGrid');
   if (cv.width !== p.w * PIX_Z || cv.height !== p.h * PIX_Z){
     cv.width = p.w * PIX_Z; cv.height = p.h * PIX_Z;
@@ -191,10 +209,18 @@ function pixPaint(){
   // how it actually appears in the game, at one, two and four times
   const pv = $('pixPreview'); pv.innerHTML = '';
   const outline = pixId.slice(0,5) === 'icon.' ? '#141c1e' : pixId.slice(0,4) === 'hat.' ? '#241d13' : null;
-  const bare = makeCv(p.w, p.h);
-  pixDraw(readCtx(bare), pixId, p.ox||0, p.oy||0, 1);
-  [1,2,4].forEach(z => pv.appendChild(shot(bare, z, z + 'x')));
-  if (outline) pv.appendChild(shot(pixCanvas(pixId, outline), 4, 'outlined'));
+  /* The case skips the zoom strip. Three more copies of a 96x160 sprite is most
+     of the width of the window, and the assembled preview beside it says
+     everything they would have said and more. */
+  if (pixId !== CASE_ID){
+    const bare = makeCv(p.w, p.h);
+    pixDraw(readCtx(bare), pixId, p.ox||0, p.oy||0, 1);
+    [1,2,4].forEach(z => pv.appendChild(shot(bare, z, z + 'x')));
+    if (outline) pv.appendChild(shot(pixCanvas(pixId, outline), 4, 'outlined'));
+  }
+
+  $('caseCard').hidden = pixId !== CASE_ID;
+  if (pixId === CASE_ID) casePaint();
 }
 
 function pixResize(p, w, h){
@@ -203,6 +229,7 @@ function pixResize(p, w, h){
 }
 function pixAt(ev, erase){
   const p = PIX[pixId], r = $('pixGrid').getBoundingClientRect();
+  const PIX_Z = pixZoom(p);
   const x = Math.floor((ev.clientX - r.left) / PIX_Z), y = Math.floor((ev.clientY - r.top) / PIX_Z);
   if (x < 0 || y < 0 || x >= p.w || y >= p.h) return;
   const row = (p.rows[y] || '').padEnd(p.w);
@@ -219,6 +246,207 @@ window.addEventListener('mouseup', () => painting = 0);
 $('pixGrid').addEventListener('contextmenu', e => e.preventDefault());
 BUILD.pix = pixBuild;
 PAINT.pix = pixPaint;
+
+/* ---- importing a picture --------------------------------------------------
+   A drawn case is data in src/00-art.js and goes wherever the project goes. An
+   imported one is a file, and the project ships no image assets — so by default
+   it lands in Store, on this machine, where it is the owner's own skin and costs
+   the build nothing. `Promote` is the separate, deliberate step that writes it
+   into src/00-art.js and makes it the game's actual look.
+
+   Both read back through the same precedence, in the game and here: a local
+   skin first, then the promoted one, then the drawing. */
+let caseSkinURL = null;                  // the local skin, when there is one
+
+async function caseLoadSkin(){
+  try { caseSkinURL = await Store.get(CASE_KEY); }
+  catch (e){ caseSkinURL = null; }
+  if (!caseSkinURL && CASE_SKIN) caseSkinURL = CASE_SKIN;
+  return caseSkinURL;
+}
+
+function caseState(text, bad){
+  const el = $('caseState');
+  el.textContent = text;
+  el.style.color = bad ? 'var(--rust)' : 'var(--dim)';
+}
+
+/* What to tell someone before they go and draw one. The ratio is the part that
+   matters — the picture is stretched to the case, so anything 3:5 lands square
+   and anything else arrives distorted. The pixel size is only about not being
+   scaled up on the largest screen the case can appear on. */
+function caseWarning(){
+  $('caseWarn').innerHTML =
+    '<b>' + CASE_IMPORT[0] + ' x ' + CASE_IMPORT[1] + '</b>, or anything else in the same '
+  + '<b>3:5</b> shape — it is stretched to the case, so a different ratio arrives squashed. '
+  + 'PNG with the outside transparent; the case is not a rectangle. JPEG will chew the hard '
+  + 'edges. Leave the screen (cells 14–82 across, 65–117 down), the five key plates '
+  + '(y130–152) and the head strip clear: the game draws those on top.';
+}
+
+function caseImport(file){
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) return caseState('That file is ' + Math.round(file.size/1048576)
+    + 'MB. Keep it under 4MB — it has to live in this browser\u2019s storage.', true);
+  const reader = new FileReader();
+  reader.onerror = () => caseState('Could not read that file.', true);
+  reader.onload = () => {
+    const url = String(reader.result);
+    const img = new Image();
+    img.onerror = () => caseState('That does not decode as an image.', true);
+    img.onload = async () => {
+      const ratio = img.width / img.height, want = CASE_W / CASE_H;
+      caseSkinURL = url;
+      try { await Store.set(CASE_KEY, url); }
+      catch (e){ return caseState('Imported, but it would not fit in storage — it will be '
+        + 'gone when this page reloads.', true); }
+      const off = Math.abs(ratio - want) / want;
+      caseState(img.width + 'x' + img.height + ', ' + Math.round(file.size/1024) + 'KB. '
+        + (off > .02 ? 'That is ' + ratio.toFixed(3) + ' to 1 where the case is '
+                       + want.toFixed(3) + ' — it will be stretched to fit.'
+                     : 'Saved on this machine.'), off > .02);
+      rebuild();
+    };
+    img.src = url;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function caseClearSkin(){
+  caseSkinURL = null;
+  try { await Store.del(CASE_KEY); } catch (e){}
+  caseState(CASE_SKIN ? 'Local skin removed. The promoted picture is showing.'
+                      : 'Local skin removed. Your drawing is showing.');
+  rebuild();
+}
+
+/* Writing the picture into the project. It is a separate press because it is a
+   different decision: it makes the import the game's look for everyone, adds
+   its whole weight to the built file, and is the one thing here that puts an
+   image asset in a project whose house rule says it has none. */
+async function casePromote(){
+  if (!caseSkinURL) return caseState('Nothing imported to promote.', true);
+  const kb = Math.round(caseSkinURL.length * 0.75 / 1024);
+  if (!confirm('Write this picture into src/00-art.js?\n\nIt becomes the game\u2019s case for '
+             + 'everyone, and adds about ' + kb + 'KB to the built file.')) return;
+  CASE_SKIN = caseSkinURL;
+  caseState('Promoted. Press Save to write it to src/00-art.js.');
+  rebuild();
+}
+
+$('caseImport').onclick = () => $('caseFile').click();
+$('caseFile').onchange = e => { caseImport(e.target.files[0]); e.target.value = ''; };
+$('caseClear').onclick = caseClearSkin;
+$('casePromote').onclick = casePromote;
+/* ---- the case ------------------------------------------------------------
+   The case is a sprite like any other, so it is edited on the Pixels tab with
+   the icons and the hats. What it needs that they do not is somewhere to see it
+   assembled: a faceplate is only right or wrong relative to the things that sit
+   on it, and a screen recess two cells off reads as a mistake in the case
+   rather than in the drawing of it.
+
+   So the preview puts the live parts where the game puts them, from the same
+   cell numbers the stylesheet uses. Nothing here is a guess: change the layout
+   and this has to change with it, which is the point of the numbers being in
+   one table at the top of this file. */
+const CASE_PZ = 3;                                   // preview zoom, cells to px
+
+/* What an imported picture should be. The case is drawn at one cell per --px
+   and --px runs to about 5 on a desktop, so sixteen device pixels a cell covers
+   every screen it can appear on without ever being scaled up. */
+const CASE_IMPORT = [CASE_W * 16, CASE_H * 16];
+
+function caseCell(i){ return [i[0]*CASE_PZ, i[1]*CASE_PZ, i[2]*CASE_PZ, i[3]*CASE_PZ]; }
+
+/* The habitat and an animal in it, at the size the glass actually shows. Built
+   at 224x168 and scaled down, rather than drawn small, so it is the real
+   picture rather than an impression of one. */
+function caseGlass(){
+  const cv = makeCv(W, H), g = readCtx(cv);
+  g.imageSmoothingEnabled = false;
+  const [sx, sy, sw, sh] = BG_CROP[3];
+  g.drawImage(bakeBg('day', 'valley'), sx, sy, sw, sh, 0, 0, W, H);
+  const f = frameOf('rex', 3, 'idle', 0, false, 'wild');
+  g.drawImage(f.cv, Math.round(W/2 - f.ox), GROUND - f.oy);
+  return cv;
+}
+
+function casePaint(){
+  const cv = $('casePv');
+  cv.width = CASE_W * CASE_PZ; cv.height = CASE_H * CASE_PZ;
+  const g = readCtx(cv);
+  g.imageSmoothingEnabled = false;
+  g.clearRect(0, 0, cv.width, cv.height);
+
+  // the artwork, as it will be scaled onto the shell
+  if (caseSkinURL){
+    const img = new Image();
+    img.onload = () => { g.drawImage(img, 0, 0, cv.width, cv.height); casePaintLive(g); };
+    img.src = caseSkinURL;
+    return;
+  }
+  const bare = makeCv(CASE_W, CASE_H);
+  pixDraw(readCtx(bare), CASE_ID, 0, 0, 1);
+  g.drawImage(bare, 0, 0, cv.width, cv.height);
+  casePaintLive(g);
+}
+
+/* Everything the case does not own, drawn where the game draws it. */
+function casePaintLive(g){
+  const z = CASE_PZ;
+  // the glass, centred in the recess the way the canvas floats in the opening
+  const [gx, gy, gw, gh] = caseCell(CASE_CELLS.glass);
+  g.drawImage(caseGlass(), gx, gy, gw, gh);
+  g.strokeStyle = 'rgba(140,183,101,.35)'; g.lineWidth = 1;
+  const [rx, ry, rw, rh] = caseCell(CASE_CELLS.recess);
+  g.strokeRect(rx + .5, ry + .5, rw - 1, rh - 1);
+
+  // the name and the four meters, on the dark panel above the glass
+  const [px_, py] = caseCell(CASE_CELLS.screenBox);
+  g.fillStyle = '#e9e1cb';
+  g.font = 'bold ' + (5*z) + 'px ui-monospace,monospace';
+  g.fillText('Tank', px_ + 3*z, py + 10*z);
+  g.fillStyle = '#8fa39a'; g.font = (3.2*z) + 'px ui-monospace,monospace';
+  g.fillText('Adult T. rex', px_ + 19*z, py + 10*z);
+  const cols = ['#e0ac48','#e8d24e','#7fb2c9','#d98aa8'], names = ['Hunger','Energy','Clean','Joy'];
+  for (let i = 0; i < 4; i++){
+    const bx = px_ + 3*z + i*18.5*z, by = py + 13*z, bw = 17*z, bh = 10*z;
+    g.fillStyle = '#141d21'; g.fillRect(bx, by, bw, bh);
+    g.strokeStyle = '#2b3a3f'; g.strokeRect(bx + .5, by + .5, bw - 1, bh - 1);
+    g.fillStyle = '#8fa39a'; g.font = (2.4*z) + 'px ui-monospace,monospace';
+    g.fillText(names[i], bx + 2, by + 4*z);
+    g.fillStyle = '#05090a'; g.fillRect(bx + 2, by + 5.5*z, bw - 4, 2.5*z);
+    g.fillStyle = cols[i];   g.fillRect(bx + 2, by + 5.5*z, (bw - 4) * (.55 + i*.12), 2.5*z);
+  }
+  // the mood line, along the foot of the panel
+  g.fillStyle = '#e9e1cb'; g.font = (3.2*z) + 'px ui-monospace,monospace';
+  g.fillText('Tank is content.', px_ + 3*z, py + 76*z);
+
+  // the five keys, on the plates the art draws for them
+  const icons = ['feed','play','wash','care','shop'];
+  const [kx, ky, kw, kh] = CASE_CELLS.keys;
+  icons.forEach((id, i) => {
+    const x = (kx + i*CASE_CELLS.keyStep)*z, y = ky*z;
+    const art = pixCanvas('icon.' + id, '#141c1e');
+    const s = Math.min((kw*z*.55)/art.width, (kh*z*.45)/art.height);
+    g.drawImage(art, x + (kw*z - art.width*s)/2, y + 2*z, art.width*s, art.height*s);
+    g.fillStyle = '#dff0e4'; g.font = (3*z) + 'px ui-monospace,monospace';
+    const label = id[0].toUpperCase() + id.slice(1);
+    g.fillText(label, x + (kw*z - g.measureText(label).width)/2, y + kh*z - 3*z);
+  });
+
+  // the head: the purse and the four small keys
+  const [hx, hy, hw, hh] = caseCell(CASE_CELLS.head);
+  g.fillStyle = '#141d21'; g.fillRect(hx + 8*CASE_PZ, hy + 4*CASE_PZ, 22*CASE_PZ, 10*CASE_PZ);
+  g.fillStyle = '#e0ac48'; g.font = (4*CASE_PZ) + 'px ui-monospace,monospace';
+  g.fillText('24', hx + 18*CASE_PZ, hy + 11.5*CASE_PZ);
+  for (let i = 0; i < 4; i++){
+    const x = hx + (34 + i*11)*CASE_PZ, y = hy + 3*CASE_PZ;
+    g.fillStyle = i === 3 ? '#2f6b49' : '#c08f43';
+    g.fillRect(x, y, 9*CASE_PZ, 9*CASE_PZ);
+    g.strokeStyle = '#42290a'; g.strokeRect(x + .5, y + .5, 9*CASE_PZ - 1, 9*CASE_PZ - 1);
+  }
+}
 
 const STAGE_COLS = ['s','head','snout','muzzle','neck','limb','tail','bulk','torso','fuzz','horn','frill','hornBend'];
 
@@ -588,7 +816,8 @@ BUILD.gear = gearBuild;
 PAINT.gear = gearPaint;
 
 /* ---- go ------------------------------------------------------------------ */
-pixBuild();
+caseWarning();
+caseLoadSkin().then(pixBuild);
 /* Say up front which kind of Save this is. Opened through tools/edit.cmd, Save
    writes src/00-art.js and there is nothing to do afterwards; opened any other
    way there is no /save to talk to, and Save degrades into a file dialog that

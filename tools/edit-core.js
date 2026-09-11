@@ -14,7 +14,7 @@
    fact about the data rather than an assumption in the code. */
 const DATA_FILES = [
   { path: '../src/00-art.js', name: '00-art.js',
-    blocks: ['PIX','STAGE','SPECIES_STAGE','POSE_ART','HABITAT_ART','GEAR_FIT',
+    blocks: ['PIX','CASE_SKIN','STAGE','SPECIES_STAGE','POSE_ART','HABITAT_ART','GEAR_FIT',
              'REX_TUNE','TRI_TUNE','BRA_TUNE',
              'REX_SPEC','TRI_SPEC','BRA_SPEC','SKINS','BIOME_ART'] }
 ];
@@ -78,7 +78,7 @@ function jsPIX(pix){
    property of the window — `window.PIX` is undefined while `PIX` is right
    there. Listing them also means a block that stops being editable fails
    loudly at load instead of silently saving stale text. */
-const LIVE = { PIX, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, GEAR_FIT,
+const LIVE = { PIX, CASE_SKIN, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, GEAR_FIT,
                REX_TUNE, TRI_TUNE, BRA_TUNE,
                REX_SPEC, TRI_SPEC, BRA_SPEC, SKINS, BIOME_ART };
 const BLOCKS = Object.keys(LIVE);
@@ -97,6 +97,10 @@ const BLOCKS = Object.keys(LIVE);
 
 function blockText(name){
   if (name === 'PIX') return jsPIX(PIX);
+  /* Read through the live binding rather than the snapshot in LIVE: the editor
+     assigns CASE_SKIN when a picture is promoted, and LIVE captured the empty
+     string this file was loaded with. */
+  if (name === 'CASE_SKIN') return 'let CASE_SKIN = ' + q(CASE_SKIN) + ';';
   return 'const ' + name + ' = ' + js(LIVE[name], 0) + ';';
 }
 

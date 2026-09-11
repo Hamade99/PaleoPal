@@ -86,8 +86,10 @@ body{
   display:flex;align-items:flex-start;justify-content:center;
   overscroll-behavior:none;
 }
+/* Narrow side padding, because the case now has a floor it cannot go below and
+   every pixel here comes off the case. */
 #app{width:100%;max-width:520px;margin:auto 0;
-  padding:calc(var(--px)*10) calc(var(--px)*3) calc(var(--px)*7 + var(--safe));position:relative}
+  padding:calc(var(--px)*8) calc(var(--px)*2) calc(var(--px)*6 + var(--safe));position:relative}
 
 /* ---------- the shell ----------
 
@@ -1480,6 +1482,24 @@ const PIX = {
     ] },
 };
 /*</data>*/
+
+/* A picture of the case, imported rather than drawn, and promoted into the
+   project on purpose.
+
+   The house rule is that this game ships no image assets, and it still ships
+   none: this is empty, and an imported case lives in Store on the machine that
+   imported it. Promoting one is the deliberate exception — it makes the picture
+   the game's case for everyone and puts its whole weight in the built file, so
+   it is a press of its own in the editor and not a side effect of importing.
+
+   `let`, not `const`, because the editor assigns it before saving. Empty string
+   means "there is no promoted picture"; the case falls back to PIX.case. */
+/*<data:CASE_SKIN>*/
+let CASE_SKIN = '';
+/*</data>*/
+/* Where a skin that has not been promoted lives: this machine, and nowhere
+   else. Named here so the game and the editor cannot drift apart on it. */
+const CASE_KEY = 'paleopal.case.skin';
 
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
@@ -8096,7 +8116,11 @@ const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
    for it and is centred there, the way an LCD sits in a moulded opening. */
 const CASE_W = 96, CASE_H = 160;          // the grid the artwork is drawn on
 const RECESS_W = 68, RECESS_H = 52;       // where the canvas floats, in cells
-const PX_MIN = 2.6, PX_MAX = 9;
+/* The floor is not a matter of taste: below it the recess is smaller than the
+   224x168 canvas, and the canvas would either be clipped by the moulding or
+   take a fractional scale to fit. 224/68 is 3.30 and 168/52 is 3.24, so 3.3 is
+   the smallest case that can still show the game at 1:1. */
+const PX_MIN = 3.3, PX_MAX = 9;
 
 function fitScreen(){
   const app = $('app');
@@ -8122,8 +8146,16 @@ function fitScreen(){
    dark halo between the case and the page. */
 let caseSkin = null;                      // an imported image, when there is one
 function paintCase(){
-  const url = caseSkin || pixCanvas('case').toDataURL();
+  const url = caseSkin || CASE_SKIN || pixCanvas('case').toDataURL();
   document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
+}
+/* An imported case is the owner's own and lives on their machine, so it has to
+   be fetched before the case is first painted. A failure here is not worth
+   stopping the game for: the drawing underneath is always there. */
+async function loadCaseSkin(){
+  try { caseSkin = await Store.get(CASE_KEY); }
+  catch (e){ caseSkin = null; }
+  paintCase();
 }
 
 /* Refit on anything that changes the box. The window resize is debounced; the
@@ -8703,6 +8735,7 @@ async function boot(){
   buildChrome();
   fitScreen();
   paintCase();
+  loadCaseSkin();
   G = freshGame();
   let loaded;
   try { loaded = loadSave(await Store.get(SAVE_KEY)); }

@@ -83,6 +83,22 @@
       <h2 style="margin-top:12px">Palette</h2>
       <div id="pixSwatches"></div>
     </div>
+    <div class="card" id="caseCard" hidden>
+      <h2>The whole thing</h2>
+      <p class="hint" style="max-width:32ch;margin-bottom:8px">Everything live is drawn
+      on top of your art, where the game puts it. The screen, the meters and the five
+      keys are not yours to draw — leave them clear.</p>
+      <canvas id="casePv"></canvas>
+      <h2 style="margin-top:12px">Import a picture</h2>
+      <p class="hint" id="caseWarn" style="max-width:32ch"></p>
+      <div class="strip">
+        <button class="tab" id="caseImport">Choose a file…</button>
+        <button class="tab" id="caseClear">Back to the drawing</button>
+        <button class="tab" id="casePromote">Into the project…</button>
+      </div>
+      <input id="caseFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+      <div id="caseState" style="color:var(--dim);font-size:11px;margin-top:6px"></div>
+    </div>
   </div>
 </main>
 

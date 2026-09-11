@@ -114,7 +114,11 @@ const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
    for it and is centred there, the way an LCD sits in a moulded opening. */
 const CASE_W = 96, CASE_H = 160;          // the grid the artwork is drawn on
 const RECESS_W = 68, RECESS_H = 52;       // where the canvas floats, in cells
-const PX_MIN = 2.6, PX_MAX = 9;
+/* The floor is not a matter of taste: below it the recess is smaller than the
+   224x168 canvas, and the canvas would either be clipped by the moulding or
+   take a fractional scale to fit. 224/68 is 3.30 and 168/52 is 3.24, so 3.3 is
+   the smallest case that can still show the game at 1:1. */
+const PX_MIN = 3.3, PX_MAX = 9;
 
 function fitScreen(){
   const app = $('app');
@@ -140,8 +144,16 @@ function fitScreen(){
    dark halo between the case and the page. */
 let caseSkin = null;                      // an imported image, when there is one
 function paintCase(){
-  const url = caseSkin || pixCanvas('case').toDataURL();
+  const url = caseSkin || CASE_SKIN || pixCanvas('case').toDataURL();
   document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
+}
+/* An imported case is the owner's own and lives on their machine, so it has to
+   be fetched before the case is first painted. A failure here is not worth
+   stopping the game for: the drawing underneath is always there. */
+async function loadCaseSkin(){
+  try { caseSkin = await Store.get(CASE_KEY); }
+  catch (e){ caseSkin = null; }
+  paintCase();
 }
 
 /* Refit on anything that changes the box. The window resize is debounced; the
@@ -721,6 +733,7 @@ async function boot(){
   buildChrome();
   fitScreen();
   paintCase();
+  loadCaseSkin();
   G = freshGame();
   let loaded;
   try { loaded = loadSave(await Store.get(SAVE_KEY)); }

@@ -75,8 +75,10 @@ body{
   display:flex;align-items:flex-start;justify-content:center;
   overscroll-behavior:none;
 }
+/* Narrow side padding, because the case now has a floor it cannot go below and
+   every pixel here comes off the case. */
 #app{width:100%;max-width:520px;margin:auto 0;
-  padding:calc(var(--px)*10) calc(var(--px)*3) calc(var(--px)*7 + var(--safe));position:relative}
+  padding:calc(var(--px)*8) calc(var(--px)*2) calc(var(--px)*6 + var(--safe));position:relative}
 
 /* ---------- the shell ----------
 

@@ -88,6 +88,32 @@ rather than writing it again.
   highlight; nothing decorative is evenly spaced or mirrored. Stacking effects
   and spacing things perfectly is what made the first case look rendered
   rather than moulded.
+- **The case is a 96x160 sprite, and the boxes on it are fractions.** `PIX.case`
+  is the moulding, the crown ridge, the bezel, the screw heads and the five key
+  plates; it is edited in the Pixels tab like any other sprite, or replaced by
+  an imported picture. Everything live sits on top at cells the stylesheet
+  writes as percentages: recess `14,65` `68x52`, keys `5,130` `15x22` in steps
+  of 18, panel `8,43` `80x80`, head `5,14`. Those numbers are in three places —
+  the art, `style.css` and `CASE_CELLS` in `tools/edit-ui.js` — and a Node test
+  checks the first two against each other, because nothing at runtime would
+  notice them drifting: the screen would just sit off the recess, which reads
+  as a badly drawn case rather than as a bug.
+  Write positions as fractions of the case, never as multiples of `--px`. Both
+  agree when `--px` is right; only the fraction is still right in the gap after
+  a resize before `fitScreen()` has caught up, and the case overflowed a 375px
+  window in exactly that gap.
+  The canvas floats *inside* the recess rather than being it — largest whole or
+  half multiple of 224 that fits, centred — so the case can scale continuously
+  while the world stays on its pixel grid. `PX_MIN` is 3.3 because below that
+  the recess is smaller than 224x168 and the glass would have to be scaled by a
+  fraction.
+- **An imported case is the owner's, not the project's.** "No image assets"
+  still holds: `CASE_SKIN` ships empty and an imported picture lives in `Store`
+  on the machine that imported it. Promoting one into `src/00-art.js` is a
+  separate press in the editor because it is a separate decision — it becomes
+  everyone's case and puts its whole weight in the built file. Precedence is
+  local skin, then promoted, then the drawing, in the game and in the editor
+  both.
 - **Anything that sits on the shell's curve is placed by `fitCrown()`,** not by
   a typed offset. That curve is an ellipse whose radii are fractions of the
   rendered width and height, so it moves with the viewport and CSS cannot

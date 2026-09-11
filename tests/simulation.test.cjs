@@ -198,7 +198,7 @@ test('art data markers match the declaration they own', () => {
   const file='00-art.js';
   const source=fs.readFileSync(path.join(__dirname,'../src',file),'utf8');
   const names=[];
-  for (const match of source.matchAll(/\/\*<data:(\w+)>\*\/\s*const (\w+)/g)) {
+  for (const match of source.matchAll(/\/\*<data:(\w+)>\*\/\s*(?:const|let) (\w+)/g)) {
     assert.equal(match[1],match[2],file+' marker names its own declaration');
     names.push(match[1]);
   }
@@ -210,6 +210,78 @@ test('art data markers match the declaration they own', () => {
   const core=fs.readFileSync(path.join(__dirname,'../tools/edit-core.js'),'utf8');
   for (const name of names)
     assert.ok(core.includes("'"+name+"'"),name+' is claimed by a file in DATA_FILES');
+});
+
+/* The case is a 96x160 grid and the boxes on it are fractions of that grid.
+   Written in two places — the art is drawn against cells, the stylesheet in
+   percentages — and a hand-drawn faceplate is only worth drawing if they agree.
+   Nothing at runtime would notice if they stopped: the screen would simply sit
+   a little off the recess, which reads as a badly drawn case rather than as a
+   bug in the game. */
+test('the case grid and the boxes placed on it agree', () => {
+  const art = fs.readFileSync(path.join(__dirname, '../src/00-art.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../src/style.css'), 'utf8');
+  const head = /'case': \{ w:(\d+), h:(\d+),/.exec(art);
+  assert.ok(head, 'PIX.case exists');
+  const W = +head[1], H = +head[2];
+  assert.deepEqual([W, H], [96, 160], 'the case grid is the size the layout assumes');
+  const body = art.slice(art.indexOf("'case': {"));
+  const rows = body.slice(body.indexOf('rows:['), body.indexOf('] },'))
+    .split('\n').map(line => /'(.*)'/.exec(line)).filter(Boolean).map(m => m[1]);
+  assert.equal(rows.length, H, 'the art has one row per cell');
+  assert.ok(rows.every(r => r.length === W), 'every row is the full width');
+
+  /* Every block for the selector, joined. A selector has more than one rule —
+     `.bezel` is placed in one and emptied of its old paint in another — and
+     they are not written the same way, so looking only at the first block found
+     reads whichever happens to come first in the file. */
+  const rule = sel => {
+    const out = [];
+    for (let at = css.indexOf(sel); at >= 0; at = css.indexOf(sel, at + 1)){
+      const brace = css.indexOf('{', at);
+      if (brace < 0 || css.slice(at + sel.length, brace).trim() !== '') continue;
+      out.push(css.slice(brace, css.indexOf('}', brace)));
+    }
+    assert.ok(out.length, sel + ' has a rule');
+    return out.join(';');
+  };
+  /* Literal patterns, built once. A pattern assembled from a string needs its
+     backslashes doubled and it is the kind of thing that silently degrades into
+     matching nothing — which in a test means passing for the wrong reason. */
+  const PROP_RE = { left:/left\s*:\s*([\d.]+)%/, top:/top\s*:\s*([\d.]+)%/,
+                    width:/width\s*:\s*([\d.]+)%/, height:/height\s*:\s*([\d.]+)%/ };
+  const pct = (sel, prop) => {
+    const m = PROP_RE[prop].exec(rule(sel));
+    assert.ok(m, sel + ' sets ' + prop + ' as a percentage of the case');
+    return parseFloat(m[1]);
+  };
+  const near = (got, want, what) =>
+    assert.ok(Math.abs(got - want) < 0.01, what + ': ' + got + '% should be ' + want.toFixed(4) + '%');
+
+  near(pct('.shellhead', 'left'),   5 / W * 100, 'head left');
+  near(pct('.shellhead', 'top'),   14 / H * 100, 'head top');
+  near(pct('.shellhead', 'width'), 86 / W * 100, 'head width');
+  near(pct('.bezel', 'left'),    8 / W * 100, 'panel left');
+  near(pct('.bezel', 'top'),    43 / H * 100, 'panel top');
+  near(pct('.bezel', 'width'),  80 / W * 100, 'panel width');
+  near(pct('.bezel', 'height'), 80 / H * 100, 'panel height');
+  near(pct('.keys', 'left'),    5 / W * 100, 'keys left');
+  near(pct('.keys', 'top'),   130 / H * 100, 'keys top');
+  near(pct('.keys', 'width'),  87 / W * 100, 'keys width');
+  // the recess is a fraction of the panel, which is 80 cells square
+  near(pct('.stage', 'left'),    6 / 80 * 100, 'recess left');
+  near(pct('.stage', 'top'),    22 / 80 * 100, 'recess top');
+  near(pct('.stage', 'width'),  68 / 80 * 100, 'recess width');
+  near(pct('.stage', 'height'), 52 / 80 * 100, 'recess height');
+
+  /* The canvas must fit the recess at 1:1 on the smallest case anyone can be
+     shown, or the glass would have to take a fractional scale — the one thing
+     the pixel grid cannot survive. */
+  const ui = fs.readFileSync(path.join(__dirname, '../src/08-ui.js'), 'utf8');
+  const pxMin = parseFloat(/PX_MIN = ([\d.]+)/.exec(ui)[1]);
+  assert.ok(68 * pxMin >= 224 && 52 * pxMin >= 168,
+    'at PX_MIN=' + pxMin + ' the recess is ' + (68 * pxMin) + 'x' + (52 * pxMin)
+    + ', too small for a 224x168 canvas');
 });
 
 /* Every crop has to be 4:3 and has to put the world's ground line on the

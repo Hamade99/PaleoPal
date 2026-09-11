@@ -762,6 +762,24 @@ const PIX = {
 };
 /*</data>*/
 
+/* A picture of the case, imported rather than drawn, and promoted into the
+   project on purpose.
+
+   The house rule is that this game ships no image assets, and it still ships
+   none: this is empty, and an imported case lives in Store on the machine that
+   imported it. Promoting one is the deliberate exception — it makes the picture
+   the game's case for everyone and puts its whole weight in the built file, so
+   it is a press of its own in the editor and not a side effect of importing.
+
+   `let`, not `const`, because the editor assigns it before saving. Empty string
+   means "there is no promoted picture"; the case falls back to PIX.case. */
+/*<data:CASE_SKIN>*/
+let CASE_SKIN = '';
+/*</data>*/
+/* Where a skin that has not been promoted lives: this machine, and nowhere
+   else. Named here so the game and the editor cannot drift apart on it. */
+const CASE_KEY = 'paleopal.case.skin';
+
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
 
