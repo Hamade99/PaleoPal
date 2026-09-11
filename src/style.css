@@ -437,6 +437,30 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   margin-top:calc(var(--px)*2.5);line-height:1.6}
 button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 
+/* Thumbs, not pointers.
+
+   The five keys under the glass are 62x64 and fine. The four small keys in the
+   head are `--px*9`, which is 36 CSS pixels — under the 44 iOS asks for and the
+   48 Android asks for, and on a phone that is the difference between pressing
+   the sound key and pressing the nest key next to it.
+
+   Making them bigger would mean redrawing the head of the case, so instead the
+   painted key stays exactly the size it is and the area a thumb has to hit is
+   extended past it by a transparent overlay.
+
+   The gap is then whatever keeps two of those targets from overlapping — which
+   is 48 less the width of the key, and never less than the gap the case wants
+   anyway. Hardcoding the gap instead works at one `--px` and fails at the
+   other: at 3.4px the keys are 30.6 wide, the pitch came out at 40.8, and two
+   48-pixel targets overlapped by seven — which makes which key you pressed a
+   question of paint order rather than of where your thumb was. */
+@media (pointer:coarse){
+  .tools{gap:max(calc(var(--px)*3), calc(48px - var(--px)*9))}
+  .iconbtn{position:relative}
+  .iconbtn::after{content:'';position:absolute;left:50%;top:50%;
+    width:48px;height:48px;transform:translate(-50%,-50%)}
+}
+
 @media (max-width:400px){
   :root{--px:3.4px}
 }
