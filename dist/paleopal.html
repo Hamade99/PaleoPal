@@ -274,7 +274,7 @@ body{
   box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(140,183,101,.14)}
 canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   touch-action:none;cursor:pointer}
-.lamp{position:absolute;right:0;bottom:calc(var(--px)*-2.5);
+.lamp{position:absolute;right:0;top:calc(var(--px)*-2.5);
   width:calc(var(--px)*1.5);height:calc(var(--px)*1.5);border-radius:50%;background:var(--moss)}
 .lamp.rest{background:var(--sky)}
 .lamp.bad{background:var(--rust)}
@@ -287,6 +287,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   border:2px solid var(--ink);z-index:2
 }
 .bubble.on{opacity:1;transform:translate(-50%,0)}
+.bubble.bad{background:#f0d3c6;border-color:#8a3a22;color:#3a1710}
 .picks span{position:absolute;bottom:calc(var(--px)*3.5);transform:translateX(-50%);
   text-align:center;font-size:calc(var(--px)*2.75);color:#b9c4bd;line-height:1.35;
   white-space:nowrap;background:rgba(10,18,16,.85);border:1px solid rgba(90,116,104,.55);
@@ -298,6 +299,14 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   font-size:calc(var(--px)*2.5);padding:1px calc(var(--px)*1.5);
   display:flex;align-items:center;gap:calc(var(--px)*1);line-height:1.5}
 .tag.warn{border-color:#8a4130;color:#f5c3ad;background:rgba(48,17,9,.88)}
+/* The animal's own age, leading the badge row. Ochre because that is already
+   the colour of something earned, and a size up from the status tags because
+   it is a counter rather than one more warning — every other badge is a thing
+   to deal with and this is the only one that is a reward for having been
+   here. */
+.age{background:rgba(10,18,16,.9);border:1px solid #6a5a2c;color:var(--ochre);
+  font-size:calc(var(--px)*3.25);font-weight:700;letter-spacing:.5px;
+  padding:0 calc(var(--px)*1.5);line-height:1.55;display:flex;align-items:center}
 .dot{width:calc(var(--px)*1.25);height:calc(var(--px)*1.25);border-radius:50%;background:var(--moss)}
 .tag.warn .dot{background:var(--rust)}
 
@@ -694,38 +703,21 @@ function blob(g, pts, col){
   }
   g.closePath(); g.fill();
 }
-function oval(g,x,y,rx,ry,col,rot){
-  if (col) g.fillStyle=col; g.beginPath(); g.ellipse(x,y,Math.abs(rx),Math.abs(ry),rot||0,0,7); g.fill();
+/* A closed polygon with hard corners. `blob` rounds everything it is given,
+   which is right for a ribcage and wrong for anything that has to meet the
+   ground flat or come to a point: a sole drawn as a blob bulges into a ball
+   and a claw drawn as one is a pebble. Straight edges, and the quantiser gives
+   them the same hard pixel edge as everything else. */
+function poly(g, pts, col){
+  if (col) g.fillStyle = col;
+  g.beginPath();
+  g.moveTo(pts[0][0], pts[0][1]);
+  for (let i=1;i<pts.length;i++) g.lineTo(pts[i][0], pts[i][1]);
+  g.closePath(); g.fill();
 }
 
-/* hard-edge pass: kill antialiasing, snap to the species ramp, dilate outline */
-function crisp(src, palette, outline){
-  const w = src.width, h = src.height;
-  const g = readCtx(src);
-  const img = g.getImageData(0,0,w,h), d = img.data;
-  const ramp = palette.map(hex => [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16),hex]);
-  const solid = new Uint8Array(w*h);
-  for (let i=0;i<w*h;i++){
-    const o=i*4;
-    if (d[o+3] < 118){ d[o+3]=0; continue; }
-    d[o+3]=255; solid[i]=1;
-    let best=ramp[0], bd=1e9;
-    for (const c of ramp){
-      const dd=(c[0]-d[o])**2+(c[1]-d[o+1])**2+(c[2]-d[o+2])**2;
-      if (dd<bd){bd=dd;best=c;}
-    }
-    d[o]=best[0]; d[o+1]=best[1]; d[o+2]=best[2];
-  }
-  // dilate a 1px outline into the transparent border
-  const oc = [parseInt(outline.slice(1,3),16),parseInt(outline.slice(3,5),16),parseInt(outline.slice(5,7),16)];
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
-    const i=y*w+x; if (solid[i]) continue;
-    if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
-      const o=i*4; d[o]=oc[0]; d[o+1]=oc[1]; d[o+2]=oc[2]; d[o+3]=255;
-    }
-  }
-  g.putImageData(img,0,0);
-  return src;
+function oval(g,x,y,rx,ry,col,rot){
+  if (col) g.fillStyle=col; g.beginPath(); g.ellipse(x,y,Math.abs(rx),Math.abs(ry),rot||0,0,7); g.fill();
 }
 
 /* trim transparent margins so anchors and ground contact stay exact */
@@ -1140,6 +1132,172 @@ const PIX = {
       '            ',
       '            '
     ] },
+  /* Seen from above, for the forage game, which is played looking down at the
+     pen. Two frames each: the legs trade places and the tail swings the other
+     way, which is a stride from this angle. They are ordinary PIX sprites, so
+     every pixel of them is editable in the Pixels tab like any other — which is
+     the point of them being pixels rather than another projection of the
+     procedural animal. Drawn facing +x and rotated to the heading. */
+  'top.rex.a': { w:30, h:17, ox:15, oy:8,
+    pal:['#241d13','#7e9c54','#a0b680','#5f713e','#e9dfba','#5b7940'], rows:[
+      '           04440              ',
+      '           00140              ',
+      '          03110               ',
+      '          01130    00         ',
+      '         001100  00330        ',
+      '       003311330033300 0000   ',
+      '      0331111113333003011130  ',
+      '    00311122221111111112211300',
+      '  0031222222221122222122222244',
+      ' 01222222222221111111112211300',
+      ' 033333331111113333003111130  ',
+      '  0000000331133003330000000   ',
+      '         001100  00330        ',
+      '         03110     00         ',
+      '         01130                ',
+      '        04100                 ',
+      '       0440                   '
+    ] },
+  'top.rex.b': { w:30, h:17, ox:15, oy:8,
+    pal:['#241d13','#7e9c54','#a0b680','#5f713e','#e9dfba','#5b7940'], rows:[
+      '       0440                   ',
+      '        04100                 ',
+      '         01130                ',
+      '         03110     00         ',
+      '         001100  00330        ',
+      '  00000003311330033300 0000   ',
+      ' 033333331111113333003011130  ',
+      ' 01222222222221111111112211300',
+      '  0031222222221122222122222244',
+      '    00311122221111111112211300',
+      '      0331111113333003111130  ',
+      '       00331133003330000000   ',
+      '         001100  00330        ',
+      '          01130    00         ',
+      '          03110               ',
+      '           00140              ',
+      '           04440              '
+    ] },
+  'top.trike.a': { w:29, h:21, ox:14, oy:10,
+    pal:['#2b1c10','#a06635','#b98e6a','#784d28','#efe6c8','#7d4a22'], rows:[
+      '                             ',
+      '            0  0             ',
+      '           010010            ',
+      '          03100110   00      ',
+      '         0313000130 0330   0 ',
+      '        031333301130333300040',
+      '        03331133313031130440 ',
+      '       03311111131111111440  ',
+      '      0331112211111112204130 ',
+      '    0031111222211222122111100',
+      '  001122222222221222122122455',
+      ' 0122222211222211222122111100',
+      '  00033331112211111112214130 ',
+      '     0003311111131111110440  ',
+      '        03331133313031130440 ',
+      '        031333303110333300040',
+      '        0313000 03100330   0 ',
+      '        0130     011000      ',
+      '        010       010        ',
+      '         0         0         ',
+      '                             '
+    ] },
+  'top.trike.b': { w:29, h:21, ox:14, oy:10,
+    pal:['#2b1c10','#a06635','#b98e6a','#784d28','#efe6c8','#7d4a22'], rows:[
+      '                             ',
+      '         0         0         ',
+      '        010       010        ',
+      '        0130     011000      ',
+      '        0313000 03100330   0 ',
+      '        031333303110333300040',
+      '        03331133313031130440 ',
+      '     0003311111131111111440  ',
+      '  00033331112211111112204130 ',
+      ' 0122222211222211222122111100',
+      '  001122222222221222122122455',
+      '    0031111222211222122111100',
+      '      0331112211111112214130 ',
+      '       03311111131111110440  ',
+      '        03331133313031130440 ',
+      '        031333301130333300040',
+      '         0313000130 0330   0 ',
+      '          03100110   00      ',
+      '           010010            ',
+      '            0  0             ',
+      '                             '
+    ] },
+  'top.brachio.a': { w:32, h:19, ox:16, oy:9,
+    pal:['#1b2422','#71958a','#96b1a8','#546f67','#e2e3bc','#88a894'], rows:[
+      '            0                   ',
+      '           010 00               ',
+      '          00100110              ',
+      '         03130 0130             ',
+      '         01130001130            ',
+      '         01333333130         0  ',
+      ' 0000000033111111330   00000030 ',
+      '0333333333111111113000033331510 ',
+      '0122222222112222111112222221510 ',
+      ' 00011222222222221222221130000  ',
+      '    0031111122221111130000      ',
+      '      0003111111113000          ',
+      '        033111111330            ',
+      '         01333333130            ',
+      '        031100003110            ',
+      '        03130   0310            ',
+      '        0100     0110           ',
+      '        010       00            ',
+      '         0                      '
+    ] },
+  'top.brachio.b': { w:32, h:19, ox:16, oy:9,
+    pal:['#1b2422','#71958a','#96b1a8','#546f67','#e2e3bc','#88a894'], rows:[
+      '         0                      ',
+      '        010       00            ',
+      '        0100     0110           ',
+      '        03130   0310            ',
+      '        031100003110            ',
+      '         01333333130            ',
+      '        033111111330            ',
+      '      0003111111113000          ',
+      '    0031111122221111130000      ',
+      ' 000112222222222212222211300 0  ',
+      '0122222222112222111112222221010 ',
+      '0333333333111111113000033331510 ',
+      ' 0000000033111111330   00000330 ',
+      '         01333333130        00  ',
+      '         01130001130            ',
+      '         03130 0130             ',
+      '          00100110              ',
+      '           010 00               ',
+      '            0                   '
+    ] },
+  'top.compy.a': { w:18, h:11, ox:9, oy:5,
+    pal:['#241d13','#c9a355','#d7bb81','#91753f','#e6cf94','#8a6c34'], rows:[
+      '         0        ',
+      '        010       ',
+      '       010    0   ',
+      '      01100000300 ',
+      '   000311113112230',
+      ' 0011222221221110 ',
+      '0221111111100000  ',
+      ' 0000001100       ',
+      '      010         ',
+      '     010          ',
+      '      0           '
+    ] },
+  'top.compy.b': { w:18, h:11, ox:9, oy:5,
+    pal:['#241d13','#c9a355','#d7bb81','#91753f','#e6cf94','#8a6c34'], rows:[
+      '      0           ',
+      '     010          ',
+      '      010         ',
+      ' 0000001100       ',
+      '022111111110000   ',
+      ' 0011222221221100 ',
+      '   000311113112230',
+      '      01100000330 ',
+      '       010    00  ',
+      '        010       ',
+      '         0        '
+    ] },
   'mess': { w:10, h:9, ox:4, oy:7,
     pal:['#6b4322','#8a5c33','#513218'], rows:[
       '          ',
@@ -1164,393 +1322,6 @@ const PIX = {
     ] },
 };
 /*</data>*/
-
-/* ==========================================================================
-   HAND-DRAWN PARTS
-   A species' draw function paints shapes onto fifteen material-layer canvases
-   and the compositor turns those into pixels. This is the way to bypass one of
-   those shapes and put a drawing there instead.
-
-   The thing to understand first, because it decides the format: a material
-   layer is NOT a picture in colours. composeSprite reads each layer as a
-   binary mask — alpha over 118 claims the pixel for that layer — and every
-   colour in the finished sprite comes from that material's ramp, run through
-   the lighting pass and the outline. Nothing ever reads a colour off a layer.
-
-   So a drawing here says which MATERIAL each pixel is, not what colour it is.
-   One character per pixel: a space is nothing, and 0-9 then a-e index into
-   LAYERS. Draw with materials and the shading, the internal edges and the
-   outline all come back for free — and the pipeline's rules still apply, so
-   two touching pixels of one material merge into a region with no edge between
-   them, exactly as a mandible painted onto `head` was invisible until
-   session 9.
-
-   Keyed species|unit|stage. A unit is one material layer's worth of geometry,
-   because that is the granularity the canvases already have — `body` is the
-   whole trunk, since the house rule says to draw neck, ribcage, hips and tail
-   as one closed blob and there is no way to replace the hip out of the middle
-   of it. PART_UNITS below is the list.
-
-   Stage is in the key because a drawing is stamped at device resolution — one
-   grid pixel is one baked pixel — and so does not scale with the animal.
-   Scaling hand-drawn pixels would destroy the grid. Four stages is four
-   drawings, which is the honest price of drawing rather than computing.
-
-   `ox`/`oy` are where the anchor sits inside the grid, the same convention PIX
-   uses. The anchor itself comes from the draw function, after the pose has
-   been applied, which is what makes a stamped part rise with the breath and
-   travel with the walk instead of sitting at a guessed offset. It is the same
-   mechanism that keeps a hat on a skull.
-
-   Empty by default: every unit with no entry here stays procedural, and that
-   absence IS the fallback. Draw the head by hand and leave the legs to the
-   gait solver, and the animal still walks. */
-/*<data:PART_PIX>*/
-const PART_PIX = {
-  'rex|mouth|3': { w:42, h:18, ox:17, oy:14, rows:[
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '       h                                  ',
-    '       hh                                 ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    ' hhhh                                     ',
-    '      hhhh               hhhhh            ',
-    '           hhhhhhhhhhhhhhh                ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          '
-  ] },
-  'trike|body|3': { w:114, h:46, ox:32, oy:6, rows:[
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '           111111111111                                                                                           ',
-    '          1111111111111111111       11111111111111111                                                             ',
-    '         1111111111111111111111111111111111111111111111111                                                        ',
-    '        11111111111111111111111111111111111111111111111111111                                                     ',
-    '       1111111111111111111111111111111111111111111111111111111111                                                 ',
-    '      11111111111111111111111111111111111111111111111111111111111111                                              ',
-    '      11111111111111111111111111111111111111111111111111111111111111111                                           ',
-    '     1111111111111111111111111111111111111111111111111111111111111111111111                                       ',
-    '     1111111111111111111111111111111111111111111111111111111111111111111111111                                    ',
-    '    111111111111111111111111111111111111111111111111111111111111111111111111111111                                ',
-    '    11111111111111111111111111111111111111111111111111111111111111111111111111111111111                           ',
-    '    1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                      ',
-    '    1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                ',
-    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111           ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111       ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111    ',
-    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111     ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111          ',
-    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                 ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111                            ',
-    '     11111111111111111111111111111111111111111111111        1111111111                                            ',
-    '      11111111111111111111111111111111111111111111                                                                ',
-    '       111111111111111111111111111111111111111111                                                                 ',
-    '       111111111111111111111111111111111111111111                                                                 ',
-    '          11111111111111111111111111111111111111                                                                  ',
-    '           1111111111111111111111111111111111111                                                                  ',
-    '           111111111111111111111111111111111111                                                                   ',
-    '            11111111111111111111111111111111111                                                                   ',
-    '            11111111111111111111111111111111111                                                                   ',
-    '             1111111111111111111111111111111111                                                                   ',
-    '              11111111111111111111111111111111                                                                    ',
-    '              11111111111111111111111111111111                                                                    ',
-    '               1111111111111111111111111111111                                                                    ',
-    '               111111111111111111111111111111                                                                     ',
-    '                11111111111111111111111111111                                                                     ',
-    '                1111111111111111111111111111                                                                      ',
-    '                  1111111111111111111111111                                                                       ',
-    '                                       11                                                                         ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  '
-  ] },
-  'trike|crest|3': { w:31, h:17, ox:-41, oy:9, rows:[
-    '                               ',
-    '                               ',
-    '                               ',
-    '                               ',
-    '               g               ',
-    '              ggg              ',
-    '    gg                         ',
-    '    gg                   gg    ',
-    '                         gg    ',
-    '                               ',
-    '                               ',
-    '          gg                   ',
-    '          gg                   ',
-    '                               ',
-    '                               ',
-    '                               ',
-    '                               '
-  ] },
-  'trike|shield|3': { w:38, h:37, ox:12, oy:5, rows:[
-    '                                      ',
-    '                                      ',
-    '                                      ',
-    '                                      ',
-    '              333                     ',
-    '             333333                   ',
-    '           33333333333                ',
-    '        33333333333333333             ',
-    '       3333333333333333333            ',
-    '       33333333333333333333           ',
-    '      3333333333333333333333          ',
-    '      33333333333333333333333         ',
-    '      33333333333333333333333         ',
-    '      333333333333333333333333        ',
-    '      333333333333333333333333        ',
-    '     33333333333333333333333333       ',
-    '     33333333333333333333333333       ',
-    '    3333333333333333333333333333      ',
-    '    3333333333333333333333333333      ',
-    '    3333333333333333333333333333      ',
-    '    33333333333333333333333333333     ',
-    '     3333333333333333333333333333     ',
-    '     33333333333333333333333333333    ',
-    '      3333333333333333333333333333    ',
-    '      3333333333333333333333333333    ',
-    '       333333333333333333333333333    ',
-    '       333333333333333333333333333    ',
-    '        3333333333333333333333333     ',
-    '         33333333333333333333333      ',
-    '         3333333333333333333333       ',
-    '          3333333333333333333         ',
-    '           333333333333333            ',
-    '             333333333                ',
-    '                                      ',
-    '                                      ',
-    '                                      ',
-    '                                      '
-  ] },
-  'trike|horn|3': { w:90, h:86, ox:33, oy:35, rows:[
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                         i                                                ',
-    '                                        iii                                               ',
-    '                                        iii                                               ',
-    '                                                                                          ',
-    '          ii                                                                              ',
-    '    i      ii                   ii                 ii                                     ',
-    '     ii     iii                 iii                ii                                     ',
-    '      iii    iiii                i                                                        ',
-    '       iii    iiiii                                                                       ',
-    '        iiii   iiiiii                                                                     ',
-    '          iiii  iiiiii                                                                    ',
-    '           iiii   iiiiii                                                                  ',
-    '            iiiii  iiiiii                                                                 ',
-    '             iiiiii iiiiiii                                                               ',
-    '              iiiiii iiiiiii                                                              ',
-    '               iiiiii iiiiiiii                                                            ',
-    '                iiiiii iiiiiiii                                                           ',
-    '                 iiiiii iiiiiiii                                                          ',
-    '                 iiiiiiiiiiiiiiii                                                         ',
-    '                  iiiiiiiiiiiiiiii                                                        ',
-    '                  iiiiiiiiiiiiiiiii                                                       ',
-    '              ii   iiiiiiiiiiiiiiii                                                       ',
-    '               i   iiiiiiiiiiiiiiii                                                       ',
-    '               ii  iiiiiiiiiiiiiiii                                                       ',
-    '               iii  iiiii  iiiiiiii                                                       ',
-    '               iii         iiiiiiii                                                       ',
-    '                iii          iiiii                                                        ',
-    '                iiii                                                                      ',
-    '                iiii                                                                      ',
-    '                 ii                                                                       ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                            iii                           ',
-    '                                                          ii ii                           ',
-    '                                                          iii                      iii    ',
-    '                                                                                  i ii    ',
-    '                                                                                iii       ',
-    '                                                                                 ii       ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          '
-  ] },
-};
-/*</data>*/
-
-/* Parts added to an animal's skeleton.
-
-   A part is a shape, a material, and a list of points measured in some joint's
-   own units. That is all it is, and that is the point: the compositor, the
-   growth columns, the gait solver and the pose table were never told how many
-   parts an animal has, so adding one costs a row here and nothing anywhere
-   else. It turns with the joint it names, scales with it through the four
-   growth stages, and is lit and outlined like anything else made of that
-   material.
-
-   The joints a species publishes are listed in its own file — the Triceratops
-   has `skull`, `jaw`, `frill`, `brow`, `hip`, `withers`, `tail0`..`tail3` and
-   the rest. `skull` measures x in snout lengths and y in head depths, so a
-   point on the face stays on the face at every age without four copies of it
-   being stored.
-
-     { layer:'horn', kind:'tube', v:[['skull',-.2,-.4],['skull',-.3,-1.1]],
-       w:[3, .6] }
-
-   `kind` is `blob`, `tube` or `oval` — the same three primitives the species
-   files have always drawn with. `w` is tube widths, in the joint's y units.
-   `r` is oval radii, in the joint's x and y units. `stage` pins a part to one
-   growth stage; leave it out and the part is there at every age. `off` keeps a
-   part in the file without drawing it.
-
-   Empty by default. This is the additive half of moving the animals out of
-   code and into data, and it is deliberately the half built first: if a fourth
-   horn can be added here and it turns, grows and lights correctly with no code
-   written for it, then converting the shapes that already exist is mechanical.
-   See docs/ARCHITECTURE-REVIEW.md. */
-/*<data:RIG_PARTS>*/
-const RIG_PARTS = {
-};
-/*</data>*/
-
-/* Which material layer each drawable unit replaces, and which of the draw
-   function's landmarks it hangs from.
-
-   The landmark names are not the same across the three species — a rex has
-   `back`, a brachiosaur does not; a trike calls its frill `frill` and a
-   brachiosaur calls its crest `crest` — so each unit lists what it would like
-   in order of preference and takes the first one the species actually returns.
-   All three provide `head`, `jaw`, `snout` and `shoulder`, so the last entry
-   in each list always lands.
-
-   `belly` and `mark` are absent because they are not drawn, they are masks
-   painted from the spine afterwards. The three eye layers are absent because
-   eyeAt has five states and the difference between a shut lid and an open but
-   hooded eye is the only thing on the whole sprite separating asleep from ill;
-   a static grid would make them the same picture again. */
-const PART_UNITS = {
-  body:   { layer:'skin',   at:['back','shoulder'], note:'the whole trunk: neck, ribcage, hips, tail' },
-  head:   { layer:'head',   at:['head'],            note:'the skull' },
-  jaw:    { layer:'jaw',    at:['jaw','head'],      note:'the lower jaw' },
-  shield: { layer:'shield', at:['frill','head'],    note:'frill or plate' },
-  crest:  { layer:'crest',  at:['crest','head'],    note:'crest' },
-  horn:   { layer:'horn',   at:['head'],            note:'horns, claws and teeth' },
-  beak:   { layer:'beak',   at:['snout','head'],    note:'beak or rostral' },
-  mouth:  { layer:'mouth',  at:['jaw','head'],      note:'the gape behind the teeth' },
-  limb:   { layer:'limb',   at:['shoulder'],        note:'near-side legs and arms — will not walk' },
-  far:    { layer:'far',    at:['shoulder'],        note:'far-side legs — will not walk' }
-};
-/* The colours a species can be painted with by hand, on top of the materials
-   it already has.
-
-   The material list is the honest palette for anything that is *made of*
-   something — skin, bone, keratin, the inside of a mouth — and it is what
-   makes a hand-drawn part sit in the animal instead of on it. But it cannot
-   say "a rust-red band across this frill", because no material on a
-   Triceratops is rust-red, and inventing one as a material would be a lie
-   about what the frill is.
-
-   So a species can also be given up to eight colours of its own. They are
-   ordinary materials once defined — each gets a ramp and takes the lighting
-   pass, so a painted band is lit by the same sun as everything else — and they
-   sit just above the coat in the paint order, because a marking covers the
-   surface and passes behind the horns, the teeth and the eye.
-
-   `lit` is how much light the colour takes. 1 is shaded like skin. 0 is flat,
-   which is the whole of the difference between a marking and a sticker, and is
-   worth having for the few things that really are flat: a glint, a wet
-   highlight, a painted-on scar.
-
-   Empty by default. A species with no colours here costs nothing at all — the
-   baker never allocates their canvases and the compositor never looks at
-   them. */
-/*<data:PART_MATS>*/
-const PART_MATS = {  };
-/*</data>*/
-
-/* One character per entry in LAYERS, ink slots included. */
-const PART_CH = '0123456789abcdefghijklm';
-const inksFor = spId => PART_MATS[spId] || [];
-
-/* A part can also be drawn once per frame of one pose, and that is the only
-   way a hand-drawn leg walks.
-
-   A drawing is a fixed picture, so a unit stamped at an anchor travels but does
-   not bend. For a head or a frill that is the whole truth — those really are
-   rigid and the pose only moves them. For a leg it is not: the gait solves new
-   joint positions every frame, and a leg that cannot bend does not step. Drawn
-   as one picture, the near legs sat still while the far ones walked.
-
-   So a key may carry a pose and a frame on the end, and the frame-specific
-   drawing wins where one exists. Only walking actually needs them — every
-   other pose leaves `legPhase` at zero, so the plain key covers the lot — and
-   the editor seeds all twelve off the gait solver rather than asking anyone to
-   draw a leg from nothing twelve times.
-
-       trike|limb|3            every pose
-       trike|limb|3|walk|7     that one frame of the walk */
-function partsFor(spId, stage, anim, frame){
-  const out = {};
-  for (const unit in PART_UNITS){
-    const key = spId + '|' + unit + '|' + stage;
-    const p = (anim !== undefined && PART_PIX[key + '|' + anim + '|' + frame]) || PART_PIX[key];
-    if (p) out[unit] = p;
-  }
-  return out;
-}
-/* Every key that belongs to one unit at one stage, the per-frame ones with it.
-   The editor clears by unit, and a "back to procedural" that left twelve walk
-   frames behind would look like it had not worked. */
-function partKeys(spId, unit, stage){
-  const stem = spId + '|' + unit + '|' + stage;
-  return Object.keys(PART_PIX).filter(k => k === stem || k.slice(0, stem.length + 1) === stem + '|');
-}
 
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
@@ -2369,8 +2140,11 @@ const PIX_CH = '0123456789abcdefghijklmnopqrstuvwxyz';
    canvas size and would otherwise ride a pixel high. */
 const PIX_PAD = 1;
 const pixCache = new Map();
+/* `outline` is optional. A sprite that wants its own edges drawn in the pixel
+   editor asks for none: the dilation pass is a convenience for art that was
+   drawn without an edge, not a tax on art that has one. */
 function pixCanvas(id, outline){
-  const key = id + '|' + outline;
+  const key = id + '|' + (outline || '');
   if (pixCache.has(key)) return pixCache.get(key);
   const p = PIX[id];
   if (!p) return makeCv(1,1);
@@ -2380,11 +2154,13 @@ function pixCanvas(id, outline){
   pixDraw(g, id, (p.ox || 0) + PIX_PAD, (p.oy || 0) + PIX_PAD, 1);
   const d = g.getImageData(0,0,w,h), px = d.data, solid = new Uint8Array(w*h);
   for (let i=0;i<w*h;i++){ if (px[i*4+3] >= 118){ px[i*4+3] = 255; solid[i] = 1; } else px[i*4+3] = 0; }
-  const [orr, og, ob] = [1,3,5].map(i => parseInt(outline.slice(i,i+2), 16));
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
-    const i = y*w+x; if (solid[i]) continue;
-    if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
-      px[i*4]=orr; px[i*4+1]=og; px[i*4+2]=ob; px[i*4+3]=255;
+  if (outline){
+    const [orr, og, ob] = [1,3,5].map(i => parseInt(outline.slice(i,i+2), 16));
+    for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+      const i = y*w+x; if (solid[i]) continue;
+      if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
+        px[i*4]=orr; px[i*4+1]=og; px[i*4+2]=ob; px[i*4+3]=255;
+      }
     }
   }
   g.putImageData(d,0,0);
@@ -2396,9 +2172,9 @@ function pixCanvas(id, outline){
 function pixInvalidate(){ pixCache.clear(); if (typeof HATS === 'object') for (const k in HATS) delete HATS[k]; }
 
 /* Everything the game has baked, dropped in one call. The editor changes a
-   number and then has to make the game forget four independent caches — the
-   frame cache, the material cache, the pixel cache and the two backdrop
-   caches. Forgetting one of them is how an editor ends up showing the old
+   number and then has to make the game forget several independent caches — the
+   frame cache, the material cache, the pixel cache, the backdrop cache and the
+   sky. Forgetting one of them is how an editor ends up showing the old
    sprite on a new palette, so there is one function and it clears them all.
    It is called at runtime, so the caches defined in later modules are there. */
 function artChanged(){
@@ -2407,103 +2183,8 @@ function artChanged(){
   if (typeof matCache   !== 'undefined') matCache.clear();
   if (typeof warmQueue  !== 'undefined') warmQueue.length = 0;
   if (typeof bgCache    !== 'undefined') bgCache.clear();
-  if (typeof bgPixCache !== 'undefined') bgPixCache.clear();
   if (typeof skyCache   !== 'undefined') skyCache.clear();
   stageCache.clear();
-}
-
-/* ==========================================================================
-   HAND-DRAWN BACKDROPS
-   A habitat painted pixel by pixel, in place of the one bakeBg computes.
-
-   This is a second art file, and the only one. "Art is data, in one file"
-   exists so that everything the editor owns is somewhere the editor can write,
-   and a second file it also writes — same `<data:NAME>` markers, same save
-   path — keeps that. What it does not keep is 00-art.js at a readable size: a
-   backdrop is 280x210 characters, so five of them would bury the growth
-   columns and the proportions under a thousand lines of pixel rows. The built
-   dist/paleopal.html is still one file; only the source splits.
-
-   Unlike PART_PIX these are real colours, not materials. Nothing about a
-   backdrop goes through composeSprite — there is no lighting pass and no ramp
-   to name — so the pixels are simply the picture, in the same palette-and-rows
-   format PIX uses. The alphabet is longer because a scene needs more colours
-   than an icon: 62 of them, and beyond that the editor snaps to the nearest.
-
-   Keyed by biome, with `biome|phase` for a phase that has a drawing of its
-   own. That is the fallback order, and the reason for it: a drawing is fixed
-   pixels, and the four times of day are fixed pixels tinted, which is crude
-   next to the procedural night that recolours itself from skySpec. If one
-   habitat ends up deserving a real night sky, it gets a `valley|night` entry
-   and the base one goes on serving the other three.
-
-   `quiet` is the other half of hand-drawing a scene. The plume, the surf, the
-   aurora, the grass blades and the rest are drawn live over the backdrop and
-   know nothing about it, which is mostly right — they are what makes the place
-   move. But a hand-drawn ground will not necessarily agree with the blades
-   growing out of it, so a drawing can name the live elements it would rather
-   do without.
-   ========================================================================== */
-/*<data:BG_PIX>*/
-const BG_PIX = {
-};
-/*</data>*/
-
-/* Sixty-two, in the order the editor allocates them. A space is a hole, which
-   for a backdrop means the procedural bake still shows through — so a partial
-   drawing is a patch over a computed scene rather than a scene with a gap. */
-const BG_CH = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-/* The drawing for a habitat at a time of day, or nothing. The phase-specific
-   entry wins; otherwise the base drawing serves every phase and takes a wash. */
-function bgArtFor(bid, phase){
-  return BG_PIX[bid + '|' + phase] || BG_PIX[bid] || null;
-}
-const bgQuiet = (bid, phase) => {
-  const a = bgArtFor(bid, phase);
-  return a && a.quiet ? a.quiet : [];
-};
-
-/* How far a base drawing is pushed toward the phase's own low sky colour when
-   it is standing in for a time of day it was not drawn for. Day is the drawing
-   as painted. Night is heavy, because a daylit scene shown at night with a
-   light touch reads as a bug rather than as evening.
-
-   This is the crude part, and it is crude on purpose: the alternative is four
-   drawings per habitat at four times the file size, which is what the
-   `biome|phase` key is there for on the day one of them earns it. */
-const BG_PHASE_MIX = { day: 0, dawn: .20, dusk: .26, night: .50 };
-
-const bgPixCache = new Map();
-function bgPixCanvas(bid, phase){
-  const art = bgArtFor(bid, phase);
-  if (!art) return null;
-  const key = bid + '|' + phase;
-  if (bgPixCache.has(key)) return bgPixCache.get(key);
-  const w = art.w || BG_W, h = art.h || BG_H;
-  const c = makeCv(w, h), g = readCtx(c);
-  for (let y = 0; y < h; y++){
-    const row = art.rows[y] || '';
-    for (let x = 0; x < row.length; x++){
-      const i = BG_CH.indexOf(row[x]);           // a space is -1, and left clear
-      if (i < 0) continue;
-      g.fillStyle = art.pal[i] || '#ff00ff';
-      g.fillRect(x, y, 1, 1);
-    }
-  }
-  /* The wash, inside the drawing only. `source-atop` so that a partial drawing
-     tints its own pixels and not the transparent ones it is letting through. */
-  const mix = BG_PIX[bid + '|' + phase] ? 0 : (BG_PHASE_MIX[phase] || 0);
-  if (mix > 0){
-    g.save();
-    g.globalCompositeOperation = 'source-atop';
-    g.globalAlpha = mix;
-    g.fillStyle = skySpec(bid, phase).low;
-    g.fillRect(0, 0, w, h);
-    g.restore();
-  }
-  bgPixCache.set(key, c);
-  return c;
 }
 
 /* ==========================================================================
@@ -2586,35 +2267,19 @@ function mixCol(a, b, t){
    near-white blobs stuck on the front of a tan face with nothing dividing
    them from the horn sheaths above. A species that does not set `spec.beak`
    gets its horn colour here and nothing changes for it. */
-/* `ink0`..`ink7` are the eight colours a species can be given to be painted
-   with by hand, and they sit here — directly above the coat and below every
-   structure that stands in front of the body — because that is what a painted
-   detail is. A stripe across a frill or a blaze down a snout is a marking on
-   the animal's surface, so it covers the surface and passes behind the horns,
-   the beak, the teeth and the eye, exactly as a coat pattern does.
-
-   They are ordinary materials in every other way: each carries a ramp built
-   from its own colour and takes the same lighting pass, which is what stops a
-   painted detail reading as a sticker. A species that defines none of them
-   costs nothing — bakeOnce never allocates a canvas for an undefined ink and
-   the compositor skips it. */
-const INKS = 8;
-const INK_NAMES = Array.from({length: INKS}, (_, i) => 'ink' + i);
-const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark']
-  .concat(INK_NAMES, ['crest','mouth','horn','beak','sclera','pupil','glint']);
+const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
 const BODY_TOP    = LAYERS.indexOf('head');
 const BELLY_LAYER = LAYERS.indexOf('belly');
 const MARK_LAYER  = LAYERS.indexOf('mark');
-const INK_FIRST   = LAYERS.indexOf('ink0');
 /* Countershading belongs to the trunk, the skull and the jaw. It is kept off
    the limbs — near-side limbs carry their own lit ramp and far-side limbs are
    held back in shade, and letting the belly claim either bleached every leg to
    the same cream as the underside. */
 const BELLY_OK = LAYERS.map(n => n === 'skin' || n === 'shield' || n === 'jaw' || n === 'head');
 
-function buildMaterials(spec, inks){
+function buildMaterials(spec){
   const skin = ramp(spec.skin), horn = ramp(spec.horn, {spread:.12, shift:14});
-  const out = {
+  return {
     /* Far-side limbs. Two steps down with the contrast raised turned them
        into a black mass slung under the body that read as shadow rather than
        as legs, which on the four-legged animals is half the sprite. */
@@ -2646,17 +2311,6 @@ function buildMaterials(spec, inks){
     glint:  { r: ramp('#fffdf2', {spread:.04}),  lit:0 },
     outline: spec.outline
   };
-  /* The species' own painting colours. `lit` is how much of the light this
-     colour takes: 1 is shaded like skin, and 0 is flat — which is the whole of
-     what "a sticker rather than a marking" means, and is how the pupil and the
-     glint are already done. A colour nobody defined stays absent, and every
-     pass that would have touched it skips it. */
-  (inks || []).forEach((ink, i) => {
-    if (!ink || i >= INKS) return;
-    out[INK_NAMES[i]] = { r: ramp(ink.col, {spread: ink.spread || .19}),
-                          lit: ink.lit === undefined ? 1 : ink.lit };
-  });
-  return out;
 }
 
 /* ---------- composite the layers, light them, draw a selective outline ----- */
@@ -2679,11 +2333,6 @@ function composeSprite(layerCanvases, mats, w, h){
     if (y < y0) y0 = y; if (y > y1) y1 = y;
   };
   for (let li=0; li<LAYERS.length; li++){
-    /* A hole in the array is a painting colour this species does not have.
-       Every pass here is per-pixel over the whole box, so skipping the eight
-       unused ink slots is the difference between this costing nothing and
-       costing half as much again on every bake in the game. */
-    if (!layerCanvases[li]) continue;
     const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
     if (li === MARK_LAYER){
       // a coat rides the body, and stops where the countershading starts
@@ -2771,184 +2420,6 @@ function composeSprite(layerCanvases, mats, w, h){
   }
   og.putImageData(img,0,0);
   return out;
-}
-
-/* ==========================================================================
-   THE RIG
-   An animal as a skeleton and a list of parts, instead of as a function.
-
-   Why this exists, in one line: every shape in this game is a list of points
-   that gets hard-quantised into pixels *afterwards*, which means a part can be
-   moved, scaled and re-lit for nothing. An ordinary pixel-art game cannot rig
-   its sprites, because rotating a bitmap tears it. This one always could, and
-   the shapes were simply trapped inside three hundred lines of arithmetic
-   working out where to put them.
-
-   So the arithmetic keeps its job and loses everything else. A species now
-   computes **joints** — named frames, each with an origin, a scale and a
-   rotation, all of them still driven by the growth columns and the pose — and
-   everything hanging off those joints is data.
-
-     joint   { x, y, sx, sy, rot }      where a thing is, how big, which way
-     vertex  [ joint, ox, oy ]          a point, in that joint's own units
-     part    { layer, kind, v, ... }    a shape, on a material, made of points
-
-   A vertex naming a joint is the whole trick. Bind every vertex of a shape to
-   one joint and you have a rigid part that follows the skull. Bind the
-   vertices of one shape to *different* joints and you have a body that
-   stretches between the shoulder and the hip as they move. Same format, and
-   the second case is what a torso is.
-
-   Adding a part is adding a row. It animates because its joint animates, it
-   grows because its joint scales, it lights because the compositor never knew
-   the difference. That is the whole point: nothing downstream can tell how
-   many parts there are.
-
-   Not everything wants to be data. A row of epoccipitals generated from a
-   count, a leg solved by inverse kinematics, an eye with five states — those
-   are functions of something, and a function is the honest way to write them.
-   A rig therefore holds both: data parts, and code parts that run in the same
-   ordered list so the paint order stays one list rather than two.
-   ========================================================================== */
-
-/* Where a vertex actually lands. The joint's scale is applied before its
-   rotation, so a part squashes with its joint and then turns with it — a frill
-   tipped back is a tipped frill, not a sheared one. */
-function rigAt(joints, v){
-  const j = joints[v[0]];
-  if (!j) return [0, 0];
-  const x = v[1] * (j.sx === undefined ? 1 : j.sx);
-  const y = v[2] * (j.sy === undefined ? 1 : j.sy);
-  if (!j.rot) return [j.x + x, j.y + y];
-  const c = Math.cos(j.rot), s = Math.sin(j.rot);
-  return [j.x + x*c - y*s, j.y + x*s + y*c];
-}
-/* How big one unit of a joint is on the canvas, for radii, which have a size
-   in each direction. */
-const rigScale = (joints, name) => {
-  const j = joints[name] || {};
-  return [j.sx === undefined ? 1 : j.sx, j.sy === undefined ? 1 : j.sy];
-};
-/* A tube's width has a size but no direction, so it needs a scale of its own
-   and cannot borrow either axis.
-
-   This was got wrong the first time and the way it failed is worth keeping.
-   Widths were scaled by the joint's y unit, which on the skull is *head
-   depth* — about twenty pixels on an adult. A width of 7, meant as seven
-   pixels of horn, came out as a hundred and forty: a disc that swallowed the
-   animal, grew the bake box until it hit its cap, and then vanished entirely
-   at adult size because by then it was clipped away on every side. The lesson
-   is that a joint's axes describe where things are, not how thick they are,
-   and a rig needs to say both. */
-const rigWidth = (joints, name) => {
-  const j = joints[name] || {};
-  return j.sw !== undefined ? j.sw : (j.sy === undefined ? 1 : j.sy);
-};
-
-/* Draw one part. `kind` is which primitive: the same three the species files
-   have always used, because the primitives were never the problem. */
-function rigPart(M, joints, p){
-  const g = M[p.layer];
-  if (!g) return;
-  const pts = p.v.map(v => rigAt(joints, v));
-  if (p.kind === 'oval'){
-    const [sx, sy] = rigScale(joints, p.v[0][0]);
-    const j = joints[p.v[0][0]] || {};
-    oval(g, pts[0][0], pts[0][1], p.r[0]*sx, p.r[1]*sy, null, j.rot || 0);
-    return;
-  }
-  if (p.kind === 'tube'){
-    /* A width belongs to the vertex it is measured at, so it scales with that
-       vertex's own joint. A neck that thins toward the skull is one tube whose
-       far end is measured in skull units. */
-    const w = p.w.map((n, i) => n * rigWidth(joints, p.v[i][0]));
-    tube(g, pts, w);
-    return;
-  }
-  blob(g, pts);
-}
-
-/* The whole animal: joints first, then every part in order. A code part is
-   handed the joints and the pose and draws whatever it likes onto the same
-   layers — the ordering is shared, so a generated row of knobs still sits
-   between the two data parts it belongs between. */
-function drawRig(M, P, rig){
-  const joints = rig.joints(P);
-  for (const part of rig.parts){
-    if (typeof part === 'function') part(M, joints, P);
-    else rigPart(M, joints, part);
-  }
-  return joints;
-}
-
-/* --------------------------- added parts ---------------------------------
-   The conversion, taken from the additive end first.
-
-   A species still draws itself the way it always has. What it now also does is
-   publish its joints — which it had all along, as local variables with names
-   like `hx` and `hipY`, computed and then thrown away. Anything in RIG_PARTS
-   is drawn against those joints afterwards.
-
-   That is deliberately the smaller half of the job and deliberately the half
-   worth doing first, because it is the half that proves the idea. Adding a
-   fourth horn is adding a row to a list; if that horn turns with the skull,
-   grows through four stages and takes the light like the other three without a
-   line of code being written for it, then the model holds and converting the
-   forty-one shapes that already exist is mechanical afterwards. If it does
-   not, almost nothing has been spent finding out.
-   -------------------------------------------------------------------------- */
-/* ---------------------------- growing up ----------------------------------
-   A part is defined once and is right at every age, because its points are in
-   joint units and the joints already scale. That is the default and it should
-   stay the default: a horn described as "half a head-depth above the brow"
-   means the same thing on a hatchling and on an adult, and nobody has to keep
-   four copies of it in step.
-
-   Two things that default cannot say, and both of them matter:
-
-   **A stage that genuinely differs.** Not bigger — different. A juvenile's
-   horn curves back where an adult's recurves forward, and no single number
-   scales one into the other. `at` overrides the points for one stage and
-   leaves the rest inheriting, which is the same shape `GEAR_FIT` and
-   `SPECIES_STAGE` already use for exactly this problem. Overriding one field
-   overrides only that field.
-
-   **A part that is not there at some ages.** The house rule is that growing up
-   changes what an animal *has*, not only how big it is. `stages` is that: a
-   brow horn that arrives at subadult is `stages:[2,3]`, a juvenile's coat of
-   fuzz that goes away is `stages:[0,1]`. Absent means every age, which is what
-   almost everything wants.
-
-   It is a list rather than a from/to range because the editor shows it as four
-   buttons you switch on and off, and a control should store what it looks
-   like. A range would also quietly forbid the animal that has a thing, loses
-   it, and grows it back — which is not hypothetical for display structures.
-
-   So inheritance is kept, per-stage escape exists, and features can arrive and
-   leave — without four copies of anything that did not need them. */
-function rigForStage(part, stage){
-  const over = part.at && part.at[STAGE[stage] && STAGE[stage].key];
-  return over ? Object.assign({}, part, over) : part;
-}
-function rigShows(part, stage){
-  return !part.off && (!part.stages || part.stages.indexOf(stage) >= 0);
-}
-
-function drawRigParts(M, spId, joints, P){
-  if (!joints) return;
-  const parts = RIG_PARTS[spId];
-  if (!parts) return;
-  for (const part of parts){
-    if (!rigShows(part, P.stage)) continue;
-    rigPart(M, joints, rigForStage(part, P.stage));
-  }
-}
-
-/* Where a part's points land on the finished sprite, for the editor to hang
-   handles on. It runs the same arithmetic the bake does, from the same joints,
-   so a handle cannot end up somewhere the pixel is not. */
-function rigOutline(joints, part){
-  return part.v.map(v => rigAt(joints, v));
 }
 
 /* ==========================================================================
@@ -3048,42 +2519,77 @@ function legStep(g, hx, hy, phase, w, cfg, hornG){
   drawFoot(g, hornG, ank, tx, ty, w, cfg.foot || 'bird');
   return [tx, ty];
 }
+/* Feet, and every one of them flat underneath.
+
+   They were ovals. An oval has a rounded bottom, so every animal in the game
+   stood balanced on a ball — which at four growth stages and thirty poses is
+   the single most visible thing about how they meet the ground, and it read as
+   a doll on stands rather than as weight on soil. The sole is now a straight
+   line at `ty`, which is the ground contact the gait solver already computes,
+   and nothing is drawn below it.
+
+   Claws go on with the foot rather than being placed afterwards by the species.
+   Hung separately they were positioned by a typed offset against a shape they
+   could not see, and on the adult rex that offset put three ovals a clear
+   seven pixels in front of the toe they were supposed to grow out of. A claw
+   here starts inside the foot and comes to a point, so it cannot float off it.
+
+   `hornG` is the keratin layer and is optional: the far-side legs pass none,
+   which is why the claws you can see are the ones on the near foot. */
+
+/* A claw: a wedge that starts inside the toe and comes to a point on the
+   ground. `dir` is which way it points — the sprite faces −x, so a forward
+   claw is −1. Its base is set back into the foot so the two shapes merge. */
+function claw(g, x, y, dir, len, d){
+  poly(g, [[x - dir*d*.9, y - d*.95], [x + dir*len, y - d*.05], [x - dir*d*.9, y + d*.10]]);
+}
+
 function drawFoot(g, hornG, ank, tx, ty, w, kind){
   if (kind === 'hoof'){
     // sauropod manus: the metacarpals stand in a vertical column and the whole
     // hand is a single hoof. No digits are visible in life, so none are drawn.
-    tube(g, [[ank[0], ank[1]],[tx, ty - w*.44]], [w*.56, w*.60]);
-    blob(g, [[tx - w*.32, ty - w*.52],[tx + w*.32, ty - w*.52],
-             [tx + w*.36, ty - w*.10],[tx, ty - w*.03],[tx - w*.36, ty - w*.10]]);
+    tube(g, [[ank[0], ank[1]],[tx, ty - w*.46]], [w*.56, w*.60]);
+    poly(g, [[tx - w*.34, ty - w*.54],[tx + w*.34, ty - w*.54],[tx + w*.38, ty],[tx - w*.38, ty]]);
+    /* One thumb claw, which the dossier promises and which is the only digit
+       a sauropod forefoot shows. */
+    if (hornG) claw(hornG, tx - w*.34, ty - w*.06, -1, w*.30, w*.14);
     return;
   }
   if (kind === 'pad'){
     // sauropod pes: a wedge, deep at the heel where the fleshy pad sits and
     // sloping forward onto three claw-bearing inner toes
-    tube(g, [[ank[0], ank[1]],[tx + w*.26, ty - w*.46]], [w*.50, w*.54]);
-    blob(g, [[tx + w*.52, ty - w*.08],[tx + w*.60, ty - w*.40],[tx + w*.30, ty - w*.60],
-             [tx - w*.16, ty - w*.44],[tx - w*.44, ty - w*.20],[tx - w*.40, ty - w*.03],
-             [tx + w*.10, ty]]);
+    tube(g, [[ank[0], ank[1]],[tx + w*.26, ty - w*.50]], [w*.50, w*.54]);
+    poly(g, [[tx + w*.56, ty - w*.14],[tx + w*.58, ty - w*.44],[tx + w*.28, ty - w*.62],
+             [tx - w*.18, ty - w*.48],[tx - w*.46, ty - w*.22],[tx - w*.48, ty],[tx + w*.54, ty]]);
     if (hornG){
-      blob(hornG, [[tx - w*.36, ty - w*.22],[tx - w*.58, ty - w*.10],[tx - w*.36, ty - w*.01]]);
-      blob(hornG, [[tx - w*.20, ty - w*.30],[tx - w*.44, ty - w*.24],[tx - w*.24, ty - w*.12]]);
+      claw(hornG, tx - w*.44, ty, -1, w*.26, w*.12);
+      claw(hornG, tx - w*.22, ty, -1, w*.22, w*.11);
     }
     return;
   }
   if (kind === 'column'){
     // ceratopsian foot: short, broad and blunt-hooved
-    tube(g, [[ank[0], ank[1]],[tx + w*.10, ty - w*.34]], [w*.50, w*.54]);
-    blob(g, [[tx + w*.36, ty - w*.06],[tx + w*.40, ty - w*.34],[tx, ty - w*.46],
-             [tx - w*.36, ty - w*.28],[tx - w*.38, ty - w*.02]]);
+    tube(g, [[ank[0], ank[1]],[tx + w*.10, ty - w*.38]], [w*.50, w*.54]);
+    poly(g, [[tx + w*.38, ty - w*.10],[tx + w*.42, ty - w*.38],[tx, ty - w*.50],
+             [tx - w*.38, ty - w*.32],[tx - w*.40, ty],[tx + w*.38, ty]]);
     if (hornG){
-      blob(hornG, [[tx - w*.28, ty - w*.20],[tx - w*.46, ty - w*.08],[tx - w*.26, ty - w*.01]]);
-      blob(hornG, [[tx - w*.08, ty - w*.26],[tx - w*.28, ty - w*.22],[tx - w*.10, ty - w*.10]]);
+      claw(hornG, tx - w*.36, ty, -1, w*.24, w*.12);
+      claw(hornG, tx - w*.12, ty, -1, w*.20, w*.11);
     }
     return;
   }
-  tube(g, [[ank[0],ank[1]],[tx,ty]], [w*.46, w*.4]);
-  oval(g, tx - w*.1, ty - w*.15, w*.56, w*.28);
+  /* Bird foot: digitigrade, so the metatarsus stands clear of the ground and
+     only the toes lie on it, spread forward under the weight. */
+  tube(g, [[ank[0], ank[1]],[tx + w*.04, ty - w*.30]], [w*.46, w*.34]);
+  poly(g, [[tx + w*.34, ty - w*.30],[tx + w*.36, ty],[tx - w*.74, ty],
+           [tx - w*.66, ty - w*.17],[tx - w*.04, ty - w*.38]]);
+  if (hornG){
+    claw(hornG, tx - w*.70, ty, -1, w*.30, w*.13);
+    claw(hornG, tx - w*.44, ty, -1, w*.24, w*.12);
+    claw(hornG, tx + w*.30, ty, 1, w*.18, w*.10);        // the hallux, pointing back
+  }
 }
+
 /* How long a polyline is, in local units. Anything spaced along a path has to
    be spaced by distance and not by count: a fixed number of filaments spread
    over a hatchling's short back overlap into one solid band, and the same
@@ -3107,8 +2613,11 @@ function samplePath(pts, t){
   }
   return pts[pts.length-1];
 }
+/* A row of claws along a hand. These were ovals too, which at this size is a
+   row of beads on the end of an arm; what a theropod has there is two recurved
+   claws, which is also what the dossier claims it has. */
 function toes(g, x, y, n, dir, size){
-  for (let i=0;i<n;i++) oval(g, x + dir*i*size*1.7, y, size*.78, size*.55);
+  for (let i=0;i<n;i++) claw(g, x + dir*i*size*1.5, y, dir, size*1.6, size*.66);
 }
 function eyeAt(M, x, y, r, state){
   /* A shut eye is a line, not a shape. The lid used to be drawn as wide as the
@@ -3148,18 +2657,22 @@ function eyeAt(M, x, y, r, state){
    functions and a private copy of the dilation loop. */
 const HATS = {};
 Object.defineProperty(HATS, 'get', { value:null });          // keep it a plain bag
-const HAT_IDS = Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
 /* A hat is hung by the bottom of its art, and the art is not the canvas. Every
    hat is drawn in a 12x11 grid with its brim wherever the artist put it, so the
-   crown has four blank rows under it and the cap three, and the outline pass
-   adds one more all round. Hanging by the canvas edge floated every hat that
-   distance above the skull, scaled up with the animal, which is what made a
-   worn hat read as a hovering object rather than as headgear. Measure the last row that has ink in it once, at
-   bake time, and hang from that. `pixInvalidate()` drops HATS, so an edit in
-   the editor re-measures. */
+   crown has four blank rows under it and the cap three. Hanging by the canvas
+   edge floated every hat that distance above the skull, scaled up with the
+   animal, which is what made a worn hat read as a hovering object rather than
+   as headgear. Measure the last row that has ink in it once, at bake time, and
+   hang from that. `pixInvalidate()` drops HATS, so an edit in the editor
+   re-measures.
+
+   No dilated outline. The animal underneath has one because the compositor
+   draws it, and a second hard edge on top of that read as a sticker rather
+   than as something worn. A hat that wants an edge has one drawn into its own
+   pixels in the editor, where it can be exactly the edge that hat wants. */
 function hatArt(id){
   if (!HATS[id]){
-    const c = pixCanvas('hat.' + id, '#241d13');
+    const c = pixCanvas('hat.' + id);
     const d = readCtx(c).getImageData(0, 0, c.width, c.height).data;
     let foot = 0, x0 = c.width, x1 = -1, seen = false;
     for (let y = c.height - 1; y >= 0; y--){
@@ -3261,7 +2774,7 @@ function matsFor(spId, skinId){
     const k = skinOf(spId, skinId);
     matCache.set(key, buildMaterials(Object.assign({}, SPECIES[spId].spec, {
       skin:k.skin, belly:k.belly, crest:k.crest, mark:k.mark
-    }), inksFor(spId)));
+    })));
   }
   return matCache.get(key);
 }
@@ -3288,7 +2801,7 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
      past the cap; the loop ends when growBake() says there is no more room. */
   let out = null;
   for (let attempt = 0; attempt < 6; attempt++){
-    out = bakeOnce(spId, stage, pose, eye, skinId, anim, idx % poses.length);
+    out = bakeOnce(spId, stage, pose, eye, skinId);
     if (!out.clipped || !growBake()) break;
   }
   delete out.clipped;
@@ -3297,79 +2810,14 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   return out;
 }
 
-/* Put the hand-drawn units for this species and stage onto their layers, in
-   place of what the draw function just painted there.
-
-   Two passes, and the order matters. A drawing says which material each of its
-   pixels is, so one grid can write to layers other than its own unit's — a
-   skull drawn with its own teeth puts pixels on `horn`. Clearing each layer
-   just before stamping it would therefore wipe pixels an earlier unit had
-   already put down, so every replaced layer is emptied first and only then is
-   anything drawn.
-
-   The whole thing runs with the transform off. The layer contexts arrive
-   translated to the origin and scaled by the animal's size, which is right for
-   the shapes the species draws in local units and wrong for a grid: one grid
-   pixel is meant to be one baked pixel, and pushing it through that scale
-   would resample the drawing and lose the very thing that makes it pixel art.
-   The anchor is converted by hand instead — the same arithmetic bakeOnce uses
-   on the anchors it hands back — which is also why BAKE_CX and BAKE_G are read
-   here rather than cached: growBake moves them between attempts. */
-function stampParts(M, spId, stage, anchors, k, anim, frame){
-  const drawn = partsFor(spId, stage, anim, frame);
-  const units = Object.keys(drawn);
-  if (!units.length) return;
-  for (const name of LAYERS){ M[name].save(); M[name].setTransform(1, 0, 0, 1, 0, 0); }
-
-  for (const unit of units) M[PART_UNITS[unit].layer].clearRect(0, 0, BAKE_W, BAKE_H);
-
-  for (const unit of units){
-    const p = drawn[unit];
-    /* Where the drawing hangs. The landmark comes from the draw function and
-       so has already been moved by the pose, which is the whole reason a
-       stamped part breathes and walks instead of sitting still. */
-    let a = null;
-    for (const name of PART_UNITS[unit].at){
-      const q = anchors.parts && anchors.parts[name];
-      if (q){ a = q; break; }
-    }
-    if (!a) continue;
-    const ax = Math.round(BAKE_CX + a[0]*k) - (p.ox || 0);
-    const ay = Math.round(BAKE_G  + a[1]*k) - (p.oy || 0);
-    for (let r = 0; r < p.rows.length; r++){
-      const row = p.rows[r];
-      for (let c = 0; c < row.length; c++){
-        const li = PART_CH.indexOf(row[c]);        // a space is -1, and nothing
-        if (li < 0 || li >= LAYERS.length) continue;
-        M[LAYERS[li]].fillRect(ax + c, ay + r, 1, 1);
-      }
-    }
-  }
-  for (const name of LAYERS) M[name].restore();
-}
-
-/* One species, one stage, one pose, painted onto fresh material layers and
-   stopped there — before anything is stamped over it and before it is
-   composed. It is its own function because the editor's Draw tab needs exactly
-   this: to show what a drawing is replacing, and to size a new drawing to the
-   shape it replaces. Sharing it with the baker is the point. Two copies of
-   this setup would drift, and the one in the editor would be the one that
-   quietly stopped matching the game. */
-function drawLayers(spId, stage, pose, eye){
-  const sp = SPECIES[spId], A = artFor(spId, stage), st = A.st, k = st.s * sp.scale;
-  const inks = inksFor(spId);
+/* One species, one stage, one pose: painted onto fresh material layers, then
+   composed, lit and trimmed. One canvas per material, each one translated to
+   the origin and scaled by the animal's size, so the species draws in its own
+   local units and never has to know what stage it is at. */
+function bakeOnce(spId, stage, pose, eye, skinId){
+  const sp = SPECIES[spId], st = artFor(spId, stage).st, k = st.s * sp.scale;
   const canvases = [], M = {};
-  /* A painting colour the species has not been given gets no canvas and a
-     hole in the array, which the compositor skips. Anything that tries to
-     paint on it lands in a one-pixel bin instead of throwing — a grid can
-     outlive the colour it was drawn with, and a stale character is not a
-     reason to stop baking the animal. */
-  const bin = readCtx(makeCv(1, 1));
-  for (let i = 0; i < LAYERS.length; i++){
-    const name = LAYERS[i];
-    if (i >= INK_FIRST && i < INK_FIRST + INKS && !inks[i - INK_FIRST]){
-      canvases.push(null); M[name] = bin; continue;
-    }
+  for (const name of LAYERS){
     const c = makeCv(BAKE_W, BAKE_H), g = readCtx(c);
     g.fillStyle = '#000';
     g.translate(BAKE_CX, BAKE_G); g.scale(k, k);
@@ -3377,21 +2825,6 @@ function drawLayers(spId, stage, pose, eye){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
-  /* Anything added to this animal through the rig, drawn against the joints
-     the species just published. It lands on the same material layers, so a
-     horn added here is lit and outlined as a horn without anything
-     downstream being told it exists. */
-  drawRigParts(M, spId, anchors.joints, P);
-  return { canvases, M, k, anchors };
-}
-
-function bakeOnce(spId, stage, pose, eye, skinId, anim, frame){
-  const sp = SPECIES[spId], st = artFor(spId, stage).st;
-  const { canvases, M, k, anchors } = drawLayers(spId, stage, pose, eye);
-  // Anything drawn by hand replaces what was just computed for it, before the
-  // countershading and the coat go on — both are masked to body pixels, so
-  // they should trim to the drawing rather than to the shape it replaced.
-  stampParts(M, spId, stage, anchors, k, anim, frame);
   // Countershading and the coat both ride the body the draw function just laid
   // down, never a path computed alongside it — the same rule the surface
   // detail follows. Belly first: the coat is masked to stop where it starts.
@@ -3405,12 +2838,6 @@ function bakeOnce(spId, stage, pose, eye, skinId, anim, frame){
     cv: t.cv, w: t.w, h: t.h,
     ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
     eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
-    /* The editor's Body tab hangs a drag handle on each of these. Converted
-       here with everything else, so a handle is in the same space as the
-       picture it sits on. */
-    parts: anchors.parts
-      ? Object.fromEntries(Object.entries(anchors.parts).map(([k, v]) => [k, conv(v)]))
-      : {},
     /* How wide the hat should be drawn, in screen pixels. The species says it,
        the way it already says how big the eye is, because the three skulls are
        nothing like each other: sized off `hs` alone a Brachiosaurus wore the
@@ -3479,11 +2906,6 @@ const GLYPHS = {
   '\u00b7':'000CC00', '\u25b6':'8CEFEC8', '\u25c0':'26EUE62', '\u25b2':'044EEV0',
   '\u25bc':'0VEE440'
 };
-
-/* cursor and scroll marks, addressed by name so the screen code does not have
-   to carry literal box-drawing characters around */
-const GL_RIGHT = '▶', GL_LEFT = '◀', GL_UP = '▲', GL_DOWN = '▼';
-const GL_DOT = '·';
 
 const fontStrips = new Map();
 function fontStrip(col){
@@ -3772,11 +3194,14 @@ function drawRex(M, P){
   tube(M.limb, [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]], [10*lM, 7.2*lM, 5.4*lM]);
   toes(M.horn, ax-T_.armLen*23/11*lM, ay+6*lM, 2, -1, Math.max(1.3, 2.3*lM));
 
-  // near limb: a heavy drumstick over the femur, then shank and bird foot
+  /* Near limb: a heavy drumstick over the femur, then shank and bird foot. The
+     keratin layer goes to legStep rather than being drawn over afterwards —
+     the claws used to be placed by a typed offset from the toe target, which
+     on an adult put them a clear seven pixels in front of the foot they grow
+     out of. drawFoot knows where the toes are; nothing else does. */
   blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM],[hipX+5*lM, hipY+18*lM],
                 [hipX-8*lM, hipY+15*lM],[hipX-14*lM, hipY-1*lM],[hipX-9*lM, hipY-13*lM]]);
-  const foot = legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT);
-  toes(M.horn, foot[0]-9*lM, foot[1]-1, 3, -1, Math.max(1.2, 2.1*lM));
+  legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT, M.horn);
 
   /* A larger eye set lower and further forward. Both eyes face forward, which
      the dossier promises, and a low, large orbit under a domed braincase is
@@ -3800,50 +3225,9 @@ function drawRex(M, P){
   /* Headgear sits on the skull roof behind the orbit — the flat over the
      braincase, not the muzzle and not the occiput. `hatW` spans about half the
      skull, which is as much of the roof as there is behind the eye. */
-  /* Where the big pieces of this animal are, for the editor's Body tab to hang
-     handles on. They are read-only landmarks — dragging one writes the TUNE
-     numbers underneath it, never these — and they exist here because only the
-     draw function knows where it put anything. */
-  /* The skeleton, published — see src/02-rig.js. Every one of these already
-     existed as a local variable, computed from the growth columns and the pose
-     and then thrown away. Each carries its own units: `skull` measures x in
-     snout lengths and y in head depths, so a part put on the face stays on the
-     face at every age. `sw` is thickness, which is neither axis — a tube width
-     scaled by head depth comes out twenty times too fat. */
-  const joints = {
-    hip:      { x: hipX,  y: hipY,   sx: 1, sy: lM, sw: lM },
-    back:     { x: 0,     y: backY,  sx: 1, sy: lM, sw: lM },
-    withers:  { x: withX, y: withY,  sx: 1, sy: lM, sw: lM },
-    shoulder: { x: withX, y: withY,  sx: 1, sy: lM, sw: lM*bk },
-    belly:    { x: 0,     y: bellyY, sx: 1, sy: lM, sw: lM },
-    throat:   { x: withX, y: throatY, sx: 1, sy: lM, sw: lM },
-    neck:     { x: (withX+hx)/2, y: (withY+hy)/2, sx: 1, sy: lM, sw: lM*bk },
-    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
-    snout:    { x: hx - sn, y: hy,   sx: sn, sy: fh, sw: hM },
-    jaw:      { x: hinge[0], y: hinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
-    brow:     { x: ex,    y: ey,     sx: hM, sy: hh, sw: hM*bw },
-    eye:      { x: ex,    y: ey,     sx: hM, sy: hM, sw: hM },
-    arm:      { x: ax,    y: ay,     sx: lM, sy: lM, sw: lM },
-    tail0:    { x: T(TL*23/72), y: hipY + sw*2, sx: tM, sy: lM, sw: lM },
-    tail1:    { x: T(TL*44/72), y: hipY + sw*5, sx: tM, sy: lM, sw: lM },
-    tail2:    { x: T(TL),       y: hipY + sw*9, sx: tM, sy: lM, sw: lM }
-  };
-
-  const parts = {
-    snout:    [hx - sn, hy],
-    jaw:      [hx - sn*.46, lipMid],
-    head:     [hx, hy],
-    shoulder: [withX, withY],
-    back:     [0, backY],
-    hip:      [hipX, hipY],
-    belly:    [0, bellyY],
-    arm:      [ax - T_.armLen*lM, ay + T_.armLen*lM],
-    tailBase: [T(TL*23/72), hipY - T_.tailBase*lM*bk],
-    tail:     [T(TL), hipY - 6*lM]
-  };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
            hat:[hx - sn*.22, hy - hh*1.10], hatW: sn*.54,
-           top: hy - hh*1.18, spine, parts, joints };
+           top: hy - hh*1.18, spine };
 }
 
 
@@ -4140,64 +3524,10 @@ function drawTrike(M, P){
   const crown = rot(fRx*.10, -fRy*.96);        // still the highest point, for `top`
   const roofBack = fx - fRx*.30*fc;            // where the frill leaves the skull
   const roofFront = ex + 5*hM;                 // the brow horn bases
-  /* Where the big pieces of this animal are, for the editor's Body tab to hang
-     handles on. They are read-only landmarks — dragging one writes the TUNE
-     numbers underneath it, never these — and they exist here because only the
-     draw function knows where it put anything. */
-  /* The skeleton, published.
-     Every one of these already existed as a local variable — `hx`, `hipY`,
-     `fTilt` — computed from the growth columns and the pose and then thrown
-     away when the function returned. Handing them out is what lets a part be
-     data: a shape bound to `skull` turns when the skull turns and scales when
-     it scales, and nothing has to be told how.
-
-     Each carries its own units, and that is the load-bearing detail. `skull`
-     measures x in snout lengths and y in head depths, so a point on the face
-     stays on the face at every growth stage without anybody storing four
-     copies of it. `frill` carries the tilt as well, so a shape bound to it is
-     tipped with the shield rather than sheared across it. */
-  const joints = {
-    hip:      { x: hipX,  y: hipY,   sx: 1,  sy: lM, sw: lM },
-    rump:     { x: hipX,  y: rumpY,  sx: 1,  sy: lM, sw: lM },
-    haunch:   { x: hipX-6, y: hipY-6*lM, sx: lM*bk, sy: lM*bk, sw: lM*bk },
-    back:     { x: 0,     y: backY,  sx: 1,  sy: lM, sw: lM },
-    withers:  { x: shX,   y: withY,  sx: 1,  sy: lM, sw: lM },
-    shoulder: { x: shX,   y: shY,    sx: 1,  sy: lM, sw: lM },
-    chest:    { x: shX,   y: chestY, sx: 1,  sy: lM, sw: lM },
-    belly:    { x: 0,     y: bellyY, sx: 1,  sy: lM, sw: lM },
-    neck:     { x: nkX,   y: nkY,    sx: 1,  sy: lM, sw: lM*bk },
-    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
-    jaw:      { x: jHinge[0], y: jHinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
-    frill:    { x: fx,    y: fy,     sx: fRx, sy: fRy, sw: hM*fM, rot: fTilt },
-    brow:     { x: ex,    y: ey,     sx: hM, sy: hh, sw: hM*(.40 + .60*hF) },
-    eye:      { x: ex,    y: ey,     sx: hM, sy: hM, sw: hM },
-    tail0:    { x: T(TL*13/62), y: hipY + sw*1.5, sx: tM, sy: lM*bk, sw: lM*bk },
-    tail1:    { x: T(TL*30/62), y: hipY + sw*3,   sx: tM, sy: lM, sw: lM },
-    tail2:    { x: T(TL*46/62), y: hipY + sw*5,   sx: tM, sy: lM, sw: lM },
-    tail3:    { x: T(TL),       y: hipY + sw*7,   sx: tM, sy: lM, sw: lM }
-  };
-
-  const parts = {
-    snout:    [hx - sn, hy],
-    jaw:      [hx - sn*.38, lipY + hh*.06],
-    head:     [hx, hy],
-    frill:    crown,
-    neck:     [nkX, nkY],
-    shoulder: [shX, withY],
-    foreleg:  [shX, shY],
-    back:     [5, backY],
-    rump:     [hipX-2, rumpY],
-    hip:      [hipX, hipY],
-    haunch:   [hipX-6, hipY-6*lM],
-    chest:    [shX+7, chestY],
-    belly:    [6, bellyY],
-    tailBase: [T(TL*13/62), hipY - T_.tailBase*lM*bk],
-    tail:     [T(TL), hipY - 4*lM]
-  };
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
            hat:[roofFront + (roofBack - roofFront)*.52, hy - hh*1.12],
            hatW: (roofBack - roofFront)*1.05,
-           top: crown[1], spine, parts, joints };
+           top: crown[1], spine };
 }
 
 /* Brachiosaurus altithorax sprite
@@ -4329,47 +3659,10 @@ function drawBrachio(M, P){
      front slope is long and the back one drops away — so a hat centred on the
      highest pixel sits over the back slope and looks pushed off the edge, which
      is the complaint even though the arithmetic was centred. */
-  /* Where the big pieces of this animal are, for the editor's Body tab to hang
-     handles on. They are read-only landmarks — dragging one writes the TUNE
-     numbers underneath it, never these — and they exist here because only the
-     draw function knows where it put anything. */
-  /* The skeleton, published — see src/02-rig.js. `n1`..`n3` are the neck
-     stations the S-curve already runs through, so a part hung on the neck
-     rides the curve rather than a straight line between its ends. */
-  const joints = {
-    hip:      { x: hipX,  y: hipY,   sx: 1, sy: lM, sw: lM },
-    shoulder: { x: shX,   y: shY,    sx: 1, sy: lM, sw: lM*bk },
-    // the shoulder hump, where the oval on `skin` actually sits
-    withers:  { x: shX + 2, y: shY - 6*lM, sx: 1, sy: lM, sw: lM*bk },
-    belly:    { x: 0,     y: shY + T_.bodyD*.5*lM, sx: 1, sy: lM, sw: lM },
-    neck0:    { x: n1[0], y: n1[1],  sx: 1, sy: lM, sw: lM*bk },
-    neck1:    { x: n2[0], y: n2[1],  sx: 1, sy: lM, sw: lM*bk },
-    neck2:    { x: n3[0], y: n3[1],  sx: 1, sy: lM, sw: lM*bk },
-    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
-    snout:    { x: hx - sn, y: hy,   sx: sn, sy: fh, sw: hM },
-    jaw:      { x: jHinge[0], y: jHinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
-    crest:    { x: (crestBack+crestFront)/2, y: hy - hh*crTop, sx: hM, sy: hh, sw: hM*cr },
-    eye:      { x: hx - sn*.48, y: hy - hh*.3, sx: hM, sy: hM, sw: hM },
-    tail0:    { x: hipX + TL*.33*tM, y: hipY + sw*2, sx: tM, sy: lM, sw: lM },
-    tail1:    { x: hipX + TL*.66*tM, y: hipY + sw*5, sx: tM, sy: lM, sw: lM },
-    tail2:    { x: hipX + TL*tM,     y: hipY + sw*8, sx: tM, sy: lM, sw: lM }
-  };
-
-  const parts = {
-    snout:    [hx - sn, hy],
-    jaw:      [hx - sn*.44, lipY + hh*.02],
-    head:     [hx, hy],
-    crest:    [hx - sn*.16, hy - hh*crTop],
-    neck:     [n3[0], n3[1]],
-    shoulder: [shX, shY],
-    hip:      [hipX, hipY],
-    belly:    [8*tor, shY + 8 + T_.bodyD*.5*lM],
-    tail:     [hipX + TL*tM, hipY + 10]
-  };
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
            hat:[(crestBack + crestFront)/2 - sn*.12, hy - hh*crTop*.97],
            hatW: (crestBack - crestFront)*1.05,
-           top: hy - hh*crTop, spine, parts, joints };
+           top: hy - hh*crTop, spine };
 }
 
 
@@ -4682,7 +3975,9 @@ landmark: drawGlacier, treeline: borealTrees, floor: borealFloor, live: drawAuro
 const BIOMES = {};
 for (const k in BIOME_ART) BIOMES[k] = Object.assign({}, BIOME_ART[k], BIOME_PAINT[k]);
 const BIOME_IDS = Object.keys(BIOMES);
-const biomeId = () => (G && BIOMES[G.biome] ? G.biome : 'valley');
+/* Whose view this is. Defaults to the animal on screen, but takes a pet so the
+   nest and the shop can ask about one that is not the active one. */
+const biomeId = (pet = S) => (pet && BIOMES[pet.biome] ? pet.biome : 'valley');
 
 /* The nine-colour palette a painter works from, built once per biome and
    phase and then cached. Everything that used to read SKY_SPECS[phase] reads
@@ -5469,16 +4764,6 @@ function bakeBg(phase, bid){
   }
   if (B.floor) B.floor(g, S_);
 
-  /* A hand-drawn backdrop goes on last, over everything that was computed.
-     Over and not instead of: a drawing that covers all 280x210 hides the lot,
-     and one that does not lets the generated scene through where it is blank,
-     so a patch and a whole scene are the same feature with the same data.
-
-     The transform is dropped for it, because a drawing is in world pixels —
-     it was painted on this canvas, not in the painters' coordinates. */
-  const drawn = bgPixCanvas(bid, phase);
-  if (drawn){ g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(drawn, 0, 0); g.restore(); }
-
   bgCache.set(key, c);
   return c;
 }
@@ -6021,6 +5306,7 @@ let G = null, S = null;
 function freshPet(){
   return {
     sp:null, name:'', born:0, growth:0, hat:null, face:null, owned:[], skin:'wild', skinsOwned:['wild'],
+    biome:'valley',
     needs:{ hunger:78, energy:88, hygiene:100, joy:70 },
     health:100, bond:6, vet:false,
     traits:{ appetite:0, tempo:0, social:0 },
@@ -6031,11 +5317,13 @@ function freshPet(){
   };
 }
 function freshGame(){
-  /* The habitat is on the keeper, not on the pet: it is the enclosure, and
-     every animal in the nest is standing in it. Coats and headgear are on the
-     animal because they are the animal's. */
+  /* Which habitats have been paid for is the keeper's — a place is bought
+     once and then open to the whole nest. Which one an animal is actually
+     standing in is the animal's, the same way its coat and its hat are. Moving
+     one animal to the lagoon used to move all of them, which made the nest a
+     single enclosure with one view rather than five animals in five places. */
   return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, dev:true, lastDay:'', streak:0,
-           biome:'valley', biomesOwned:['valley'],
+           biomesOwned:['valley'],
            lastTick:Date.now(), lastSeen:Date.now() };
 }
 
@@ -6119,7 +5407,7 @@ function loadSave(raw){
     pet.journal = [...new Set(array(pet.journal).filter(id => journalEntries().some(entry => entry.id === id)))];
     pet.records = {};
     for (const [key, record] of Object.entries(rawPet.records || {})){
-      if (!/^(snack|forage|leap):(rex|trike|brachio):[0-3]$/.test(key) || !record || typeof record !== 'object') continue;
+      if (!/^(snack|forage|leap|tug|guard):(rex|trike|brachio):[0-3]$/.test(key) || !record || typeof record !== 'object') continue;
       pet.records[key] = {best:Math.floor(number(record.best,0,0,1000)), weekly:Math.floor(number(record.weekly,0,0,1000)), week:Math.floor(number(record.week,0))};
     }
     pet.tally = {meals:Math.floor(number(rawPet.tally?.meals,0,0,999999))};
@@ -6132,7 +5420,14 @@ function loadSave(raw){
   g.lastDay = typeof g.lastDay === 'string' ? g.lastDay : '';
   g.sound = g.sound !== false; g.dev = g.dev === true;
   g.biomesOwned = [...new Set(['valley', ...array(g.biomesOwned).filter(id => Object.hasOwn(BIOMES, id))])];
-  if (!g.biomesOwned.includes(g.biome)) g.biome = 'valley';
+  /* A save written before the habitat moved onto the pet has one on the
+     keeper; every animal in it was standing there, so that is where they all
+     start. After this the keeper has no habitat at all and `delete` is what
+     stops a stale one being carried forward forever. */
+  for (const pet of g.pets)
+    if (!g.biomesOwned.includes(pet.biome))
+      pet.biome = g.biomesOwned.includes(o.biome) ? o.biome : 'valley';
+  delete g.biome;
   g.active = clamp(o.active | 0, 0, g.pets.length - 1);
   g.v = SAVE_VERSION;
   return { game:g, why:null, keep:null, from };
@@ -6141,7 +5436,22 @@ const trait = (k, pet = S) => TRAITS[k][pet.traits[k]];
 const hatched = (pet = S) => !!pet && !!pet.sp && !!pet.born;
 const stageIdx = (pet = S) => pet.growth < GROWTH_GATES[0] ? 0 : pet.growth < GROWTH_GATES[1] ? 1 : pet.growth < GROWTH_GATES[2] ? 2 : 3;
 const bondPips = () => clamp(Math.floor(S.bond/20), 0, 5);
-const ageDays  = () => (Date.now()-S.born)/86400e3;
+/* How old an animal is, in days, from the wall clock — so it goes on ageing
+   while the game is shut, the same way growth and hunger do. Takes a pet, like
+   `stageIdx` and `biomeId`, so the nest can ask about one that is not on
+   screen. Clamped at zero: `born` is a timestamp, and a device clock nudged
+   backwards would otherwise hand back a negative age. */
+const ageDays  = (pet = S) => Math.max(0, Date.now() - pet.born) / 86400e3;
+
+/* The badge on the glass. Hours for the first day, because an animal that has
+   just hatched reading "0 D" is the one moment the counter is most looked at,
+   and days after that. Grouped past a thousand — about three years, but the
+   whole point of the number is that somebody gets there. */
+function ageLabel(pet = S){
+  const d = ageDays(pet);
+  if (d < 1) return Math.max(1, Math.floor(d*24)) + ' H';
+  return String(Math.floor(d)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' D';
+}
 const hasIll   = (id, pet = S) => pet.ills.some(ill => ill.id === id);
 const isNight  = (now = Date.now()) => { const hour = new Date(now).getHours(); return hour >= BED_HOUR || hour < WAKE_HOUR; };
 
@@ -6465,21 +5775,22 @@ function buySkin(id){
   logEvent('Unlocked the ' + k.name.toLowerCase() + ' coat.');
   refresh();
 }
-/* Habitats. Bought once and then chosen, the way a coat is — except that
-   there is always exactly one in use and it belongs to the whole nest, so
-   switching costs nothing and cannot be undone into a state with no habitat
-   at all. */
+/* Habitats. Bought once for the nest and then chosen per animal, the way a
+   coat is: buying opens the place to everyone, moving moves the one you are
+   looking at. Switching costs nothing and cannot leave an animal with no
+   habitat at all. */
 function buyHabitat(id){
   const b = BIOMES[id];
   if (!b) return;
   if (G.biomesOwned.includes(id)){
-    if (G.biome === id) return refuse('Already out there.');
-    G.biome = id; SFX.pop(); say('Moved everyone to the ' + b.name.toLowerCase() + '.');
+    if (S.biome === id) return refuse('Already out there.');
+    S.biome = id; S.habitatAt = 0; SFX.pop();
+    say('Moved ' + (S.name || 'the egg') + ' to the ' + b.name.toLowerCase() + '.');
     logEvent('Moved to the ' + b.name.toLowerCase() + '.');
     refresh(); save(); return;
   }
   if (G.coins < b.cost) return refuse('Not enough coins.');
-  G.coins -= b.cost; G.biomesOwned.push(id); G.biome = id;
+  G.coins -= b.cost; G.biomesOwned.push(id); S.biome = id; S.habitatAt = 0;
   SFX.coin(); say('A new place to live.');
   logEvent('Opened up the ' + b.name.toLowerCase() + '.');
   refresh(); save();
@@ -6496,7 +5807,7 @@ function doTrick(){
   say(pick(['It spins on the spot.','A short, proud roar.','It stamps twice and looks at you.']));
   closeSheet(); refresh();
 }
-function refuse(msg){ SFX.bonk(); say(msg); }
+function refuse(msg){ SFX.bonk(); say(msg, 0, true); }
 
 /* ------------------------------- the nest ---------------------------------- */
 function switchPet(i){
@@ -6582,7 +5893,7 @@ const DEV = {
 
   /* --- world --- */
   setBiome(id){ if (!BIOMES[id]) return; if (!G.biomesOwned.includes(id)) G.biomesOwned.push(id);
-                G.biome = id; DEV.done('Now in the ' + BIOMES[id].name.toLowerCase() + '.'); },
+                S.biome = id; S.habitatAt = 0; DEV.done('Now in the ' + BIOMES[id].name.toLowerCase() + '.'); },
   addMess(){ if (S.mess.length < 4) S.mess.push({ x: rnd(28, W-28) }); DEV.done('Mess dropped.'); },
   clearMess(){ S.mess = []; DEV.done('Pen cleaned.'); },
 
@@ -6665,9 +5976,18 @@ const anim = {
 };
 
 let sayTimer = 0;
-function say(text, ms){
+/* Wherever the player is actually looking. With a screen open that is the
+   screen, and the message goes into its title bar rather than over the rows
+   being chosen from; in a game it is the game, and it goes in a strip along the
+   top; otherwise it is the habitat, where a bubble over the sky covers nothing
+   that matters. `bad` marks a refusal, which is drawn red on all three. */
+const hideBubble = () => { clearTimeout(sayTimer); $('bubble').classList.remove('on'); };
+function say(text, ms, bad){
+  if (screenOpen() || mode === 'game'){ hideBubble(); noteOnGlass(text, bad, ms); return; }
   const b = $('bubble');
-  b.textContent = text; b.classList.add('on');
+  b.textContent = text;
+  b.classList.toggle('bad', !!bad);
+  b.classList.add('on');
   clearTimeout(sayTimer);
   sayTimer = setTimeout(() => b.classList.remove('on'), ms || 2800);
 }
@@ -6761,36 +6081,32 @@ function drawScene(now){
     return;
   }
   const phase = skyPhase(new Date());
+  /* A game that looks down at the pen paints every pixel of the screen itself,
+     so baking and blitting a habitat behind it is work nobody sees. */
+  if (mode === 'game' && GAMES[game.kind].top){ drawGame(now, phase); return; }
   const [sx, sy, sw, sh] = BG_CROP[bgStage()];
   ctx.drawImage(bakeBg(phase), sx, sy, sw, sh, 0, 0, W, H);
 
   /* Everything below is drawn live over the backdrop and knows nothing about
-     it, which is what makes the place move. A hand-drawn backdrop can name the
-     ones it would rather do without — its own ground may disagree with blades
-     growing out of it — and `quiet` is that list. Empty for every procedural
-     habitat, so this costs nothing until someone paints one. */
-  const hush = bgQuiet(biomeId(), phase);
-  const on = name => hush.indexOf(name) < 0;
-
-  if (phase === 'night' && on('stars')){
+     it, which is what makes the place move. */
+  if (phase === 'night'){
     for (const s of STARS){
       const tw = Math.sin(now/520 + s.p);
       if (tw > .15){ ctx.fillStyle = tw > .8 ? '#ffffff' : 'rgba(232,228,200,.8)'; ctx.fillRect(s.x|0, s.y|0, 1, 1); }
     }
   }
-  if (on('sky')) drawSkyBody(ctx, phase, now);
+  drawSkyBody(ctx, phase, now);
   // whatever this habitat has that moves: a plume, surf, a fall, an aurora
   const live = (BIOMES[biomeId()] || BIOMES.valley).live;
-  if (live && on('live')) live(ctx, phase, now);
-  if (on('clouds')) drawClouds(ctx, phase);
-  if (on('flyers')) drawFlyers(ctx);
-  if (on('water')) drawWater(ctx, phase, now);
-  if (on('grass')) drawGrassLine(ctx, phase, now);
-  if (phase !== 'night' && on('motes')) drawMotes(ctx, phase);
-  const fronds = (g, p, n) => { if (on('fronds')) drawFronds(g, p, n); };
+  if (live) live(ctx, phase, now);
+  drawClouds(ctx, phase);
+  drawFlyers(ctx);
+  drawWater(ctx, phase, now);
+  drawGrassLine(ctx, phase, now);
+  if (phase !== 'night') drawMotes(ctx, phase);
 
-  if (mode === 'choose'){ drawChoose(now); fronds(ctx, phase, now); return; }
-  if (mode === 'egg'){ drawEgg(now); fronds(ctx, phase, now); return; }
+  if (mode === 'choose'){ drawChoose(now); drawFronds(ctx, phase, now); return; }
+  if (mode === 'egg'){ drawEgg(now); drawFronds(ctx, phase, now); return; }
   if (mode === 'game'){ drawGame(now, phase); return; }
   const habitat = HABITAT_ART[biomeId()];
   ctx.save();
@@ -6798,7 +6114,7 @@ function drawScene(now){
   drawItem(ctx, habitat.item, habitat.slot[0]-6, habitat.slot[1]-10, 1.5);
   ctx.restore();
   drawLive(now);
-  fronds(ctx, phase, now);
+  drawFronds(ctx, phase, now);
   const tint = skyOf(phase).tint;
   if (tint !== 'rgba(0,0,0,0)'){ ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
 }
@@ -6916,13 +6232,34 @@ function stateMark(g, x, top, now){
 
 /* ============================== MINIGAMES ================================== */
 const GAMES = {
-  snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', pay:1,
+  snack: { name:'Snack run',  blurb:'Thirty seconds. Catch the food, dodge the rocks. Five in a row and each catch counts double.', hint:'Catch the food, dodge the rocks.', pay:1,
     start:() => ({x:W/2, tx:W/2, dir:-1, items:[], combo:0, spawn:.5, stun:0, kL:false, kR:false}),
     update:stepSnack, draw:drawSnack, input:inputSnack, finish:finishRound },
-  forage:{ name:'Forage', blurb:'Food turns up around the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', pay:1,
-    start:() => ({x:W/2, tx:W/2, dir:-1, dist:0, walking:false, snap:0, finds:[], thief:null, thiefAt:4, chain:0, missed:0, spawn:.4}),
+  /* `top` says the game paints the whole screen itself, looking down. Without
+     it drawScene would bake and blit a habitat nobody is going to see. */
+  forage:{ name:'Forage', blurb:'Food turns up across the pen and spoils where it lies. Tap to send your animal, and beat the compies to it.', hint:'Tap to send it. Beat the compies.', pay:1, top:true,
+    start:() => ({x:W/2, y:(PEN.y0+PEN.y1)/2, tx:W/2, ty:(PEN.y0+PEN.y1)/2, head:0, dist:0,
+                  walking:false, snap:0, boost:0, finds:[], thief:null, thiefAt:4,
+                  chain:0, missed:0, spawn:.4, ground:'clearing'}),
     update:stepForage, draw:drawForage, input:(input) => { if (input.type === 'point') tapForage(input.x,input.y); }, finish:finishRound },
-  leap: { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', pay:2,
+  guard:{ name:'Nest guard', blurb:'Compies come for the clutch from every side. Tap one to send your animal at it, and get the egg back off any that gets one.', hint:'Send it at the raiders.', pay:2, top:true,
+    /* The animal starts in a corner, not on the clutch. Parked beside the nest
+       its reach covers every approach, so standing still intercepted the whole
+       round — the game has to be played from somewhere, and where you leave it
+       standing is part of the decision. */
+    start:() => ({x:PEN.x0 + 20, y:PEN.y1 - 18, tx:PEN.x0 + 20, ty:PEN.y1 - 18, head:0, dist:0,
+                  walking:false, raiders:[], eggs:5, ends:0, chain:0, spawn:1.1, ground:'clearing'}),
+    update:stepGuard, draw:drawGuard, input:(input) => { if (input.type === 'point') tapGuard(input.x,input.y); }, finish:finishRound },
+  tug:  { name:'Tug of war', blurb:'A rival takes the other end of the vine. Pull when the grip is in the green, and do not slip.', hint:'Pull when the grip is green.', pay:2,
+    start:() => ({pull:0, grip:0, winAt:.5, ends:0, chain:0, ready:0, hit:-999, slip:0, want:false}),
+    update:stepTug, draw:drawTug,
+    /* A tap only asks for a pull; stepTug decides when it happens. The input
+       handler has no clock of its own, and reaching for the wall clock here put
+       the cooldown on a different timebase from the round — which on a machine
+       running faster than real time swallowed every pull after the first. */
+    input:(input) => { if ((input.type === 'point' && !input.move) || (input.down && [' ','ArrowUp','w'].includes(input.key))) game.want = true; },
+    finish:finishRound },
+  leap: { name:'River leap', blurb:'Your animal runs. Tap anywhere to jump the logs and boulders coming at it.', hint:'Tap to jump.', pay:2,
     start:() => ({obs:[], y:0, vy:0, spawn:1.1, speed:78, run:0, stun:0}),
     update:stepLeap, draw:drawLeap, input:(input) => { if ((input.type === 'point' && !input.move) || (input.down && [' ','ArrowUp','w'].includes(input.key))) leapJump(); }, finish:finishRound }
 };
@@ -6931,7 +6268,10 @@ function gameProfile(pet){
   const stage = stageIdx(pet), reach = pet.sp === 'brachio' ? 5 : pet.sp === 'trike' ? 3 : 0;
   return { speed:88-stage*6+(pet.sp === 'rex' ? 8 : pet.sp === 'brachio' ? -8 : 0),
     reach:10+stage*4+reach, catch:11+stage*2, jump:148-stage*3-(pet.sp === 'brachio' ? 6 : 0), stun:800-stage*100,
-    runSpeed:78+stage*8+(pet.sp === 'rex' ? 6 : pet.sp === 'brachio' ? -6 : 0) };
+    runSpeed:78+stage*8+(pet.sp === 'rex' ? 6 : pet.sp === 'brachio' ? -6 : 0),
+    /* What one well-timed pull is worth. A tyrannosaur hauls, a sauropod has
+       the weight to anchor, and a hatchling of either has neither yet. */
+    pull:.19+stage*.05+(pet.sp === 'rex' ? .025 : pet.sp === 'brachio' ? .015 : 0) };
 }
 function gameRandom(min=0, max=1){
   game.seed = (Math.imul(game.seed,1664525)+1013904223) >>> 0;
@@ -6950,13 +6290,18 @@ function startGame(kind, seed){
   if (S.asleep) return refuse(S.name + ' is asleep.');
   if (S.vet) return refuse(S.name + ' is in no state to play.');
   if (S.needs.energy < 12) return refuse('Too tired to run around.');
-  closeSheet();
+  closeSheet(); hideBubble();
   mode = 'game'; feedFX = null;
   const week = challengeWeek();
   game = Object.assign({kind, score:0, left:30, pet:S, week, profile:gameProfile(S),
     recordKey:kind+':'+S.sp+':'+stageIdx(S), seed:seed ?? (week*97+Object.keys(GAMES).indexOf(kind)+1)}, GAMES[kind].start());
   if (kind === 'leap') game.speed = game.profile.runSpeed;
-  say(GAMES[kind].blurb.split('.')[0] + '.');
+  /* Which floor, from the seed rather than from gameRandom: start() runs before
+     `game` exists, and the weekly challenge compares scores, which it could not
+     do if one player got the open clearing and another the reed beds. */
+  if (kind === 'forage' || kind === 'guard') game.ground = FORAGE_GROUNDS[game.seed % FORAGE_GROUNDS.length];
+  if (kind === 'tug') tugNewEnd();
+  say(GAMES[kind].hint);
   paintChrome();
 }
 function finishRound(round){
@@ -6977,9 +6322,11 @@ function endGame(){
   player.needs.energy = clamp(player.needs.energy - 7, 0, 100);
   player.bond = clamp(player.bond + (game.score > 8 ? 3 : 1), 0, 100);
   if (game.score > 8) logEvent('A good run at ' + g.name.toLowerCase() + ': ' + game.score + '.', player);
-  say(game.score ? 'Scored ' + game.score + '. That is ' + earned + ' coins.' : 'Nothing scored. Next time.');
   if (game.score) SFX.coin();
+  const said = game.score ? 'Scored ' + game.score + '. That is ' + earned + ' coins.'
+                          : 'Nothing scored. Next time.';
   game = null; mode = 'live';
+  say(said);              // after the mode flips, or it lands on a game that has stopped drawing
   paintChrome(); refresh();
 }
 function stepGame(dt, now){
@@ -6995,6 +6342,16 @@ function drawGame(now, phase){
   ctx.fillStyle = 'rgba(16,22,24,.78)'; ctx.fillRect(0, 0, W, 9);
   ctx.fillStyle = game.left < 6 ? '#c2603c' : '#7ea55f';
   ctx.fillRect(1, 2, Math.round((W-2) * game.left/30), 5);
+  /* A message during a round goes under the clock, in the bitmap font, on a
+     plate the width of the line. The DOM bubble sat in the middle of the glass
+     and covered the thing being played. */
+  if (screenNote && Date.now() < screenNote.until){
+    const line = fit(screenNote.text, W - 8);
+    const wide = textW(line) + 6;
+    ctx.fillStyle = screenNote.bad ? 'rgba(58,23,16,.92)' : 'rgba(16,26,24,.88)';
+    ctx.fillRect(Math.round((W - wide)/2), 10, wide, 11);
+    text(ctx, line, W/2, 12, screenNote.bad ? '#f0bba4' : '#e9e1cb', 'centre');
+  }
 }
 function gameSprite(anim2, frame, scaleTo){
   const f = frameOf(S.sp, stageIdx(), anim2, frame, false, S.skin);
@@ -7047,123 +6404,211 @@ function drawSnack(now){
 
 /* ------ forage ------
 
-   This replaces Bug hunt, which had two faults and only one of them was a bug.
+   Looking down at the pen rather than across it.
 
-   The bug: critters spawned in two bands, one in the air and one on the
-   ground *below* the grass line, and catching one meant bringing the animal's
-   mouth anchor within eleven pixels of it in both axes. An adult's mouth sits
-   around thirty pixels above the ground line, so nothing walking on the floor
-   of the pen was ever reachable — half the quarry in the game could not be
-   caught by any player at any skill.
+   Side-on, this game had one axis. Every find sat on the same ground line, so
+   "which one next" was only ever left or right, and the animal walked past two
+   of them to reach the third. From above it is a floor: a find can be behind
+   you, the compies come in from any edge, and the route between two finds is a
+   decision rather than a direction.
 
-   The design fault, which mattered more: the quarry was insects, and two of
-   the three animals in this game are obligate herbivores. Nothing about
-   Triceratops or Brachiosaurus makes chasing dragonflies across a pen a thing
-   they would do, and no amount of fixing the hitbox was going to change that.
-
-   So the quarry is food, and which food comes from the species' own `likes` —
-   ferns and cycad cones for the ceratopsian, berries and cones for the
-   sauropod, river fish and carrion for the tyrannosaur. Everything sits ON
-   the ground line, where the animal's own feet are, so reach is a horizontal
-   distance and nothing can spawn somewhere unreachable by construction.
-
-   What makes it a game rather than a queue is the compsognathids. They come
-   in from the edges and go for whatever has been sitting longest, and they
-   are faster than any of the three animals you can raise. So it is not "walk
-   to each thing in turn": it is a choice, every few seconds, between the
-   close one and the one about to be stolen — and the walk cycle, the growth
-   stage and the animal's own speed all decide whether you make it.
+   The animals are PIX sprites here, not the procedural side view, because a
+   top-down animal is a different projection and no amount of turning the side
+   one produces it. They live in `top.<species>.<a|b>`, which means the Pixels
+   tab edits every one of them like any other sprite. They are drawn facing +x
+   and rotated to the heading — a top-down sprite is the one kind that can be
+   rotated honestly, because from directly above, turning the animal really is
+   turning the picture.
    -------------------------------------------------------------------------- */
-const FORAGE_H = 50;                           // drawn sprite height in the pen
 const FORAGE_LIFE = 3600;                      // how long a find sits before it spoils
+const FORAGE_BOOST = 4200;                     // how long a burst of speed lasts
+/* The floor, in screen pixels. Clear of the timer bar above and the score tag
+   below, so nothing the player has to read sits under something drawn over it. */
+const PEN = { x0: 6, y0: 12, x1: W - 6, y1: H - 20 };
+const FORAGE_GROUNDS = ['clearing', 'mudflat', 'shore'];
+const STAGE_TOP = [.62, .76, .9, 1.0];         // how big the animal draws, by age
 
-function forageSprite(now){
-  const snapping = now < game.snap;
-  const sp = SPECIES[S.sp], st = stageIdx();
-  if (snapping) return gameSprite('eat', Math.floor(now/150), FORAGE_H);
-  if (!game.walking) return gameSprite('idle', Math.floor(now/700), FORAGE_H);
-  // one sprite stride to one stride of ground, the same rule the habitat uses
-  const probe = gameSprite('walk', 0, FORAGE_H);
-  const cycle = strideCycle(S.sp, st);
-  const frame = Math.floor((game.dist / probe.sc) / cycle * POSES.walk.length);
-  return gameSprite('walk', frame, FORAGE_H);
+/* Three floors, so a round does not always look like the last one. Which one
+   comes up is drawn from the round's seed: a replayed seed is the same place,
+   which the weekly challenge needs, since it compares scores and would not
+   survive one player getting the open clearing and another the reed beds.
+
+   Scatter is hash1 on a quantised input, never a thresholded sine — sampling a
+   sine per column gives evenly spaced detail, and the eye reads even spacing as
+   manufactured. Quantising the input is what makes a tuft a block a few pixels
+   across rather than hatching. */
+const penCache = new Map();
+const PEN_ART = {
+  clearing: { base:'#5b7a3f', dark:'#48642f', lit:'#6f9150', grit:'#3c5428',
+              prop:'#3f5f2c', propLit:'#7ba455', rim:'#33481f' },
+  mudflat:  { base:'#6b5637', dark:'#55432a', lit:'#84693f', grit:'#3f3120',
+              prop:'#46603f', propLit:'#6d8a52', rim:'#3a2d1c' },
+  shore:    { base:'#b3a276', dark:'#94855e', lit:'#c9b98d', grit:'#7a6c4b',
+              prop:'#8d9a86', propLit:'#d6d2b4', rim:'#6d6045' }
+};
+
+function penCanvas(kind){
+  if (penCache.has(kind)) return penCache.get(kind);
+  const c = makeCv(W, H), g = readCtx(c), P = PEN_ART[kind];
+  g.fillStyle = P.base; g.fillRect(0, 0, W, H);
+
+  /* Patches first, so everything else lies on them: blocks of the darker and
+     lighter ground on a six-pixel grid, which reads as areas of turf rather
+     than as noise over a flat fill. */
+  for (let i = 0; i < 170; i++){
+    const r = hash1(i*2.3 + 11);
+    if (r < .32) continue;
+    const x = Math.floor(hash1(i*3.1) * (W/6)) * 6, y = Math.floor(hash1(i*7.7 + 40) * (H/6)) * 6;
+    g.fillStyle = r < .64 ? P.dark : P.lit;
+    g.fillRect(x, y, r > .88 ? 12 : 6, 6);
+  }
+  for (let i = 0; i < 430; i++){
+    const x = Math.floor(hash1(i*1.7 + 3) * W), y = Math.floor(hash1(i*5.3 + 91) * H);
+    g.fillStyle = hash1(i*9.1) < .5 ? P.grit : P.lit;
+    g.fillRect(x, y, 1, 1);
+  }
+
+  /* One kind of prop each, scattered the same way and drawn differently: fern
+     clumps on the clearing, reed tufts on the mud, shells on the sand. They are
+     what tells you which place you are in at a glance. */
+  for (let i = 0; i < 30; i++){
+    const x = 10 + Math.floor(hash1(i*4.7) * (W - 20));
+    const y = 16 + Math.floor(hash1(i*8.3 + 5) * (H - 40));
+    if (kind === 'shore'){
+      g.fillStyle = P.prop;    g.fillRect(x, y, 3, 2); g.fillRect(x+1, y-1, 2, 1);
+      g.fillStyle = P.propLit; g.fillRect(x+1, y, 1, 1);
+    } else {
+      const n = 2 + Math.floor(hash1(i*1.9) * 3);
+      for (let b = 0; b < n; b++){
+        const len = 3 + Math.floor(hash1(i*3.3 + b*1.4) * 4);
+        const bx = x + (b - (n-1)/2) * 3;
+        g.fillStyle = P.prop;    g.fillRect(bx, y - len, 2, len + 1);
+        g.fillStyle = P.propLit; g.fillRect(bx, y - len, 1, 2);
+      }
+    }
+  }
+
+  /* Boulders, the only thing on the floor with real weight: a flat fill, one
+     hard lit edge along the top and a contact shadow under it. Nothing here is
+     mirrored and no two are the same size. */
+  for (let i = 0; i < 5; i++){
+    const x = 16 + Math.floor(hash1(i*11.3 + 2) * (W - 40));
+    const y = 24 + Math.floor(hash1(i*6.1 + 17) * (H - 60));
+    const bw = 7 + Math.floor(hash1(i*2.9) * 7), bh = 5 + Math.floor(hash1(i*4.1 + 8) * 5);
+    g.fillStyle = 'rgba(12,16,10,.30)'; g.fillRect(x+1, y+2, bw, bh);
+    g.fillStyle = '#6c6a5e'; g.fillRect(x, y, bw, bh);
+    g.fillStyle = '#8a887a'; g.fillRect(x, y, bw, 1);
+    g.fillStyle = '#4c4b42'; g.fillRect(x, y+bh-1, bw, 1);
+  }
+
+  /* The rim. A pen needs an edge or the floor reads as a texture that happens
+     to stop, and the player needs to know where the animal cannot go. */
+  g.fillStyle = P.rim;
+  g.fillRect(0, 0, W, PEN.y0 - 2); g.fillRect(0, PEN.y1 + 2, W, H - PEN.y1);
+  g.fillRect(0, 0, PEN.x0 - 2, H);  g.fillRect(PEN.x1 + 2, 0, W - PEN.x1, H);
+  g.fillStyle = P.grit;
+  g.fillRect(PEN.x0 - 2, PEN.y0 - 2, PEN.x1 - PEN.x0 + 4, 1);
+  g.fillRect(PEN.x0 - 2, PEN.y1 + 1, PEN.x1 - PEN.x0 + 4, 1);
+  g.fillRect(PEN.x0 - 2, PEN.y0 - 2, 1, PEN.y1 - PEN.y0 + 4);
+  g.fillRect(PEN.x1 + 1, PEN.y0 - 2, 1, PEN.y1 - PEN.y0 + 4);
+
+  penCache.set(kind, c);
+  return c;
 }
 
-/* Somewhere to put a new find: on the ground, inside the pen, and not on top
-   of one that is already there. */
+/* Somewhere to put a new find: inside the pen, and not on top of one already
+   there or under the animal's nose as it arrives. */
 function forageSlot(){
-  for (let tries=0; tries<12; tries++){
-    const x = gameRandom(18, W-18);
-    if (game.finds.every(f => Math.abs(f.x - x) > 26)) return x;
+  for (let tries = 0; tries < 16; tries++){
+    const x = gameRandom(PEN.x0 + 10, PEN.x1 - 10), y = gameRandom(PEN.y0 + 10, PEN.y1 - 10);
+    const clear = game.finds.every(f => Math.hypot(f.x - x, f.y - y) > 26)
+               && Math.hypot(game.x - x, game.y - y) > 30;
+    if (clear) return [x, y];
   }
-  return gameRandom(18, W-18);
+  return [gameRandom(PEN.x0 + 10, PEN.x1 - 10), gameRandom(PEN.y0 + 10, PEN.y1 - 10)];
 }
 
 function stepForage(dt, now){
   const sec = dt / 1000;
 
-  // run toward the last place the player pointed
-  const speed = game.profile.speed;
-  const d = game.tx - game.x;
-  if (Math.abs(d) > 1.5){
-    const step = clamp(d, -speed*sec, speed*sec);
-    game.x = clamp(game.x + step, 12, W - 12);
-    game.dist += Math.abs(step);
-    game.dir = step < 0 ? -1 : 1;
+  /* Run toward the last place the player pointed. Straight line, because the
+     floor has nothing on it that blocks — the boulders are painted into the
+     ground and an animal walking over one is cheaper to accept than a path
+     solver is to write and to explain. */
+  const boosting = now < game.boost;
+  const speed = game.profile.speed * (boosting ? 1.55 : 1);
+  const dx = game.tx - game.x, dy = game.ty - game.y;
+  const d = Math.hypot(dx, dy);
+  if (d > 1.5){
+    const step = Math.min(d, speed * sec);
+    game.x += dx/d * step;
+    game.y += dy/d * step;
+    game.head = Math.atan2(dy, dx);
+    game.dist += step;
     game.walking = true;
   } else game.walking = false;
+  game.x = clamp(game.x, PEN.x0 + 6, PEN.x1 - 6);
+  game.y = clamp(game.y, PEN.y0 + 6, PEN.y1 - 6);
 
-  // new finds
+  // new finds. One in eight is a burst: worth a point like anything else, and
+  // four seconds of speed on top, which is what makes a detour worth taking.
   game.spawn -= sec;
-  if (game.spawn <= 0 && game.finds.length < 5){
-    game.spawn = gameRandom(.6, 1.05);
-    // what turns up is what this species eats, and nothing else
-    game.finds.push({ x: forageSlot(), id: gamePick(SPECIES[game.pet.sp].likes), age: 0 });
+  if (game.spawn <= 0 && game.finds.length < 6){
+    game.spawn = gameRandom(.55, 1.0);
+    const [fx, fy] = forageSlot();
+    const burst = gameRandom() < .13;
+    game.finds.push({ x:fx, y:fy, id: burst ? 'cake' : gamePick(SPECIES[game.pet.sp].likes),
+                      burst, age:0 });
   }
   for (const f of game.finds){
     f.age += dt;
     if (f.age > FORAGE_LIFE){ f.dead = true; game.missed++; game.chain = 0; }
   }
 
-  /* Thieves. One at a time, aimed at whatever has been down longest — the
-     thing the player is most likely to have written off, which is what makes
-     ignoring a find a decision rather than an oversight. */
+  /* Thieves. One at a time, aimed at whatever has been down longest — the find
+     the player is most likely to have written off, which is what makes ignoring
+     one a decision rather than an oversight. They come in from the nearest edge
+     to their mark and leave the same way, and they are faster than any of the
+     three animals you can raise. */
   game.thiefAt -= sec;
   if (!game.thief && game.thiefAt <= 0 && game.finds.length){
     const mark = game.finds.reduce((a, b) => (b.age > a.age ? b : a));
-    game.thief = { x: mark.x < W/2 ? -10 : W+10, mark, p:0, carry:false };
+    const fromX = mark.x < W/2 ? PEN.x0 - 12 : PEN.x1 + 12;
+    game.thief = { x:fromX, y:mark.y, mark, p:0, carry:false, head:0 };
   }
   if (game.thief){
     const t = game.thief;
     t.p += dt;
-    const goal = t.carry ? (t.x < W/2 ? -14 : W+14) : t.mark.x;
-    const dir = goal > t.x ? 1 : -1;
-    t.x += dir * 74 * sec;
-    if (!t.carry && Math.abs(t.x - t.mark.x) < 3){
+    const gx = t.carry ? (t.home < W/2 ? PEN.x0 - 16 : PEN.x1 + 16) : t.mark.x;
+    const gy = t.carry ? t.y : t.mark.y;
+    const tdx = gx - t.x, tdy = gy - t.y, td = Math.hypot(tdx, tdy) || 1;
+    t.head = Math.atan2(tdy, tdx);
+    t.x += tdx/td * 92 * sec;
+    t.y += tdy/td * 92 * sec;
+    if (!t.carry && td < 4){
       if (t.mark.dead){ game.thief = null; game.thiefAt = gameRandom(2.2, 4.2); }
-      else { t.mark.dead = true; t.carry = true; game.missed++; game.chain = 0; SFX.pop(); }
-    } else if (t.carry && (t.x < -12 || t.x > W+12)){
+      else { t.mark.dead = true; t.carry = true; t.home = t.x; game.missed++; game.chain = 0; SFX.pop(); }
+    } else if (t.carry && (t.x < PEN.x0 - 14 || t.x > PEN.x1 + 14)){
       game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
     }
   }
 
-  /* Reach. A horizontal distance along the ground, because everything here is
-     on the ground — the old game measured to a mouth anchor thirty pixels up
-     and then spawned half its quarry on the floor. */
+  /* Reach, now a radius rather than a distance along a line. Everything is on
+     one floor, so there is no axis a find can hide in. */
   const reach = game.profile.reach;
   for (const f of game.finds){
     if (f.dead) continue;
-    if (Math.abs(f.x - game.x) < reach){
+    if (Math.hypot(f.x - game.x, f.y - game.y) < reach){
       f.dead = true;
       game.chain++;
       game.score += game.chain >= 4 ? 2 : 1;
       game.snap = now + 260;
+      if (f.burst){ game.boost = now + FORAGE_BOOST; SFX.coin(); }
       if (game.thief && game.thief.mark === f && !game.thief.carry){
         game.thief = null; game.thiefAt = gameRandom(2.2, 4.2);
       }
       SFX.chomp();
-      emit('spark', f.x, GROUND - 4, 4, {col:'#cfe0a8'});
-      emit('crumb', f.x, GROUND - 4, 3, {col:'#7d9c5a', vy:-14, g:110});
+      emit('spark', f.x, f.y, 4, {col: f.burst ? '#e8d27a' : '#cfe0a8', vy:-8, g:0});
     }
   }
   game.finds = game.finds.filter(f => !f.dead);
@@ -7172,99 +6617,369 @@ function stepForage(dt, now){
   }
 }
 
-/* A find: a scrape of turned earth with the item standing on it, over a bar
-   that runs down as it spoils.
-
-   Both parts have to fight the habitat for attention. Drawn small and flat on
-   the grass line, among cycads and boulders and a watering hole, a fern frond
-   is one more piece of scenery — so the earth is a mound in a colour nothing
-   else in the pen uses, and the item stands clear above it at twice size.
-   The bar is the only information the game gives, so it is under every find
-   rather than only under the urgent one. */
+/* A find: a scrape of turned earth with the item standing on it, and a ring
+   that closes as it spoils. The ring rather than a bar, because from above a
+   bar has no up to sit above — it is drawn around the thing it is about. */
 function drawFind(g, f, now){
-  const x = Math.round(f.x), u = clamp(f.age / FORAGE_LIFE, 0, 1);
-  // the mound
-  g.fillStyle = '#6b4a2a';
-  g.fillRect(x-6, GROUND-1, 13, 4);
-  g.fillRect(x-4, GROUND-3, 9, 2);
-  g.fillStyle = '#8a6438';
-  g.fillRect(x-4, GROUND-3, 9, 1);
-  g.fillStyle = '#3a2716';
-  g.fillRect(x-6, GROUND+2, 13, 1);
-  /* The find itself, standing clear of the grass and bobbing once it starts
-     to go over. It is drawn four more times underneath in near-black, one
-     pixel out in each direction, which gives it the same hard outline every
-     animal in this game has — a green fern frond on a green grass line is
-     otherwise invisible, and the item is the thing the player is aiming at. */
+  const x = Math.round(f.x), y = Math.round(f.y), u = clamp(f.age / FORAGE_LIFE, 0, 1);
+  g.fillStyle = '#5a3f22'; g.fillRect(x-6, y-3, 13, 7); g.fillRect(x-5, y-4, 11, 9);
+  g.fillStyle = '#7a5a33'; g.fillRect(x-5, y-4, 11, 1);
+  /* The item, drawn four times in near-black one pixel out before it is drawn
+     properly. A green frond on green turf is otherwise invisible, and the item
+     is the thing the player is aiming at. */
   const bob = u > .70 ? Math.round(Math.sin(now/90)) : 0;
-  const ix = x - 4 + bob, iy = GROUND - 12;   // standing on the mound, not over it
-  for (const d of [[-1,0],[1,0],[0,-1],[0,1]])
-    drawItem(g, f.id, ix + d[0], iy + d[1], 1.6, '#1c160e');
-  drawItem(g, f.id, ix, iy, 1.6);
-  // freshness
-  const w = Math.max(1, Math.round(13 * (1 - u)));
-  g.fillStyle = '#101a18'; g.fillRect(x - 8, GROUND + 4, 17, 5);
-  g.fillStyle = '#2b3a3f'; g.fillRect(x - 7, GROUND + 5, 15, 3);
+  const ix = x - 4 + bob, iy = y - 9;
+  for (const d of [[-1,0],[1,0],[0,-1],[0,1]]) drawItem(g, f.id, ix + d[0], iy + d[1], 1.5, '#16120b');
+  drawItem(g, f.id, ix, iy, 1.5);
+  if (f.burst){
+    g.fillStyle = Math.sin(now/110) > 0 ? '#f2dd93' : '#e0ac48';
+    for (const d of [[-8,0],[8,0],[0,-9],[0,7]]) g.fillRect(x + d[0], y + d[1], 1, 1);
+  }
+  // freshness: a square ring that loses a side as it goes
+  const left = Math.round(20 * (1 - u));
   g.fillStyle = u > .70 ? '#e2704a' : u > .45 ? '#e8bd4e' : '#8cc46a';
-  g.fillRect(x - 7 + (13 - w), GROUND + 5, w + 2, 3);
+  for (let i = 0; i < left; i++){
+    const s = i % 20, hx = s < 6 ? x - 5 + s*2 : s < 10 ? x + 6 : s < 16 ? x + 5 - (s-10)*2 : x - 6;
+    const hy = s < 6 ? y - 7 : s < 10 ? y - 7 + (s-6)*3 : s < 16 ? y + 5 : y + 5 - (s-16)*3;
+    g.fillRect(hx, hy, 1, 1);
+  }
 }
 
-/* Compsognathus: a metre of animal and mostly tail, which at this size is a
-   body three pixels deep, a neck and a tail as long as the rest of it. It is
-   painted light with a hard dark edge, because the one thing it must not do
-   is disappear into the treeline it walks out of. */
-function drawThief(g, t){
-  const x = Math.round(t.x), y = GROUND - 8, run = Math.sin(t.p/70) > 0;
-  const face = t.x < W/2 ? 1 : -1;                           // it faces where it is going
-  g.fillStyle = '#241d13';                                   // the hard edge, drawn under
-  g.fillRect(x - 6, y + 1, 11, 6);
-  g.fillRect(x + face*3 - 1, y - 1, 5, 5);
-  g.fillStyle = '#c9a355';
-  g.fillRect(x - 4, y + 2, 8, 4);                            // body
-  g.fillRect(x + face*3, y, 3, 3);                           // head
-  g.fillStyle = '#e6cf94';
-  g.fillRect(x - 4, y + 2, 8, 1);
-  g.fillStyle = '#8a6c34';
-  for (let i=0;i<6;i++) g.fillRect(x - 5 - face*i*2, y + 3 + (i>3?1:0), 2, 1);   // tail
-  g.fillStyle = '#c9a355';
-  g.fillRect(x - 2, y + 6, 2, run ? 3 : 2);                  // legs
-  g.fillRect(x + 2, y + 6, 2, run ? 2 : 3);
-  g.fillStyle = '#241d13'; g.fillRect(x + face*4, y + 1, 1, 1);
-  if (t.carry){ g.fillStyle = '#cfe0a8'; g.fillRect(x + face*5, y + 3, 3, 3); }
+/* A sprite seen from above, turned to face where it is going.
+
+   The heading is snapped to sixteenths of a turn. Rotating pixel art by a free
+   angle makes the outline crawl as the animal turns, which at this size looks
+   like the sprite is boiling; sixteen steps is under twelve degrees of error,
+   which nobody reads as wrong, and holds the picture still between steps. */
+function drawTop(g, id, x, y, head, sc){
+  const art = pixCanvas(id);
+  const step = Math.PI/8;
+  g.save();
+  g.translate(Math.round(x), Math.round(y));
+  g.rotate(Math.round(head/step) * step);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(art, -art.width/2*sc, -art.height/2*sc, art.width*sc, art.height*sc);
+  g.restore();
 }
 
 function drawForage(now){
+  ctx.drawImage(penCanvas(game.ground), 0, 0);
   for (const f of game.finds) drawFind(ctx, f, now);
 
-  const { f, sc } = forageSprite(now);
-  const flip = game.dir > 0;
-  const x = Math.round(game.x);
-  ctx.fillStyle = 'rgba(16,26,24,.32)';
-  ctx.beginPath(); ctx.ellipse(x, GROUND + 1, f.w*sc*.38, 3, 0, 0, 7); ctx.fill();
-  ctx.save(); ctx.translate(x, GROUND);
-  if (flip) ctx.scale(-1, 1);
-  ctx.drawImage(f.cv, -f.ox*sc, -f.oy*sc, f.w*sc, f.h*sc);
-  ctx.restore();
-
-  if (game.thief) drawThief(ctx, game.thief);
-
-  // a marker where the animal has been told to go, so the order reads
-  if (game.walking){
-    const tx = Math.round(game.tx);
-    ctx.fillStyle = 'rgba(207,224,168,.5)';
-    ctx.fillRect(tx-3, GROUND+3, 7, 1); ctx.fillRect(tx, GROUND+1, 1, 5);
+  if (game.thief){
+    const t = game.thief;
+    drawTop(ctx, 'top.compy.' + (Math.floor(t.p/90) % 2 ? 'b' : 'a'), t.x, t.y, t.head, 1);
+    if (t.carry){ ctx.fillStyle = '#cfe0a8'; ctx.fillRect(Math.round(t.x)-1, Math.round(t.y)-1, 3, 3); }
   }
-  scoreTag('Found ' + game.score + (game.chain >= 4 ? '  x2' : ''));
+
+  /* The animal. One sprite stride to one stride of ground, the same rule the
+     habitat walk uses, so the legs do not skate when a burst speeds it up. */
+  const sc = STAGE_TOP[stageIdx()];
+  const frame = game.walking ? (Math.floor(game.dist / (11 * sc)) % 2 ? 'b' : 'a')
+              : (now < game.snap ? 'b' : 'a');
+  ctx.fillStyle = 'rgba(12,18,10,.26)';
+  ctx.beginPath(); ctx.ellipse(Math.round(game.x), Math.round(game.y) + 2, 13*sc, 8*sc, 0, 0, 7); ctx.fill();
+  if (now < game.boost){
+    // a burst shows on the animal, not only in the speed
+    ctx.fillStyle = Math.sin(now/70) > 0 ? 'rgba(240,214,120,.5)' : 'rgba(240,214,120,.22)';
+    ctx.beginPath(); ctx.ellipse(Math.round(game.x), Math.round(game.y), 17*sc, 12*sc, 0, 0, 7); ctx.fill();
+  }
+  drawTop(ctx, 'top.' + S.sp + '.' + frame, game.x, game.y, game.head, sc);
+
+  // where the animal has been told to go, so the order reads as an order
+  if (game.walking){
+    const tx = Math.round(game.tx), ty = Math.round(game.ty);
+    ctx.fillStyle = 'rgba(223,236,190,.62)';
+    ctx.fillRect(tx-4, ty, 3, 1); ctx.fillRect(tx+2, ty, 3, 1);
+    ctx.fillRect(tx, ty-4, 1, 3); ctx.fillRect(tx, ty+2, 1, 3);
+  }
+  scoreTag('Found ' + game.score + (game.chain >= 4 ? '  x2' : '')
+           + (now < game.boost ? '  fast' : ''));
 }
 
 function tapForage(mx, my){
-  // tapping a find aims at the find; tapping the pen aims at the pen
-  let best = null, bd = 30;
+  // tapping a find aims at the find; tapping the floor aims at the floor
+  let best = null, bd = 16;
   for (const f of game.finds){
-    const d = Math.abs(f.x - mx) + Math.abs(GROUND - 6 - my) * .35;
+    const d = Math.hypot(f.x - mx, f.y - my);
     if (d < bd){ bd = d; best = f; }
   }
-  game.tx = clamp(best ? best.x : mx, 12, W - 12);
+  game.tx = clamp(best ? best.x : mx, PEN.x0 + 6, PEN.x1 - 6);
+  game.ty = clamp(best ? best.y : my, PEN.y0 + 6, PEN.y1 - 6);
+}
+
+/* ------ nest guard ------
+
+   The other side of forage: the same floor, seen the same way, but the compies
+   are not after the food any more and there is something behind you worth
+   losing. Foraging is a routing problem — visit these in the best order before
+   they spoil. This is triage: three are coming, you can reach two, and the one
+   you ignore takes an egg.
+
+   It shares the pen art and the top-down sprites with forage, which is most of
+   why both exist: the projection was the expensive part and it now carries two
+   games.
+   -------------------------------------------------------------------------- */
+const GUARD_EGGS = 5;
+const NEST = { x: W/2, y: (PEN.y0 + PEN.y1)/2 };
+
+function guardRaider(){
+  /* In from an edge, aimed at the nest. Which edge is seeded, so a replayed
+     round is the same round. */
+  const side = Math.floor(gameRandom(0, 4));
+  const along = gameRandom(.18, .82);
+  const x = side === 0 ? PEN.x0 - 10 : side === 1 ? PEN.x1 + 10 : PEN.x0 + (PEN.x1-PEN.x0)*along;
+  const y = side === 2 ? PEN.y0 - 10 : side === 3 ? PEN.y1 + 10 : PEN.y0 + (PEN.y1-PEN.y0)*along;
+  /* Fast enough that not everything can be caught, which is what makes how
+     much ground your animal covers matter at all. The ramp is capped: past a
+     point a raider nothing can catch is not difficulty, it is a cutscene. */
+  return { x, y, home:[x, y], p:0, head:0, carry:false,
+           speed: gameRandom(70, 88) + Math.min(16, game.ends * 1.5) };
+}
+
+function stepGuard(dt, now){
+  const sec = dt / 1000;
+
+  /* `runSpeed`, not the pottering-about-the-pen speed. Guarding a nest is
+     running, and it has to be a stat that grows: the pen speed falls with age
+     while reach rises, the two cancel almost exactly, and a hatchling and an
+     adult scored the same round — which is the definition of growth not
+     mattering. Running and reach both grow, so age is worth something here. */
+  const speed = game.profile.runSpeed;
+  const dx = game.tx - game.x, dy = game.ty - game.y, d = Math.hypot(dx, dy);
+  if (d > 1.5){
+    const step = Math.min(d, speed * sec);
+    game.x += dx/d * step; game.y += dy/d * step;
+    game.head = Math.atan2(dy, dx);
+    game.dist += step;
+    game.walking = true;
+  } else game.walking = false;
+  game.x = clamp(game.x, PEN.x0 + 6, PEN.x1 - 6);
+  game.y = clamp(game.y, PEN.y0 + 6, PEN.y1 - 6);
+
+  /* They come faster as the round goes on, which is what stops a good player
+     simply standing on the nest for thirty seconds. */
+  game.spawn -= sec;
+  if (game.spawn <= 0 && game.raiders.length < 4){
+    game.spawn = Math.max(.85, gameRandom(1.5, 2.2) - game.ends * .045);
+    game.ends++;
+    game.raiders.push(guardRaider());
+  }
+
+  const reach = game.profile.reach;
+  for (const r of game.raiders){
+    r.p += dt;
+    const gx = r.carry ? r.home[0] : NEST.x, gy = r.carry ? r.home[1] : NEST.y;
+    const rdx = gx - r.x, rdy = gy - r.y, rd = Math.hypot(rdx, rdy) || 1;
+    r.head = Math.atan2(rdy, rdx);
+    r.x += rdx/rd * r.speed * sec;
+    r.y += rdy/rd * r.speed * sec;
+
+    // driven off: your animal got to it, carrying or not — and one with an egg
+    // drops it, which is the save worth making
+    if (Math.hypot(r.x - game.x, r.y - game.y) < reach){
+      if (r.carry){ game.eggs = Math.min(GUARD_EGGS, game.eggs + 1); SFX.coin(); }
+      else SFX.pop();
+      r.gone = true;
+      game.chain++;
+      game.score += game.chain >= 4 ? 2 : 1;
+      emit('spark', r.x, r.y, 4, {col:'#e8d27a', vy:-8, g:0});
+      continue;
+    }
+    if (!r.carry && rd < 7){
+      if (game.eggs > 0){ game.eggs--; r.carry = true; game.chain = 0; SFX.bonk();
+                          emit('crumb', NEST.x, NEST.y, 5, {col:'#d8cfae', vy:-14, g:90}); }
+      else r.carry = true;                       // nothing left to take; it leaves anyway
+    }
+    if (r.carry && (r.x < PEN.x0 - 12 || r.x > PEN.x1 + 12 || r.y < PEN.y0 - 12 || r.y > PEN.y1 + 12))
+      r.gone = true;
+  }
+  game.raiders = game.raiders.filter(r => !r.gone);
+}
+
+function drawGuard(now){
+  ctx.drawImage(penCanvas(game.ground), 0, 0);
+
+  /* The nest: a ring of banked earth with the clutch in it. The eggs are the
+     score you are protecting, so they are drawn as themselves and counted by
+     being there rather than by a number somewhere else. */
+  const nx = Math.round(NEST.x), ny = Math.round(NEST.y);
+  ctx.fillStyle = '#4a3520';
+  ctx.beginPath(); ctx.ellipse(nx, ny, 17, 12, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#6b4f2e';
+  ctx.beginPath(); ctx.ellipse(nx, ny, 14, 9, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#3a2a18';
+  ctx.beginPath(); ctx.ellipse(nx, ny + 1, 11, 7, 0, 0, 7); ctx.fill();
+  for (let i = 0; i < game.eggs; i++){
+    const a = i/GUARD_EGGS * Math.PI*2 + .4;
+    const ex = nx + Math.round(Math.cos(a) * 6) - 2, ey = ny + Math.round(Math.sin(a) * 4) - 3;
+    ctx.fillStyle = '#e4dcc0'; ctx.fillRect(ex, ey, 4, 5);
+    ctx.fillStyle = '#f4efdb'; ctx.fillRect(ex, ey + 1, 1, 3);
+    ctx.fillStyle = '#b3a888'; ctx.fillRect(ex, ey + 4, 4, 1);
+  }
+
+  for (const r of game.raiders){
+    drawTop(ctx, 'top.compy.' + (Math.floor(r.p/90) % 2 ? 'b' : 'a'), r.x, r.y, r.head, 1);
+    if (r.carry){ ctx.fillStyle = '#e4dcc0'; ctx.fillRect(Math.round(r.x)-1, Math.round(r.y)-1, 3, 4); }
+  }
+
+  const sc = STAGE_TOP[stageIdx()];
+  const frame = game.walking ? (Math.floor(game.dist / (11 * sc)) % 2 ? 'b' : 'a') : 'a';
+  ctx.fillStyle = 'rgba(12,18,10,.26)';
+  ctx.beginPath(); ctx.ellipse(Math.round(game.x), Math.round(game.y) + 2, 13*sc, 8*sc, 0, 0, 7); ctx.fill();
+  drawTop(ctx, 'top.' + S.sp + '.' + frame, game.x, game.y, game.head, sc);
+
+  if (game.walking){
+    const tx = Math.round(game.tx), ty = Math.round(game.ty);
+    ctx.fillStyle = 'rgba(223,236,190,.62)';
+    ctx.fillRect(tx-4, ty, 3, 1); ctx.fillRect(tx+2, ty, 3, 1);
+    ctx.fillRect(tx, ty-4, 1, 3); ctx.fillRect(tx, ty+2, 1, 3);
+  }
+  scoreTag('Saw off ' + game.score + (game.chain >= 4 ? ' x2' : '') + '   eggs ' + game.eggs);
+}
+
+function tapGuard(mx, my){
+  // tapping a raider aims at the raider; tapping the floor aims at the floor
+  let best = null, bd = 18;
+  for (const r of game.raiders){
+    const d = Math.hypot(r.x - mx, r.y - my);
+    if (d < bd){ bd = d; best = r; }
+  }
+  game.tx = clamp(best ? best.x : mx, PEN.x0 + 6, PEN.x1 - 6);
+  game.ty = clamp(best ? best.y : my, PEN.y0 + 6, PEN.y1 - 6);
+}
+
+/* ------ tug ------
+
+   The competitive one. Everything else in the pen is the animal against the
+   clock; this is the animal against another animal, which is the only kind of
+   score that means anything to anybody.
+
+   The opponent is a rival of the same species at the same age in a different
+   coat, so it is a fair match by construction and needs no art of its own —
+   and so that when your animal wins it is because of what you did, not because
+   it was given a smaller opponent.
+
+   It is not a mash. Mashing rewards a fast finger and nothing else, is
+   miserable on a phone, and cannot tell a hatchling from an adult. Instead the
+   grip sweeps back and forth and a pull only counts for its full weight if it
+   lands in the window: timing decides whether you pull, and the animal's own
+   strength decides how much that pull is worth. Growing up widens the window
+   and adds weight, so an adult both pulls harder and is easier to pull with.
+   -------------------------------------------------------------------------- */
+const TUG_SWEEP = 1000;            // ms for the grip to travel and come back
+const TUG_COOLDOWN = 120;          // ms between pulls, so mashing cannot beat timing
+const TUG_ROUND = 1.0;             // how far the knot has to travel to win an end
+
+/* Where the window sits this end, from the round's own seed: a fixed window
+   would be learned once and never looked at again. */
+function tugNewEnd(){
+  game.pull = 0;
+  game.winAt = gameRandom(.18, .82);
+  game.ends++;
+}
+
+function stepTug(dt, now){
+  const P = game.profile;
+  game.grip = (game.grip + dt / TUG_SWEEP) % 1;
+  if (game.want){ game.want = false; tugPull(now); }
+  /* The rival hauls steadily, and a little harder after every end it loses, so
+     a good player meets a real opponent rather than running away with it. */
+  game.pull += (0.14 + game.ends * 0.022) * dt / 1000;
+  if (game.slip > 0) game.slip -= dt;
+
+  if (game.pull >= TUG_ROUND){                    // dragged over: the rival takes the end
+    SFX.bonk(); game.chain = 0;
+    emit('crumb', 54, GROUND - 10, 6, {col:'#9b7a52', vy:-20, g:120});
+    tugNewEnd();
+  } else if (game.pull <= -TUG_ROUND){            // hauled in: the end is yours
+    SFX.coin();
+    game.chain++;
+    game.score += game.chain >= 3 ? 2 : 1;
+    emit('spark', W - 54, GROUND - 10, 7, {col:'#e8d27a'});
+    tugNewEnd();
+  }
+}
+
+/* One pull per tap, and never more often than the cooldown, so the game cannot
+   be won by tapping faster than a person reasonably can. */
+function tugPull(now){
+  if (now < game.ready) return;
+  game.ready = now + TUG_COOLDOWN;
+  const half = tugWindow() / 2;
+  const cursor = tugCursor();
+  const good = Math.abs(cursor - game.winAt) < half;
+  if (good){
+    game.pull -= game.profile.pull;
+    game.hit = now;
+    SFX.pop();
+  } else {
+    /* A mistimed pull is a slip, and it costs. Without that, tapping at random
+       is a slow win rather than a loss, and the window may as well not exist. */
+    game.pull += game.profile.pull * .42;
+    game.slip = 260;
+    SFX.bonk();
+  }
+}
+/* The cursor travels out and back rather than wrapping, so it is a grip
+   tightening and loosening and not a bar that teleports home. */
+const tugCursor = () => game.grip < .5 ? game.grip * 2 : 2 - game.grip * 2;
+const tugWindow = () => .20 + stageIdx() * .03;
+
+function drawTug(now){
+  const phase = skyPhase(new Date());
+  const midX = Math.round(W/2 - game.pull * 30);
+
+  /* Both animals, leaning away from the vine. The rival is the same species at
+     the same age in its second coat: a fair match, and no art of its own. */
+  const st = stageIdx(), sp = S.sp;
+  const coats = SKINS[sp] || [];
+  const rivalCoat = (coats[1] || coats[0] || {id:'wild'}).id;
+  const strain = now < game.hit + 180 ? 2 : 0;
+  const mine  = frameOf(sp, st, 'wary', 0, false, S.skin);
+  const yours = frameOf(sp, st, 'wary', 0, false, rivalCoat);
+
+  const myX = 46 - Math.round(game.pull * 18) - strain;
+  const rvX = W - 46 - Math.round(game.pull * 18);
+  // yours faces +x, the rival faces −x: the sprite is drawn facing −x unflipped
+  ctx.save(); ctx.translate(myX, GROUND); ctx.scale(-1, 1);
+  ctx.drawImage(mine.cv, -mine.ox, -mine.oy);
+  ctx.restore();
+  ctx.drawImage(yours.cv, rvX - yours.ox, GROUND - yours.oy);
+
+  /* The vine. Held at the height of the animal holding it, so a hatchling has
+     it at its own head rather than over it, and it sags between the two of them
+     and pulls straighter the harder the knot is being dragged — which is the
+     whole state of the game in one line. */
+  const y0 = GROUND - Math.round(mine.h * .52), sag = 7 * (1 - Math.abs(game.pull));
+  ctx.strokeStyle = '#7a6134'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(myX + 6, y0);
+  ctx.quadraticCurveTo(midX, y0 + sag * 2, rvX - 6, y0);
+  ctx.stroke();
+  ctx.fillStyle = game.slip > 0 ? '#c2603c' : '#d8c48a';
+  ctx.fillRect(midX - 3, y0 + Math.round(sag) - 2, 7, 5);
+  ctx.fillStyle = '#6b5430';
+  ctx.fillRect(midX - 3, y0 + Math.round(sag) - 2, 7, 1);
+
+  /* The centre line, so "which way is it going" is a fact and not a feeling. */
+  ctx.fillStyle = 'rgba(233,225,203,.35)';
+  ctx.fillRect(W/2, GROUND - 6, 1, 8);
+
+  /* The grip. A track with the window marked on it and the cursor sweeping
+     across, drawn along the bottom where the thumb already is — and starting
+     clear of the score tag, which it was drawing straight through. */
+  const tx = 62, tw = W - 70, ty = H - 15;
+  ctx.fillStyle = 'rgba(16,26,24,.85)'; ctx.fillRect(tx - 2, ty - 2, tw + 4, 11);
+  ctx.fillStyle = '#2b3a3f'; ctx.fillRect(tx, ty, tw, 7);
+  const half = tugWindow() / 2;
+  const wx = Math.round(tx + (game.winAt - half) * tw), ww = Math.max(3, Math.round(half * 2 * tw));
+  ctx.fillStyle = '#3f7a4a'; ctx.fillRect(wx, ty, ww, 7);
+  ctx.fillStyle = '#8cc46a'; ctx.fillRect(wx, ty, ww, 1);
+  const cx = Math.round(tx + tugCursor() * tw);
+  ctx.fillStyle = now < game.hit + 160 ? '#e8d27a' : '#e9e1cb';
+  ctx.fillRect(cx - 1, ty - 2, 3, 11);
+
+  scoreTag('Won ' + game.score + (game.chain >= 3 ? ' x2' : ''));
 }
 
 /* ------ river leap ------
@@ -7540,7 +7255,8 @@ const SC = {
   gold:   '#e0ac48',   // coins and prices
   moss:   '#8cb765',   // affirmative, owned, worn
   rust:   '#cf6a44',   // refusals, warnings, costs you cannot meet
-  sel:    '#3d5c4e'    // the selected cell's fill
+  sel:    '#3d5c4e',   // the selected cell's fill
+  close:  '#3a1710'    // the plate behind the close tab's X
 };
 
 /* one grid unit. Everything on a screen is a whole number of these, which is
@@ -7550,12 +7266,32 @@ const U = 4;
 let screen = null;          // null when the habitat is showing
 let screenState = {};       // per-screen scratch: which item is selected, scroll
 
+/* A message that arrives while a screen is open.
+
+   These used to go to the DOM speech bubble, which floats over the middle of
+   the glass — and the glass, when a screen is open, IS the screen. Telling
+   someone their animal is full by covering the row of food they are choosing
+   from is worse than not telling them: the menu is still live underneath, so
+   it reads as broken rather than as busy.
+
+   So the message goes in the title bar, which every screen already has, is
+   always exactly thirteen pixels tall, and carries the least useful text on
+   the screen — the title, which names the screen you are looking at and can
+   therefore be spared for two seconds. Nothing moves, nothing is covered, and
+   nothing reflows under the finger that is already reaching for a row. */
+let screenNote = null;
+function noteOnGlass(text, bad, ms){
+  screenNote = { text:String(text), bad:!!bad, until:Date.now() + (ms || 2600) };
+}
+
 function openScreen(which){
   if (!SCREENS[which]) return;
   if (mode === 'game') return;
   if (mode !== 'live' && !SCREENS[which].preHatch) return;
   screen = which;
   screenState = { pick: 0, scroll: 0 };
+  screenNote = null;            // a message from the habitat is not this screen's
+  hideBubble();                 // nor is a bubble it left hanging over the glass
   SFX.pop();
   paintChrome();
 }
@@ -7593,17 +7329,30 @@ function panel(g, x, y, w, h, fill){
 function screenFrame(g, title){
   g.fillStyle = SC.ink;
   g.fillRect(0, 0, W, H);
-  g.fillStyle = SC.panel;
+  if (screenNote && Date.now() >= screenNote.until) screenNote = null;
+  const note = screenNote;
+  /* The bar carries either the screen's name and the purse, or a message. Not
+     both: at six pixels a character there is room for one of them, and a
+     message cut off halfway is worse than a title missing for two seconds. */
+  g.fillStyle = note ? (note.bad ? SC.close : '#18291f') : SC.panel;
   g.fillRect(0, 0, W, BAR_H);
-  g.fillStyle = SC.edge;
+  g.fillStyle = note ? (note.bad ? SC.rust : SC.moss) : SC.edge;
   g.fillRect(0, BAR_H - 1, W, 1);
-  text(g, title, PAD, 3, SC.bone);
-  const purse = Math.floor(G.coins) + 'c';
-  text(g, purse, W - PAD - 11, 3, SC.gold, 'right');
-  // close tab, top right, always in the same place on every screen
-  g.fillStyle = SC.line;
+  if (note){
+    text(g, fit(note.text, W - PAD - 14), PAD, 3, note.bad ? '#f0bba4' : SC.bone);
+  } else {
+    text(g, title, PAD, 3, SC.bone);
+    text(g, Math.floor(G.coins) + 'c', W - PAD - 11, 3, SC.gold, 'right');
+  }
+  /* Close tab, top right, always in the same place on every screen — and red,
+     because it is the one control on a screen that undoes being there. It was
+     the same grey as an inactive cell, which made the only way back the least
+     visible thing on the glass. */
+  g.fillStyle = SC.close;
   g.fillRect(W - 11, 2, 9, 9);
-  g.fillStyle = SC.dim;
+  g.fillStyle = SC.rust;
+  g.fillRect(W - 11, 2, 9, 1); g.fillRect(W - 11, 10, 9, 1);
+  g.fillRect(W - 11, 2, 1, 9); g.fillRect(W - 3, 2, 1, 9);
   for (let i=0;i<5;i++){ g.fillRect(W - 9 + i, 4 + i, 1, 1); g.fillRect(W - 5 - i, 4 + i, 1, 1); }
   return { close: [W - 12, 1, 11, 11] };
 }
@@ -7949,7 +7698,7 @@ function shelfItems(which){
   }
   return { items: BIOME_IDS.map(id => BIOMES[id]), cols:5, cell:[26,20],
     art: (g, it, cx, cy) => thumb(g, biomeThumb(it.id), cx, cy, 26, 20),
-    own: it => G.biomesOwned.includes(it.id), worn: it => G.biome === it.id,
+    own: it => G.biomesOwned.includes(it.id), worn: it => S.biome === it.id,
     note: it => it.note, take:false, here:'here' };
 }
 
@@ -8049,7 +7798,7 @@ SCREENS.nest = {
       else {
         const prev = S; S = p;
         const worst = Math.min(p.needs.hunger, p.needs.energy, p.needs.hygiene, p.needs.joy);
-        note = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + '. '
+        note = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + ', ' + ageLabel(p) + '. '
              + (p.vet ? 'Needs a vet.' : p.ills.length ? ILLS[p.ills[0].id].name + '.'
                 : worst < 25 ? 'Needs attention.' : p.asleep ? 'Asleep.' : 'Doing fine.');
         S = prev;
@@ -8277,9 +8026,10 @@ function paintChrome(){
     const k = $('act-' + screen);
     if (k) k.classList.add('down');           // the key that opened it stays in
   }
-  /* The status badges float over the glass. A screen is the glass, so they
-     have to get out of the way or they sit on top of its title bar. */
-  $('badges').style.display = screenOpen() ? 'none' : '';
+  /* The status badges float over the glass. A screen is the glass, and so is a
+     round of a game, so they have to get out of the way or they sit on top of
+     the title bar or the clock. */
+  $('badges').style.display = screenOpen() || mode === 'game' ? 'none' : '';
   ['feed','play','wash','care','shop'].forEach(k => { $('act-'+k).disabled = busy; });
   const careBtn = $('act-care');
   const old = careBtn.querySelector('.nub'); if (old) old.remove();
@@ -8320,9 +8070,10 @@ function refresh(){
   }
   const sp = SPECIES[S.sp], st = STAGE[stageIdx()];
   $('dName').textContent = S.name;
-  const d = ageDays();
-  const age = d < 1 ? Math.max(1, Math.round(d*24)) + 'h old' : Math.floor(d) + (Math.floor(d) === 1 ? ' day old' : ' days old');
-  $('dSub').textContent = st.label + ' ' + sp.common + ' · ' + age;
+  /* The age has moved to the chip on the glass, so it is not written here as
+     well: two places saying how old the animal is is two places that can
+     disagree, and the subtitle is the one nobody was reading. */
+  $('dSub').textContent = st.label + ' ' + sp.common;
   $('mood').innerHTML = escapeHTML(S.name) + ' <em>' + escapeHTML(moodOf().line) + '</em>';
   const bondEl = $('bond');
   const pips = bondPips();
@@ -8337,7 +8088,11 @@ function refresh(){
   if (S.asleep && !S.vet) tags.push(['', 'Asleep']);
   if (S.mess.length) tags.push(['warn', S.mess.length + ' to clean']);
   if (G.streak > 1) tags.push(['', G.streak + '-day streak']);
-  $('badges').innerHTML = tags.slice(0,3).map(([c,t]) => `<span class="tag ${c}"><i class="dot"></i>${t}</span>`).join('');
+  /* The age leads the row and is always there; the status tags flow after it.
+     It is this animal's own counter — every pet in the nest has its own — and
+     it is the one number on the glass that only ever goes up. */
+  $('badges').innerHTML = `<span class="age">${ageLabel()}</span>`
+    + tags.slice(0,3).map(([c,t]) => `<span class="tag ${c}"><i class="dot"></i>${t}</span>`).join('');
   lamp.className = 'lamp' + (S.vet || S.ills.length ? ' bad' : S.asleep ? ' rest' : '');
   paintChrome();
   if (openPanel) renderSheet(openPanel);
@@ -8396,17 +8151,6 @@ function mountArt(root){
     }
   });
 }
-function portrait(pet, size){
-  const c = makeCv(size, size), g = readCtx(c);
-  g.imageSmoothingEnabled = false;
-  if (!pet.sp){ g.fillStyle = '#3a4a44'; g.fillRect(size/2-5, size/2-7, 10, 14); return c; }
-  const st = pet.born ? stageIdx(pet) : 0;
-  const f = frameOf(pet.sp, st, 'idle', 0, false, pet.skin || 'wild');
-  const sc = Math.min(size / f.w, size / f.h) * .92;
-  g.drawImage(f.cv, (size - f.w*sc)/2, size - f.h*sc - 1, f.w*sc, f.h*sc);
-  return c;
-}
-
 /* One entry per sheet, each handed the body element and the active species.
    This was a single if/else chain that every new panel had to be threaded
    into; a sheet is now self-contained, the way GAMES already works in

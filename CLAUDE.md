@@ -22,16 +22,15 @@ the default is the machine's locale, which is cp1252 on Windows, and it will
 quietly turn every `·` and `—` into mojibake.
 
 Open `index.html` for development, `dist/paleopal.html` to check the build.
-There is a test suite, added in session 14. `npm test` runs fifteen Node
+There is a test suite, added in session 14. `npm test` runs sixteen Node
 checks over the simulation — growth parity between the active pet and the
-roster, overnight catch-up, save validation and version handling, and that
-each `<data:NAME>` marker in `src/00-art.js` still matches the declaration it
-owns. `npm run test:browser` runs twelve Playwright specs in Chromium: ten
-load the real page — console cleanliness at desktop and mobile sizes, every
-species and stage and coat and pose baking without clipping, the import and
-export paths, each minigame drawing and taking input — and two load
-`tools/editor.html` to check the hand-drawn art paths. `npm run check` runs
-both.
+roster, overnight catch-up, save validation and version handling, that each
+`<data:NAME>` marker in `src/00-art.js` still matches the declaration it owns,
+and that every background crop is 4:3 and lands on the ground line. `npm run
+test:browser` runs ten Playwright specs in Chromium that load the real page:
+console cleanliness at desktop and mobile sizes, every species and stage and
+coat and pose baking without clipping, the import and export paths, and each
+minigame drawing and taking input. `npm run check` runs both.
 Browsers come from `npx playwright install`, and results are written to the
 system temp directory because OneDrive locked an in-repo output directory.
 
@@ -108,54 +107,15 @@ rather than writing it again.
   step, while the number still updates — so it looks like the slider is broken
   rather than the code. `tools/edit-ui.js` keeps `BUILD` and `PAINT` apart:
   moving a control paints, only choosing a different thing to edit builds.
-- **Art is data, in the files the editor writes.** Anything that can change
-  without changing behaviour — pixel sprites, growth columns, proportions,
-  every colour that is not the case — belongs behind a `<data:NAME>` marker in
-  `src/00-art.js`, because that file is what `tools/editor.html` writes.
-  Adding a hand-written `fillRect` sprite somewhere else puts it out of the
-  owner's reach. There is exactly one other such file, `src/00-bg-art.js`,
-  and it exists only because a hand-drawn backdrop is 59,000 characters and
-  five of them would bury everything else; it has the same markers and the
-  same save path. Do not add a third without a reason that good. Every block
-  must be claimed by a file in `DATA_FILES` in `tools/edit-core.js` — a block
-  nothing claims is silently dropped on save, so that is checked at load.
-  After changing any of it, call `artChanged()`: eight caches hold baked
+- **Art is data, in one file.** Anything that can change without changing
+  behaviour — pixel sprites, growth columns, proportions, every colour that is
+  not the case — belongs in `src/00-art.js` behind its `<data:NAME>` markers,
+  because that file is what `tools/editor.html` writes. Adding a hand-written
+  `fillRect` sprite somewhere else puts it out of the owner's reach. Every
+  block must be claimed by a file in `DATA_FILES` in `tools/edit-core.js` — a
+  block nothing claims is silently dropped on save, so that is checked at
+  load. After changing any of it, call `artChanged()`: seven caches hold baked
   results and forgetting one shows a stale sprite.
-
-- **A hand-drawn part says what a pixel is made of, not what colour it is.**
-  `composeSprite` reads every material layer as a binary mask and takes all
-  colour from that material's ramp. So `PART_PIX` grids hold layer characters,
-  and the shading, the internal edges and the outline come back for free. A
-  unit with no grid stays procedural, which is what lets a hand-drawn head
-  keep a gait-solved walk. The eye is not drawable on purpose: it has five
-  pose states and a static one would make asleep and ill the same picture
-  again.
-
-- **A drawn part travels; it does not bend.** It hangs from a landmark the
-  pose has already moved, so a head breathes and a frill turns with the skull
-  — but a leg does not step, because the gait solves new joint positions every
-  frame and a picture has none. Drawing `limb` froze the near legs while the
-  far ones walked on, which on the glass read as one foreleg being stuck. The
-  fix is a drawing per frame: `sp|unit|stage|anim|frame` beats `sp|unit|stage`
-  where it exists. Only `walk` needs them — every other pose leaves `legPhase`
-  at zero — and the Draw tab traces all twelve off the gait solver in one
-  press, because nobody draws twelve legs from an empty grid. A drawn `body`
-  has the same limit in a smaller way: it costs the idle breath, since the
-  trunk slides instead of flexing.
-
-- **A colour that is not a material is a colour, and says so.** Materials
-  cannot honestly express "a rust-red band across this frill", so a species
-  can carry up to eight colours of its own in `PART_MATS`. They occupy the
-  `ink0`..`ink7` slots in `LAYERS`, just above the coat, because a marking
-  covers the surface and passes behind horns, teeth and eyes. They are
-  ordinary materials otherwise — each gets a ramp and takes the lighting pass,
-  which is the difference between a marking and a sticker; `lit: 0` is how you
-  ask for the sticker. A species that defines none costs nothing: `drawLayers`
-  puts a hole in the canvas array and every per-pixel pass skips it. Do not
-  invent a material to get a colour — that is a lie about what the animal is
-  made of, and the dossier rule applies to the sprite as much as to the
-  prose.
-
 - **The world is wider than the screen, by extension and not by scale.**
   `bakeBg` translates by `BG_PAD_X`/`BG_PAD_Y` once, so every literal
   coordinate in `04-world.js` still means what it meant and today's picture
@@ -165,6 +125,15 @@ rather than writing it again.
   `BG_CROP` is four views of that one canvas, anchored on the ground line so
   the animal's feet never leave the grass; change a number there and check it
   still lands on whole pixels.
+- **A message goes where the player is looking.** `say()` picks the surface:
+  the screen's title bar if a screen is open, a strip under the clock if a game
+  is running, the DOM bubble over the habitat otherwise. It used to be the
+  bubble always — which floats over the middle of the glass, and the glass,
+  when a menu is open, *is* the menu. Telling someone their animal is full by
+  covering the row of food they are choosing from reads as broken rather than
+  as busy. Nothing may reflow to make room: the title bar is always thirteen
+  pixels and gives up the title, which is the least useful text on the screen.
+  `refuse()` passes `bad`, and a refusal is red on all three surfaces.
 - **The developer tools are a harness, not a cheat menu.** Anything added to
   `DEV` must write the same fields the simulation writes.
 - **Check a player-facing change along the player's path.** Setting state from
@@ -216,8 +185,15 @@ to both produced a hatchling whose skull was longer than its body.
 
 ## State
 
-`G` is the keeper (roster, coins, sound, streak). `S` is the active pet and is
-always `G.pets[G.active]`. `simulateAll()` swaps `S` across the roster and
+`G` is the keeper (roster, coins, sound, streak, and which habitats have been
+paid for). `S` is the active pet and is always `G.pets[G.active]`. Which
+habitat an animal is actually standing in is `S.biome`, not the keeper's:
+buying a place opens it to the whole nest, moving moves the one you are looking
+at. `biomeId()` reads the pet, and takes one, so the nest and the shop can ask
+about an animal that is not the active one; `ageDays()` and `ageLabel()` take
+one for the same reason. Age is wall-clock from `S.born`, so it goes on running
+while the game is shut, and it is the one number on the glass that only ever
+goes up. `simulateAll()` swaps `S` across the roster and
 restores it, so per-pet code can be written as if there were one animal. Store
 nothing derived: stage, bond level and mood are all computed.
 

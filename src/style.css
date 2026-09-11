@@ -263,7 +263,7 @@ body{
   box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(140,183,101,.14)}
 canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   touch-action:none;cursor:pointer}
-.lamp{position:absolute;right:0;bottom:calc(var(--px)*-2.5);
+.lamp{position:absolute;right:0;top:calc(var(--px)*-2.5);
   width:calc(var(--px)*1.5);height:calc(var(--px)*1.5);border-radius:50%;background:var(--moss)}
 .lamp.rest{background:var(--sky)}
 .lamp.bad{background:var(--rust)}
@@ -276,6 +276,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   border:2px solid var(--ink);z-index:2
 }
 .bubble.on{opacity:1;transform:translate(-50%,0)}
+.bubble.bad{background:#f0d3c6;border-color:#8a3a22;color:#3a1710}
 .picks span{position:absolute;bottom:calc(var(--px)*3.5);transform:translateX(-50%);
   text-align:center;font-size:calc(var(--px)*2.75);color:#b9c4bd;line-height:1.35;
   white-space:nowrap;background:rgba(10,18,16,.85);border:1px solid rgba(90,116,104,.55);
@@ -287,6 +288,14 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   font-size:calc(var(--px)*2.5);padding:1px calc(var(--px)*1.5);
   display:flex;align-items:center;gap:calc(var(--px)*1);line-height:1.5}
 .tag.warn{border-color:#8a4130;color:#f5c3ad;background:rgba(48,17,9,.88)}
+/* The animal's own age, leading the badge row. Ochre because that is already
+   the colour of something earned, and a size up from the status tags because
+   it is a counter rather than one more warning — every other badge is a thing
+   to deal with and this is the only one that is a reward for having been
+   here. */
+.age{background:rgba(10,18,16,.9);border:1px solid #6a5a2c;color:var(--ochre);
+  font-size:calc(var(--px)*3.25);font-weight:700;letter-spacing:.5px;
+  padding:0 calc(var(--px)*1.5);line-height:1.55;display:flex;align-items:center}
 .dot{width:calc(var(--px)*1.25);height:calc(var(--px)*1.25);border-radius:50%;background:var(--moss)}
 .tag.warn .dot{background:var(--rust)}
 

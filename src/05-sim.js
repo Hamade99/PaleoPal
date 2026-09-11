@@ -75,6 +75,7 @@ let G = null, S = null;
 function freshPet(){
   return {
     sp:null, name:'', born:0, growth:0, hat:null, face:null, owned:[], skin:'wild', skinsOwned:['wild'],
+    biome:'valley',
     needs:{ hunger:78, energy:88, hygiene:100, joy:70 },
     health:100, bond:6, vet:false,
     traits:{ appetite:0, tempo:0, social:0 },
@@ -85,11 +86,13 @@ function freshPet(){
   };
 }
 function freshGame(){
-  /* The habitat is on the keeper, not on the pet: it is the enclosure, and
-     every animal in the nest is standing in it. Coats and headgear are on the
-     animal because they are the animal's. */
+  /* Which habitats have been paid for is the keeper's — a place is bought
+     once and then open to the whole nest. Which one an animal is actually
+     standing in is the animal's, the same way its coat and its hat are. Moving
+     one animal to the lagoon used to move all of them, which made the nest a
+     single enclosure with one view rather than five animals in five places. */
   return { v:SAVE_VERSION, pets:[freshPet()], active:0, coins:24, sound:true, dev:true, lastDay:'', streak:0,
-           biome:'valley', biomesOwned:['valley'],
+           biomesOwned:['valley'],
            lastTick:Date.now(), lastSeen:Date.now() };
 }
 
@@ -173,7 +176,7 @@ function loadSave(raw){
     pet.journal = [...new Set(array(pet.journal).filter(id => journalEntries().some(entry => entry.id === id)))];
     pet.records = {};
     for (const [key, record] of Object.entries(rawPet.records || {})){
-      if (!/^(snack|forage|leap):(rex|trike|brachio):[0-3]$/.test(key) || !record || typeof record !== 'object') continue;
+      if (!/^(snack|forage|leap|tug|guard):(rex|trike|brachio):[0-3]$/.test(key) || !record || typeof record !== 'object') continue;
       pet.records[key] = {best:Math.floor(number(record.best,0,0,1000)), weekly:Math.floor(number(record.weekly,0,0,1000)), week:Math.floor(number(record.week,0))};
     }
     pet.tally = {meals:Math.floor(number(rawPet.tally?.meals,0,0,999999))};
@@ -186,7 +189,14 @@ function loadSave(raw){
   g.lastDay = typeof g.lastDay === 'string' ? g.lastDay : '';
   g.sound = g.sound !== false; g.dev = g.dev === true;
   g.biomesOwned = [...new Set(['valley', ...array(g.biomesOwned).filter(id => Object.hasOwn(BIOMES, id))])];
-  if (!g.biomesOwned.includes(g.biome)) g.biome = 'valley';
+  /* A save written before the habitat moved onto the pet has one on the
+     keeper; every animal in it was standing there, so that is where they all
+     start. After this the keeper has no habitat at all and `delete` is what
+     stops a stale one being carried forward forever. */
+  for (const pet of g.pets)
+    if (!g.biomesOwned.includes(pet.biome))
+      pet.biome = g.biomesOwned.includes(o.biome) ? o.biome : 'valley';
+  delete g.biome;
   g.active = clamp(o.active | 0, 0, g.pets.length - 1);
   g.v = SAVE_VERSION;
   return { game:g, why:null, keep:null, from };
@@ -195,7 +205,22 @@ const trait = (k, pet = S) => TRAITS[k][pet.traits[k]];
 const hatched = (pet = S) => !!pet && !!pet.sp && !!pet.born;
 const stageIdx = (pet = S) => pet.growth < GROWTH_GATES[0] ? 0 : pet.growth < GROWTH_GATES[1] ? 1 : pet.growth < GROWTH_GATES[2] ? 2 : 3;
 const bondPips = () => clamp(Math.floor(S.bond/20), 0, 5);
-const ageDays  = () => (Date.now()-S.born)/86400e3;
+/* How old an animal is, in days, from the wall clock — so it goes on ageing
+   while the game is shut, the same way growth and hunger do. Takes a pet, like
+   `stageIdx` and `biomeId`, so the nest can ask about one that is not on
+   screen. Clamped at zero: `born` is a timestamp, and a device clock nudged
+   backwards would otherwise hand back a negative age. */
+const ageDays  = (pet = S) => Math.max(0, Date.now() - pet.born) / 86400e3;
+
+/* The badge on the glass. Hours for the first day, because an animal that has
+   just hatched reading "0 D" is the one moment the counter is most looked at,
+   and days after that. Grouped past a thousand — about three years, but the
+   whole point of the number is that somebody gets there. */
+function ageLabel(pet = S){
+  const d = ageDays(pet);
+  if (d < 1) return Math.max(1, Math.floor(d*24)) + ' H';
+  return String(Math.floor(d)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' D';
+}
 const hasIll   = (id, pet = S) => pet.ills.some(ill => ill.id === id);
 const isNight  = (now = Date.now()) => { const hour = new Date(now).getHours(); return hour >= BED_HOUR || hour < WAKE_HOUR; };
 
@@ -519,21 +544,22 @@ function buySkin(id){
   logEvent('Unlocked the ' + k.name.toLowerCase() + ' coat.');
   refresh();
 }
-/* Habitats. Bought once and then chosen, the way a coat is — except that
-   there is always exactly one in use and it belongs to the whole nest, so
-   switching costs nothing and cannot be undone into a state with no habitat
-   at all. */
+/* Habitats. Bought once for the nest and then chosen per animal, the way a
+   coat is: buying opens the place to everyone, moving moves the one you are
+   looking at. Switching costs nothing and cannot leave an animal with no
+   habitat at all. */
 function buyHabitat(id){
   const b = BIOMES[id];
   if (!b) return;
   if (G.biomesOwned.includes(id)){
-    if (G.biome === id) return refuse('Already out there.');
-    G.biome = id; SFX.pop(); say('Moved everyone to the ' + b.name.toLowerCase() + '.');
+    if (S.biome === id) return refuse('Already out there.');
+    S.biome = id; S.habitatAt = 0; SFX.pop();
+    say('Moved ' + (S.name || 'the egg') + ' to the ' + b.name.toLowerCase() + '.');
     logEvent('Moved to the ' + b.name.toLowerCase() + '.');
     refresh(); save(); return;
   }
   if (G.coins < b.cost) return refuse('Not enough coins.');
-  G.coins -= b.cost; G.biomesOwned.push(id); G.biome = id;
+  G.coins -= b.cost; G.biomesOwned.push(id); S.biome = id; S.habitatAt = 0;
   SFX.coin(); say('A new place to live.');
   logEvent('Opened up the ' + b.name.toLowerCase() + '.');
   refresh(); save();
@@ -550,7 +576,7 @@ function doTrick(){
   say(pick(['It spins on the spot.','A short, proud roar.','It stamps twice and looks at you.']));
   closeSheet(); refresh();
 }
-function refuse(msg){ SFX.bonk(); say(msg); }
+function refuse(msg){ SFX.bonk(); say(msg, 0, true); }
 
 /* ------------------------------- the nest ---------------------------------- */
 function switchPet(i){
@@ -636,7 +662,7 @@ const DEV = {
 
   /* --- world --- */
   setBiome(id){ if (!BIOMES[id]) return; if (!G.biomesOwned.includes(id)) G.biomesOwned.push(id);
-                G.biome = id; DEV.done('Now in the ' + BIOMES[id].name.toLowerCase() + '.'); },
+                S.biome = id; S.habitatAt = 0; DEV.done('Now in the ' + BIOMES[id].name.toLowerCase() + '.'); },
   addMess(){ if (S.mess.length < 4) S.mess.push({ x: rnd(28, W-28) }); DEV.done('Mess dropped.'); },
   clearMess(){ S.mess = []; DEV.done('Pen cleaned.'); },
 

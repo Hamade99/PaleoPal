@@ -291,62 +291,8 @@ function drawTrike(M, P){
   const crown = rot(fRx*.10, -fRy*.96);        // still the highest point, for `top`
   const roofBack = fx - fRx*.30*fc;            // where the frill leaves the skull
   const roofFront = ex + 5*hM;                 // the brow horn bases
-  /* Where the big pieces of this animal are, for the editor's Body tab to hang
-     handles on. They are read-only landmarks — dragging one writes the TUNE
-     numbers underneath it, never these — and they exist here because only the
-     draw function knows where it put anything. */
-  /* The skeleton, published.
-     Every one of these already existed as a local variable — `hx`, `hipY`,
-     `fTilt` — computed from the growth columns and the pose and then thrown
-     away when the function returned. Handing them out is what lets a part be
-     data: a shape bound to `skull` turns when the skull turns and scales when
-     it scales, and nothing has to be told how.
-
-     Each carries its own units, and that is the load-bearing detail. `skull`
-     measures x in snout lengths and y in head depths, so a point on the face
-     stays on the face at every growth stage without anybody storing four
-     copies of it. `frill` carries the tilt as well, so a shape bound to it is
-     tipped with the shield rather than sheared across it. */
-  const joints = {
-    hip:      { x: hipX,  y: hipY,   sx: 1,  sy: lM, sw: lM },
-    rump:     { x: hipX,  y: rumpY,  sx: 1,  sy: lM, sw: lM },
-    haunch:   { x: hipX-6, y: hipY-6*lM, sx: lM*bk, sy: lM*bk, sw: lM*bk },
-    back:     { x: 0,     y: backY,  sx: 1,  sy: lM, sw: lM },
-    withers:  { x: shX,   y: withY,  sx: 1,  sy: lM, sw: lM },
-    shoulder: { x: shX,   y: shY,    sx: 1,  sy: lM, sw: lM },
-    chest:    { x: shX,   y: chestY, sx: 1,  sy: lM, sw: lM },
-    belly:    { x: 0,     y: bellyY, sx: 1,  sy: lM, sw: lM },
-    neck:     { x: nkX,   y: nkY,    sx: 1,  sy: lM, sw: lM*bk },
-    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
-    jaw:      { x: jHinge[0], y: jHinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
-    frill:    { x: fx,    y: fy,     sx: fRx, sy: fRy, sw: hM*fM, rot: fTilt },
-    brow:     { x: ex,    y: ey,     sx: hM, sy: hh, sw: hM*(.40 + .60*hF) },
-    eye:      { x: ex,    y: ey,     sx: hM, sy: hM, sw: hM },
-    tail0:    { x: T(TL*13/62), y: hipY + sw*1.5, sx: tM, sy: lM*bk, sw: lM*bk },
-    tail1:    { x: T(TL*30/62), y: hipY + sw*3,   sx: tM, sy: lM, sw: lM },
-    tail2:    { x: T(TL*46/62), y: hipY + sw*5,   sx: tM, sy: lM, sw: lM },
-    tail3:    { x: T(TL),       y: hipY + sw*7,   sx: tM, sy: lM, sw: lM }
-  };
-
-  const parts = {
-    snout:    [hx - sn, hy],
-    jaw:      [hx - sn*.38, lipY + hh*.06],
-    head:     [hx, hy],
-    frill:    crown,
-    neck:     [nkX, nkY],
-    shoulder: [shX, withY],
-    foreleg:  [shX, shY],
-    back:     [5, backY],
-    rump:     [hipX-2, rumpY],
-    hip:      [hipX, hipY],
-    haunch:   [hipX-6, hipY-6*lM],
-    chest:    [shX+7, chestY],
-    belly:    [6, bellyY],
-    tailBase: [T(TL*13/62), hipY - T_.tailBase*lM*bk],
-    tail:     [T(TL), hipY - 4*lM]
-  };
   return { eye:[ex,ey], eyeR:3.4*hM, mouth:[hx - sn*1.12, hy + hh*.22],
            hat:[roofFront + (roofBack - roofFront)*.52, hy - hh*1.12],
            hatW: (roofBack - roofFront)*1.05,
-           top: crown[1], spine, parts, joints };
+           top: crown[1], spine };
 }

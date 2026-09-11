@@ -31,7 +31,8 @@ const SC = {
   gold:   '#e0ac48',   // coins and prices
   moss:   '#8cb765',   // affirmative, owned, worn
   rust:   '#cf6a44',   // refusals, warnings, costs you cannot meet
-  sel:    '#3d5c4e'    // the selected cell's fill
+  sel:    '#3d5c4e',   // the selected cell's fill
+  close:  '#3a1710'    // the plate behind the close tab's X
 };
 
 /* one grid unit. Everything on a screen is a whole number of these, which is
@@ -41,12 +42,32 @@ const U = 4;
 let screen = null;          // null when the habitat is showing
 let screenState = {};       // per-screen scratch: which item is selected, scroll
 
+/* A message that arrives while a screen is open.
+
+   These used to go to the DOM speech bubble, which floats over the middle of
+   the glass — and the glass, when a screen is open, IS the screen. Telling
+   someone their animal is full by covering the row of food they are choosing
+   from is worse than not telling them: the menu is still live underneath, so
+   it reads as broken rather than as busy.
+
+   So the message goes in the title bar, which every screen already has, is
+   always exactly thirteen pixels tall, and carries the least useful text on
+   the screen — the title, which names the screen you are looking at and can
+   therefore be spared for two seconds. Nothing moves, nothing is covered, and
+   nothing reflows under the finger that is already reaching for a row. */
+let screenNote = null;
+function noteOnGlass(text, bad, ms){
+  screenNote = { text:String(text), bad:!!bad, until:Date.now() + (ms || 2600) };
+}
+
 function openScreen(which){
   if (!SCREENS[which]) return;
   if (mode === 'game') return;
   if (mode !== 'live' && !SCREENS[which].preHatch) return;
   screen = which;
   screenState = { pick: 0, scroll: 0 };
+  screenNote = null;            // a message from the habitat is not this screen's
+  hideBubble();                 // nor is a bubble it left hanging over the glass
   SFX.pop();
   paintChrome();
 }
@@ -84,17 +105,30 @@ function panel(g, x, y, w, h, fill){
 function screenFrame(g, title){
   g.fillStyle = SC.ink;
   g.fillRect(0, 0, W, H);
-  g.fillStyle = SC.panel;
+  if (screenNote && Date.now() >= screenNote.until) screenNote = null;
+  const note = screenNote;
+  /* The bar carries either the screen's name and the purse, or a message. Not
+     both: at six pixels a character there is room for one of them, and a
+     message cut off halfway is worse than a title missing for two seconds. */
+  g.fillStyle = note ? (note.bad ? SC.close : '#18291f') : SC.panel;
   g.fillRect(0, 0, W, BAR_H);
-  g.fillStyle = SC.edge;
+  g.fillStyle = note ? (note.bad ? SC.rust : SC.moss) : SC.edge;
   g.fillRect(0, BAR_H - 1, W, 1);
-  text(g, title, PAD, 3, SC.bone);
-  const purse = Math.floor(G.coins) + 'c';
-  text(g, purse, W - PAD - 11, 3, SC.gold, 'right');
-  // close tab, top right, always in the same place on every screen
-  g.fillStyle = SC.line;
+  if (note){
+    text(g, fit(note.text, W - PAD - 14), PAD, 3, note.bad ? '#f0bba4' : SC.bone);
+  } else {
+    text(g, title, PAD, 3, SC.bone);
+    text(g, Math.floor(G.coins) + 'c', W - PAD - 11, 3, SC.gold, 'right');
+  }
+  /* Close tab, top right, always in the same place on every screen — and red,
+     because it is the one control on a screen that undoes being there. It was
+     the same grey as an inactive cell, which made the only way back the least
+     visible thing on the glass. */
+  g.fillStyle = SC.close;
   g.fillRect(W - 11, 2, 9, 9);
-  g.fillStyle = SC.dim;
+  g.fillStyle = SC.rust;
+  g.fillRect(W - 11, 2, 9, 1); g.fillRect(W - 11, 10, 9, 1);
+  g.fillRect(W - 11, 2, 1, 9); g.fillRect(W - 3, 2, 1, 9);
   for (let i=0;i<5;i++){ g.fillRect(W - 9 + i, 4 + i, 1, 1); g.fillRect(W - 5 - i, 4 + i, 1, 1); }
   return { close: [W - 12, 1, 11, 11] };
 }
@@ -440,7 +474,7 @@ function shelfItems(which){
   }
   return { items: BIOME_IDS.map(id => BIOMES[id]), cols:5, cell:[26,20],
     art: (g, it, cx, cy) => thumb(g, biomeThumb(it.id), cx, cy, 26, 20),
-    own: it => G.biomesOwned.includes(it.id), worn: it => G.biome === it.id,
+    own: it => G.biomesOwned.includes(it.id), worn: it => S.biome === it.id,
     note: it => it.note, take:false, here:'here' };
 }
 
@@ -540,7 +574,7 @@ SCREENS.nest = {
       else {
         const prev = S; S = p;
         const worst = Math.min(p.needs.hunger, p.needs.energy, p.needs.hygiene, p.needs.joy);
-        note = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + '. '
+        note = STAGE[stageIdx()].label + ' ' + SPECIES[p.sp].common + ', ' + ageLabel(p) + '. '
              + (p.vet ? 'Needs a vet.' : p.ills.length ? ILLS[p.ills[0].id].name + '.'
                 : worst < 25 ? 'Needs attention.' : p.asleep ? 'Asleep.' : 'Doing fine.');
         S = prev;

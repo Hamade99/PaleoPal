@@ -181,38 +181,21 @@ function blob(g, pts, col){
   }
   g.closePath(); g.fill();
 }
-function oval(g,x,y,rx,ry,col,rot){
-  if (col) g.fillStyle=col; g.beginPath(); g.ellipse(x,y,Math.abs(rx),Math.abs(ry),rot||0,0,7); g.fill();
+/* A closed polygon with hard corners. `blob` rounds everything it is given,
+   which is right for a ribcage and wrong for anything that has to meet the
+   ground flat or come to a point: a sole drawn as a blob bulges into a ball
+   and a claw drawn as one is a pebble. Straight edges, and the quantiser gives
+   them the same hard pixel edge as everything else. */
+function poly(g, pts, col){
+  if (col) g.fillStyle = col;
+  g.beginPath();
+  g.moveTo(pts[0][0], pts[0][1]);
+  for (let i=1;i<pts.length;i++) g.lineTo(pts[i][0], pts[i][1]);
+  g.closePath(); g.fill();
 }
 
-/* hard-edge pass: kill antialiasing, snap to the species ramp, dilate outline */
-function crisp(src, palette, outline){
-  const w = src.width, h = src.height;
-  const g = readCtx(src);
-  const img = g.getImageData(0,0,w,h), d = img.data;
-  const ramp = palette.map(hex => [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16),hex]);
-  const solid = new Uint8Array(w*h);
-  for (let i=0;i<w*h;i++){
-    const o=i*4;
-    if (d[o+3] < 118){ d[o+3]=0; continue; }
-    d[o+3]=255; solid[i]=1;
-    let best=ramp[0], bd=1e9;
-    for (const c of ramp){
-      const dd=(c[0]-d[o])**2+(c[1]-d[o+1])**2+(c[2]-d[o+2])**2;
-      if (dd<bd){bd=dd;best=c;}
-    }
-    d[o]=best[0]; d[o+1]=best[1]; d[o+2]=best[2];
-  }
-  // dilate a 1px outline into the transparent border
-  const oc = [parseInt(outline.slice(1,3),16),parseInt(outline.slice(3,5),16),parseInt(outline.slice(5,7),16)];
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
-    const i=y*w+x; if (solid[i]) continue;
-    if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
-      const o=i*4; d[o]=oc[0]; d[o+1]=oc[1]; d[o+2]=oc[2]; d[o+3]=255;
-    }
-  }
-  g.putImageData(img,0,0);
-  return src;
+function oval(g,x,y,rx,ry,col,rot){
+  if (col) g.fillStyle=col; g.beginPath(); g.ellipse(x,y,Math.abs(rx),Math.abs(ry),rot||0,0,7); g.fill();
 }
 
 /* trim transparent margins so anchors and ground contact stay exact */

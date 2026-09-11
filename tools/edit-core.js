@@ -1,7 +1,7 @@
 /* Editor plumbing: serialising the art data back out, and the file it goes to.
 
-   Everything the editor can change lives in one file, src/00-art.js, and that
-   file carries `<data:NAME>` markers around each declaration. So saving is
+   Everything the editor can change lives in one file, src/00-art.js, which
+   carries `<data:NAME>` markers around each declaration. So saving is
    not surgery on six source files and not a regeneration that would throw the
    prose away: the text between markers is replaced and everything outside them
    is kept exactly as written.
@@ -10,22 +10,16 @@
    patch a value out of the middle of a working source file is an editor that
    will eventually corrupt one. */
 
-/* Two files now, and only two. Backdrops are 280x210 characters each and would
-   bury everything else in 00-art.js, so they have a file of their own with the
-   same markers, written the same way. Everything here works a file at a time;
-   the only thing that knows there is more than one is the loop in saveData. */
+/* One file, and the machinery works a file at a time so that staying one is a
+   fact about the data rather than an assumption in the code. */
 const DATA_FILES = [
-  { path: '../src/00-art.js',    name: '00-art.js',
-    blocks: ['PIX','PART_PIX','PART_MATS','RIG_PARTS','STAGE','SPECIES_STAGE','POSE_ART','HABITAT_ART','GEAR_FIT',
+  { path: '../src/00-art.js', name: '00-art.js',
+    blocks: ['PIX','STAGE','SPECIES_STAGE','POSE_ART','HABITAT_ART','GEAR_FIT',
              'REX_TUNE','TRI_TUNE','BRA_TUNE',
-             'REX_SPEC','TRI_SPEC','BRA_SPEC','SKINS','BIOME_ART'] },
-  { path: '../src/00-bg-art.js', name: '00-bg-art.js', blocks: ['BG_PIX'] }
+             'REX_SPEC','TRI_SPEC','BRA_SPEC','SKINS','BIOME_ART'] }
 ];
-const fileOf = name => DATA_FILES.find(f => f.blocks.indexOf(name) >= 0);
 
 /* ---- pretty-printing values back to JavaScript --------------------------- */
-
-const isHex = v => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v);
 
 function q(s){ return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
 
@@ -77,44 +71,6 @@ function jsPIX(pix){
   return out.join('\n');
 }
 
-/* A backdrop is the PIX format at scene size: a palette and 210 rows of 280
-   characters. The palette goes on one line however long it gets, and the rows
-   one per line, for the same reason PIX does it — the file is meant to stay
-   something a person can open. `quiet` is written only when it has anything in
-   it, so a backdrop that suppresses nothing does not carry an empty list. */
-function jsBG_PIX(pix){
-  const out = ['const BG_PIX = {'];
-  for (const id in pix){
-    const p = pix[id];
-    let head = "  " + q(id) + ": { w:" + p.w + ", h:" + p.h;
-    if (p.quiet && p.quiet.length) head += ", quiet:[" + p.quiet.map(q).join(',') + "]";
-    out.push(head + ',');
-    out.push("    pal:[" + p.pal.map(q).join(',') + "], rows:[");
-    out.push(p.rows.map(r => "      " + q(r.padEnd(p.w))).join(',\n'));
-    out.push("    ] },");
-  }
-  out.push('};');
-  return out.join('\n');
-}
-
-/* A hand-drawn part is rows too, but of material characters rather than
-   palette indices, so there is no palette line and the origin is always
-   written — it is the anchor the drawing hangs from, and a part with it at
-   0,0 is a part hanging by its top-left corner, which is a thing someone
-   might mean. */
-function jsPART_PIX(pix){
-  const out = ['const PART_PIX = {'];
-  for (const id in pix){
-    const p = pix[id];
-    out.push("  " + q(id) + ": { w:" + p.w + ", h:" + p.h
-             + ", ox:" + (p.ox||0) + ", oy:" + (p.oy||0) + ", rows:[");
-    out.push(p.rows.map(r => "    " + q(r.padEnd(p.w))).join(',\n'));
-    out.push("  ] },");
-  }
-  out.push('};');
-  return out.join('\n');
-}
-
 /* ---- the file ------------------------------------------------------------ */
 
 /* Named here rather than looked up on `window`, because a top-level `const`
@@ -122,9 +78,9 @@ function jsPART_PIX(pix){
    property of the window — `window.PIX` is undefined while `PIX` is right
    there. Listing them also means a block that stops being editable fails
    loudly at load instead of silently saving stale text. */
-const LIVE = { PIX, PART_PIX, PART_MATS, RIG_PARTS, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, GEAR_FIT,
+const LIVE = { PIX, STAGE, SPECIES_STAGE, POSE_ART, HABITAT_ART, GEAR_FIT,
                REX_TUNE, TRI_TUNE, BRA_TUNE,
-               REX_SPEC, TRI_SPEC, BRA_SPEC, SKINS, BIOME_ART, BG_PIX };
+               REX_SPEC, TRI_SPEC, BRA_SPEC, SKINS, BIOME_ART };
 const BLOCKS = Object.keys(LIVE);
 
 /* Every block has to be claimed by exactly one file, or a save quietly drops
@@ -141,8 +97,6 @@ const BLOCKS = Object.keys(LIVE);
 
 function blockText(name){
   if (name === 'PIX') return jsPIX(PIX);
-  if (name === 'PART_PIX') return jsPART_PIX(PART_PIX);
-  if (name === 'BG_PIX') return jsBG_PIX(BG_PIX);
   return 'const ' + name + ' = ' + js(LIVE[name], 0) + ';';
 }
 
@@ -349,23 +303,10 @@ async function saveFile(file, index){
   return 'Downloaded ' + file.name + ' — move it into src/ over the old one.';
 }
 
-/* Both files, in order, skipping any second file that has nothing in it.
-
-   A backdrop file with no backdrops in it is the common case and will be for a
-   long time. Rewriting it would produce the bytes it already holds, so nothing
-   is lost by leaving it alone — and something real is gained: without this, a
-   browser on the file-dialog path asks for a second file, and hands over a
-   second download, every single time anyone saves a sprite. That is the kind
-   of ceremony that makes a Save button something you hesitate over. The moment
-   the file has a backdrop in it, it saves like anything else. */
-const fileEmpty = file =>
-  file.blocks.every(n => { const v = LIVE[n]; return v && !Object.keys(v).length; });
-
+/* Every file the editor owns, in order. */
 async function saveData(){
   const said = [];
-  for (let i = 0; i < DATA_FILES.length; i++){
-    if (i > 0 && fileEmpty(DATA_FILES[i])) continue;
+  for (let i = 0; i < DATA_FILES.length; i++)
     said.push(await saveFile(DATA_FILES[i], i));
-  }
   return said.join('  ');
 }

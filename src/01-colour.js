@@ -78,35 +78,19 @@ function mixCol(a, b, t){
    near-white blobs stuck on the front of a tan face with nothing dividing
    them from the horn sheaths above. A species that does not set `spec.beak`
    gets its horn colour here and nothing changes for it. */
-/* `ink0`..`ink7` are the eight colours a species can be given to be painted
-   with by hand, and they sit here — directly above the coat and below every
-   structure that stands in front of the body — because that is what a painted
-   detail is. A stripe across a frill or a blaze down a snout is a marking on
-   the animal's surface, so it covers the surface and passes behind the horns,
-   the beak, the teeth and the eye, exactly as a coat pattern does.
-
-   They are ordinary materials in every other way: each carries a ramp built
-   from its own colour and takes the same lighting pass, which is what stops a
-   painted detail reading as a sticker. A species that defines none of them
-   costs nothing — bakeOnce never allocates a canvas for an undefined ink and
-   the compositor skips it. */
-const INKS = 8;
-const INK_NAMES = Array.from({length: INKS}, (_, i) => 'ink' + i);
-const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark']
-  .concat(INK_NAMES, ['crest','mouth','horn','beak','sclera','pupil','glint']);
+const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
 const BODY_TOP    = LAYERS.indexOf('head');
 const BELLY_LAYER = LAYERS.indexOf('belly');
 const MARK_LAYER  = LAYERS.indexOf('mark');
-const INK_FIRST   = LAYERS.indexOf('ink0');
 /* Countershading belongs to the trunk, the skull and the jaw. It is kept off
    the limbs — near-side limbs carry their own lit ramp and far-side limbs are
    held back in shade, and letting the belly claim either bleached every leg to
    the same cream as the underside. */
 const BELLY_OK = LAYERS.map(n => n === 'skin' || n === 'shield' || n === 'jaw' || n === 'head');
 
-function buildMaterials(spec, inks){
+function buildMaterials(spec){
   const skin = ramp(spec.skin), horn = ramp(spec.horn, {spread:.12, shift:14});
-  const out = {
+  return {
     /* Far-side limbs. Two steps down with the contrast raised turned them
        into a black mass slung under the body that read as shadow rather than
        as legs, which on the four-legged animals is half the sprite. */
@@ -138,17 +122,6 @@ function buildMaterials(spec, inks){
     glint:  { r: ramp('#fffdf2', {spread:.04}),  lit:0 },
     outline: spec.outline
   };
-  /* The species' own painting colours. `lit` is how much of the light this
-     colour takes: 1 is shaded like skin, and 0 is flat — which is the whole of
-     what "a sticker rather than a marking" means, and is how the pupil and the
-     glint are already done. A colour nobody defined stays absent, and every
-     pass that would have touched it skips it. */
-  (inks || []).forEach((ink, i) => {
-    if (!ink || i >= INKS) return;
-    out[INK_NAMES[i]] = { r: ramp(ink.col, {spread: ink.spread || .19}),
-                          lit: ink.lit === undefined ? 1 : ink.lit };
-  });
-  return out;
 }
 
 /* ---------- composite the layers, light them, draw a selective outline ----- */
@@ -171,11 +144,6 @@ function composeSprite(layerCanvases, mats, w, h){
     if (y < y0) y0 = y; if (y > y1) y1 = y;
   };
   for (let li=0; li<LAYERS.length; li++){
-    /* A hole in the array is a painting colour this species does not have.
-       Every pass here is per-pixel over the whole box, so skipping the eight
-       unused ink slots is the difference between this costing nothing and
-       costing half as much again on every bake in the game. */
-    if (!layerCanvases[li]) continue;
     const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
     if (li === MARK_LAYER){
       // a coat rides the body, and stops where the countershading starts

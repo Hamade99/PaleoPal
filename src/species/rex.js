@@ -206,11 +206,14 @@ function drawRex(M, P){
   tube(M.limb, [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]], [10*lM, 7.2*lM, 5.4*lM]);
   toes(M.horn, ax-T_.armLen*23/11*lM, ay+6*lM, 2, -1, Math.max(1.3, 2.3*lM));
 
-  // near limb: a heavy drumstick over the femur, then shank and bird foot
+  /* Near limb: a heavy drumstick over the femur, then shank and bird foot. The
+     keratin layer goes to legStep rather than being drawn over afterwards —
+     the claws used to be placed by a typed offset from the toe target, which
+     on an adult put them a clear seven pixels in front of the foot they grow
+     out of. drawFoot knows where the toes are; nothing else does. */
   blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM],[hipX+5*lM, hipY+18*lM],
                 [hipX-8*lM, hipY+15*lM],[hipX-14*lM, hipY-1*lM],[hipX-9*lM, hipY-13*lM]]);
-  const foot = legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT);
-  toes(M.horn, foot[0]-9*lM, foot[1]-1, 3, -1, Math.max(1.2, 2.1*lM));
+  legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT, M.horn);
 
   /* A larger eye set lower and further forward. Both eyes face forward, which
      the dossier promises, and a low, large orbit under a domed braincase is
@@ -234,49 +237,8 @@ function drawRex(M, P){
   /* Headgear sits on the skull roof behind the orbit — the flat over the
      braincase, not the muzzle and not the occiput. `hatW` spans about half the
      skull, which is as much of the roof as there is behind the eye. */
-  /* Where the big pieces of this animal are, for the editor's Body tab to hang
-     handles on. They are read-only landmarks — dragging one writes the TUNE
-     numbers underneath it, never these — and they exist here because only the
-     draw function knows where it put anything. */
-  /* The skeleton, published — see src/02-rig.js. Every one of these already
-     existed as a local variable, computed from the growth columns and the pose
-     and then thrown away. Each carries its own units: `skull` measures x in
-     snout lengths and y in head depths, so a part put on the face stays on the
-     face at every age. `sw` is thickness, which is neither axis — a tube width
-     scaled by head depth comes out twenty times too fat. */
-  const joints = {
-    hip:      { x: hipX,  y: hipY,   sx: 1, sy: lM, sw: lM },
-    back:     { x: 0,     y: backY,  sx: 1, sy: lM, sw: lM },
-    withers:  { x: withX, y: withY,  sx: 1, sy: lM, sw: lM },
-    shoulder: { x: withX, y: withY,  sx: 1, sy: lM, sw: lM*bk },
-    belly:    { x: 0,     y: bellyY, sx: 1, sy: lM, sw: lM },
-    throat:   { x: withX, y: throatY, sx: 1, sy: lM, sw: lM },
-    neck:     { x: (withX+hx)/2, y: (withY+hy)/2, sx: 1, sy: lM, sw: lM*bk },
-    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
-    snout:    { x: hx - sn, y: hy,   sx: sn, sy: fh, sw: hM },
-    jaw:      { x: hinge[0], y: hinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
-    brow:     { x: ex,    y: ey,     sx: hM, sy: hh, sw: hM*bw },
-    eye:      { x: ex,    y: ey,     sx: hM, sy: hM, sw: hM },
-    arm:      { x: ax,    y: ay,     sx: lM, sy: lM, sw: lM },
-    tail0:    { x: T(TL*23/72), y: hipY + sw*2, sx: tM, sy: lM, sw: lM },
-    tail1:    { x: T(TL*44/72), y: hipY + sw*5, sx: tM, sy: lM, sw: lM },
-    tail2:    { x: T(TL),       y: hipY + sw*9, sx: tM, sy: lM, sw: lM }
-  };
-
-  const parts = {
-    snout:    [hx - sn, hy],
-    jaw:      [hx - sn*.46, lipMid],
-    head:     [hx, hy],
-    shoulder: [withX, withY],
-    back:     [0, backY],
-    hip:      [hipX, hipY],
-    belly:    [0, bellyY],
-    arm:      [ax - T_.armLen*lM, ay + T_.armLen*lM],
-    tailBase: [T(TL*23/72), hipY - T_.tailBase*lM*bk],
-    tail:     [T(TL), hipY - 6*lM]
-  };
   return { eye:[ex,ey], eyeR:4.0*hM, mouth:[hx - sn*.82, hy + hh*.14],
            hat:[hx - sn*.22, hy - hh*1.10], hatW: sn*.54,
-           top: hy - hh*1.18, spine, parts, joints };
+           top: hy - hh*1.18, spine };
 }
 

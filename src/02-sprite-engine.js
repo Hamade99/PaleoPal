@@ -95,42 +95,77 @@ function legStep(g, hx, hy, phase, w, cfg, hornG){
   drawFoot(g, hornG, ank, tx, ty, w, cfg.foot || 'bird');
   return [tx, ty];
 }
+/* Feet, and every one of them flat underneath.
+
+   They were ovals. An oval has a rounded bottom, so every animal in the game
+   stood balanced on a ball — which at four growth stages and thirty poses is
+   the single most visible thing about how they meet the ground, and it read as
+   a doll on stands rather than as weight on soil. The sole is now a straight
+   line at `ty`, which is the ground contact the gait solver already computes,
+   and nothing is drawn below it.
+
+   Claws go on with the foot rather than being placed afterwards by the species.
+   Hung separately they were positioned by a typed offset against a shape they
+   could not see, and on the adult rex that offset put three ovals a clear
+   seven pixels in front of the toe they were supposed to grow out of. A claw
+   here starts inside the foot and comes to a point, so it cannot float off it.
+
+   `hornG` is the keratin layer and is optional: the far-side legs pass none,
+   which is why the claws you can see are the ones on the near foot. */
+
+/* A claw: a wedge that starts inside the toe and comes to a point on the
+   ground. `dir` is which way it points — the sprite faces −x, so a forward
+   claw is −1. Its base is set back into the foot so the two shapes merge. */
+function claw(g, x, y, dir, len, d){
+  poly(g, [[x - dir*d*.9, y - d*.95], [x + dir*len, y - d*.05], [x - dir*d*.9, y + d*.10]]);
+}
+
 function drawFoot(g, hornG, ank, tx, ty, w, kind){
   if (kind === 'hoof'){
     // sauropod manus: the metacarpals stand in a vertical column and the whole
     // hand is a single hoof. No digits are visible in life, so none are drawn.
-    tube(g, [[ank[0], ank[1]],[tx, ty - w*.44]], [w*.56, w*.60]);
-    blob(g, [[tx - w*.32, ty - w*.52],[tx + w*.32, ty - w*.52],
-             [tx + w*.36, ty - w*.10],[tx, ty - w*.03],[tx - w*.36, ty - w*.10]]);
+    tube(g, [[ank[0], ank[1]],[tx, ty - w*.46]], [w*.56, w*.60]);
+    poly(g, [[tx - w*.34, ty - w*.54],[tx + w*.34, ty - w*.54],[tx + w*.38, ty],[tx - w*.38, ty]]);
+    /* One thumb claw, which the dossier promises and which is the only digit
+       a sauropod forefoot shows. */
+    if (hornG) claw(hornG, tx - w*.34, ty - w*.06, -1, w*.30, w*.14);
     return;
   }
   if (kind === 'pad'){
     // sauropod pes: a wedge, deep at the heel where the fleshy pad sits and
     // sloping forward onto three claw-bearing inner toes
-    tube(g, [[ank[0], ank[1]],[tx + w*.26, ty - w*.46]], [w*.50, w*.54]);
-    blob(g, [[tx + w*.52, ty - w*.08],[tx + w*.60, ty - w*.40],[tx + w*.30, ty - w*.60],
-             [tx - w*.16, ty - w*.44],[tx - w*.44, ty - w*.20],[tx - w*.40, ty - w*.03],
-             [tx + w*.10, ty]]);
+    tube(g, [[ank[0], ank[1]],[tx + w*.26, ty - w*.50]], [w*.50, w*.54]);
+    poly(g, [[tx + w*.56, ty - w*.14],[tx + w*.58, ty - w*.44],[tx + w*.28, ty - w*.62],
+             [tx - w*.18, ty - w*.48],[tx - w*.46, ty - w*.22],[tx - w*.48, ty],[tx + w*.54, ty]]);
     if (hornG){
-      blob(hornG, [[tx - w*.36, ty - w*.22],[tx - w*.58, ty - w*.10],[tx - w*.36, ty - w*.01]]);
-      blob(hornG, [[tx - w*.20, ty - w*.30],[tx - w*.44, ty - w*.24],[tx - w*.24, ty - w*.12]]);
+      claw(hornG, tx - w*.44, ty, -1, w*.26, w*.12);
+      claw(hornG, tx - w*.22, ty, -1, w*.22, w*.11);
     }
     return;
   }
   if (kind === 'column'){
     // ceratopsian foot: short, broad and blunt-hooved
-    tube(g, [[ank[0], ank[1]],[tx + w*.10, ty - w*.34]], [w*.50, w*.54]);
-    blob(g, [[tx + w*.36, ty - w*.06],[tx + w*.40, ty - w*.34],[tx, ty - w*.46],
-             [tx - w*.36, ty - w*.28],[tx - w*.38, ty - w*.02]]);
+    tube(g, [[ank[0], ank[1]],[tx + w*.10, ty - w*.38]], [w*.50, w*.54]);
+    poly(g, [[tx + w*.38, ty - w*.10],[tx + w*.42, ty - w*.38],[tx, ty - w*.50],
+             [tx - w*.38, ty - w*.32],[tx - w*.40, ty],[tx + w*.38, ty]]);
     if (hornG){
-      blob(hornG, [[tx - w*.28, ty - w*.20],[tx - w*.46, ty - w*.08],[tx - w*.26, ty - w*.01]]);
-      blob(hornG, [[tx - w*.08, ty - w*.26],[tx - w*.28, ty - w*.22],[tx - w*.10, ty - w*.10]]);
+      claw(hornG, tx - w*.36, ty, -1, w*.24, w*.12);
+      claw(hornG, tx - w*.12, ty, -1, w*.20, w*.11);
     }
     return;
   }
-  tube(g, [[ank[0],ank[1]],[tx,ty]], [w*.46, w*.4]);
-  oval(g, tx - w*.1, ty - w*.15, w*.56, w*.28);
+  /* Bird foot: digitigrade, so the metatarsus stands clear of the ground and
+     only the toes lie on it, spread forward under the weight. */
+  tube(g, [[ank[0], ank[1]],[tx + w*.04, ty - w*.30]], [w*.46, w*.34]);
+  poly(g, [[tx + w*.34, ty - w*.30],[tx + w*.36, ty],[tx - w*.74, ty],
+           [tx - w*.66, ty - w*.17],[tx - w*.04, ty - w*.38]]);
+  if (hornG){
+    claw(hornG, tx - w*.70, ty, -1, w*.30, w*.13);
+    claw(hornG, tx - w*.44, ty, -1, w*.24, w*.12);
+    claw(hornG, tx + w*.30, ty, 1, w*.18, w*.10);        // the hallux, pointing back
+  }
 }
+
 /* How long a polyline is, in local units. Anything spaced along a path has to
    be spaced by distance and not by count: a fixed number of filaments spread
    over a hatchling's short back overlap into one solid band, and the same
@@ -154,8 +189,11 @@ function samplePath(pts, t){
   }
   return pts[pts.length-1];
 }
+/* A row of claws along a hand. These were ovals too, which at this size is a
+   row of beads on the end of an arm; what a theropod has there is two recurved
+   claws, which is also what the dossier claims it has. */
 function toes(g, x, y, n, dir, size){
-  for (let i=0;i<n;i++) oval(g, x + dir*i*size*1.7, y, size*.78, size*.55);
+  for (let i=0;i<n;i++) claw(g, x + dir*i*size*1.5, y, dir, size*1.6, size*.66);
 }
 function eyeAt(M, x, y, r, state){
   /* A shut eye is a line, not a shape. The lid used to be drawn as wide as the
@@ -195,18 +233,22 @@ function eyeAt(M, x, y, r, state){
    functions and a private copy of the dilation loop. */
 const HATS = {};
 Object.defineProperty(HATS, 'get', { value:null });          // keep it a plain bag
-const HAT_IDS = Object.keys(PIX).filter(k => k.slice(0,4) === 'hat.').map(k => k.slice(4));
 /* A hat is hung by the bottom of its art, and the art is not the canvas. Every
    hat is drawn in a 12x11 grid with its brim wherever the artist put it, so the
-   crown has four blank rows under it and the cap three, and the outline pass
-   adds one more all round. Hanging by the canvas edge floated every hat that
-   distance above the skull, scaled up with the animal, which is what made a
-   worn hat read as a hovering object rather than as headgear. Measure the last row that has ink in it once, at
-   bake time, and hang from that. `pixInvalidate()` drops HATS, so an edit in
-   the editor re-measures. */
+   crown has four blank rows under it and the cap three. Hanging by the canvas
+   edge floated every hat that distance above the skull, scaled up with the
+   animal, which is what made a worn hat read as a hovering object rather than
+   as headgear. Measure the last row that has ink in it once, at bake time, and
+   hang from that. `pixInvalidate()` drops HATS, so an edit in the editor
+   re-measures.
+
+   No dilated outline. The animal underneath has one because the compositor
+   draws it, and a second hard edge on top of that read as a sticker rather
+   than as something worn. A hat that wants an edge has one drawn into its own
+   pixels in the editor, where it can be exactly the edge that hat wants. */
 function hatArt(id){
   if (!HATS[id]){
-    const c = pixCanvas('hat.' + id, '#241d13');
+    const c = pixCanvas('hat.' + id);
     const d = readCtx(c).getImageData(0, 0, c.width, c.height).data;
     let foot = 0, x0 = c.width, x1 = -1, seen = false;
     for (let y = c.height - 1; y >= 0; y--){
@@ -308,7 +350,7 @@ function matsFor(spId, skinId){
     const k = skinOf(spId, skinId);
     matCache.set(key, buildMaterials(Object.assign({}, SPECIES[spId].spec, {
       skin:k.skin, belly:k.belly, crest:k.crest, mark:k.mark
-    }), inksFor(spId)));
+    })));
   }
   return matCache.get(key);
 }
@@ -335,7 +377,7 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
      past the cap; the loop ends when growBake() says there is no more room. */
   let out = null;
   for (let attempt = 0; attempt < 6; attempt++){
-    out = bakeOnce(spId, stage, pose, eye, skinId, anim, idx % poses.length);
+    out = bakeOnce(spId, stage, pose, eye, skinId);
     if (!out.clipped || !growBake()) break;
   }
   delete out.clipped;
@@ -344,79 +386,14 @@ function frameOf(spId, stage, anim, idx, blinking, skinId){
   return out;
 }
 
-/* Put the hand-drawn units for this species and stage onto their layers, in
-   place of what the draw function just painted there.
-
-   Two passes, and the order matters. A drawing says which material each of its
-   pixels is, so one grid can write to layers other than its own unit's — a
-   skull drawn with its own teeth puts pixels on `horn`. Clearing each layer
-   just before stamping it would therefore wipe pixels an earlier unit had
-   already put down, so every replaced layer is emptied first and only then is
-   anything drawn.
-
-   The whole thing runs with the transform off. The layer contexts arrive
-   translated to the origin and scaled by the animal's size, which is right for
-   the shapes the species draws in local units and wrong for a grid: one grid
-   pixel is meant to be one baked pixel, and pushing it through that scale
-   would resample the drawing and lose the very thing that makes it pixel art.
-   The anchor is converted by hand instead — the same arithmetic bakeOnce uses
-   on the anchors it hands back — which is also why BAKE_CX and BAKE_G are read
-   here rather than cached: growBake moves them between attempts. */
-function stampParts(M, spId, stage, anchors, k, anim, frame){
-  const drawn = partsFor(spId, stage, anim, frame);
-  const units = Object.keys(drawn);
-  if (!units.length) return;
-  for (const name of LAYERS){ M[name].save(); M[name].setTransform(1, 0, 0, 1, 0, 0); }
-
-  for (const unit of units) M[PART_UNITS[unit].layer].clearRect(0, 0, BAKE_W, BAKE_H);
-
-  for (const unit of units){
-    const p = drawn[unit];
-    /* Where the drawing hangs. The landmark comes from the draw function and
-       so has already been moved by the pose, which is the whole reason a
-       stamped part breathes and walks instead of sitting still. */
-    let a = null;
-    for (const name of PART_UNITS[unit].at){
-      const q = anchors.parts && anchors.parts[name];
-      if (q){ a = q; break; }
-    }
-    if (!a) continue;
-    const ax = Math.round(BAKE_CX + a[0]*k) - (p.ox || 0);
-    const ay = Math.round(BAKE_G  + a[1]*k) - (p.oy || 0);
-    for (let r = 0; r < p.rows.length; r++){
-      const row = p.rows[r];
-      for (let c = 0; c < row.length; c++){
-        const li = PART_CH.indexOf(row[c]);        // a space is -1, and nothing
-        if (li < 0 || li >= LAYERS.length) continue;
-        M[LAYERS[li]].fillRect(ax + c, ay + r, 1, 1);
-      }
-    }
-  }
-  for (const name of LAYERS) M[name].restore();
-}
-
-/* One species, one stage, one pose, painted onto fresh material layers and
-   stopped there — before anything is stamped over it and before it is
-   composed. It is its own function because the editor's Draw tab needs exactly
-   this: to show what a drawing is replacing, and to size a new drawing to the
-   shape it replaces. Sharing it with the baker is the point. Two copies of
-   this setup would drift, and the one in the editor would be the one that
-   quietly stopped matching the game. */
-function drawLayers(spId, stage, pose, eye){
-  const sp = SPECIES[spId], A = artFor(spId, stage), st = A.st, k = st.s * sp.scale;
-  const inks = inksFor(spId);
+/* One species, one stage, one pose: painted onto fresh material layers, then
+   composed, lit and trimmed. One canvas per material, each one translated to
+   the origin and scaled by the animal's size, so the species draws in its own
+   local units and never has to know what stage it is at. */
+function bakeOnce(spId, stage, pose, eye, skinId){
+  const sp = SPECIES[spId], st = artFor(spId, stage).st, k = st.s * sp.scale;
   const canvases = [], M = {};
-  /* A painting colour the species has not been given gets no canvas and a
-     hole in the array, which the compositor skips. Anything that tries to
-     paint on it lands in a one-pixel bin instead of throwing — a grid can
-     outlive the colour it was drawn with, and a stale character is not a
-     reason to stop baking the animal. */
-  const bin = readCtx(makeCv(1, 1));
-  for (let i = 0; i < LAYERS.length; i++){
-    const name = LAYERS[i];
-    if (i >= INK_FIRST && i < INK_FIRST + INKS && !inks[i - INK_FIRST]){
-      canvases.push(null); M[name] = bin; continue;
-    }
+  for (const name of LAYERS){
     const c = makeCv(BAKE_W, BAKE_H), g = readCtx(c);
     g.fillStyle = '#000';
     g.translate(BAKE_CX, BAKE_G); g.scale(k, k);
@@ -424,21 +401,6 @@ function drawLayers(spId, stage, pose, eye){
   }
   const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
   const anchors = sp.draw(M, P);
-  /* Anything added to this animal through the rig, drawn against the joints
-     the species just published. It lands on the same material layers, so a
-     horn added here is lit and outlined as a horn without anything
-     downstream being told it exists. */
-  drawRigParts(M, spId, anchors.joints, P);
-  return { canvases, M, k, anchors };
-}
-
-function bakeOnce(spId, stage, pose, eye, skinId, anim, frame){
-  const sp = SPECIES[spId], st = artFor(spId, stage).st;
-  const { canvases, M, k, anchors } = drawLayers(spId, stage, pose, eye);
-  // Anything drawn by hand replaces what was just computed for it, before the
-  // countershading and the coat go on — both are masked to body pixels, so
-  // they should trim to the drawing rather than to the shape it replaced.
-  stampParts(M, spId, stage, anchors, k, anim, frame);
   // Countershading and the coat both ride the body the draw function just laid
   // down, never a path computed alongside it — the same rule the surface
   // detail follows. Belly first: the coat is masked to stop where it starts.
@@ -452,12 +414,6 @@ function bakeOnce(spId, stage, pose, eye, skinId, anim, frame){
     cv: t.cv, w: t.w, h: t.h,
     ox: BAKE_CX - t.ox, oy: BAKE_G - t.oy,
     eye: conv(anchors.eye), mouth: conv(anchors.mouth), hat: conv(anchors.hat),
-    /* The editor's Body tab hangs a drag handle on each of these. Converted
-       here with everything else, so a handle is in the same space as the
-       picture it sits on. */
-    parts: anchors.parts
-      ? Object.fromEntries(Object.entries(anchors.parts).map(([k, v]) => [k, conv(v)]))
-      : {},
     /* How wide the hat should be drawn, in screen pixels. The species says it,
        the way it already says how big the eye is, because the three skulls are
        nothing like each other: sized off `hs` alone a Brachiosaurus wore the

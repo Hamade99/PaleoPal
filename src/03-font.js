@@ -37,11 +37,6 @@ const GLYPHS = {
   '\u25bc':'0VEE440'
 };
 
-/* cursor and scroll marks, addressed by name so the screen code does not have
-   to carry literal box-drawing characters around */
-const GL_RIGHT = '▶', GL_LEFT = '◀', GL_UP = '▲', GL_DOWN = '▼';
-const GL_DOT = '·';
-
 const fontStrips = new Map();
 function fontStrip(col){
   let strip = fontStrips.get(col);

@@ -127,46 +127,9 @@ function drawBrachio(M, P){
      front slope is long and the back one drops away — so a hat centred on the
      highest pixel sits over the back slope and looks pushed off the edge, which
      is the complaint even though the arithmetic was centred. */
-  /* Where the big pieces of this animal are, for the editor's Body tab to hang
-     handles on. They are read-only landmarks — dragging one writes the TUNE
-     numbers underneath it, never these — and they exist here because only the
-     draw function knows where it put anything. */
-  /* The skeleton, published — see src/02-rig.js. `n1`..`n3` are the neck
-     stations the S-curve already runs through, so a part hung on the neck
-     rides the curve rather than a straight line between its ends. */
-  const joints = {
-    hip:      { x: hipX,  y: hipY,   sx: 1, sy: lM, sw: lM },
-    shoulder: { x: shX,   y: shY,    sx: 1, sy: lM, sw: lM*bk },
-    // the shoulder hump, where the oval on `skin` actually sits
-    withers:  { x: shX + 2, y: shY - 6*lM, sx: 1, sy: lM, sw: lM*bk },
-    belly:    { x: 0,     y: shY + T_.bodyD*.5*lM, sx: 1, sy: lM, sw: lM },
-    neck0:    { x: n1[0], y: n1[1],  sx: 1, sy: lM, sw: lM*bk },
-    neck1:    { x: n2[0], y: n2[1],  sx: 1, sy: lM, sw: lM*bk },
-    neck2:    { x: n3[0], y: n3[1],  sx: 1, sy: lM, sw: lM*bk },
-    skull:    { x: hx,    y: hy,     sx: sn, sy: hh, sw: hM },
-    snout:    { x: hx - sn, y: hy,   sx: sn, sy: fh, sw: hM },
-    jaw:      { x: jHinge[0], y: jHinge[1], sx: sn, sy: hh, sw: hM, rot: jawA },
-    crest:    { x: (crestBack+crestFront)/2, y: hy - hh*crTop, sx: hM, sy: hh, sw: hM*cr },
-    eye:      { x: hx - sn*.48, y: hy - hh*.3, sx: hM, sy: hM, sw: hM },
-    tail0:    { x: hipX + TL*.33*tM, y: hipY + sw*2, sx: tM, sy: lM, sw: lM },
-    tail1:    { x: hipX + TL*.66*tM, y: hipY + sw*5, sx: tM, sy: lM, sw: lM },
-    tail2:    { x: hipX + TL*tM,     y: hipY + sw*8, sx: tM, sy: lM, sw: lM }
-  };
-
-  const parts = {
-    snout:    [hx - sn, hy],
-    jaw:      [hx - sn*.44, lipY + hh*.02],
-    head:     [hx, hy],
-    crest:    [hx - sn*.16, hy - hh*crTop],
-    neck:     [n3[0], n3[1]],
-    shoulder: [shX, shY],
-    hip:      [hipX, hipY],
-    belly:    [8*tor, shY + 8 + T_.bodyD*.5*lM],
-    tail:     [hipX + TL*tM, hipY + 10]
-  };
   return { eye:[hx - sn*.48, hy - hh*.3], eyeR:2.9*hM, mouth:[hx - sn*.9, hy + hh*.5],
            hat:[(crestBack + crestFront)/2 - sn*.12, hy - hh*crTop*.97],
            hatW: (crestBack - crestFront)*1.05,
-           top: hy - hh*crTop, spine, parts, joints };
+           top: hy - hh*crTop, spine };
 }
 

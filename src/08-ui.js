@@ -203,9 +203,10 @@ function paintChrome(){
     const k = $('act-' + screen);
     if (k) k.classList.add('down');           // the key that opened it stays in
   }
-  /* The status badges float over the glass. A screen is the glass, so they
-     have to get out of the way or they sit on top of its title bar. */
-  $('badges').style.display = screenOpen() ? 'none' : '';
+  /* The status badges float over the glass. A screen is the glass, and so is a
+     round of a game, so they have to get out of the way or they sit on top of
+     the title bar or the clock. */
+  $('badges').style.display = screenOpen() || mode === 'game' ? 'none' : '';
   ['feed','play','wash','care','shop'].forEach(k => { $('act-'+k).disabled = busy; });
   const careBtn = $('act-care');
   const old = careBtn.querySelector('.nub'); if (old) old.remove();
@@ -246,9 +247,10 @@ function refresh(){
   }
   const sp = SPECIES[S.sp], st = STAGE[stageIdx()];
   $('dName').textContent = S.name;
-  const d = ageDays();
-  const age = d < 1 ? Math.max(1, Math.round(d*24)) + 'h old' : Math.floor(d) + (Math.floor(d) === 1 ? ' day old' : ' days old');
-  $('dSub').textContent = st.label + ' ' + sp.common + ' · ' + age;
+  /* The age has moved to the chip on the glass, so it is not written here as
+     well: two places saying how old the animal is is two places that can
+     disagree, and the subtitle is the one nobody was reading. */
+  $('dSub').textContent = st.label + ' ' + sp.common;
   $('mood').innerHTML = escapeHTML(S.name) + ' <em>' + escapeHTML(moodOf().line) + '</em>';
   const bondEl = $('bond');
   const pips = bondPips();
@@ -263,7 +265,11 @@ function refresh(){
   if (S.asleep && !S.vet) tags.push(['', 'Asleep']);
   if (S.mess.length) tags.push(['warn', S.mess.length + ' to clean']);
   if (G.streak > 1) tags.push(['', G.streak + '-day streak']);
-  $('badges').innerHTML = tags.slice(0,3).map(([c,t]) => `<span class="tag ${c}"><i class="dot"></i>${t}</span>`).join('');
+  /* The age leads the row and is always there; the status tags flow after it.
+     It is this animal's own counter — every pet in the nest has its own — and
+     it is the one number on the glass that only ever goes up. */
+  $('badges').innerHTML = `<span class="age">${ageLabel()}</span>`
+    + tags.slice(0,3).map(([c,t]) => `<span class="tag ${c}"><i class="dot"></i>${t}</span>`).join('');
   lamp.className = 'lamp' + (S.vet || S.ills.length ? ' bad' : S.asleep ? ' rest' : '');
   paintChrome();
   if (openPanel) renderSheet(openPanel);
@@ -322,17 +328,6 @@ function mountArt(root){
     }
   });
 }
-function portrait(pet, size){
-  const c = makeCv(size, size), g = readCtx(c);
-  g.imageSmoothingEnabled = false;
-  if (!pet.sp){ g.fillStyle = '#3a4a44'; g.fillRect(size/2-5, size/2-7, 10, 14); return c; }
-  const st = pet.born ? stageIdx(pet) : 0;
-  const f = frameOf(pet.sp, st, 'idle', 0, false, pet.skin || 'wild');
-  const sc = Math.min(size / f.w, size / f.h) * .92;
-  g.drawImage(f.cv, (size - f.w*sc)/2, size - f.h*sc - 1, f.w*sc, f.h*sc);
-  return c;
-}
-
 /* One entry per sheet, each handed the body element and the active species.
    This was a single if/else chain that every new panel had to be threaded
    into; a sheet is now self-contained, the way GAMES already works in

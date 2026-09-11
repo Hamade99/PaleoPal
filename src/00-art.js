@@ -396,6 +396,172 @@ const PIX = {
       '            ',
       '            '
     ] },
+  /* Seen from above, for the forage game, which is played looking down at the
+     pen. Two frames each: the legs trade places and the tail swings the other
+     way, which is a stride from this angle. They are ordinary PIX sprites, so
+     every pixel of them is editable in the Pixels tab like any other — which is
+     the point of them being pixels rather than another projection of the
+     procedural animal. Drawn facing +x and rotated to the heading. */
+  'top.rex.a': { w:30, h:17, ox:15, oy:8,
+    pal:['#241d13','#7e9c54','#a0b680','#5f713e','#e9dfba','#5b7940'], rows:[
+      '           04440              ',
+      '           00140              ',
+      '          03110               ',
+      '          01130    00         ',
+      '         001100  00330        ',
+      '       003311330033300 0000   ',
+      '      0331111113333003011130  ',
+      '    00311122221111111112211300',
+      '  0031222222221122222122222244',
+      ' 01222222222221111111112211300',
+      ' 033333331111113333003111130  ',
+      '  0000000331133003330000000   ',
+      '         001100  00330        ',
+      '         03110     00         ',
+      '         01130                ',
+      '        04100                 ',
+      '       0440                   '
+    ] },
+  'top.rex.b': { w:30, h:17, ox:15, oy:8,
+    pal:['#241d13','#7e9c54','#a0b680','#5f713e','#e9dfba','#5b7940'], rows:[
+      '       0440                   ',
+      '        04100                 ',
+      '         01130                ',
+      '         03110     00         ',
+      '         001100  00330        ',
+      '  00000003311330033300 0000   ',
+      ' 033333331111113333003011130  ',
+      ' 01222222222221111111112211300',
+      '  0031222222221122222122222244',
+      '    00311122221111111112211300',
+      '      0331111113333003111130  ',
+      '       00331133003330000000   ',
+      '         001100  00330        ',
+      '          01130    00         ',
+      '          03110               ',
+      '           00140              ',
+      '           04440              '
+    ] },
+  'top.trike.a': { w:29, h:21, ox:14, oy:10,
+    pal:['#2b1c10','#a06635','#b98e6a','#784d28','#efe6c8','#7d4a22'], rows:[
+      '                             ',
+      '            0  0             ',
+      '           010010            ',
+      '          03100110   00      ',
+      '         0313000130 0330   0 ',
+      '        031333301130333300040',
+      '        03331133313031130440 ',
+      '       03311111131111111440  ',
+      '      0331112211111112204130 ',
+      '    0031111222211222122111100',
+      '  001122222222221222122122455',
+      ' 0122222211222211222122111100',
+      '  00033331112211111112214130 ',
+      '     0003311111131111110440  ',
+      '        03331133313031130440 ',
+      '        031333303110333300040',
+      '        0313000 03100330   0 ',
+      '        0130     011000      ',
+      '        010       010        ',
+      '         0         0         ',
+      '                             '
+    ] },
+  'top.trike.b': { w:29, h:21, ox:14, oy:10,
+    pal:['#2b1c10','#a06635','#b98e6a','#784d28','#efe6c8','#7d4a22'], rows:[
+      '                             ',
+      '         0         0         ',
+      '        010       010        ',
+      '        0130     011000      ',
+      '        0313000 03100330   0 ',
+      '        031333303110333300040',
+      '        03331133313031130440 ',
+      '     0003311111131111111440  ',
+      '  00033331112211111112204130 ',
+      ' 0122222211222211222122111100',
+      '  001122222222221222122122455',
+      '    0031111222211222122111100',
+      '      0331112211111112214130 ',
+      '       03311111131111110440  ',
+      '        03331133313031130440 ',
+      '        031333301130333300040',
+      '         0313000130 0330   0 ',
+      '          03100110   00      ',
+      '           010010            ',
+      '            0  0             ',
+      '                             '
+    ] },
+  'top.brachio.a': { w:32, h:19, ox:16, oy:9,
+    pal:['#1b2422','#71958a','#96b1a8','#546f67','#e2e3bc','#88a894'], rows:[
+      '            0                   ',
+      '           010 00               ',
+      '          00100110              ',
+      '         03130 0130             ',
+      '         01130001130            ',
+      '         01333333130         0  ',
+      ' 0000000033111111330   00000030 ',
+      '0333333333111111113000033331510 ',
+      '0122222222112222111112222221510 ',
+      ' 00011222222222221222221130000  ',
+      '    0031111122221111130000      ',
+      '      0003111111113000          ',
+      '        033111111330            ',
+      '         01333333130            ',
+      '        031100003110            ',
+      '        03130   0310            ',
+      '        0100     0110           ',
+      '        010       00            ',
+      '         0                      '
+    ] },
+  'top.brachio.b': { w:32, h:19, ox:16, oy:9,
+    pal:['#1b2422','#71958a','#96b1a8','#546f67','#e2e3bc','#88a894'], rows:[
+      '         0                      ',
+      '        010       00            ',
+      '        0100     0110           ',
+      '        03130   0310            ',
+      '        031100003110            ',
+      '         01333333130            ',
+      '        033111111330            ',
+      '      0003111111113000          ',
+      '    0031111122221111130000      ',
+      ' 000112222222222212222211300 0  ',
+      '0122222222112222111112222221010 ',
+      '0333333333111111113000033331510 ',
+      ' 0000000033111111330   00000330 ',
+      '         01333333130        00  ',
+      '         01130001130            ',
+      '         03130 0130             ',
+      '          00100110              ',
+      '           010 00               ',
+      '            0                   '
+    ] },
+  'top.compy.a': { w:18, h:11, ox:9, oy:5,
+    pal:['#241d13','#c9a355','#d7bb81','#91753f','#e6cf94','#8a6c34'], rows:[
+      '         0        ',
+      '        010       ',
+      '       010    0   ',
+      '      01100000300 ',
+      '   000311113112230',
+      ' 0011222221221110 ',
+      '0221111111100000  ',
+      ' 0000001100       ',
+      '      010         ',
+      '     010          ',
+      '      0           '
+    ] },
+  'top.compy.b': { w:18, h:11, ox:9, oy:5,
+    pal:['#241d13','#c9a355','#d7bb81','#91753f','#e6cf94','#8a6c34'], rows:[
+      '      0           ',
+      '     010          ',
+      '      010         ',
+      ' 0000001100       ',
+      '022111111110000   ',
+      ' 0011222221221100 ',
+      '   000311113112230',
+      '      01100000330 ',
+      '       010    00  ',
+      '        010       ',
+      '         0        '
+    ] },
   'mess': { w:10, h:9, ox:4, oy:7,
     pal:['#6b4322','#8a5c33','#513218'], rows:[
       '          ',
@@ -420,393 +586,6 @@ const PIX = {
     ] },
 };
 /*</data>*/
-
-/* ==========================================================================
-   HAND-DRAWN PARTS
-   A species' draw function paints shapes onto fifteen material-layer canvases
-   and the compositor turns those into pixels. This is the way to bypass one of
-   those shapes and put a drawing there instead.
-
-   The thing to understand first, because it decides the format: a material
-   layer is NOT a picture in colours. composeSprite reads each layer as a
-   binary mask — alpha over 118 claims the pixel for that layer — and every
-   colour in the finished sprite comes from that material's ramp, run through
-   the lighting pass and the outline. Nothing ever reads a colour off a layer.
-
-   So a drawing here says which MATERIAL each pixel is, not what colour it is.
-   One character per pixel: a space is nothing, and 0-9 then a-e index into
-   LAYERS. Draw with materials and the shading, the internal edges and the
-   outline all come back for free — and the pipeline's rules still apply, so
-   two touching pixels of one material merge into a region with no edge between
-   them, exactly as a mandible painted onto `head` was invisible until
-   session 9.
-
-   Keyed species|unit|stage. A unit is one material layer's worth of geometry,
-   because that is the granularity the canvases already have — `body` is the
-   whole trunk, since the house rule says to draw neck, ribcage, hips and tail
-   as one closed blob and there is no way to replace the hip out of the middle
-   of it. PART_UNITS below is the list.
-
-   Stage is in the key because a drawing is stamped at device resolution — one
-   grid pixel is one baked pixel — and so does not scale with the animal.
-   Scaling hand-drawn pixels would destroy the grid. Four stages is four
-   drawings, which is the honest price of drawing rather than computing.
-
-   `ox`/`oy` are where the anchor sits inside the grid, the same convention PIX
-   uses. The anchor itself comes from the draw function, after the pose has
-   been applied, which is what makes a stamped part rise with the breath and
-   travel with the walk instead of sitting at a guessed offset. It is the same
-   mechanism that keeps a hat on a skull.
-
-   Empty by default: every unit with no entry here stays procedural, and that
-   absence IS the fallback. Draw the head by hand and leave the legs to the
-   gait solver, and the animal still walks. */
-/*<data:PART_PIX>*/
-const PART_PIX = {
-  'rex|mouth|3': { w:42, h:18, ox:17, oy:14, rows:[
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '       h                                  ',
-    '       hh                                 ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    ' hhhh                                     ',
-    '      hhhh               hhhhh            ',
-    '           hhhhhhhhhhhhhhh                ',
-    '                                          ',
-    '                                          ',
-    '                                          ',
-    '                                          '
-  ] },
-  'trike|body|3': { w:114, h:46, ox:32, oy:6, rows:[
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '           111111111111                                                                                           ',
-    '          1111111111111111111       11111111111111111                                                             ',
-    '         1111111111111111111111111111111111111111111111111                                                        ',
-    '        11111111111111111111111111111111111111111111111111111                                                     ',
-    '       1111111111111111111111111111111111111111111111111111111111                                                 ',
-    '      11111111111111111111111111111111111111111111111111111111111111                                              ',
-    '      11111111111111111111111111111111111111111111111111111111111111111                                           ',
-    '     1111111111111111111111111111111111111111111111111111111111111111111111                                       ',
-    '     1111111111111111111111111111111111111111111111111111111111111111111111111                                    ',
-    '    111111111111111111111111111111111111111111111111111111111111111111111111111111                                ',
-    '    11111111111111111111111111111111111111111111111111111111111111111111111111111111111                           ',
-    '    1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                      ',
-    '    1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                ',
-    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111           ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111       ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111    ',
-    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111     ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111          ',
-    '     11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111                 ',
-    '     111111111111111111111111111111111111111111111111111111111111111111111111111111111                            ',
-    '     11111111111111111111111111111111111111111111111        1111111111                                            ',
-    '      11111111111111111111111111111111111111111111                                                                ',
-    '       111111111111111111111111111111111111111111                                                                 ',
-    '       111111111111111111111111111111111111111111                                                                 ',
-    '          11111111111111111111111111111111111111                                                                  ',
-    '           1111111111111111111111111111111111111                                                                  ',
-    '           111111111111111111111111111111111111                                                                   ',
-    '            11111111111111111111111111111111111                                                                   ',
-    '            11111111111111111111111111111111111                                                                   ',
-    '             1111111111111111111111111111111111                                                                   ',
-    '              11111111111111111111111111111111                                                                    ',
-    '              11111111111111111111111111111111                                                                    ',
-    '               1111111111111111111111111111111                                                                    ',
-    '               111111111111111111111111111111                                                                     ',
-    '                11111111111111111111111111111                                                                     ',
-    '                1111111111111111111111111111                                                                      ',
-    '                  1111111111111111111111111                                                                       ',
-    '                                       11                                                                         ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  ',
-    '                                                                                                                  '
-  ] },
-  'trike|crest|3': { w:31, h:17, ox:-41, oy:9, rows:[
-    '                               ',
-    '                               ',
-    '                               ',
-    '                               ',
-    '               g               ',
-    '              ggg              ',
-    '    gg                         ',
-    '    gg                   gg    ',
-    '                         gg    ',
-    '                               ',
-    '                               ',
-    '          gg                   ',
-    '          gg                   ',
-    '                               ',
-    '                               ',
-    '                               ',
-    '                               '
-  ] },
-  'trike|shield|3': { w:38, h:37, ox:12, oy:5, rows:[
-    '                                      ',
-    '                                      ',
-    '                                      ',
-    '                                      ',
-    '              333                     ',
-    '             333333                   ',
-    '           33333333333                ',
-    '        33333333333333333             ',
-    '       3333333333333333333            ',
-    '       33333333333333333333           ',
-    '      3333333333333333333333          ',
-    '      33333333333333333333333         ',
-    '      33333333333333333333333         ',
-    '      333333333333333333333333        ',
-    '      333333333333333333333333        ',
-    '     33333333333333333333333333       ',
-    '     33333333333333333333333333       ',
-    '    3333333333333333333333333333      ',
-    '    3333333333333333333333333333      ',
-    '    3333333333333333333333333333      ',
-    '    33333333333333333333333333333     ',
-    '     3333333333333333333333333333     ',
-    '     33333333333333333333333333333    ',
-    '      3333333333333333333333333333    ',
-    '      3333333333333333333333333333    ',
-    '       333333333333333333333333333    ',
-    '       333333333333333333333333333    ',
-    '        3333333333333333333333333     ',
-    '         33333333333333333333333      ',
-    '         3333333333333333333333       ',
-    '          3333333333333333333         ',
-    '           333333333333333            ',
-    '             333333333                ',
-    '                                      ',
-    '                                      ',
-    '                                      ',
-    '                                      '
-  ] },
-  'trike|horn|3': { w:90, h:86, ox:33, oy:35, rows:[
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                         i                                                ',
-    '                                        iii                                               ',
-    '                                        iii                                               ',
-    '                                                                                          ',
-    '          ii                                                                              ',
-    '    i      ii                   ii                 ii                                     ',
-    '     ii     iii                 iii                ii                                     ',
-    '      iii    iiii                i                                                        ',
-    '       iii    iiiii                                                                       ',
-    '        iiii   iiiiii                                                                     ',
-    '          iiii  iiiiii                                                                    ',
-    '           iiii   iiiiii                                                                  ',
-    '            iiiii  iiiiii                                                                 ',
-    '             iiiiii iiiiiii                                                               ',
-    '              iiiiii iiiiiii                                                              ',
-    '               iiiiii iiiiiiii                                                            ',
-    '                iiiiii iiiiiiii                                                           ',
-    '                 iiiiii iiiiiiii                                                          ',
-    '                 iiiiiiiiiiiiiiii                                                         ',
-    '                  iiiiiiiiiiiiiiii                                                        ',
-    '                  iiiiiiiiiiiiiiiii                                                       ',
-    '              ii   iiiiiiiiiiiiiiii                                                       ',
-    '               i   iiiiiiiiiiiiiiii                                                       ',
-    '               ii  iiiiiiiiiiiiiiii                                                       ',
-    '               iii  iiiii  iiiiiiii                                                       ',
-    '               iii         iiiiiiii                                                       ',
-    '                iii          iiiii                                                        ',
-    '                iiii                                                                      ',
-    '                iiii                                                                      ',
-    '                 ii                                                                       ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                            iii                           ',
-    '                                                          ii ii                           ',
-    '                                                          iii                      iii    ',
-    '                                                                                  i ii    ',
-    '                                                                                iii       ',
-    '                                                                                 ii       ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          ',
-    '                                                                                          '
-  ] },
-};
-/*</data>*/
-
-/* Parts added to an animal's skeleton.
-
-   A part is a shape, a material, and a list of points measured in some joint's
-   own units. That is all it is, and that is the point: the compositor, the
-   growth columns, the gait solver and the pose table were never told how many
-   parts an animal has, so adding one costs a row here and nothing anywhere
-   else. It turns with the joint it names, scales with it through the four
-   growth stages, and is lit and outlined like anything else made of that
-   material.
-
-   The joints a species publishes are listed in its own file — the Triceratops
-   has `skull`, `jaw`, `frill`, `brow`, `hip`, `withers`, `tail0`..`tail3` and
-   the rest. `skull` measures x in snout lengths and y in head depths, so a
-   point on the face stays on the face at every age without four copies of it
-   being stored.
-
-     { layer:'horn', kind:'tube', v:[['skull',-.2,-.4],['skull',-.3,-1.1]],
-       w:[3, .6] }
-
-   `kind` is `blob`, `tube` or `oval` — the same three primitives the species
-   files have always drawn with. `w` is tube widths, in the joint's y units.
-   `r` is oval radii, in the joint's x and y units. `stage` pins a part to one
-   growth stage; leave it out and the part is there at every age. `off` keeps a
-   part in the file without drawing it.
-
-   Empty by default. This is the additive half of moving the animals out of
-   code and into data, and it is deliberately the half built first: if a fourth
-   horn can be added here and it turns, grows and lights correctly with no code
-   written for it, then converting the shapes that already exist is mechanical.
-   See docs/ARCHITECTURE-REVIEW.md. */
-/*<data:RIG_PARTS>*/
-const RIG_PARTS = {
-};
-/*</data>*/
-
-/* Which material layer each drawable unit replaces, and which of the draw
-   function's landmarks it hangs from.
-
-   The landmark names are not the same across the three species — a rex has
-   `back`, a brachiosaur does not; a trike calls its frill `frill` and a
-   brachiosaur calls its crest `crest` — so each unit lists what it would like
-   in order of preference and takes the first one the species actually returns.
-   All three provide `head`, `jaw`, `snout` and `shoulder`, so the last entry
-   in each list always lands.
-
-   `belly` and `mark` are absent because they are not drawn, they are masks
-   painted from the spine afterwards. The three eye layers are absent because
-   eyeAt has five states and the difference between a shut lid and an open but
-   hooded eye is the only thing on the whole sprite separating asleep from ill;
-   a static grid would make them the same picture again. */
-const PART_UNITS = {
-  body:   { layer:'skin',   at:['back','shoulder'], note:'the whole trunk: neck, ribcage, hips, tail' },
-  head:   { layer:'head',   at:['head'],            note:'the skull' },
-  jaw:    { layer:'jaw',    at:['jaw','head'],      note:'the lower jaw' },
-  shield: { layer:'shield', at:['frill','head'],    note:'frill or plate' },
-  crest:  { layer:'crest',  at:['crest','head'],    note:'crest' },
-  horn:   { layer:'horn',   at:['head'],            note:'horns, claws and teeth' },
-  beak:   { layer:'beak',   at:['snout','head'],    note:'beak or rostral' },
-  mouth:  { layer:'mouth',  at:['jaw','head'],      note:'the gape behind the teeth' },
-  limb:   { layer:'limb',   at:['shoulder'],        note:'near-side legs and arms — will not walk' },
-  far:    { layer:'far',    at:['shoulder'],        note:'far-side legs — will not walk' }
-};
-/* The colours a species can be painted with by hand, on top of the materials
-   it already has.
-
-   The material list is the honest palette for anything that is *made of*
-   something — skin, bone, keratin, the inside of a mouth — and it is what
-   makes a hand-drawn part sit in the animal instead of on it. But it cannot
-   say "a rust-red band across this frill", because no material on a
-   Triceratops is rust-red, and inventing one as a material would be a lie
-   about what the frill is.
-
-   So a species can also be given up to eight colours of its own. They are
-   ordinary materials once defined — each gets a ramp and takes the lighting
-   pass, so a painted band is lit by the same sun as everything else — and they
-   sit just above the coat in the paint order, because a marking covers the
-   surface and passes behind the horns, the teeth and the eye.
-
-   `lit` is how much light the colour takes. 1 is shaded like skin. 0 is flat,
-   which is the whole of the difference between a marking and a sticker, and is
-   worth having for the few things that really are flat: a glint, a wet
-   highlight, a painted-on scar.
-
-   Empty by default. A species with no colours here costs nothing at all — the
-   baker never allocates their canvases and the compositor never looks at
-   them. */
-/*<data:PART_MATS>*/
-const PART_MATS = {  };
-/*</data>*/
-
-/* One character per entry in LAYERS, ink slots included. */
-const PART_CH = '0123456789abcdefghijklm';
-const inksFor = spId => PART_MATS[spId] || [];
-
-/* A part can also be drawn once per frame of one pose, and that is the only
-   way a hand-drawn leg walks.
-
-   A drawing is a fixed picture, so a unit stamped at an anchor travels but does
-   not bend. For a head or a frill that is the whole truth — those really are
-   rigid and the pose only moves them. For a leg it is not: the gait solves new
-   joint positions every frame, and a leg that cannot bend does not step. Drawn
-   as one picture, the near legs sat still while the far ones walked.
-
-   So a key may carry a pose and a frame on the end, and the frame-specific
-   drawing wins where one exists. Only walking actually needs them — every
-   other pose leaves `legPhase` at zero, so the plain key covers the lot — and
-   the editor seeds all twelve off the gait solver rather than asking anyone to
-   draw a leg from nothing twelve times.
-
-       trike|limb|3            every pose
-       trike|limb|3|walk|7     that one frame of the walk */
-function partsFor(spId, stage, anim, frame){
-  const out = {};
-  for (const unit in PART_UNITS){
-    const key = spId + '|' + unit + '|' + stage;
-    const p = (anim !== undefined && PART_PIX[key + '|' + anim + '|' + frame]) || PART_PIX[key];
-    if (p) out[unit] = p;
-  }
-  return out;
-}
-/* Every key that belongs to one unit at one stage, the per-frame ones with it.
-   The editor clears by unit, and a "back to procedural" that left twelve walk
-   frames behind would look like it had not worked. */
-function partKeys(spId, unit, stage){
-  const stem = spId + '|' + unit + '|' + stage;
-  return Object.keys(PART_PIX).filter(k => k === stem || k.slice(0, stem.length + 1) === stem + '|');
-}
 
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
@@ -1625,8 +1404,11 @@ const PIX_CH = '0123456789abcdefghijklmnopqrstuvwxyz';
    canvas size and would otherwise ride a pixel high. */
 const PIX_PAD = 1;
 const pixCache = new Map();
+/* `outline` is optional. A sprite that wants its own edges drawn in the pixel
+   editor asks for none: the dilation pass is a convenience for art that was
+   drawn without an edge, not a tax on art that has one. */
 function pixCanvas(id, outline){
-  const key = id + '|' + outline;
+  const key = id + '|' + (outline || '');
   if (pixCache.has(key)) return pixCache.get(key);
   const p = PIX[id];
   if (!p) return makeCv(1,1);
@@ -1636,11 +1418,13 @@ function pixCanvas(id, outline){
   pixDraw(g, id, (p.ox || 0) + PIX_PAD, (p.oy || 0) + PIX_PAD, 1);
   const d = g.getImageData(0,0,w,h), px = d.data, solid = new Uint8Array(w*h);
   for (let i=0;i<w*h;i++){ if (px[i*4+3] >= 118){ px[i*4+3] = 255; solid[i] = 1; } else px[i*4+3] = 0; }
-  const [orr, og, ob] = [1,3,5].map(i => parseInt(outline.slice(i,i+2), 16));
-  for (let y=0;y<h;y++) for (let x=0;x<w;x++){
-    const i = y*w+x; if (solid[i]) continue;
-    if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
-      px[i*4]=orr; px[i*4+1]=og; px[i*4+2]=ob; px[i*4+3]=255;
+  if (outline){
+    const [orr, og, ob] = [1,3,5].map(i => parseInt(outline.slice(i,i+2), 16));
+    for (let y=0;y<h;y++) for (let x=0;x<w;x++){
+      const i = y*w+x; if (solid[i]) continue;
+      if ((x>0&&solid[i-1])||(x<w-1&&solid[i+1])||(y>0&&solid[i-w])||(y<h-1&&solid[i+w])){
+        px[i*4]=orr; px[i*4+1]=og; px[i*4+2]=ob; px[i*4+3]=255;
+      }
     }
   }
   g.putImageData(d,0,0);
@@ -1652,9 +1436,9 @@ function pixCanvas(id, outline){
 function pixInvalidate(){ pixCache.clear(); if (typeof HATS === 'object') for (const k in HATS) delete HATS[k]; }
 
 /* Everything the game has baked, dropped in one call. The editor changes a
-   number and then has to make the game forget four independent caches — the
-   frame cache, the material cache, the pixel cache and the two backdrop
-   caches. Forgetting one of them is how an editor ends up showing the old
+   number and then has to make the game forget several independent caches — the
+   frame cache, the material cache, the pixel cache, the backdrop cache and the
+   sky. Forgetting one of them is how an editor ends up showing the old
    sprite on a new palette, so there is one function and it clears them all.
    It is called at runtime, so the caches defined in later modules are there. */
 function artChanged(){
@@ -1663,7 +1447,6 @@ function artChanged(){
   if (typeof matCache   !== 'undefined') matCache.clear();
   if (typeof warmQueue  !== 'undefined') warmQueue.length = 0;
   if (typeof bgCache    !== 'undefined') bgCache.clear();
-  if (typeof bgPixCache !== 'undefined') bgPixCache.clear();
   if (typeof skyCache   !== 'undefined') skyCache.clear();
   stageCache.clear();
 }

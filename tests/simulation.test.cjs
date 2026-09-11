@@ -6,7 +6,8 @@ const vm = require('node:vm');
 
 function harness() {
   const context = vm.createContext({ console, Date, Math, performance, setTimeout, clearTimeout,
-    document: { getElementById: () => ({getContext: () => ({})}) } });
+    document: { getElementById: () => ({getContext: () => ({}),
+      classList: {add(){}, remove(){}, toggle(){}}}) } });
   for (const file of ['00-core.js', '00-art.js', '05-sim.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../src', file), 'utf8'), context, { filename: file });
   }
@@ -14,7 +15,7 @@ function harness() {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/species/registry.js'), 'utf8'), context);
   vm.runInContext(`
     const BIOMES = BIOME_ART;
-    const biomeId = () => G.biome;
+    const biomeId = (pet = S) => (pet && BIOMES[pet.biome] ? pet.biome : 'valley');
     const emit = () => {};
     G = freshGame(); S = G.pets[0]; S.sp = 'rex'; S.born = 1;
     G.sound = false;
@@ -99,14 +100,27 @@ test('seeded games distinguish active and idle players for every species and age
       for (let frame=0; game && frame<1802;frame++){
         if (active){
           if (kind === 'forage' && game.finds.length){
-            const target = game.finds.reduce((best,item) => Math.abs(item.x-game.x)<Math.abs(best.x-game.x) ? item : best);
-            gameInput({type:'point',x:target.x,y:GROUND});
+            const near=(item)=>Math.hypot(item.x-game.x,item.y-game.y);
+            const target = game.finds.reduce((best,item) => near(item)<near(best) ? item : best);
+            gameInput({type:'point',x:target.x,y:target.y});
           }
           if (kind === 'snack'){
             const candidates=game.items.filter(item => !item.rock && item.y<122).sort((first,second) => second.y-first.y);
             if (candidates[0]) gameInput({type:'point',x:candidates[0].x,y:100});
             const rock=game.items.find(item => item.rock && item.y>80 && item.y<130 && Math.abs(item.x-game.x)<game.profile.catch+5);
             if (rock) gameInput({type:'point',x:rock.x<W/2 ? rock.x+40 : rock.x-40,y:100});
+          }
+          if (kind === 'guard' && game.raiders.length){
+            /* Go for whichever raider reaches the clutch first, which is the
+               whole decision the game is made of. */
+            const eta=(r)=>Math.hypot(r.x-W/2,r.y-(PEN.y0+PEN.y1)/2)/r.speed;
+            const target=game.raiders.reduce((best,r) => eta(r)<eta(best) ? r : best);
+            gameInput({type:'point',x:target.x,y:target.y});
+          }
+          if (kind === 'tug'){
+            const half=(.20+stageIdx(S)*.03)/2;
+            const cursor=game.grip<.5 ? game.grip*2 : 2-game.grip*2;
+            if (Math.abs(cursor-game.winAt)<half*.8) gameInput({type:'point',x:100,y:100});
           }
           if (kind === 'leap'){
             const obstacle=game.obs.find(item => !item.past && item.x>54);
@@ -137,6 +151,27 @@ test('seeded games distinguish active and idle players for every species and age
   console.table(totals);
 });
 
+/* The age badge is the one number on the glass that only goes up, so the
+   awkward moments are worth pinning: the first hour, the day boundary, a clock
+   that has gone backwards, and the point where the number needs grouping. */
+test('the age badge reads in hours, then days, and never goes backwards', () => {
+  const run=harness();
+  const at=hours=>run(`S.born=Date.now()-${hours}*3600e3; ageLabel()`);
+  assert.equal(at(0),'1 H','a just-hatched animal is never 0');
+  assert.equal(at(0.4),'1 H');
+  assert.equal(at(5),'5 H');
+  assert.equal(at(23.9),'23 H','still hours right up to the day line');
+  assert.equal(at(24),'1 D','and days from it');
+  assert.equal(at(47.9),'1 D','a day is a whole day, not a rounded one');
+  assert.equal(at(48),'2 D');
+  assert.equal(at(24*1230),'1,230 D','grouped past a thousand');
+  assert.equal(run(`S.born=Date.now()+9e6; ageLabel()`),'1 H','a clock nudged back cannot go negative');
+  assert.equal(run(`S.born=Date.now()+9e6; ageDays()`),0);
+  // and it is per pet, because the nest asks about animals that are not on screen
+  assert.equal(run(`const other=freshPet(); other.born=Date.now()-72*3600e3;
+    S.born=Date.now()-3600e3; ageLabel(other)+'/'+ageLabel()`),'3 D/1 H');
+});
+
 test('records reset weekly best without erasing lifetime best', () => {
   const run=harness();
   assert.equal(run(`
@@ -156,23 +191,20 @@ test('weekly challenge RNG is independent of cosmetic randomness', () => {
   `),true);
 });
 
-/* Both art files, and every block claimed by exactly one of them. A block the
-   editor holds live but no file claims is written nowhere and silently lost on
-   the next save, which is why edit-core checks the other direction at load. */
+/* Every art block claimed by the file the editor writes. A block the editor
+   holds live but no file claims is written nowhere and silently lost on the
+   next save, which is why edit-core checks the other direction at load. */
 test('art data markers match the declaration they own', () => {
+  const file='00-art.js';
+  const source=fs.readFileSync(path.join(__dirname,'../src',file),'utf8');
   const names=[];
-  for (const file of ['00-art.js','00-bg-art.js']) {
-    const source=fs.readFileSync(path.join(__dirname,'../src',file),'utf8');
-    const found=[];
-    for (const match of source.matchAll(/\/\*<data:(\w+)>\*\/\s*const (\w+)/g)) {
-      assert.equal(match[1],match[2],file+' marker names its own declaration');
-      found.push(match[1]);
-    }
-    assert.ok(found.length,file+' has marked data blocks');
-    names.push(...found);
+  for (const match of source.matchAll(/\/\*<data:(\w+)>\*\/\s*const (\w+)/g)) {
+    assert.equal(match[1],match[2],file+' marker names its own declaration');
+    names.push(match[1]);
   }
+  assert.ok(names.length,file+' has marked data blocks');
   assert.equal(names.length,new Set(names).size,'no block is claimed twice');
-  for (const required of ['HABITAT_ART','POSE_ART','PART_PIX','BG_PIX'])
+  for (const required of ['HABITAT_ART','POSE_ART','PIX','STAGE'])
     assert.ok(names.includes(required),required+' is editable');
 
   const core=fs.readFileSync(path.join(__dirname,'../tools/edit-core.js'),'utf8');

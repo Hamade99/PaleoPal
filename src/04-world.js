@@ -82,7 +82,9 @@ landmark: drawGlacier, treeline: borealTrees, floor: borealFloor, live: drawAuro
 const BIOMES = {};
 for (const k in BIOME_ART) BIOMES[k] = Object.assign({}, BIOME_ART[k], BIOME_PAINT[k]);
 const BIOME_IDS = Object.keys(BIOMES);
-const biomeId = () => (G && BIOMES[G.biome] ? G.biome : 'valley');
+/* Whose view this is. Defaults to the animal on screen, but takes a pet so the
+   nest and the shop can ask about one that is not the active one. */
+const biomeId = (pet = S) => (pet && BIOMES[pet.biome] ? pet.biome : 'valley');
 
 /* The nine-colour palette a painter works from, built once per biome and
    phase and then cached. Everything that used to read SKY_SPECS[phase] reads
@@ -868,16 +870,6 @@ function bakeBg(phase, bid){
     g.fillRect(x-1,y+1,1,2); g.fillRect(x+1,y+1,1,2);
   }
   if (B.floor) B.floor(g, S_);
-
-  /* A hand-drawn backdrop goes on last, over everything that was computed.
-     Over and not instead of: a drawing that covers all 280x210 hides the lot,
-     and one that does not lets the generated scene through where it is blank,
-     so a patch and a whole scene are the same feature with the same data.
-
-     The transform is dropped for it, because a drawing is in world pixels —
-     it was painted on this canvas, not in the painters' coordinates. */
-  const drawn = bgPixCanvas(bid, phase);
-  if (drawn){ g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(drawn, 0, 0); g.restore(); }
 
   bgCache.set(key, c);
   return c;

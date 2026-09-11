@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """Run the art editor as a tool instead of as a web page.
 
-The editor's job is to write src/00-art.js and src/00-bg-art.js, and a browser
-will only let a page
+The editor's job is to write src/00-art.js, and a browser will only let a page
 write a file through the File System Access API, which is Chrome and Edge only.
 Firefox has none of it and Mozilla has declined to add it, so in Firefox the
 editor can hand you a download and nothing better.
 
 So the writing moves out of the browser. This serves the project folder on a
 free port, opens the editor, and answers POST /save by writing src/00-art.js
-itself, choosing which by the ?file= on the request. No file dialog, no
-permission prompt, nothing to move afterwards, and
+itself. No file dialog, no permission prompt, nothing to move afterwards, and
 every browser behaves the same way.
 
     python tools/edit.py                  # your default browser
@@ -39,8 +37,6 @@ PAGE = "/tools/editor.html"
 TARGETS = {
     "00-art.js": (ROOT / "src" / "00-art.js",
                   ("/*<data:PIX>*/", "/*</data>*/", "/*<data:STAGE>*/")),
-    "00-bg-art.js": (ROOT / "src" / "00-bg-art.js",
-                     ("/*<data:BG_PIX>*/", "/*</data>*/")),
 }
 DEFAULT = "00-art.js"
 

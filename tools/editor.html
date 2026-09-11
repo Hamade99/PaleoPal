@@ -16,7 +16,6 @@
   .tab{background:var(--panel);color:var(--dim);border:1px solid var(--line);
        padding:6px 14px;cursor:pointer;font:inherit}
   .tab.on{background:#2c4a3c;color:var(--bone);border-color:var(--moss)}
-  .lbl{color:var(--dim);font-size:11px;margin-right:6px;align-self:center}
   #save{margin-left:auto;background:#2f6b49;color:var(--bone);border:1px solid var(--moss);
         padding:6px 16px;cursor:pointer;font:inherit}
   #msg{margin-left:12px;color:var(--dim)}
@@ -60,14 +59,9 @@
   <strong>PALEOPAL ART</strong>
   <button class="tab on" data-tab="pix">Pixels</button>
   <button class="tab" data-tab="species">Species</button>
-  <button class="tab" data-tab="body">Body</button>
-  <button class="tab" data-tab="draw">Draw</button>
-  <button class="tab" data-tab="rig">Rig</button>
   <button class="tab" data-tab="stages">Growth</button>
   <button class="tab" data-tab="coats">Coats</button>
   <button class="tab" data-tab="gear">Headgear</button>
-  <button class="tab" data-tab="habitat">Habitats</button>
-  <button class="tab" data-tab="backdrop">Backdrop</button>
   <button id="save">Save</button>
   <span id="msg"></span>
 </header>
@@ -106,100 +100,6 @@
     <div class="card"><h2>Proportions</h2><div id="spTune"></div></div>
     <div class="card"><h2>Colours</h2><div id="spCols"></div></div>
     <div class="card"><h2>Every stage</h2><div class="strip" id="spPreview"></div></div>
-  </div>
-</main>
-
-<main id="tab-body">
-  <p class="hint">The proportions as handles on the animal. Hover a square to name it, click
-  to select, then drag — a selected handle is the only one a drag moves, so two landmarks
-  close together stop fighting over the pointer. Each handle moves one thing. The animal is
-  pinned by its feet, so it will not wander while you work on it. These write the same
-  numbers the Species tab puts on sliders: another way in, not another set of values.</p>
-  <div class="cols">
-    <div class="card list" id="bodySp"></div>
-    <div class="card list" id="bodyPart"></div>
-    <div class="card">
-      <div id="bodyStage" class="strip" style="margin-bottom:5px"></div>
-      <div id="bodyAnim" class="strip" style="margin-bottom:5px"></div>
-      <div id="bodyPlay" class="strip" style="margin-bottom:8px"></div>
-      <div id="bodyCanvas"></div>
-    </div>
-  </div>
-</main>
-
-<main id="tab-draw">
-  <p class="hint">Draw a body part by hand, in place of the shape the species computes for it.
-  <br>The palette is the list of <b>materials</b>, not colours: the compositor reads every layer
-  as a mask and takes all the colour from that material's ramp, so you say what each pixel is
-  <i>made of</i> and the shading, the internal edges and the outline come back for free. The chips
-  show what each material will paint on this animal.
-  <br>Start with <b>fill from the computed shape</b> and push it around — nobody draws a torso from
-  an empty grid. A unit with nothing drawn stays procedural, which is how you draw a head by hand
-  and still let the gait solver walk the legs. Drawings are per stage, because one grid pixel is one
-  screen pixel and does not scale. <b>Play</b> the poses to check a drawn part still moves with the
-  animal: it hangs from a landmark the pose has already shifted, so it should.
-  <br>Materials cannot say <i>rust-red band across this frill</i>, because no material on a
-  Triceratops is rust-red. So a species can also carry up to eight <b>colours of its own</b> —
-  <b>+</b> at the end of the palette adds one, and its chip is dashed to mark it as a colour rather
-  than a material. They are lit like everything else, so a painted band sits under the same sun;
-  drop the light slider to 0 for the few things that really are flat. They paint over the coat and
-  pass behind horns, teeth and eyes, which is what a marking does.</p>
-  <div class="cols">
-    <div class="card list" id="drawSp"></div>
-    <div class="card list" id="drawUnit"></div>
-    <div class="card">
-      <div id="drawStage" class="strip" style="margin-bottom:5px"></div>
-      <div id="drawAnim" class="strip" style="margin-bottom:5px"></div>
-      <div id="drawFrames" class="strip" style="margin-bottom:5px"></div>
-      <div class="pal" id="drawPal"></div>
-      <div class="lbl" style="margin-bottom:6px">painting: <b id="drawPenName" class="pin"></b>
-        — left click paints, right click erases</div>
-      <div id="drawCanvas"></div>
-      <div id="drawRead" style="color:var(--dim);font-size:11px;margin-top:5px;min-height:15px"></div>
-      <div id="drawTools" class="strip" style="margin-top:8px"></div>
-    </div>
-    <div class="card">
-      <h2>As baked</h2>
-      <div class="strip" id="drawPreview"></div>
-      <h2 style="margin-top:12px">Every stage</h2>
-      <div class="strip" id="drawStages"></div>
-      <h2 style="margin-top:12px">This animal's colours</h2>
-      <div id="drawInks"></div>
-      <h2 style="margin-top:12px">Grid</h2>
-      <div id="drawSize"></div>
-    </div>
-  </div>
-</main>
-
-<main id="tab-rig">
-  <p class="hint">Add parts to an animal and they just work. Press <b>+ spike</b>, <b>+ shape</b> or
-  <b>+ bump</b>, then click the animal where you want it, and drag the handles. Click any part on the
-  animal to pick it up again.
-  <br>A part hangs off a <b>bone</b>, so it moves and grows with the animal, and it is lit and
-  outlined because of what it is <i>made of</i>. Drag a handle somewhere else and it re-attaches to
-  whichever bone is nearest.
-  <br>One shape covers <b>every age</b> — points are measured in the bone’s own units and the
-  bone already grows. <b>has it at</b> is for something an animal only grows later;
-  <b>this age has its own shape</b> is for an age that is a different shape, not just a different
-  size.</p>
-  <div class="cols">
-    <div class="card" style="flex:1;min-width:640px">
-      <div id="rigSp" class="strip" style="margin-bottom:5px"></div>
-      <div id="rigStage" class="strip" style="margin-bottom:5px"></div>
-      <div id="rigAdd" class="strip" style="margin-bottom:5px"></div>
-      <div class="pal" id="rigPal" style="margin-bottom:5px"></div>
-      <div id="rigAges" class="strip" style="margin-bottom:8px"></div>
-      <div id="rigCanvas"></div>
-      <div id="rigRead" style="color:var(--dim);font-size:11px;margin-top:5px;min-height:15px"></div>
-    </div>
-    <div class="card">
-      <h2>Parts</h2>
-      <div id="rigList" style="min-width:190px"></div>
-      <h2 style="margin-top:12px">Size</h2>
-      <div id="rigNums"></div>
-      <h2 style="margin-top:12px">Every age</h2>
-      <div class="strip" id="rigPreview"></div>
-    </div>
   </div>
 </main>
 
@@ -245,61 +145,9 @@
   </div>
 </main>
 
-<main id="tab-habitat">
-  <p class="hint">Sky is two colours per phase. Ground is six materials at midday only
-  — dawn, dusk and night are mixed from them, so changing a day colour changes all
-  four. The tint is the wash laid over the finished frame.</p>
-  <div class="cols">
-    <div class="card list" id="bioList"></div>
-    <div class="card"><h2>Sky</h2><div id="bioSky"></div>
-      <h2 style="margin-top:12px">Ground (midday)</h2><div id="bioGround"></div>
-      <h2 style="margin-top:12px">Tint</h2><div id="bioTint"></div></div>
-    <div class="card"><h2>All four phases</h2><div class="strip" id="bioPreview"></div></div>
-  </div>
-</main>
-
-<main id="tab-backdrop">
-  <p class="hint">Paint a whole habitat by hand, over the one the game computes. These are real
-  colours, not materials — nothing here goes through the sprite compositor, so the pixels are
-  simply the picture.
-  <br>Start with <b>fill from the computed habitat</b>: it traces the generated scene and builds a
-  palette from it, and then you change what you want changed. Anywhere you leave <i>blank</i>, the
-  computed scene still shows through, so a patch and a whole backdrop are the same thing.
-  <br>The gold rectangles are what each growth stage sees — the inner one is the hatchling's view,
-  the outer one the adult's, and anything outside the outer box never reaches the screen. The pink
-  rule is the ground line: whatever you draw, the animal's feet land on it.
-  <br>A <b>base</b> drawing serves all four times of day, washed toward each one's sky. That is
-  crude next to a computed night, so a phase can have a drawing of its own when it earns it.
-  <b>Hide</b> switches off live elements — the blades, the surf, the plume — that your own ground
-  may disagree with.
-  <br><b>These are big.</b> One backdrop is about 59,000 characters in <code>src/00-bg-art.js</code>,
-  roughly a sixth of the built game each.</p>
-  <div class="cols">
-    <div class="card list" id="bdBio"></div>
-    <div class="card">
-      <div id="bdPhase" class="strip" style="margin-bottom:5px"></div>
-      <div id="bdTools" class="strip" style="margin-bottom:5px"></div>
-      <div id="bdQuiet" class="strip" style="margin-bottom:5px"></div>
-      <div class="pal" id="bdPal"></div>
-      <div id="bdCanvas"></div>
-      <div id="bdRead" style="color:var(--dim);font-size:11px;margin-top:5px;min-height:15px"></div>
-    </div>
-    <div class="card">
-      <h2>All four phases</h2>
-      <div class="strip" id="bdPreview"></div>
-      <h2 style="margin-top:12px">On screen, per stage</h2>
-      <div class="strip" id="bdStages"></div>
-      <h2 style="margin-top:12px">Palette</h2>
-      <div id="bdSwatches" style="max-height:40vh;overflow:auto"></div>
-    </div>
-  </div>
-</main>
-
 <script src="../src/00-core.js"></script>
 <script src="../src/00-art.js"></script>
-<script src="../src/00-bg-art.js"></script>
 <script src="../src/01-colour.js"></script>
-<script src="../src/02-rig.js"></script>
 <script src="../src/02-sprite-engine.js"></script>
 <script src="../src/03-font.js"></script>
 <script src="../src/species/rex.js"></script>
