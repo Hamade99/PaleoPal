@@ -89,71 +89,45 @@ body{
 #app{width:100%;max-width:520px;margin:auto 0;
   padding:calc(var(--px)*10) calc(var(--px)*3) calc(var(--px)*7 + var(--safe));position:relative}
 
-/* ---------- the shell ---------- */
+/* ---------- the shell ----------
+
+   The case is a fixed 96x160 grid, one cell per --px, and the art that fills it
+   is a sprite like any other — `PIX.case`, editable in the Pixels tab, or an
+   imported image. That is the whole reason for pinning it: a drawn faceplate can
+   only line up with the screen and the keys if the screen and the keys are at
+   fixed fractions of a box whose shape never changes. Before this the height was
+   whatever the contents came to and the ratio drifted from .60 to .70 across
+   viewports, so no single picture could fit it.
+
+   Everything that used to be painted here in CSS — the silhouette, the speckle,
+   the crown ridge, the bezel, the screw heads, the key plates — is in the art
+   now. What is left in the DOM is only what has to be live. */
 .shell{
   position:relative;
-  padding:calc(var(--px)*13) calc(var(--px)*5) calc(var(--px)*10);
-  border-radius:50% 50% 44% 44% / 20% 20% 15% 15%;
-  background-image:var(--speckles),linear-gradient(var(--shell) 0 100%);
-  background-size:var(--speckle-size),100% 100%;
-  border:2px solid var(--shell-edge);
-  /* one highlight along the crown, one shade along the base, one shadow under
-     the whole thing. Nothing else. */
-  box-shadow:
-    inset 0 3px 0 var(--shell-hi),
-    inset 0 -5px 0 var(--shell-lo),
-    0 calc(var(--px)*2) 0 #33200a;
+  width:min(calc(var(--px)*96), 100%);aspect-ratio:96 / 160;
+  margin:0 auto;
+  background-image:var(--case-art);
+  background-size:100% 100%;background-repeat:no-repeat;
+  image-rendering:pixelated;
 }
-/* the mould seam, and the gate mark it runs to */
-.shell::before{
-  content:"";position:absolute;left:50%;top:calc(var(--px)*-1);bottom:calc(var(--px)*-1);
-  width:1px;background:rgba(66,41,10,.30);pointer-events:none;
-  transform:translateX(calc(var(--px)*9));
-}
-.shell::after{
-  content:"";position:absolute;right:calc(var(--px)*7);bottom:calc(var(--px)*3);
-  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
-  background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
-}
+/* Boxes are placed in grid cells, written as fractions of the case rather than
+   as multiples of --px. Both say the same thing when --px is right; only the
+   fraction is still right when it is not. --px is set by JS, and there is
+   always a moment after a resize when it is stale — the case overflowed the
+   window in exactly that gap. A fraction cannot: the shell caps at the width it
+   is given and everything in it follows.
 
-/* Osteoderms over the crown.
-
-   The shell's top edge is an ellipse — `border-radius: 50% / 20%` — whose
-   radii both depend on the rendered size of the case, so where the crown
-   actually is at a given x is not a number this file can know. Every plate
-   used to carry a hand-typed `bottom`, fitted by eye at one window size: the
-   arc was twice as steep as the real one, the row ran from 0 to 203 inside a
-   224-wide box so the whole ridge sat ten pixels left of the crown it was
-   supposed to be growing out of, and the outer plates floated off the shell.
-
-   The look stays here and the arithmetic goes to `fitCrown()` in 08-ui.js.
-   Each plate declares where it sits along the ridge and how big it is; the
-   function puts it on the real curve and turns it normal to the surface.
-   Nothing is mirrored and no two are the same width — a symmetrical row of
-   identical plates is the most machine-made thing a case can do. */
-.scutes{position:absolute;left:0;right:0;top:0;height:0;pointer-events:none}
-.scutes i{position:absolute;
-  left:calc(50% + var(--x));width:var(--w);height:var(--h);
-  margin-left:calc(var(--w) / -2);
-  transform-origin:50% 100%;
-  background:var(--scute);
-  border:2px solid var(--shell-edge);border-bottom:0;
-  border-radius:62% 62% 0 0 / 90% 90% 0 0;
-  box-shadow:inset 0 2px 0 var(--shell-hi)}
-/* every size a multiple of --px, no two the same, spacing uneven. Broad and
-   low rather than tall and narrow: at the first pass they were parallel-sided
-   and read as a row of thumbs standing on the case. */
-.scutes i:nth-child(1){--x:-104px; --w:12px; --h:8px}
-.scutes i:nth-child(2){--x:-76px;  --w:20px; --h:16px}
-.scutes i:nth-child(3){--x:-44px;  --w:16px; --h:16px}
-.scutes i:nth-child(4){--x:-16px;  --w:24px; --h:20px}   /* tallest, left of centre */
-.scutes i:nth-child(5){--x:12px;   --w:20px; --h:20px}
-.scutes i:nth-child(6){--x:48px;   --w:20px; --h:12px}
-.scutes i:nth-child(7){--x:88px;   --w:16px; --h:8px}
+   Cells, for reading against the artwork: head 5,14 86 wide; bezel 8,43 80x80;
+   keys 5,130 87 wide. */
+.shell > *{position:absolute}
+.shellhead{left:5.2083%;  top:8.75%;    width:89.5833%}
+.bezel    {left:8.3333%;  top:26.875%;  width:83.3333%; height:50%}
+.keys     {left:5.2083%;  top:81.25%;   width:90.625%}
+.screw{display:none}                  /* painted into the art now */
 
 /* ---------- faceplate ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
-  gap:calc(var(--px)*2);padding:0 calc(var(--px)*2);margin-bottom:calc(var(--px)*3)}
+  gap:calc(var(--px)*2);padding:0 calc(var(--px)*2)}
 /* the brand is moulded lettering, and it sits against the seam rather than in
    the middle of the shell */
 .brand{
@@ -205,34 +179,17 @@ body{
   border:1.5px solid var(--shell-edge)}
 #nestCount:empty{display:none}
 
-/* ---------- bone bezel ---------- */
-.bezel{
-  position:relative;border-radius:calc(var(--px)*5);padding:calc(var(--px)*3);
-  background:var(--bezel);
-  border:2px solid var(--bezel-edge);
-  box-shadow:inset 0 2px 0 #f2ead2,inset 0 -3px 0 var(--bezel-lo),
-             0 calc(var(--px)*1) 0 rgba(66,41,10,.5)
-}
-/* Four fixings, not four of the same screw: two slotted, one cross, one plug.
-   Nobody reads them individually and everybody reads the difference. */
-.screw{position:absolute;width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
-  background:#b9aa85;box-shadow:inset 0 0 0 1px rgba(80,66,38,.7)}
-.screw::after{content:"";position:absolute;left:1px;top:calc(50% - .5px);
-  width:calc(100% - 2px);height:1px;background:rgba(70,58,32,.85)}
-.screw.tr::before{content:"";position:absolute;top:1px;left:calc(50% - .5px);
-  width:1px;height:calc(100% - 2px);background:rgba(70,58,32,.85)}
-.screw.br::after{display:none}
-.screw.tl{left:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
-.screw.tr{right:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
-.screw.bl{left:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
-.screw.br{right:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
-
-.screen{
-  border-radius:calc(var(--px)*3);padding:calc(var(--px)*2.5);
-  background:var(--bg);
-  border:2px solid #05090a;
-  box-shadow:inset 0 2px 0 #05090a
-}
+/* ---------- bone bezel ----------
+   Painted in the art. The box that is left only has to hold the live parts and
+   put the canvas exactly on the recess drawn for it. */
+.bezel{position:absolute;background:none;border:0;padding:0}
+.screen{position:absolute;inset:0;background:none;border:0;padding:3.75%}
+.ident,.needs{position:static}
+/* The glass sits on the recess the artwork draws, at grid cells 6..74 across and
+   22..74 down of the dark panel — which is 14..82 and 65..117 of the case. A
+   hand-drawn faceplate can rely on those numbers. */
+.stage{position:absolute;left:7.5%;top:27.5%;width:85%;height:65%}
+.moodrow{position:absolute;left:3.75%;right:3.75%;bottom:2.5%}
 
 /* ---------- identity ---------- */
 .ident{display:flex;align-items:baseline;gap:calc(var(--px)*2);flex-wrap:wrap;
@@ -264,8 +221,9 @@ body{
 .need.low b{color:var(--rust)}
 .need.low{border-color:#6d3527}
 
-/* ---------- the glass ---------- */
-.stage{position:relative;display:flex;flex-direction:column;align-items:center}
+/* ---------- the glass ----------
+   Placed by the block above; this only says how the canvas sits inside it. */
+.stage{display:flex;flex-direction:column;align-items:center;justify-content:center}
 /* The screen is 224 device pixels across and only ever shown at a whole or
    half multiple of that, set by fitScreen(). At an arbitrary fraction the
    pixel grid of the world came out uneven against the grid of the case, which
@@ -274,7 +232,10 @@ body{
   box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(140,183,101,.14)}
 canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   touch-action:none;cursor:pointer}
-.lamp{position:absolute;right:0;top:calc(var(--px)*-2.5);
+/* The power lamp, in the corner of the moulded opening rather than on the
+   glass: the recess is wider than the canvas by six cells a side, so there is
+   somewhere for it to sit that is part of the case and not part of the game. */
+.lamp{position:absolute;right:calc(var(--px)*1);bottom:calc(var(--px)*1);
   width:calc(var(--px)*1.5);height:calc(var(--px)*1.5);border-radius:50%;background:var(--moss)}
 .lamp.rest{background:var(--sky)}
 .lamp.bad{background:var(--rust)}
@@ -312,7 +273,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 
 /* ---------- mood strip ---------- */
 .moodrow{display:flex;align-items:center;justify-content:space-between;
-  gap:calc(var(--px)*2.5);margin:calc(var(--px)*2.5) 0 0}
+  gap:calc(var(--px)*2.5)}
 .mood{font-size:calc(var(--px)*3.25);color:var(--bone);line-height:1.35}
 .mood em{font-style:normal;color:var(--dim)}
 .bondwrap{display:flex;align-items:center;gap:calc(var(--px)*1.5);font-size:calc(var(--px)*2.75);
@@ -320,23 +281,26 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 .bondwrap canvas{image-rendering:pixelated}
 
 /* ---------- the five keys ---------- */
-.keys{padding-top:calc(var(--px)*4)}
-.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*2)}
+/* The five keys are painted into the case art, at cells x5..92 in steps of 18,
+   y130..152. What is left in the DOM is the part that has to be live: the hit
+   box, the icon, the label and the press. Painting them here as well would mean
+   two pictures of the same key that have to agree, and they would not — the art
+   is the one the owner can change. */
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*3)}
 .act{
-  background:var(--key);
-  border:2px solid var(--key-edge);color:#dff0e4;
-  border-radius:calc(var(--px)*3);min-height:calc(var(--px)*16);
+  background:none;border:0;color:#dff0e4;
+  height:calc(var(--px)*22);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:calc(var(--px)*1);
   font-family:inherit;font-size:calc(var(--px)*3);letter-spacing:.4px;cursor:pointer;
-  position:relative;padding:calc(var(--px)*1.5) calc(var(--px)*0.5);
-  box-shadow:inset 0 3px 0 var(--key-hi),inset 0 -3px 0 var(--key-lo),
-             0 calc(var(--px)*1.5) 0 var(--key-edge)
+  position:relative;padding:0
 }
-.act:hover{background:var(--key-hi)}
+.act:hover{filter:brightness(1.12)}
 /* A key that opened a screen stays pressed, the way a latching key does. */
-.act:active,.act.down{transform:translateY(calc(var(--px)*1.5));
-  box-shadow:inset 0 3px 0 var(--key-lo)}
+/* The press. With the key painted in the art there is no box to re-shade, so
+   the contents drop into it and darken — which is what a key going down looks
+   like from the front anyway. */
+.act:active,.act.down{transform:translateY(calc(var(--px)*1.5));filter:brightness(.82)}
 /* A fixed square slot, and the sprite is fitted inside it whatever its shape.
    Two earlier versions of this rule each handled one axis and ignored the
    other: `width` and `height` both set squashed anything that was not square,
@@ -360,7 +324,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 
 /* moulded nameplate and speaker slots */
 .plate{display:flex;align-items:center;justify-content:center;gap:calc(var(--px)*2);
-  margin-top:calc(var(--px)*4);
+  margin-top:calc(var(--px)*1);
   font-size:calc(var(--px)*2.75);letter-spacing:2.4px;color:var(--stamp);
   text-shadow:0 1px 0 rgba(255,240,204,.5)}
 .grille{width:calc(var(--px)*8);height:calc(var(--px)*2);
@@ -472,9 +436,8 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
     width:48px;height:48px;transform:translate(-50%,-50%)}
 }
 
-@media (max-width:400px){
-  :root{--px:3.4px}
-}
+/* No width breakpoint for `--px`: fitScreen() computes it from both axes, and
+   a media query fighting it would only be right at one window size. */
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 </style>
@@ -487,10 +450,6 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
        physical keys along the bottom. Everything is CSS; the project has no
        image assets and this does not change that. -->
   <div class="shell">
-    <!-- The crown ridge. fitCrown() in 08-ui.js sits each plate on the shell's
-         own top curve; see the note there for why that cannot be done in CSS. -->
-    <div class="scutes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-
     <div class="shellhead">
       <div class="brand">PALEO<span>PAL</span><i class="rivet"></i></div>
       <div class="tools">
@@ -1343,6 +1302,181 @@ const PIX = {
       ' 00200  ',
       '  000   ',
       '   0    '
+    ] },
+  /* The case itself, at one cell per `--px`.
+
+     The house rule was always that every size in the case is a multiple of
+     `--px`, which is another way of saying the case was already a low-resolution
+     picture scaled up — it just happened to be expressed as CSS boxes. Here it
+     is as the picture it always was, which is what makes it something that can
+     be drawn rather than typed.
+
+     96x160 cells. The live parts are NOT in here and must not be drawn over:
+     the canvas floats inside the recess at x14..82 y64..116, the five keys sit
+     on the plates at y128..150, and the meters, the name and the mood line are
+     DOM text over the dark panel. Everything else is yours. */
+  'case': { w:96, h:160,
+    pal:['#42290a','#c08f43','#dcb060','#8d6527','#a9782f','#d8ccac','#a08e69','#5d5138','#0e1417','#05090a','#b9aa85','#2f6b49','#448a60','#1b432e','#0c2419'], rows:[
+      '                                                                                                ',
+      '                                             0000000000000000                                   ',
+      '                                      00000000222222202222220                                   ',
+      '                              0000000002222200444444404444440                                   ',
+      '                              02222220044444004444444044444400000000                            ',
+      '                              04444440044444004444444044444400222220                            ',
+      '                              04444440044444004444444044444400444440                            ',
+      '                       000000 04444440044444004444444044444400444440                            ',
+      '                       022220 04444440022222222222222222200000444440 000000                     ',
+      '                       04444000002222221111111111111111112222220000  022220                     ',
+      '                       0444402222111111111111111111111111111111222200044440                     ',
+      '                       0002221111111111111111111111111111111111111122044440                     ',
+      '                    00022211111111111111111111111111111111111111111111222000                    ',
+      '                  002221111111111111111111111111111111111111111111111111122200                  ',
+      '                0022111111111111111111111111111111111111111111111111111111112200                ',
+      '               022111111111111111111111111111111111112111111111111111111111111220               ',
+      '             0021111111111111111111111111111111111111111111111111111111111111111200             ',
+      '            022111111111111111111111111111111111111111111111111111111111111311111220            ',
+      '          0021111111111111111111111111111111111111111111111111111111111111111111111200          ',
+      '         022111111111111111111111111111111111111111111111111111111111111111111111111220         ',
+      '        02111111111111111111111111111111111111111111111111111111111111111111111111111120        ',
+      '       0211111111111111111111111111111111111111111111111111111111111111111111111111111120       ',
+      '      021111111111111111111111111111111111111111111111111111111111111111111111111111111120      ',
+      '     02111111111111111111111111111111111111111111111111111111111111111111111111111111111120     ',
+      '    0211111111111111111111111111111111111111111111111111111111111111111121111111111111111120    ',
+      '    0111111111111111111111111131111111111111111111111111111111111111111111111111111111111110    ',
+      '   021111111111111111111111111111111111111111111111111111111111111111111111111111111111111120   ',
+      '  02111111111111111111111111111113111111111111111111111111111111111111111111111111111111111120  ',
+      '  01111111111111111111111111111111111111111111111111111111111111111111111111111311111111111110  ',
+      '  01111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110  ',
+      ' 0211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111120 ',
+      ' 0111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110 ',
+      ' 0111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110 ',
+      '021111111111111111111111111111111111311111111111111111111111111111111111111111111111111111111120',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111112111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111113111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111112111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111131111111111111111111111111111111111111111111111111111111111111110',
+      '011111117777777777777777777777777777777777777777777777777777777777777777777777777777777711111110',
+      '011111775555555555555555555555555555555555555555555555555555555555555555555555555555555577111110',
+      '011111aa55555555555555555555555555555555555555555555555555555555555555555555555555555555aa211110',
+      '011117aa59999999999999999999999999999999999999999999999999999999999999999999999999999995aa711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955721110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888889999999999999999999999999999999999999999999999999999999999999999999988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955713110',
+      '031117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '031117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '031117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955712110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889888888888888888888888888888888888888888888888888888888888888888888988888955711110',
+      '011117559888889999999999999999999999999999999999999999999999999999999999999999999988888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117559888888888888888888888888888888888888888888888888888888888888888888888888888888955711110',
+      '011117aa59999999999999999999999999999999999999999999999999999999999999999999999999999995aa711110',
+      '011111aa55555555555555555555555555555555555555555555555555555555555555555555555555555555aa111110',
+      '011111776666666666666666666666666666666666666666666666666666666666666666666666666666666677111110',
+      '011111117777777777777777777777777777777777777777777777777777777777777777777777777777777711111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111113111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111eeeeeeeeeeeee11111eeeeeeeeeeeee11111eeeeeeeeeeeee11111eeeeeeeeeeeee11111eeeeeeeeeeeee11110',
+      '01111eccccccccccccce111eccccccccccccce111eccccccccccccce111eccccccccccccce111eccccccccccccce1110',
+      '01111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1110',
+      '01111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1110',
+      '01111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1110',
+      '01111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1110',
+      '01111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe131ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1110',
+      '01111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1310',
+      '01111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1110',
+      '03111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe1130',
+      ' 0111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe110 ',
+      ' 0311ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe130 ',
+      '  011ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe10  ',
+      '  031ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe30  ',
+      '   01ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe0   ',
+      '   03ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe0   ',
+      '    0ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe    ',
+      '     ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe    ',
+      '     ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe    ',
+      '     ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe111ebbbbbbbbbbbbbe    ',
+      '     eddddddddddddde111eddddddddddddde111eddddddddddddde111eddddddddddddde111eddddddddddddde    ',
+      '      eeeeeeeeeeeee11111eeeeeeeeeeeee11111eeeeeeeeeeeee11111eeeeeeeeeeeee11111eeeeeeeeeeeee     ',
+      '            033111111111111111111111111111111111111111111111111111111111111111111330            ',
+      '             0033311111111111111111111111111111111111111111111111111111111111133300             ',
+      '               000331111111111111111111111111111111111111111111111111111111133000               ',
+      '                  003331111111111111111111111111111111111111111111111111133300                  ',
+      '                    00033331111111111111111111111111111111111111111113333000                    ',
+      '                       00003333331111111111131111111111111111113333330000                       ',
+      '                           000000333333333333333333333333333333000000                           ',
+      '                                 000000000000000000000000000000                                 '
     ] },
 };
 /*</data>*/
@@ -2203,6 +2337,7 @@ function pixInvalidate(){ pixCache.clear(); if (typeof HATS === 'object') for (c
    It is called at runtime, so the caches defined in later modules are there. */
 function artChanged(){
   pixInvalidate();
+  if (typeof paintCase === 'function') paintCase();   // the case is a sprite too
   if (typeof frameCache !== 'undefined') frameCache.clear();
   if (typeof matCache   !== 'undefined') matCache.clear();
   if (typeof warmQueue  !== 'undefined') warmQueue.length = 0;
@@ -7947,63 +8082,63 @@ function buildChrome(){
    keep the ratio regular, and the case is sized so that a phone gets 1.5x and
    a desktop 2x. */
 const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
+
+/* The case is a fixed 96x160 grid and `--px` is how big one cell of it is, so
+   fitting the case to the window is one number. Both axes matter now: the old
+   layout grew downward for as long as its contents needed and only ever checked
+   the width, which is why a phone left a third of its height empty under the
+   case while the glass stayed at 1x.
+
+   `--px` is deliberately not snapped to whole pixels. The case art is a sprite
+   scaled to the box and a fractional scale only softens it slightly, whereas
+   the game canvas must not be scaled fractionally at all — so the canvas takes
+   the largest whole or half multiple of 224 that fits inside the recess drawn
+   for it and is centred there, the way an LCD sits in a moulded opening. */
+const CASE_W = 96, CASE_H = 160;          // the grid the artwork is drawn on
+const RECESS_W = 68, RECESS_H = 52;       // where the canvas floats, in cells
+const PX_MIN = 2.6, PX_MAX = 9;
+
 function fitScreen(){
-  const el = document.querySelector('.screen');
-  if (!el) return;
-  const cs = getComputedStyle(el);
-  const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const app = $('app');
+  if (!app) return;
+  const cs = getComputedStyle(app);
+  const availW = app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = window.innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const px = clamp(Math.min(availW / CASE_W, availH / CASE_H), PX_MIN, PX_MAX);
+  document.documentElement.style.setProperty('--px', px + 'px');
+
   let best = W;
-  for (const k of LCD_STEPS) if (W * k <= avail) best = W * k;
+  for (const k of LCD_STEPS)
+    if (W * k <= RECESS_W * px && H * k <= RECESS_H * px) best = W * k;
   document.documentElement.style.setProperty('--lcd-w', best + 'px');
 }
-/* The crown ridge.
 
-   `border-radius: 50% 50% ... / 20% 20% ...` makes the top of the shell one
-   ellipse arc running the full width, with rx = width/2 and ry = 20% of the
-   height. Both move with the case, so a plate's height above the base line at
-   a given x is not something style.css can express — it has no square root and
-   no way to read its own box. Hand-fitted offsets are what put the old ridge
-   ten pixels to the left of the crown and gave it an arc twice as steep as the
-   shell's.
+/* The artwork. Either the sprite in `PIX.case`, which is what the Pixels tab
+   edits, or an image the owner imported — whichever, it ends up as one
+   background on the shell, scaled to the box and left hard-edged.
 
-   So the plates declare --x, --w and --h in the stylesheet and this puts them
-   on the real curve: base tucked TUCK px inside the shell so each one is
-   rooted rather than balanced on the edge, and rotated to the surface normal
-   so they fan the way a dorsal ridge does instead of all leaning one way. */
-const CROWN_TUCK = 5;
-function fitCrown(){
-  const shell = document.querySelector('.shell');
-  const row = document.querySelector('.scutes');
-  if (!shell || !row) return;
-  const rx = shell.offsetWidth / 2, ry = shell.offsetHeight * 0.20;
-  if (!rx || !ry) return;
-  for (const el of row.children){
-    const cs = getComputedStyle(el);
-    const x = parseFloat(cs.getPropertyValue('--x')) || 0;
-    const h = parseFloat(cs.getPropertyValue('--h')) || 0;
-    const u = clamp(x / rx, -.999, .999);
-    const c = Math.sqrt(1 - u*u);
-    const drop = ry * (1 - c);                    // how far the crown has fallen at x
-    const slope = ry * u / (rx * c);              // d(drop)/dx, so the surface normal
-    el.style.top = Math.round(drop + CROWN_TUCK - h) + 'px';
-    el.style.transform = 'rotate(' + (Math.atan(slope) * 180 / Math.PI).toFixed(2) + 'deg)';
-  }
+   Drawn through pixCanvas with no outline pass: the case has its own edges
+   drawn into it, and a dilated border round the whole silhouette would put a
+   dark halo between the case and the page. */
+let caseSkin = null;                      // an imported image, when there is one
+function paintCase(){
+  const url = caseSkin || pixCanvas('case').toDataURL();
+  document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
 }
 
-/* The ridge is measured off the shell, so it has to be refitted whenever the
-   shell changes size — a resize, but also the web font landing and the screen
-   being sized, both of which move the height after boot. Watching the box
-   catches all three; the plates are absolutely positioned inside a zero-height
-   container, so refitting them cannot itself resize the shell. */
+/* Refit on anything that changes the box. The window resize is debounced; the
+   observer on #app is not, because between a resize landing and the debounce
+   firing `--px` is the size the last window wanted. With the boxes written as
+   fractions that is only a typography problem, but it is still wrong for a
+   frame or two and the observer closes it. */
 if (window.ResizeObserver){
-  const shell = document.querySelector('.shell');
-  if (shell) new ResizeObserver(fitCrown).observe(shell);
+  const app = document.getElementById('app');
+  if (app) new ResizeObserver(() => fitScreen()).observe(app);
 }
-
 let fitTimer = 0;
 window.addEventListener('resize', () => {
   clearTimeout(fitTimer);
-  fitTimer = setTimeout(() => { fitScreen(); fitCrown(); }, 120);
+  fitTimer = setTimeout(fitScreen, 120);
 });
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It
@@ -8567,7 +8702,7 @@ function frame(now){
 async function boot(){
   buildChrome();
   fitScreen();
-  fitCrown();
+  paintCase();
   G = freshGame();
   let loaded;
   try { loaded = loadSave(await Store.get(SAVE_KEY)); }

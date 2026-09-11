@@ -78,71 +78,45 @@ body{
 #app{width:100%;max-width:520px;margin:auto 0;
   padding:calc(var(--px)*10) calc(var(--px)*3) calc(var(--px)*7 + var(--safe));position:relative}
 
-/* ---------- the shell ---------- */
+/* ---------- the shell ----------
+
+   The case is a fixed 96x160 grid, one cell per --px, and the art that fills it
+   is a sprite like any other — `PIX.case`, editable in the Pixels tab, or an
+   imported image. That is the whole reason for pinning it: a drawn faceplate can
+   only line up with the screen and the keys if the screen and the keys are at
+   fixed fractions of a box whose shape never changes. Before this the height was
+   whatever the contents came to and the ratio drifted from .60 to .70 across
+   viewports, so no single picture could fit it.
+
+   Everything that used to be painted here in CSS — the silhouette, the speckle,
+   the crown ridge, the bezel, the screw heads, the key plates — is in the art
+   now. What is left in the DOM is only what has to be live. */
 .shell{
   position:relative;
-  padding:calc(var(--px)*13) calc(var(--px)*5) calc(var(--px)*10);
-  border-radius:50% 50% 44% 44% / 20% 20% 15% 15%;
-  background-image:var(--speckles),linear-gradient(var(--shell) 0 100%);
-  background-size:var(--speckle-size),100% 100%;
-  border:2px solid var(--shell-edge);
-  /* one highlight along the crown, one shade along the base, one shadow under
-     the whole thing. Nothing else. */
-  box-shadow:
-    inset 0 3px 0 var(--shell-hi),
-    inset 0 -5px 0 var(--shell-lo),
-    0 calc(var(--px)*2) 0 #33200a;
+  width:min(calc(var(--px)*96), 100%);aspect-ratio:96 / 160;
+  margin:0 auto;
+  background-image:var(--case-art);
+  background-size:100% 100%;background-repeat:no-repeat;
+  image-rendering:pixelated;
 }
-/* the mould seam, and the gate mark it runs to */
-.shell::before{
-  content:"";position:absolute;left:50%;top:calc(var(--px)*-1);bottom:calc(var(--px)*-1);
-  width:1px;background:rgba(66,41,10,.30);pointer-events:none;
-  transform:translateX(calc(var(--px)*9));
-}
-.shell::after{
-  content:"";position:absolute;right:calc(var(--px)*7);bottom:calc(var(--px)*3);
-  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
-  background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
-}
+/* Boxes are placed in grid cells, written as fractions of the case rather than
+   as multiples of --px. Both say the same thing when --px is right; only the
+   fraction is still right when it is not. --px is set by JS, and there is
+   always a moment after a resize when it is stale — the case overflowed the
+   window in exactly that gap. A fraction cannot: the shell caps at the width it
+   is given and everything in it follows.
 
-/* Osteoderms over the crown.
-
-   The shell's top edge is an ellipse — `border-radius: 50% / 20%` — whose
-   radii both depend on the rendered size of the case, so where the crown
-   actually is at a given x is not a number this file can know. Every plate
-   used to carry a hand-typed `bottom`, fitted by eye at one window size: the
-   arc was twice as steep as the real one, the row ran from 0 to 203 inside a
-   224-wide box so the whole ridge sat ten pixels left of the crown it was
-   supposed to be growing out of, and the outer plates floated off the shell.
-
-   The look stays here and the arithmetic goes to `fitCrown()` in 08-ui.js.
-   Each plate declares where it sits along the ridge and how big it is; the
-   function puts it on the real curve and turns it normal to the surface.
-   Nothing is mirrored and no two are the same width — a symmetrical row of
-   identical plates is the most machine-made thing a case can do. */
-.scutes{position:absolute;left:0;right:0;top:0;height:0;pointer-events:none}
-.scutes i{position:absolute;
-  left:calc(50% + var(--x));width:var(--w);height:var(--h);
-  margin-left:calc(var(--w) / -2);
-  transform-origin:50% 100%;
-  background:var(--scute);
-  border:2px solid var(--shell-edge);border-bottom:0;
-  border-radius:62% 62% 0 0 / 90% 90% 0 0;
-  box-shadow:inset 0 2px 0 var(--shell-hi)}
-/* every size a multiple of --px, no two the same, spacing uneven. Broad and
-   low rather than tall and narrow: at the first pass they were parallel-sided
-   and read as a row of thumbs standing on the case. */
-.scutes i:nth-child(1){--x:-104px; --w:12px; --h:8px}
-.scutes i:nth-child(2){--x:-76px;  --w:20px; --h:16px}
-.scutes i:nth-child(3){--x:-44px;  --w:16px; --h:16px}
-.scutes i:nth-child(4){--x:-16px;  --w:24px; --h:20px}   /* tallest, left of centre */
-.scutes i:nth-child(5){--x:12px;   --w:20px; --h:20px}
-.scutes i:nth-child(6){--x:48px;   --w:20px; --h:12px}
-.scutes i:nth-child(7){--x:88px;   --w:16px; --h:8px}
+   Cells, for reading against the artwork: head 5,14 86 wide; bezel 8,43 80x80;
+   keys 5,130 87 wide. */
+.shell > *{position:absolute}
+.shellhead{left:5.2083%;  top:8.75%;    width:89.5833%}
+.bezel    {left:8.3333%;  top:26.875%;  width:83.3333%; height:50%}
+.keys     {left:5.2083%;  top:81.25%;   width:90.625%}
+.screw{display:none}                  /* painted into the art now */
 
 /* ---------- faceplate ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
-  gap:calc(var(--px)*2);padding:0 calc(var(--px)*2);margin-bottom:calc(var(--px)*3)}
+  gap:calc(var(--px)*2);padding:0 calc(var(--px)*2)}
 /* the brand is moulded lettering, and it sits against the seam rather than in
    the middle of the shell */
 .brand{
@@ -194,34 +168,17 @@ body{
   border:1.5px solid var(--shell-edge)}
 #nestCount:empty{display:none}
 
-/* ---------- bone bezel ---------- */
-.bezel{
-  position:relative;border-radius:calc(var(--px)*5);padding:calc(var(--px)*3);
-  background:var(--bezel);
-  border:2px solid var(--bezel-edge);
-  box-shadow:inset 0 2px 0 #f2ead2,inset 0 -3px 0 var(--bezel-lo),
-             0 calc(var(--px)*1) 0 rgba(66,41,10,.5)
-}
-/* Four fixings, not four of the same screw: two slotted, one cross, one plug.
-   Nobody reads them individually and everybody reads the difference. */
-.screw{position:absolute;width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
-  background:#b9aa85;box-shadow:inset 0 0 0 1px rgba(80,66,38,.7)}
-.screw::after{content:"";position:absolute;left:1px;top:calc(50% - .5px);
-  width:calc(100% - 2px);height:1px;background:rgba(70,58,32,.85)}
-.screw.tr::before{content:"";position:absolute;top:1px;left:calc(50% - .5px);
-  width:1px;height:calc(100% - 2px);background:rgba(70,58,32,.85)}
-.screw.br::after{display:none}
-.screw.tl{left:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
-.screw.tr{right:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
-.screw.bl{left:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
-.screw.br{right:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
-
-.screen{
-  border-radius:calc(var(--px)*3);padding:calc(var(--px)*2.5);
-  background:var(--bg);
-  border:2px solid #05090a;
-  box-shadow:inset 0 2px 0 #05090a
-}
+/* ---------- bone bezel ----------
+   Painted in the art. The box that is left only has to hold the live parts and
+   put the canvas exactly on the recess drawn for it. */
+.bezel{position:absolute;background:none;border:0;padding:0}
+.screen{position:absolute;inset:0;background:none;border:0;padding:3.75%}
+.ident,.needs{position:static}
+/* The glass sits on the recess the artwork draws, at grid cells 6..74 across and
+   22..74 down of the dark panel — which is 14..82 and 65..117 of the case. A
+   hand-drawn faceplate can rely on those numbers. */
+.stage{position:absolute;left:7.5%;top:27.5%;width:85%;height:65%}
+.moodrow{position:absolute;left:3.75%;right:3.75%;bottom:2.5%}
 
 /* ---------- identity ---------- */
 .ident{display:flex;align-items:baseline;gap:calc(var(--px)*2);flex-wrap:wrap;
@@ -253,8 +210,9 @@ body{
 .need.low b{color:var(--rust)}
 .need.low{border-color:#6d3527}
 
-/* ---------- the glass ---------- */
-.stage{position:relative;display:flex;flex-direction:column;align-items:center}
+/* ---------- the glass ----------
+   Placed by the block above; this only says how the canvas sits inside it. */
+.stage{display:flex;flex-direction:column;align-items:center;justify-content:center}
 /* The screen is 224 device pixels across and only ever shown at a whole or
    half multiple of that, set by fitScreen(). At an arbitrary fraction the
    pixel grid of the world came out uneven against the grid of the case, which
@@ -263,7 +221,10 @@ body{
   box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(140,183,101,.14)}
 canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   touch-action:none;cursor:pointer}
-.lamp{position:absolute;right:0;top:calc(var(--px)*-2.5);
+/* The power lamp, in the corner of the moulded opening rather than on the
+   glass: the recess is wider than the canvas by six cells a side, so there is
+   somewhere for it to sit that is part of the case and not part of the game. */
+.lamp{position:absolute;right:calc(var(--px)*1);bottom:calc(var(--px)*1);
   width:calc(var(--px)*1.5);height:calc(var(--px)*1.5);border-radius:50%;background:var(--moss)}
 .lamp.rest{background:var(--sky)}
 .lamp.bad{background:var(--rust)}
@@ -301,7 +262,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 
 /* ---------- mood strip ---------- */
 .moodrow{display:flex;align-items:center;justify-content:space-between;
-  gap:calc(var(--px)*2.5);margin:calc(var(--px)*2.5) 0 0}
+  gap:calc(var(--px)*2.5)}
 .mood{font-size:calc(var(--px)*3.25);color:var(--bone);line-height:1.35}
 .mood em{font-style:normal;color:var(--dim)}
 .bondwrap{display:flex;align-items:center;gap:calc(var(--px)*1.5);font-size:calc(var(--px)*2.75);
@@ -309,23 +270,26 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 .bondwrap canvas{image-rendering:pixelated}
 
 /* ---------- the five keys ---------- */
-.keys{padding-top:calc(var(--px)*4)}
-.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*2)}
+/* The five keys are painted into the case art, at cells x5..92 in steps of 18,
+   y130..152. What is left in the DOM is the part that has to be live: the hit
+   box, the icon, the label and the press. Painting them here as well would mean
+   two pictures of the same key that have to agree, and they would not — the art
+   is the one the owner can change. */
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*3)}
 .act{
-  background:var(--key);
-  border:2px solid var(--key-edge);color:#dff0e4;
-  border-radius:calc(var(--px)*3);min-height:calc(var(--px)*16);
+  background:none;border:0;color:#dff0e4;
+  height:calc(var(--px)*22);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:calc(var(--px)*1);
   font-family:inherit;font-size:calc(var(--px)*3);letter-spacing:.4px;cursor:pointer;
-  position:relative;padding:calc(var(--px)*1.5) calc(var(--px)*0.5);
-  box-shadow:inset 0 3px 0 var(--key-hi),inset 0 -3px 0 var(--key-lo),
-             0 calc(var(--px)*1.5) 0 var(--key-edge)
+  position:relative;padding:0
 }
-.act:hover{background:var(--key-hi)}
+.act:hover{filter:brightness(1.12)}
 /* A key that opened a screen stays pressed, the way a latching key does. */
-.act:active,.act.down{transform:translateY(calc(var(--px)*1.5));
-  box-shadow:inset 0 3px 0 var(--key-lo)}
+/* The press. With the key painted in the art there is no box to re-shade, so
+   the contents drop into it and darken — which is what a key going down looks
+   like from the front anyway. */
+.act:active,.act.down{transform:translateY(calc(var(--px)*1.5));filter:brightness(.82)}
 /* A fixed square slot, and the sprite is fitted inside it whatever its shape.
    Two earlier versions of this rule each handled one axis and ignored the
    other: `width` and `height` both set squashed anything that was not square,
@@ -349,7 +313,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 
 /* moulded nameplate and speaker slots */
 .plate{display:flex;align-items:center;justify-content:center;gap:calc(var(--px)*2);
-  margin-top:calc(var(--px)*4);
+  margin-top:calc(var(--px)*1);
   font-size:calc(var(--px)*2.75);letter-spacing:2.4px;color:var(--stamp);
   text-shadow:0 1px 0 rgba(255,240,204,.5)}
 .grille{width:calc(var(--px)*8);height:calc(var(--px)*2);
@@ -461,7 +425,6 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
     width:48px;height:48px;transform:translate(-50%,-50%)}
 }
 
-@media (max-width:400px){
-  :root{--px:3.4px}
-}
+/* No width breakpoint for `--px`: fitScreen() computes it from both axes, and
+   a media query fighting it would only be right at one window size. */
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

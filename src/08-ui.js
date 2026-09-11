@@ -100,63 +100,63 @@ function buildChrome(){
    keep the ratio regular, and the case is sized so that a phone gets 1.5x and
    a desktop 2x. */
 const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
+
+/* The case is a fixed 96x160 grid and `--px` is how big one cell of it is, so
+   fitting the case to the window is one number. Both axes matter now: the old
+   layout grew downward for as long as its contents needed and only ever checked
+   the width, which is why a phone left a third of its height empty under the
+   case while the glass stayed at 1x.
+
+   `--px` is deliberately not snapped to whole pixels. The case art is a sprite
+   scaled to the box and a fractional scale only softens it slightly, whereas
+   the game canvas must not be scaled fractionally at all — so the canvas takes
+   the largest whole or half multiple of 224 that fits inside the recess drawn
+   for it and is centred there, the way an LCD sits in a moulded opening. */
+const CASE_W = 96, CASE_H = 160;          // the grid the artwork is drawn on
+const RECESS_W = 68, RECESS_H = 52;       // where the canvas floats, in cells
+const PX_MIN = 2.6, PX_MAX = 9;
+
 function fitScreen(){
-  const el = document.querySelector('.screen');
-  if (!el) return;
-  const cs = getComputedStyle(el);
-  const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const app = $('app');
+  if (!app) return;
+  const cs = getComputedStyle(app);
+  const availW = app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = window.innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const px = clamp(Math.min(availW / CASE_W, availH / CASE_H), PX_MIN, PX_MAX);
+  document.documentElement.style.setProperty('--px', px + 'px');
+
   let best = W;
-  for (const k of LCD_STEPS) if (W * k <= avail) best = W * k;
+  for (const k of LCD_STEPS)
+    if (W * k <= RECESS_W * px && H * k <= RECESS_H * px) best = W * k;
   document.documentElement.style.setProperty('--lcd-w', best + 'px');
 }
-/* The crown ridge.
 
-   `border-radius: 50% 50% ... / 20% 20% ...` makes the top of the shell one
-   ellipse arc running the full width, with rx = width/2 and ry = 20% of the
-   height. Both move with the case, so a plate's height above the base line at
-   a given x is not something style.css can express — it has no square root and
-   no way to read its own box. Hand-fitted offsets are what put the old ridge
-   ten pixels to the left of the crown and gave it an arc twice as steep as the
-   shell's.
+/* The artwork. Either the sprite in `PIX.case`, which is what the Pixels tab
+   edits, or an image the owner imported — whichever, it ends up as one
+   background on the shell, scaled to the box and left hard-edged.
 
-   So the plates declare --x, --w and --h in the stylesheet and this puts them
-   on the real curve: base tucked TUCK px inside the shell so each one is
-   rooted rather than balanced on the edge, and rotated to the surface normal
-   so they fan the way a dorsal ridge does instead of all leaning one way. */
-const CROWN_TUCK = 5;
-function fitCrown(){
-  const shell = document.querySelector('.shell');
-  const row = document.querySelector('.scutes');
-  if (!shell || !row) return;
-  const rx = shell.offsetWidth / 2, ry = shell.offsetHeight * 0.20;
-  if (!rx || !ry) return;
-  for (const el of row.children){
-    const cs = getComputedStyle(el);
-    const x = parseFloat(cs.getPropertyValue('--x')) || 0;
-    const h = parseFloat(cs.getPropertyValue('--h')) || 0;
-    const u = clamp(x / rx, -.999, .999);
-    const c = Math.sqrt(1 - u*u);
-    const drop = ry * (1 - c);                    // how far the crown has fallen at x
-    const slope = ry * u / (rx * c);              // d(drop)/dx, so the surface normal
-    el.style.top = Math.round(drop + CROWN_TUCK - h) + 'px';
-    el.style.transform = 'rotate(' + (Math.atan(slope) * 180 / Math.PI).toFixed(2) + 'deg)';
-  }
+   Drawn through pixCanvas with no outline pass: the case has its own edges
+   drawn into it, and a dilated border round the whole silhouette would put a
+   dark halo between the case and the page. */
+let caseSkin = null;                      // an imported image, when there is one
+function paintCase(){
+  const url = caseSkin || pixCanvas('case').toDataURL();
+  document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
 }
 
-/* The ridge is measured off the shell, so it has to be refitted whenever the
-   shell changes size — a resize, but also the web font landing and the screen
-   being sized, both of which move the height after boot. Watching the box
-   catches all three; the plates are absolutely positioned inside a zero-height
-   container, so refitting them cannot itself resize the shell. */
+/* Refit on anything that changes the box. The window resize is debounced; the
+   observer on #app is not, because between a resize landing and the debounce
+   firing `--px` is the size the last window wanted. With the boxes written as
+   fractions that is only a typography problem, but it is still wrong for a
+   frame or two and the observer closes it. */
 if (window.ResizeObserver){
-  const shell = document.querySelector('.shell');
-  if (shell) new ResizeObserver(fitCrown).observe(shell);
+  const app = document.getElementById('app');
+  if (app) new ResizeObserver(() => fitScreen()).observe(app);
 }
-
 let fitTimer = 0;
 window.addEventListener('resize', () => {
   clearTimeout(fitTimer);
-  fitTimer = setTimeout(() => { fitScreen(); fitCrown(); }, 120);
+  fitTimer = setTimeout(fitScreen, 120);
 });
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It
@@ -720,7 +720,7 @@ function frame(now){
 async function boot(){
   buildChrome();
   fitScreen();
-  fitCrown();
+  paintCase();
   G = freshGame();
   let loaded;
   try { loaded = loadSave(await Store.get(SAVE_KEY)); }
