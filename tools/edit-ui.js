@@ -141,8 +141,8 @@ const pixZoom = p => Math.max(2, Math.min(22, Math.floor(Math.min(760 / p.w, 820
    fractions of a 96x160 grid, and the recess, the key plates and the head are
    at cells the layout relies on, so it cannot be resized from here. */
 const CASE_ID = 'case', CASE_W = 96, CASE_H = 160;
-const CASE_CELLS = { recess:[14,65,68,52], screenBox:[8,43,80,80], keys:[5,130,15,22], keyStep:18,
-                     head:[5,14,86,19], glass:[20,70,56,42] };
+const CASE_CELLS = { recess:[14,63,68,52], screenBox:[8,41,80,80], keys:[8,126,14,22], keyStep:16,
+                     head:[5,14,86,19], glass:[20,68,56,42] };
 
 function pixBuild(){
   const p = PIX[pixId];
@@ -427,6 +427,16 @@ function casePaintLive(g){
   const [kx, ky, kw, kh] = CASE_CELLS.keys;
   icons.forEach((id, i) => {
     const x = (kx + i*CASE_CELLS.keyStep)*z, y = ky*z;
+    /* Moulded, the way the stylesheet moulds them: a flat fill, one highlight
+       along the top, one shade along the bottom, a hard edge and a drop onto the
+       shell. Drawn flat here the preview would be telling you the case looks
+       like something it does not. */
+    g.fillStyle = '#0c2419'; g.fillRect(x + 1.5*z, y + 1.5*z, kw*z, kh*z);
+    g.fillStyle = '#2f6b49'; g.fillRect(x, y, kw*z, kh*z);
+    g.fillStyle = '#448a60'; g.fillRect(x, y, kw*z, 1*z);
+    g.fillStyle = '#1b432e'; g.fillRect(x, y + kh*z - 1*z, kw*z, 1*z);
+    g.strokeStyle = '#0c2419'; g.lineWidth = 1;
+    g.strokeRect(x + .5, y + .5, kw*z - 1, kh*z - 1);
     const art = pixCanvas('icon.' + id, '#141c1e');
     const s = Math.min((kw*z*.55)/art.width, (kh*z*.45)/art.height);
     g.drawImage(art, x + (kw*z - art.width*s)/2, y + 2*z, art.width*s, art.height*s);

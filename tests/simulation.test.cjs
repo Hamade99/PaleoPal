@@ -262,12 +262,23 @@ test('the case grid and the boxes placed on it agree', () => {
   near(pct('.shellhead', 'top'),   14 / H * 100, 'head top');
   near(pct('.shellhead', 'width'), 86 / W * 100, 'head width');
   near(pct('.bezel', 'left'),    8 / W * 100, 'panel left');
-  near(pct('.bezel', 'top'),    43 / H * 100, 'panel top');
+  near(pct('.bezel', 'top'),    41 / H * 100, 'panel top');
   near(pct('.bezel', 'width'),  80 / W * 100, 'panel width');
   near(pct('.bezel', 'height'), 80 / H * 100, 'panel height');
-  near(pct('.keys', 'left'),    5 / W * 100, 'keys left');
-  near(pct('.keys', 'top'),   130 / H * 100, 'keys top');
-  near(pct('.keys', 'width'),  87 / W * 100, 'keys width');
+  near(pct('.keys', 'left'),    8 / W * 100, 'keys left');
+  near(pct('.keys', 'top'),   126 / H * 100, 'keys top');
+  near(pct('.keys', 'width'),  78 / W * 100, 'keys width');
+
+  /* The key row has to stay on the moulding. The shell's base is an ellipse
+     with rx 42 and ry 24 centred at (54,136), and the row used to run to x92 at
+     y152 where the curve had already pulled in to x85 — the outer keys hung off
+     the case entirely. */
+  const keyRight = 8 + 4*16 + 14, keyFoot = 126 + 22 + 1;
+  const half = 42 * Math.sqrt(1 - Math.pow((keyFoot - 136) / 24, 2));
+  assert.ok(keyRight <= 54 + half,
+    'at y' + keyFoot + ' the shell reaches x' + (54 + half).toFixed(1)
+    + ' but the keys run to x' + keyRight);
+  assert.ok(8 >= 96 - (54 + half), 'and the left of the row is inside it too');
   // the recess is a fraction of the panel, which is 80 cells square
   near(pct('.stage', 'left'),    6 / 80 * 100, 'recess left');
   near(pct('.stage', 'top'),    22 / 80 * 100, 'recess top');

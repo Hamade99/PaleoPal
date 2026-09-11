@@ -89,11 +89,17 @@ rather than writing it again.
   and spacing things perfectly is what made the first case look rendered
   rather than moulded.
 - **The case is a 96x160 sprite, and the boxes on it are fractions.** `PIX.case`
-  is the moulding, the crown ridge, the bezel, the screw heads and the five key
-  plates; it is edited in the Pixels tab like any other sprite, or replaced by
+  is the moulding, the crown ridge, the bezel, the screw heads and the shadow
+  each key casts — not the keys, which are moulded in CSS with a highlight along
+  the top and a shade along the bottom, because drawn flat into the art they
+  read as green rectangles laid on the case rather than as something standing
+  proud of it. It is edited in the Pixels tab like any other sprite, or replaced by
   an imported picture. Everything live sits on top at cells the stylesheet
-  writes as percentages: recess `14,65` `68x52`, keys `5,130` `15x22` in steps
-  of 18, panel `8,43` `80x80`, head `5,14`. Those numbers are in three places —
+  writes as percentages: recess `14,63` `68x52`, keys `8,126` `14x22` in steps
+  of 16, panel `8,41` `80x80`, head `5,14`. The key row is held well inboard
+  because the shell's base curve pulls in to x85 by y152, and a row running to
+  x92 had its outer keys hanging off the moulding. Those numbers are in three
+  places —
   the art, `style.css` and `CASE_CELLS` in `tools/edit-ui.js` — and a Node test
   checks the first two against each other, because nothing at runtime would
   notice them drifting: the screen would just sit off the recess, which reads
