@@ -113,12 +113,13 @@ const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
    the largest whole or half multiple of 224 that fits inside the recess drawn
    for it and is centred there, the way an LCD sits in a moulded opening. */
 const CASE_W = 96, CASE_H = 155;          // the grid the artwork is drawn on
-const RECESS_W = 68, RECESS_H = 52;       // where the canvas floats, in cells
+const RECESS_W = 84, RECESS_H = 62;       // where the canvas floats, in cells
 /* The floor is not a matter of taste: below it the recess is smaller than the
    224x168 canvas, and the canvas would either be clipped by the moulding or
-   take a fractional scale to fit. 224/68 is 3.30 and 168/52 is 3.24, so 3.3 is
-   the smallest case that can still show the game at 1:1. */
-const PX_MIN = 3.3, PX_MAX = 9;
+   take a fractional scale to fit. 224/84 is 2.67 and 168/61 is 2.76, so 2.8 is
+   the smallest case that can still show the game at 1:1 — lower than it was,
+   because the glass took the room the meters were using. */
+const PX_MIN = 2.8, PX_MAX = 9;
 
 function fitScreen(){
   const app = $('app');

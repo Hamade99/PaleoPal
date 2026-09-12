@@ -102,9 +102,11 @@ rather than writing it again.
   and at 96 cells across one cell is four screen pixels; a grid fine enough
   would be 384x620, a quarter of a megabyte of pixel rows. The default stays the
   real thing and the grid is there for when someone wants their own.
-  Cells: head `5,14` `86x19`, bone bezel `4,35` `88x86`, dark panel `8,39`
-  `80x78` (`4,4` of the bezel), glass recess `14,60` `68x52` (`6,21` of the
-  panel), keys `7,121`, `14x16` in steps of 17 four cells below the bezel. Those
+  Cells: head `5,14` `86x19`, bone bezel `3,32` `90x87`, dark panel `6,35`
+  `84x81` (`3,3` of the bezel), glass recess `6,48` `84x62` — the panel's full
+  width — and keys `7,121`, `14x16` in steps of 17 four cells below the bezel.
+  `RECESS_W`/`RECESS_H` in `08-ui.js` must match the recess or the glass will
+  not take the step it could. Those
   numbers are in three places — the art, `style.css` and `CASE_CELLS` in
   `tools/edit-ui.js` — and a Node test checks the first two against each other,
   because nothing at runtime would notice them drifting: the screen would just
@@ -113,8 +115,15 @@ rather than writing it again.
   pulled in to x90 by the row's foot; the test checks it against that ellipse.
   The canvas floats *inside* the recess rather than being it — largest whole or
   half multiple of 224 that fits, centred — so the case scales continuously
-  while the world stays on its pixel grid. `PX_MIN` is 3.3 because below that
+  while the world stays on its pixel grid. `PX_MIN` is 2.8 because below that
   the recess is smaller than 224x168.
+- **Nothing DOM may sit over the glass and take a tap.** `.moodrow`, `.badge`
+  and `.bubble` are drawn after the canvas, so anything they cover they also
+  swallow. The mood line wrapped to two lines on a long name, grew upward over
+  the bottom of the glass, and ate the taps meant for the shop's buy bar. All
+  three are `pointer-events:none`, and the name, the species and the mood line
+  are pinned to one line with an ellipsis — an absolutely placed box that can
+  grow is a box that will eventually grow over something.
 - **`fitCrown()` measures boxes, not custom properties.** `getComputedStyle`
   hands a custom property back as the `calc()` it was written as, so
   `parseFloat('calc(4.16px*5)')` is `NaN` — which fell through to a plate height

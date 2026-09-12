@@ -138,12 +138,9 @@ body{
     0 calc(var(--px)*2) 0 #33200a;
   pointer-events:none;
 }
-/* the mould seam, and the gate mark it runs to */
-.moulding::before{
-  content:"";position:absolute;left:50%;top:calc(var(--px)*-1);bottom:calc(var(--px)*-1);
-  width:1px;background:rgba(66,41,10,.30);
-  transform:translateX(calc(var(--px)*9));
-}
+/* The gate mark, where the moulding was filled. There was a seam running the
+   full height beside it, which is a real feature of a moulded shell and read on
+   the glass as a scratch down the middle of the case. */
 .moulding::after{
   content:"";position:absolute;right:calc(var(--px)*7);bottom:calc(var(--px)*3);
   width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
@@ -186,7 +183,7 @@ body{
    4,35 88x86; keys 7,121 82 wide. */
 .shell > *{position:absolute}
 .shellhead{left:5.2083%;  top:9.0323%;  width:89.5833%}
-.bezel    {left:4.1667%;  top:22.5806%; width:91.6667%; height:55.4839%}
+.bezel    {left:3.125%;   top:20.6452%; width:93.75%;    height:56.129%}
 .keys     {left:7.2917%;  top:78.0645%; width:85.4167%}
 
 /* ---------- faceplate ---------- */
@@ -272,49 +269,60 @@ body{
 [data-case="art"] .screw{display:none}
 
 .screen{
-  position:absolute;left:4.5455%;top:4.6512%;width:90.9091%;height:90.6977%;
-  border-radius:calc(var(--px)*3);padding:3.75%;
+  position:absolute;left:3.3333%;top:3.4483%;width:93.3333%;height:93.1034%;
+  border-radius:calc(var(--px)*3);padding:2%;
   background:var(--bg);
   border:2px solid #05090a;
   box-shadow:inset 0 2px 0 #05090a
 }
 [data-case="art"] .screen{background:none;border:0;box-shadow:none;border-radius:0}
 .ident,.needs{position:static}
-/* The glass sits at cells 14,60 68x52 of the case — 6,21 of the dark panel. A
-   drawn faceplate can rely on those numbers; the canvas is centred in there at
-   whatever whole or half multiple of 224 fits. */
-.stage{position:absolute;left:7.5%;top:26.9231%;width:85%;height:66.6667%}
-.moodrow{position:absolute;left:3.75%;right:3.75%;bottom:2.5%}
+/* The glass sits at cells 6,49 84x61 of the case — the full width of the dark
+   panel, and everything above it moved up to give it the room. A drawn faceplate
+   can rely on those numbers; the canvas is centred in there at whatever whole or
+   half multiple of 224 fits, which on a phone is now one and a half rather than
+   one. */
+.stage{position:absolute;left:0;top:16.0494%;width:100%;height:76.5432%}
+/* Never in the way. This is one line of prose and a row of pips, none of it
+   interactive, and it is drawn after the canvas — so when the line wrapped it
+   grew upward over the glass and swallowed taps meant for the row underneath.
+   In the shop that was the buy bar. It cannot wrap now, and it could not take a
+   tap even if it did. */
+.moodrow{position:absolute;left:3.5%;right:3.5%;bottom:0.5%;pointer-events:none}
 
 /* ---------- identity ---------- */
-.ident{display:flex;align-items:baseline;gap:calc(var(--px)*2);flex-wrap:wrap;
-  margin-bottom:calc(var(--px)*2)}
+.ident{display:flex;align-items:baseline;gap:calc(var(--px)*2);flex-wrap:nowrap;
+  margin-bottom:calc(var(--px)*0.5);overflow:hidden}
 .dname{font-size:calc(var(--px)*5);line-height:1;cursor:pointer;
-  border-bottom:1px dashed transparent;color:var(--bone)}
+  border-bottom:1px dashed transparent;color:var(--bone);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
 .dname:hover{border-bottom-color:var(--line)}
-.dsub{font-size:calc(var(--px)*3);color:var(--dim)}
+.dsub{font-size:calc(var(--px)*3);color:var(--dim);white-space:nowrap;flex:0 0 auto}
 #nameEdit{font:inherit;font-size:calc(var(--px)*5);background:var(--panel);color:var(--bone);
   border:1px solid var(--line);border-radius:calc(var(--px)*1);
   padding:1px calc(var(--px)*1.5);width:calc(var(--px)*38)}
 
-/* ---------- needs: the classic icon strip ---------- */
-.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:calc(var(--px)*1.5);
-  margin-bottom:calc(var(--px)*2.5)}
-.need{background:var(--deep);border:1px solid var(--line);
-  padding:calc(var(--px)*1.25) calc(var(--px)*1.5) calc(var(--px)*1.5);
-  display:flex;flex-direction:column;gap:calc(var(--px)*1)}
-.need .cap{display:flex;align-items:center;gap:calc(var(--px)*1);min-height:calc(var(--px)*3.5)}
+/* ---------- needs: four meters in one strip ----------
+   These were four cards — an icon, a written label and a ten-cell track,
+   stacked — eleven and a half cells tall, which was most of the room above the
+   glass spent on four numbers. The icon says which and the bar says how much;
+   the word said nothing the icon did not. The cards, the borders and the labels
+   are gone and the space went to the game. */
+.needs{display:grid;grid-template-columns:repeat(4,1fr);gap:calc(var(--px)*2.5);
+  margin-bottom:0}
+.need{display:flex;align-items:center;gap:calc(var(--px)*1.25)}
+.need .cap{display:flex;align-items:center;flex:0 0 auto}
 .need .cap canvas{image-rendering:pixelated;object-fit:contain;
   width:calc(var(--px)*3.5);height:calc(var(--px)*3.5);flex:0 0 calc(var(--px)*3.5)}
-.need b{font-weight:500;font-size:calc(var(--px)*2.5);color:var(--dim);letter-spacing:.5px}
+.need b{display:none}                       /* the icon is the label */
 /* ten hard cells behind a black grid, square corners */
-.track{position:relative;height:calc(var(--px)*2.5);background:#05090a;border:1px solid #000;
+.track{position:relative;flex:1;height:calc(var(--px)*3);background:#05090a;border:1px solid #000;
   overflow:hidden}
 .fill{height:100%;width:50%;transition:width .45s linear,background .4s}
 .seg{position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#05090a calc(10% - 2px) 10%)}
-.need.low b{color:var(--rust)}
-.need.low{border-color:#6d3527}
+/* Running low is the fill turning rust, which refreshLight already does. There
+   is no label left to redden and no card left to outline. */
 
 /* ---------- the glass ----------
    Placed by the block above; this only says how the canvas sits inside it. */
@@ -350,7 +358,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   padding:calc(var(--px)*0.75) calc(var(--px)*1.75)}
 .picks b{display:block;font-size:calc(var(--px)*3);color:var(--bone);letter-spacing:.3px}
 .badge{position:absolute;left:calc(var(--px)*1);top:calc(var(--px)*1);right:calc(var(--px)*1);
-  display:flex;gap:calc(var(--px)*1);flex-wrap:wrap}
+  display:flex;gap:calc(var(--px)*1);flex-wrap:wrap;pointer-events:none}
 .tag{background:rgba(10,18,16,.88);border:1px solid #3a4d45;color:var(--bone);
   font-size:calc(var(--px)*2.5);padding:1px calc(var(--px)*1.5);
   display:flex;align-items:center;gap:calc(var(--px)*1);line-height:1.5}
@@ -369,7 +377,8 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 /* ---------- mood strip ---------- */
 .moodrow{display:flex;align-items:center;justify-content:space-between;
   gap:calc(var(--px)*2.5)}
-.mood{font-size:calc(var(--px)*3.25);color:var(--bone);line-height:1.35}
+.mood{font-size:calc(var(--px)*3.25);color:var(--bone);line-height:1.35;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .mood em{font-style:normal;color:var(--dim)}
 .bondwrap{display:flex;align-items:center;gap:calc(var(--px)*1.5);font-size:calc(var(--px)*2.75);
   color:var(--dim);flex:0 0 auto}
@@ -1430,152 +1439,152 @@ const PIX = {
       '                            0244420 044440 04444440444440   02220                               ',
       '                            0444440 044440004444440444440dd0244420                              ',
       '                            04444400000000002222222200000000444440    0000                      ',
-      '                      000   d0000002222222221111111122222f222000000d 022220                     ',
-      '                     022200000022221111111111111111111111f11122220000044440                     ',
-      '                     044400222211111111111111111111111111f111111122220000d                      ',
-      '                    0000222111111111111111111111111111111f111111111112220000                    ',
-      '                 d000222111111111111111111111111111111111f11111111111111222000d                 ',
-      '                00022111111111111111111111111111111111111f1111111111111111122000                ',
-      '              0002211111111111111111111111111111111111111f111111111111111111122000              ',
-      '            d00221111111111111111111111111111111111111111f1111111111111111111112200d            ',
-      '           0002111111111111111111111111111111111111111111f111111111111111111111112000           ',
-      '          00221111111111111111111111111111111111111111111f1111111111111111111111112200          ',
-      '         002211111111111111111111111111111111111111111111f11111111111111111111111111200         ',
-      '        0021111111111111111111111111111111111111111111111f111111111111111113111111111200        ',
-      '       00211111111111111111111111111111111111111111111111f1111111111111111111111111111200       ',
-      '      002111111111111111111111111111111111111111111111111f11111111111111111111111111111200      ',
-      '     0021111111111111111111111111111111111111111111111111f111111111111111111111111111111200     ',
-      '    00211111111111111111111111111111111111111111111111111f1111111111111111111111111111111200    ',
-      '   d02111111111111111111111111111111111111111111111111111f1111111111111111111111111111111120d   ',
-      '   001111111111111111111111111111111111111111111111111111f11111111111111211111111111111111100   ',
-      '  0021111111111111111111111111311111111111111111111111111f111111111111111111111111111111111200  ',
-      '  0211111111111111111111111111111111111111111111111111111f111111111111111111111111111111111120  ',
-      ' 00111111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111100 ',
-      ' 00311111111111111111111111111111311111111111111111111111f1111111111111111111113111111111111100 ',
-      ' 02111111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111120 ',
-      '001111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111100',
-      '001111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111100',
-      '001111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111100',
-      '021111111111111111111111111111111111311111111111111111111f11111111111111111111111111111111111120',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111112111111111111111111111111111111111111111111111111f13111111111111111111111111111111111110',
-      '011111188888888888888888888888888888888888888888888888888888888888888888888888888888888881111110',
-      '011118866666666666666666666666666666666666666666666666666666666666666666666666666666666668811110',
-      '011118bb55555555555555555555555555555555555555555555555555555555555555555555555555555555bb811110',
-      '011186bb55555555555555555555555555555555555555555555555555555555555555555555555555555555bb681110',
-      '011185555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa555581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55583110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '03118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '03118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55582110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '01118555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa55581110',
-      '011185555aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa555581110',
-      '011187bb55555555555555555555555555555555555555555555555555555555555555555555555555555555bb781110',
-      '011108bb55555555555555555555555555555555555555555555555555555555555555555555555555555555bb801110',
-      '011118877777777777777777777777777777777777777777777777777777777777777777777777777777777778811110',
-      '011110088888888888888888888888888888888888888888888888888888888888888888888888888888888880011110',
-      '011111100000000000000000000000000000000000000000000000000000000000000000000000000000000001111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111113111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '031111111111111111111111111111111111111111111111111111111f11111111111111111111111111311111111130',
-      '001111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111100',
-      '001111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111300',
-      'd03111111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111130d',
-      ' 00111111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111100 ',
-      ' 00311111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111300 ',
-      ' c0011111111111111111111111111111111111111111111111111111f111111111111111111111111111111111100c ',
-      '  d031111111111111111111111111111111111111111111111111111f11111211111111111111111111111111130d  ',
-      '   003111111111111111111111111111111111111111111111111111f11111111111111111111111111111111300   ',
-      '   c00311111111111111111111111111111111111311111111111111f1111111111111111111111111111111300c   ',
-      '    c0033111111111111111111111111111111111111111111111111f111111111111111111111111111113300c    ',
-      '     c000311111111111111111111111111111111111111111111111f11111111111111111111111111113000c     ',
-      '      cd0033111111111111111111111111111111111111111111111f111111111111111111111111113300dc      ',
-      '        c000331111111111111111111111111113111111111111111f11111111111111111111111133000c        ',
-      '         cd0003311111111111111111111111111111111111111111f111111111111111111111133000dc         ',
-      '           c000033111111112111111111111111111111111111111f11111111111111111111330000c           ',
-      '            cc0000333111111111111111111111111111111111111f111111111111111113330000cc ff         ',
-      '              ccd0000333311111111111111111111111111111111f111111111111133330000dcc   ff         ',
-      '                 ccd0000033331111111111111111111111111111f111111111333300000dcc                 ',
-      '                    ccd0000003333333331111111111111111111f333333333000000dcc                    ',
-      '                       cccd000000000003333333333333333333f00000000000dccc                       ',
+      '                      000   d00000022222222211111111222222222000000d 022220                     ',
+      '                     022200000022221111111111111111111111111122220000044440                     ',
+      '                     0444002222111111111111111111111111111111111122220000d                      ',
+      '                    00002221111111111111111111111111111111111111111112220000                    ',
+      '                 d000222111111111111111111111111111111111111111111111111222000d                 ',
+      '                0002211111111111111111111111111111111111111111111111111111122000                ',
+      '              00022111111111111111111111111111111111111111111111111111111111122000              ',
+      '            d0022111111111111111111111111111111111111111111111111111111111111112200d            ',
+      '           00021111111111111111111111111111111111111111111111111111111111111111112000           ',
+      '          0022111111111111111111111111111111111111111111111111111111111111111111112200          ',
+      '         002211111111111111111111111111111111111111111111111111111111111111111111111200         ',
+      '        00211111111111111111111111111111111111111111111111111111111111111113111111111200        ',
+      '       0021111111111111111111111111111111111111111111111111111111111111111111111111111200       ',
+      '      002111111111111111111111111111111111111111111111111111111111111111111111111111111200      ',
+      '     00211111111111111111111111111111111111111111111111111111111111111111111111111111111200     ',
+      '    0021111111111111111111111111111111111111111111111111111111111111111111111111111111111200    ',
+      '   d0211111111111111111111111111111111111111111111111111111111111111111111111111111111111120d   ',
+      '   001111111111111111111111111111111111111111111111111111111111111111111211111111111111111100   ',
+      '  00211111111111111111111111113111111111111111111111111111111111111111111111111111111111111200  ',
+      '  02111111111111111111111111111111111111111111111111111111111111111111111111111111111111111120  ',
+      ' 0011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100 ',
+      ' 0031111111111111111111111111111131111111111111111111111111111111111111111111113111111111111100 ',
+      ' 0211111111111111111111111111111111111111111111111111111111111111111111111111111111111111111120 ',
+      '001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100',
+      '001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100',
+      '001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100',
+      '021111888888888888888888888888888888888888888888888888888888888888888888888888888888888888111120',
+      '011188666666666666666666666666666666666666666666666666666666666666666666666666666666666666881110',
+      '01118bb5555555555555555555555555555555555555555555555555555555555555555555555555555555555bb81110',
+      '01186bbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb68110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '031855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '031855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '011855aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa558110',
+      '01185bbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb58110',
+      '01187bbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb78110',
+      '011087555555555555555555555555555555555555555555555555555555555555555555555555555555555555780110',
+      '011188777777777777777777777777777777777777777777777777777777777777777777777777777777777777881110',
+      '011100888888888888888888888888888888888888888888888888888888888888888888888888888888888888001110',
+      '011111000000000000000000000000000000000000000000000000000000000000000000000000000000000000111110',
+      '011111111111111111111111111111111111111111111111111111111111121111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111113111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111113111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111110',
+      '031111111111111111111111111111111111111111111111111111111111111111111111111111111111311111111130',
+      '001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100',
+      '001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111300',
+      'd0311111111111111111111111111111111111111111111111111111111111111111111111111111111111111111130d',
+      ' 0011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100 ',
+      ' 0031111111111111111111111111111111111111111111111111111111111111111111111111111111111111111300 ',
+      ' c00111111111111111111111111111111111111111111111111111111111111111111111111111111111111111100c ',
+      '  d031111111111111111111111111111111111111111111111111111111111211111111111111111111111111130d  ',
+      '   003111111111111111111111111111111111111111111111111111111111111111111111111111111111111300   ',
+      '   c0031111111111111111111111111111111111131111111111111111111111111111111111111111111111300c   ',
+      '    c00331111111111111111111111111111111111111111111111111111111111111111111111111111113300c    ',
+      '     c000311111111111111111111111111111111111111111111111111111111111111111111111111113000c     ',
+      '      cd00331111111111111111111111111111111111111111111111111111111111111111111111113300dc      ',
+      '        c000331111111111111111111111111113111111111111111111111111111111111111111133000c        ',
+      '         cd00033111111111111111111111111111111111111111111111111111111111111111133000dc         ',
+      '           c000033111111112111111111111111111111111111111111111111111111111111330000c           ',
+      '            cc00003331111111111111111111111111111111111111111111111111111113330000cc ff         ',
+      '              ccd00003333111111111111111111111111111111111111111111111133330000dcc   ff         ',
+      '                 ccd00000333311111111111111111111111111111111111111333300000dcc                 ',
+      '                    ccd00000033333333311111111111111111111333333333000000dcc                    ',
+      '                       cccd000000000003333333333333333333300000000000dccc                       ',
       '                           ccccdd000000000000000000000000000000ddcccc                           ',
       '                                 cccccccccccccccccccccccccccccc                                 ',
       '                                                                                                '
@@ -8218,12 +8227,13 @@ const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
    the largest whole or half multiple of 224 that fits inside the recess drawn
    for it and is centred there, the way an LCD sits in a moulded opening. */
 const CASE_W = 96, CASE_H = 155;          // the grid the artwork is drawn on
-const RECESS_W = 68, RECESS_H = 52;       // where the canvas floats, in cells
+const RECESS_W = 84, RECESS_H = 62;       // where the canvas floats, in cells
 /* The floor is not a matter of taste: below it the recess is smaller than the
    224x168 canvas, and the canvas would either be clipped by the moulding or
-   take a fractional scale to fit. 224/68 is 3.30 and 168/52 is 3.24, so 3.3 is
-   the smallest case that can still show the game at 1:1. */
-const PX_MIN = 3.3, PX_MAX = 9;
+   take a fractional scale to fit. 224/84 is 2.67 and 168/61 is 2.76, so 2.8 is
+   the smallest case that can still show the game at 1:1 — lower than it was,
+   because the glass took the room the meters were using. */
+const PX_MIN = 2.8, PX_MAX = 9;
 
 function fitScreen(){
   const app = $('app');
