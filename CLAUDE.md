@@ -88,34 +88,41 @@ rather than writing it again.
   highlight; nothing decorative is evenly spaced or mirrored. Stacking effects
   and spacing things perfectly is what made the first case look rendered
   rather than moulded.
-- **The case is a 96x155 sprite, and the boxes on it are fractions.** 96:155 is
-  what the CSS case measured on a phone before it was a sprite (388x626), and
-  the whole point of the grid is to hold that look, not to replace it. `PIX.case`
-  is the moulding, the crown ridge, the bezel, the screw heads and the shadow
-  each key casts — not the keys, which are moulded in CSS with a highlight along
-  the top and a shade along the bottom, because drawn flat into the art they
-  read as green rectangles laid on the case rather than as something standing
-  proud of it. It is edited in the Pixels tab like any other sprite, or replaced by
-  an imported picture. Everything live sits on top at cells the stylesheet
-  writes as percentages: glass recess `14,60` `68x52`, keys `7,125` `14x16` in
-  steps of 17, panel `8,39` `80x78`, head `5,14` `86x19`. The key row is centred
-  and held inboard because the shell's base curve has pulled in to x90 by the
-  row's foot, and a wider row had its outer keys hanging off the moulding — the
-  test checks the row against that ellipse rather than trusting the numbers.
-  Those numbers are in three places —
-  the art, `style.css` and `CASE_CELLS` in `tools/edit-ui.js` — and a Node test
-  checks the first two against each other, because nothing at runtime would
-  notice them drifting: the screen would just sit off the recess, which reads
-  as a badly drawn case rather than as a bug.
-  Write positions as fractions of the case, never as multiples of `--px`. Both
-  agree when `--px` is right; only the fraction is still right in the gap after
-  a resize before `fitScreen()` has caught up, and the case overflowed a 375px
-  window in exactly that gap.
+- **The case has two faces and one box.** The box is a fixed 96x155 grid, one
+  cell per `--px`, and everything live is placed on it as a *fraction* of the
+  case — never as a multiple of `--px`. Both say the same thing when `--px` is
+  right; only the fraction is still right in the gap after a resize before
+  `fitScreen()` has caught up, and the case overflowed a 375px window in exactly
+  that gap. 96:155 is what the CSS case measured on a phone (388x626).
+  The face is either the **moulding**, which is the CSS case drawn the way it
+  always was, or a **picture** — `PIX.case` from the Pixels tab, or an imported
+  file. `data-case="art"` on the root switches. Keep both: no pixel grid small
+  enough to live in a source file can match a vector curve rendered at device
+  resolution. The moulding has 2px borders, a 1px seam and a smooth silhouette,
+  and at 96 cells across one cell is four screen pixels; a grid fine enough
+  would be 384x620, a quarter of a megabyte of pixel rows. The default stays the
+  real thing and the grid is there for when someone wants their own.
+  Cells: head `5,14` `86x19`, bone bezel `4,35` `88x86`, dark panel `8,39`
+  `80x78` (`4,4` of the bezel), glass recess `14,60` `68x52` (`6,21` of the
+  panel), keys `7,121`, `14x16` in steps of 17 four cells below the bezel. Those
+  numbers are in three places — the art, `style.css` and `CASE_CELLS` in
+  `tools/edit-ui.js` — and a Node test checks the first two against each other,
+  because nothing at runtime would notice them drifting: the screen would just
+  sit off the recess, which reads as a badly drawn case rather than as a bug.
+  The key row is centred and held inboard because the shell's base curve has
+  pulled in to x90 by the row's foot; the test checks it against that ellipse.
   The canvas floats *inside* the recess rather than being it — largest whole or
-  half multiple of 224 that fits, centred — so the case can scale continuously
+  half multiple of 224 that fits, centred — so the case scales continuously
   while the world stays on its pixel grid. `PX_MIN` is 3.3 because below that
-  the recess is smaller than 224x168 and the glass would have to be scaled by a
-  fraction.
+  the recess is smaller than 224x168.
+- **`fitCrown()` measures boxes, not custom properties.** `getComputedStyle`
+  hands a custom property back as the `calc()` it was written as, so
+  `parseFloat('calc(4.16px*5)')` is `NaN` — which fell through to a plate height
+  of zero and buried the whole crown ridge twenty pixels inside the shell. Read
+  `offsetHeight` and `offsetLeft`: the box is already resolved and cannot lie
+  about itself. Sizes on the ridge are in `--px` so it grows with the case; they
+  were literal pixels, which held the ridge at one absolute size while the case
+  grew around it.
 - **An imported case is the owner's, not the project's.** "No image assets"
   still holds: `CASE_SKIN` ships empty and an imported picture lives in `Store`
   on the machine that imported it. Promoting one into `src/00-art.js` is a

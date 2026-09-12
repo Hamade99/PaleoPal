@@ -261,10 +261,15 @@ test('the case grid and the boxes placed on it agree', () => {
   near(pct('.shellhead', 'left'),   5 / W * 100, 'head left');
   near(pct('.shellhead', 'top'),   14 / H * 100, 'head top');
   near(pct('.shellhead', 'width'), 86 / W * 100, 'head width');
-  near(pct('.bezel', 'left'),    8 / W * 100, 'panel left');
-  near(pct('.bezel', 'top'),    39 / H * 100, 'panel top');
-  near(pct('.bezel', 'width'),  80 / W * 100, 'panel width');
-  near(pct('.bezel', 'height'), 78 / H * 100, 'panel height');
+  near(pct('.bezel', 'left'),    4 / W * 100, 'bezel left');
+  near(pct('.bezel', 'top'),    35 / H * 100, 'bezel top');
+  near(pct('.bezel', 'width'),  88 / W * 100, 'bezel width');
+  near(pct('.bezel', 'height'), 86 / H * 100, 'bezel height');
+  // the dark panel is a fraction of the bezel: cells 8,39 80x78 of the case
+  near(pct('.screen', 'left'),    4 / 88 * 100, 'panel left');
+  near(pct('.screen', 'top'),     4 / 86 * 100, 'panel top');
+  near(pct('.screen', 'width'),  80 / 88 * 100, 'panel width');
+  near(pct('.screen', 'height'), 78 / 86 * 100, 'panel height');
   near(pct('.keys', 'left'),    7 / W * 100, 'keys left');
   near(pct('.keys', 'top'),   121 / H * 100, 'keys top');
   near(pct('.keys', 'width'),  82 / W * 100, 'keys width');

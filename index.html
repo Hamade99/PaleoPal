@@ -18,6 +18,14 @@
        physical keys along the bottom. Everything is CSS; the project has no
        image assets and this does not change that. -->
   <div class="shell">
+    <!-- The moulding itself. A separate layer because the case has two possible
+         faces: this one, drawn in CSS the way it always was, and a picture — a
+         sprite from the Pixels tab or an imported file — which replaces it. The
+         box they both fill is the same fixed grid either way. -->
+    <i class="moulding" aria-hidden="true"></i>
+    <!-- The crown ridge. fitCrown() sits each plate on the moulding's own top
+         curve; see the note there for why that cannot be done in CSS. -->
+    <div class="scutes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="shellhead">
       <div class="brand">PALEO<span>PAL</span><i class="rivet"></i></div>
       <div class="tools">

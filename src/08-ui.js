@@ -135,25 +135,87 @@ function fitScreen(){
   document.documentElement.style.setProperty('--lcd-w', best + 'px');
 }
 
-/* The artwork. Either the sprite in `PIX.case`, which is what the Pixels tab
-   edits, or an image the owner imported — whichever, it ends up as one
-   background on the shell, scaled to the box and left hard-edged.
+/* Which face the case wears.
 
-   Drawn through pixCanvas with no outline pass: the case has its own edges
-   drawn into it, and a dilated border round the whole silhouette would put a
-   dark halo between the case and the page. */
+   `moulded` is the CSS one and the default — it is the case this game has always
+   had, and no pixel grid that would fit in a source file can reproduce a vector
+   curve rendered at device resolution. `art` is a picture: the sprite in
+   `PIX.case`, which the Pixels tab edits, or a file the owner imported. The box
+   is the same 96x155 grid either way, so everything live stays where it is.
+
+   Precedence, here and in the editor: an imported skin on this machine, then one
+   promoted into the project, then the drawing if it has been asked for, then the
+   moulding. */
 let caseSkin = null;                      // an imported image, when there is one
+let caseMode = 'moulded';                 // or 'drawn', if the sprite was chosen
+
+function caseArtURL(){
+  if (caseSkin) return caseSkin;
+  if (CASE_SKIN) return CASE_SKIN;
+  if (caseMode === 'drawn') return pixCanvas('case').toDataURL();
+  return null;
+}
 function paintCase(){
-  const url = caseSkin || CASE_SKIN || pixCanvas('case').toDataURL();
-  document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
+  const url = caseArtURL();
+  if (url){
+    document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
+    document.documentElement.dataset.case = 'art';
+  } else {
+    document.documentElement.style.removeProperty('--case-art');
+    document.documentElement.dataset.case = 'moulded';
+  }
+  fitCrown();
 }
 /* An imported case is the owner's own and lives on their machine, so it has to
    be fetched before the case is first painted. A failure here is not worth
-   stopping the game for: the drawing underneath is always there. */
+   stopping the game for: the moulding underneath is always there. */
 async function loadCaseSkin(){
-  try { caseSkin = await Store.get(CASE_KEY); }
-  catch (e){ caseSkin = null; }
+  try {
+    caseSkin = await Store.get(CASE_KEY);
+    caseMode = (await Store.get(CASE_MODE_KEY)) === 'drawn' ? 'drawn' : 'moulded';
+  } catch (e){ caseSkin = null; caseMode = 'moulded'; }
   paintCase();
+}
+
+/* The crown ridge.
+
+   `border-radius: 50% 50% ... / 20% 20% ...` makes the top of the moulding one
+   ellipse arc running the full width, with rx = width/2 and ry = 20% of the
+   height. Both move with the case, so a plate's height above the base line at a
+   given x is not something style.css can express — it has no square root and no
+   way to read its own box. Hand-fitted offsets are how the ridge ended up ten
+   pixels left of the crown, on an arc twice as steep as the real one.
+
+   So the plates declare --x, --w and --h in the stylesheet and this puts them on
+   the real curve: base tucked TUCK px inside the moulding so each one is rooted
+   rather than balanced on the edge, and rotated to the surface normal so they
+   fan the way a dorsal ridge does instead of all leaning one way. */
+/* How far a plate's base is buried in the shell, in cells, so it stays buried
+   by the same amount whatever size the case is. */
+const CROWN_TUCK = 1.25;
+function fitCrown(){
+  const face = document.querySelector('.moulding');
+  const row = document.querySelector('.scutes');
+  if (!face || !row) return;
+  const rx = face.offsetWidth / 2, ry = face.offsetHeight * 0.20;
+  if (!rx || !ry) return;
+  const px = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--px')) || 4;
+  const mid = row.offsetWidth / 2;
+  for (const el of row.children){
+    /* Measured off the element's own resolved box, not read out of its custom
+       properties. `getPropertyValue('--h')` hands back the calc() as written —
+       "calc(4.16px*5)" — and parseFloat of that is NaN, which fell through to a
+       height of zero and put the whole ridge twenty pixels down inside the
+       shell. The box is already resolved and cannot lie about itself. */
+    const h = el.offsetHeight;
+    const x = el.offsetLeft + el.offsetWidth / 2 - mid;
+    const u = clamp(x / rx, -.999, .999);
+    const c = Math.sqrt(1 - u*u);
+    const drop = ry * (1 - c);                    // how far the crown has fallen at x
+    const slope = ry * u / (rx * c);              // d(drop)/dx, so the surface normal
+    el.style.top = Math.round(drop + CROWN_TUCK*px - h) + 'px';
+    el.style.transform = 'rotate(' + (Math.atan(slope) * 180 / Math.PI).toFixed(2) + 'deg)';
+  }
 }
 
 /* Refit on anything that changes the box. The window resize is debounced; the
@@ -163,12 +225,12 @@ async function loadCaseSkin(){
    frame or two and the observer closes it. */
 if (window.ResizeObserver){
   const app = document.getElementById('app');
-  if (app) new ResizeObserver(() => fitScreen()).observe(app);
+  if (app) new ResizeObserver(() => { fitScreen(); fitCrown(); }).observe(app);
 }
 let fitTimer = 0;
 window.addEventListener('resize', () => {
   clearTimeout(fitTimer);
-  fitTimer = setTimeout(fitScreen, 120);
+  fitTimer = setTimeout(() => { fitScreen(); fitCrown(); }, 120);
 });
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It

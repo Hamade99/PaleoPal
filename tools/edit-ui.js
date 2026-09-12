@@ -220,7 +220,7 @@ function pixPaint(){
   }
 
   $('caseCard').hidden = pixId !== CASE_ID;
-  if (pixId === CASE_ID) casePaint();
+  if (pixId === CASE_ID){ casePaint(); $('caseWearing').textContent = caseLive(); }
 }
 
 function pixResize(p, w, h){
@@ -257,12 +257,37 @@ PAINT.pix = pixPaint;
    Both read back through the same precedence, in the game and here: a local
    skin first, then the promoted one, then the drawing. */
 let caseSkinURL = null;                  // the local skin, when there is one
+let caseModeNow = 'moulded';             // or 'drawn', when the sprite is in use
 
 async function caseLoadSkin(){
-  try { caseSkinURL = await Store.get(CASE_KEY); }
-  catch (e){ caseSkinURL = null; }
+  try {
+    caseSkinURL = await Store.get(CASE_KEY);
+    caseModeNow = (await Store.get(CASE_MODE_KEY)) === 'drawn' ? 'drawn' : 'moulded';
+  } catch (e){ caseSkinURL = null; caseModeNow = 'moulded'; }
   if (!caseSkinURL && CASE_SKIN) caseSkinURL = CASE_SKIN;
   return caseSkinURL;
+}
+
+/* What the game is wearing right now, said plainly, because the preview beside
+   it always shows your drawing whether or not the game is using it — that is
+   what you are editing, so that is what it has to show. */
+function caseLive(){
+  return caseSkinURL ? 'The game is wearing the imported picture.'
+       : caseModeNow === 'drawn' ? 'The game is wearing this drawing.'
+       : 'The game is wearing the moulded case. This drawing is not in use.';
+}
+async function caseUseDrawing(){
+  caseModeNow = 'drawn';
+  try { await Store.set(CASE_MODE_KEY, 'drawn'); } catch (e){}
+  caseState('The game is wearing this drawing now.');
+  rebuild();
+}
+async function caseUseMoulded(){
+  caseModeNow = 'moulded';
+  caseSkinURL = null;
+  try { await Store.del(CASE_KEY); await Store.set(CASE_MODE_KEY, 'moulded'); } catch (e){}
+  caseState('Back to the moulded case.');
+  rebuild();
 }
 
 function caseState(text, bad){
@@ -299,7 +324,7 @@ function caseImport(file){
     img.onload = async () => {
       const ratio = img.width / img.height, want = CASE_W / CASE_H;
       caseSkinURL = url;
-      try { await Store.set(CASE_KEY, url); }
+      try { await Store.set(CASE_KEY, url); await Store.set(CASE_MODE_KEY, 'drawn'); }
       catch (e){ return caseState('Imported, but it would not fit in storage — it will be '
         + 'gone when this page reloads.', true); }
       const off = Math.abs(ratio - want) / want;
@@ -314,13 +339,7 @@ function caseImport(file){
   reader.readAsDataURL(file);
 }
 
-async function caseClearSkin(){
-  caseSkinURL = null;
-  try { await Store.del(CASE_KEY); } catch (e){}
-  caseState(CASE_SKIN ? 'Local skin removed. The promoted picture is showing.'
-                      : 'Local skin removed. Your drawing is showing.');
-  rebuild();
-}
+
 
 /* Writing the picture into the project. It is a separate press because it is a
    different decision: it makes the import the game's look for everyone, adds
@@ -338,7 +357,8 @@ async function casePromote(){
 
 $('caseImport').onclick = () => $('caseFile').click();
 $('caseFile').onchange = e => { caseImport(e.target.files[0]); e.target.value = ''; };
-$('caseClear').onclick = caseClearSkin;
+$('caseDrawn').onclick = caseUseDrawing;
+$('caseClear').onclick = caseUseMoulded;
 $('casePromote').onclick = casePromote;
 /* ---- the case ------------------------------------------------------------
    The case is a sprite like any other, so it is edited on the Pixels tab with

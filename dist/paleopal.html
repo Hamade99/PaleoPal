@@ -96,39 +96,98 @@ body{
 
 /* ---------- the shell ----------
 
-   The case is a fixed 96x160 grid, one cell per --px, and the art that fills it
-   is a sprite like any other — `PIX.case`, editable in the Pixels tab, or an
-   imported image. That is the whole reason for pinning it: a drawn faceplate can
-   only line up with the screen and the keys if the screen and the keys are at
-   fixed fractions of a box whose shape never changes. Before this the height was
-   whatever the contents came to and the ratio drifted from .60 to .70 across
-   viewports, so no single picture could fit it.
+   The case has two possible faces and one box.
 
-   Everything that used to be painted here in CSS — the silhouette, the speckle,
-   the crown ridge, the bezel, the screw heads, the key plates — is in the art
-   now. What is left in the DOM is only what has to be live. */
+   The box is a fixed 96x155 grid, one cell per --px, and everything live is
+   placed on it as a fraction. That is what lets a drawn or imported faceplate
+   line up: the screen and the keys are at cells a picture can be drawn against.
+
+   The face is either this — the moulding, in CSS, exactly as it was before the
+   grid existed — or a picture, which is `PIX.case` from the Pixels tab or a file
+   the owner imported. `[data-case="art"]` on the root switches between them.
+
+   Both, rather than one: no pixel grid small enough to keep in a source file can
+   match a vector curve rendered at device resolution. The moulding has 2px
+   borders, a 1px seam and a smooth silhouette, and at 96 cells across one cell
+   is four screen pixels. A grid fine enough would be 384x620 — a quarter of a
+   megabyte of pixel rows. So the default stays the real thing, and the grid is
+   there for when you want your own. */
 .shell{
   position:relative;
   width:min(calc(var(--px)*96), 100%);aspect-ratio:96 / 155;
   margin:0 auto;
+}
+[data-case="art"] .shell{
   background-image:var(--case-art);
   background-size:100% 100%;background-repeat:no-repeat;
   image-rendering:pixelated;
 }
+/* The moulding fills the box below the crown, which is where the ridge stands.
+   Cells 0,4 96x149. */
+.moulding{
+  position:absolute;left:0;top:2.5806%;width:100%;height:96.129%;
+  border-radius:50% 50% 44% 44% / 20% 20% 15% 15%;
+  background-image:var(--speckles),linear-gradient(var(--shell) 0 100%);
+  background-size:var(--speckle-size),100% 100%;
+  border:2px solid var(--shell-edge);
+  /* one highlight along the crown, one shade along the base, one shadow under
+     the whole thing. Nothing else. */
+  box-shadow:
+    inset 0 3px 0 var(--shell-hi),
+    inset 0 -5px 0 var(--shell-lo),
+    0 calc(var(--px)*2) 0 #33200a;
+  pointer-events:none;
+}
+/* the mould seam, and the gate mark it runs to */
+.moulding::before{
+  content:"";position:absolute;left:50%;top:calc(var(--px)*-1);bottom:calc(var(--px)*-1);
+  width:1px;background:rgba(66,41,10,.30);
+  transform:translateX(calc(var(--px)*9));
+}
+.moulding::after{
+  content:"";position:absolute;right:calc(var(--px)*7);bottom:calc(var(--px)*3);
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
+}
+[data-case="art"] .moulding,[data-case="art"] .scutes{display:none}
+
+/* Osteoderms over the crown. The look is here and the arithmetic is in
+   fitCrown(): each plate says where it sits along the ridge and how big it is,
+   and the function puts it on the real curve and turns it normal to the
+   surface. Nothing is mirrored and no two are the same width. */
+.scutes{position:absolute;left:0;right:0;top:2.5806%;height:0;pointer-events:none}
+.scutes i{position:absolute;
+  left:calc(50% + var(--x));width:var(--w);height:var(--h);
+  margin-left:calc(var(--w) / -2);
+  transform-origin:50% 100%;
+  background:var(--scute);
+  border:2px solid var(--shell-edge);border-bottom:0;
+  border-radius:62% 62% 0 0 / 90% 90% 0 0;
+  box-shadow:inset 0 2px 0 var(--shell-hi)}
+/* In cells, not in pixels. These were literal px, which held the ridge at one
+   absolute size while the case grew — on a bigger case it read as a smaller
+   ridge on a larger animal. Same numbers, divided by the four --px was when
+   they were written. */
+.scutes i:nth-child(1){--x:calc(var(--px)*-26); --w:calc(var(--px)*3); --h:calc(var(--px)*2)}
+.scutes i:nth-child(2){--x:calc(var(--px)*-19); --w:calc(var(--px)*5); --h:calc(var(--px)*4)}
+.scutes i:nth-child(3){--x:calc(var(--px)*-11); --w:calc(var(--px)*4); --h:calc(var(--px)*4)}
+.scutes i:nth-child(4){--x:calc(var(--px)*-4);  --w:calc(var(--px)*6); --h:calc(var(--px)*5)}
+.scutes i:nth-child(5){--x:calc(var(--px)*3);   --w:calc(var(--px)*5); --h:calc(var(--px)*5)}
+.scutes i:nth-child(6){--x:calc(var(--px)*12);  --w:calc(var(--px)*5); --h:calc(var(--px)*3)}
+.scutes i:nth-child(7){--x:calc(var(--px)*22);  --w:calc(var(--px)*4); --h:calc(var(--px)*2)}
+
 /* Boxes are placed in grid cells, written as fractions of the case rather than
    as multiples of --px. Both say the same thing when --px is right; only the
-   fraction is still right when it is not. --px is set by JS, and there is
-   always a moment after a resize when it is stale — the case overflowed the
-   window in exactly that gap. A fraction cannot: the shell caps at the width it
-   is given and everything in it follows.
+   fraction is still right when it is not — --px is set by JS, and there is
+   always a moment after a resize when it is stale. The case overflowed the
+   window in exactly that gap.
 
-   Cells, for reading against the artwork: head 5,14 86 wide; bezel 8,43 80x80;
-   keys 5,130 87 wide. */
+   Cells, for reading against a drawn faceplate: head 5,14 86x19; bone bezel
+   4,35 88x86; keys 7,121 82 wide. */
 .shell > *{position:absolute}
 .shellhead{left:5.2083%;  top:9.0323%;  width:89.5833%}
-.bezel    {left:8.3333%;  top:25.1613%; width:83.3333%; height:50.3226%}
+.bezel    {left:4.1667%;  top:22.5806%; width:91.6667%; height:55.4839%}
 .keys     {left:7.2917%;  top:78.0645%; width:85.4167%}
-.screw{display:none}                  /* painted into the art now */
 
 /* ---------- faceplate ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
@@ -185,14 +244,45 @@ body{
 #nestCount:empty{display:none}
 
 /* ---------- bone bezel ----------
-   Painted in the art. The box that is left only has to hold the live parts and
-   put the canvas exactly on the recess drawn for it. */
-.bezel{position:absolute;background:none;border:0;padding:0}
-.screen{position:absolute;inset:0;background:none;border:0;padding:3.75%}
+   Painted here when the moulding is, hidden when a picture is. The dark panel
+   inside it is placed as a fraction of it rather than by padding, so it holds
+   still when --px is momentarily stale: cells 8,39 80x78 of the case, which is
+   4,4 80x78 of this. */
+.bezel{
+  border-radius:calc(var(--px)*5);
+  background:var(--bezel);
+  border:2px solid var(--bezel-edge);
+  box-shadow:inset 0 2px 0 #f2ead2,inset 0 -3px 0 var(--bezel-lo),
+             0 calc(var(--px)*1) 0 rgba(66,41,10,.5)
+}
+[data-case="art"] .bezel{background:none;border:0;box-shadow:none;border-radius:0}
+/* Four fixings, not four of the same screw: two slotted, one cross, one plug.
+   Nobody reads them individually and everybody reads the difference. */
+.screw{position:absolute;width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:#b9aa85;box-shadow:inset 0 0 0 1px rgba(80,66,38,.7)}
+.screw::after{content:"";position:absolute;left:1px;top:calc(50% - .5px);
+  width:calc(100% - 2px);height:1px;background:rgba(70,58,32,.85)}
+.screw.tr::before{content:"";position:absolute;top:1px;left:calc(50% - .5px);
+  width:1px;height:calc(100% - 2px);background:rgba(70,58,32,.85)}
+.screw.br::after{display:none}
+.screw.tl{left:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.tr{right:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.bl{left:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
+.screw.br{right:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
+[data-case="art"] .screw{display:none}
+
+.screen{
+  position:absolute;left:4.5455%;top:4.6512%;width:90.9091%;height:90.6977%;
+  border-radius:calc(var(--px)*3);padding:3.75%;
+  background:var(--bg);
+  border:2px solid #05090a;
+  box-shadow:inset 0 2px 0 #05090a
+}
+[data-case="art"] .screen{background:none;border:0;box-shadow:none;border-radius:0}
 .ident,.needs{position:static}
-/* The glass sits on the recess the artwork draws, at grid cells 6..74 across and
-   22..74 down of the dark panel — which is 14..82 and 65..117 of the case. A
-   hand-drawn faceplate can rely on those numbers. */
+/* The glass sits at cells 14,60 68x52 of the case — 6,21 of the dark panel. A
+   drawn faceplate can rely on those numbers; the canvas is centred in there at
+   whatever whole or half multiple of 224 fits. */
 .stage{position:absolute;left:7.5%;top:26.9231%;width:85%;height:66.6667%}
 .moodrow{position:absolute;left:3.75%;right:3.75%;bottom:2.5%}
 
@@ -459,6 +549,14 @@ button:focus-visible,.dname:focus-visible{outline:2px solid var(--sky);outline-o
        physical keys along the bottom. Everything is CSS; the project has no
        image assets and this does not change that. -->
   <div class="shell">
+    <!-- The moulding itself. A separate layer because the case has two possible
+         faces: this one, drawn in CSS the way it always was, and a picture — a
+         sprite from the Pixels tab or an imported file — which replaces it. The
+         box they both fill is the same fixed grid either way. -->
+    <i class="moulding" aria-hidden="true"></i>
+    <!-- The crown ridge. fitCrown() sits each plate on the moulding's own top
+         curve; see the note there for why that cannot be done in CSS. -->
+    <div class="scutes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="shellhead">
       <div class="brand">PALEO<span>PAL</span><i class="rivet"></i></div>
       <div class="tools">
@@ -1452,23 +1550,23 @@ const PIX = {
       '011111111111111111111111111111111111111111111111111111111f11111111111113111111111111111111111110',
       '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
       '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
-      '011111111111111111111011111111111111110111111111111111101f11111111111111011111111111111110111110',
-      '011111111111111111111011111111111111110111111111111111101f11111111111111011111111111111110111110',
-      '011111111111111111111011111111111111110111111111111111101f11111111111111011111111111111110111110',
-      '011111111111111111111011111111111111110111111111111111101f11111111111111011111111111111110111110',
-      '011111111111111111111011111111111111110111111111111111101f11111111111111011111111111111110111110',
-      '031111111111111111111011111111111111110111111111111111101f11111111111111011111111111311110111130',
-      '001111111111111111111011111111111111110111111111111111101f11111111111111011111111111111110111100',
-      '001111111111111111111011111111111111110111111111111111101f11111111111111011111111111111110111300',
-      'd03111111111111111111011111111111111110111111111111111101f1111111111111101111111111111111011130d',
-      ' 00111111111111111111011111111111111110111111111111111101f1111111111111101111111111111111011100 ',
-      ' 00311111111111111111011111111111111110111111111111111101f1111111111111101111111111111111011300 ',
-      ' c0011111111111111111011111111111111110111111111111111101f111111111111110111111111111111101100c ',
-      '  d031111111111111111011111111111111110111111111111111101f11111211111111011111111111111110130d  ',
-      '   003111111111111111011111111111111110111111111111111101f11111111111111011111111111111110300   ',
-      '   c00311111111111111011111111111111110111311111111111101f1111111111111101111111111111111000c   ',
-      '    c0000000000000000011000000000000000110000000000000001f000000000000000110000000000000000c    ',
-      '     c033333333333333111333333333333331113333333333333311f33333333333333111333333333333330c     ',
+      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
+      '011111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111110',
+      '031111111111111111111111111111111111111111111111111111111f11111111111111111111111111311111111130',
+      '001111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111100',
+      '001111111111111111111111111111111111111111111111111111111f11111111111111111111111111111111111300',
+      'd03111111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111130d',
+      ' 00111111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111100 ',
+      ' 00311111111111111111111111111111111111111111111111111111f1111111111111111111111111111111111300 ',
+      ' c0011111111111111111111111111111111111111111111111111111f111111111111111111111111111111111100c ',
+      '  d031111111111111111111111111111111111111111111111111111f11111211111111111111111111111111130d  ',
+      '   003111111111111111111111111111111111111111111111111111f11111111111111111111111111111111300   ',
+      '   c00311111111111111111111111111111111111311111111111111f1111111111111111111111111111111300c   ',
+      '    c0033111111111111111111111111111111111111111111111111f111111111111111111111111111113300c    ',
+      '     c000311111111111111111111111111111111111111111111111f11111111111111111111111111113000c     ',
       '      cd0033111111111111111111111111111111111111111111111f111111111111111111111111113300dc      ',
       '        c000331111111111111111111111111113111111111111111f11111111111111111111111133000c        ',
       '         cd0003311111111111111111111111111111111111111111f111111111111111111111133000dc         ',
@@ -1500,8 +1598,11 @@ const PIX = {
 let CASE_SKIN = '';
 /*</data>*/
 /* Where a skin that has not been promoted lives: this machine, and nowhere
-   else. Named here so the game and the editor cannot drift apart on it. */
+   else, alongside which of the two faces the case is wearing. Named here rather
+   than in the game or the editor, because both read them and only one of those
+   two files is loaded by the other. */
 const CASE_KEY = 'paleopal.case.skin';
+const CASE_MODE_KEY = 'paleopal.case.mode';
 
 /* Per-stage multipliers. Every feature that grows on its own schedule gets its
    own column — merging any two of them has produced a bad sprite at least once.
@@ -8139,25 +8240,87 @@ function fitScreen(){
   document.documentElement.style.setProperty('--lcd-w', best + 'px');
 }
 
-/* The artwork. Either the sprite in `PIX.case`, which is what the Pixels tab
-   edits, or an image the owner imported — whichever, it ends up as one
-   background on the shell, scaled to the box and left hard-edged.
+/* Which face the case wears.
 
-   Drawn through pixCanvas with no outline pass: the case has its own edges
-   drawn into it, and a dilated border round the whole silhouette would put a
-   dark halo between the case and the page. */
+   `moulded` is the CSS one and the default — it is the case this game has always
+   had, and no pixel grid that would fit in a source file can reproduce a vector
+   curve rendered at device resolution. `art` is a picture: the sprite in
+   `PIX.case`, which the Pixels tab edits, or a file the owner imported. The box
+   is the same 96x155 grid either way, so everything live stays where it is.
+
+   Precedence, here and in the editor: an imported skin on this machine, then one
+   promoted into the project, then the drawing if it has been asked for, then the
+   moulding. */
 let caseSkin = null;                      // an imported image, when there is one
+let caseMode = 'moulded';                 // or 'drawn', if the sprite was chosen
+
+function caseArtURL(){
+  if (caseSkin) return caseSkin;
+  if (CASE_SKIN) return CASE_SKIN;
+  if (caseMode === 'drawn') return pixCanvas('case').toDataURL();
+  return null;
+}
 function paintCase(){
-  const url = caseSkin || CASE_SKIN || pixCanvas('case').toDataURL();
-  document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
+  const url = caseArtURL();
+  if (url){
+    document.documentElement.style.setProperty('--case-art', 'url("' + url + '")');
+    document.documentElement.dataset.case = 'art';
+  } else {
+    document.documentElement.style.removeProperty('--case-art');
+    document.documentElement.dataset.case = 'moulded';
+  }
+  fitCrown();
 }
 /* An imported case is the owner's own and lives on their machine, so it has to
    be fetched before the case is first painted. A failure here is not worth
-   stopping the game for: the drawing underneath is always there. */
+   stopping the game for: the moulding underneath is always there. */
 async function loadCaseSkin(){
-  try { caseSkin = await Store.get(CASE_KEY); }
-  catch (e){ caseSkin = null; }
+  try {
+    caseSkin = await Store.get(CASE_KEY);
+    caseMode = (await Store.get(CASE_MODE_KEY)) === 'drawn' ? 'drawn' : 'moulded';
+  } catch (e){ caseSkin = null; caseMode = 'moulded'; }
   paintCase();
+}
+
+/* The crown ridge.
+
+   `border-radius: 50% 50% ... / 20% 20% ...` makes the top of the moulding one
+   ellipse arc running the full width, with rx = width/2 and ry = 20% of the
+   height. Both move with the case, so a plate's height above the base line at a
+   given x is not something style.css can express — it has no square root and no
+   way to read its own box. Hand-fitted offsets are how the ridge ended up ten
+   pixels left of the crown, on an arc twice as steep as the real one.
+
+   So the plates declare --x, --w and --h in the stylesheet and this puts them on
+   the real curve: base tucked TUCK px inside the moulding so each one is rooted
+   rather than balanced on the edge, and rotated to the surface normal so they
+   fan the way a dorsal ridge does instead of all leaning one way. */
+/* How far a plate's base is buried in the shell, in cells, so it stays buried
+   by the same amount whatever size the case is. */
+const CROWN_TUCK = 1.25;
+function fitCrown(){
+  const face = document.querySelector('.moulding');
+  const row = document.querySelector('.scutes');
+  if (!face || !row) return;
+  const rx = face.offsetWidth / 2, ry = face.offsetHeight * 0.20;
+  if (!rx || !ry) return;
+  const px = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--px')) || 4;
+  const mid = row.offsetWidth / 2;
+  for (const el of row.children){
+    /* Measured off the element's own resolved box, not read out of its custom
+       properties. `getPropertyValue('--h')` hands back the calc() as written —
+       "calc(4.16px*5)" — and parseFloat of that is NaN, which fell through to a
+       height of zero and put the whole ridge twenty pixels down inside the
+       shell. The box is already resolved and cannot lie about itself. */
+    const h = el.offsetHeight;
+    const x = el.offsetLeft + el.offsetWidth / 2 - mid;
+    const u = clamp(x / rx, -.999, .999);
+    const c = Math.sqrt(1 - u*u);
+    const drop = ry * (1 - c);                    // how far the crown has fallen at x
+    const slope = ry * u / (rx * c);              // d(drop)/dx, so the surface normal
+    el.style.top = Math.round(drop + CROWN_TUCK*px - h) + 'px';
+    el.style.transform = 'rotate(' + (Math.atan(slope) * 180 / Math.PI).toFixed(2) + 'deg)';
+  }
 }
 
 /* Refit on anything that changes the box. The window resize is debounced; the
@@ -8167,12 +8330,12 @@ async function loadCaseSkin(){
    frame or two and the observer closes it. */
 if (window.ResizeObserver){
   const app = document.getElementById('app');
-  if (app) new ResizeObserver(() => fitScreen()).observe(app);
+  if (app) new ResizeObserver(() => { fitScreen(); fitCrown(); }).observe(app);
 }
 let fitTimer = 0;
 window.addEventListener('resize', () => {
   clearTimeout(fitTimer);
-  fitTimer = setTimeout(fitScreen, 120);
+  fitTimer = setTimeout(() => { fitScreen(); fitCrown(); }, 120);
 });
 
 /* The sound switch lives on the case, not three taps deep in the dossier. It

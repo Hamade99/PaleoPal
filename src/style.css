@@ -85,39 +85,98 @@ body{
 
 /* ---------- the shell ----------
 
-   The case is a fixed 96x160 grid, one cell per --px, and the art that fills it
-   is a sprite like any other — `PIX.case`, editable in the Pixels tab, or an
-   imported image. That is the whole reason for pinning it: a drawn faceplate can
-   only line up with the screen and the keys if the screen and the keys are at
-   fixed fractions of a box whose shape never changes. Before this the height was
-   whatever the contents came to and the ratio drifted from .60 to .70 across
-   viewports, so no single picture could fit it.
+   The case has two possible faces and one box.
 
-   Everything that used to be painted here in CSS — the silhouette, the speckle,
-   the crown ridge, the bezel, the screw heads, the key plates — is in the art
-   now. What is left in the DOM is only what has to be live. */
+   The box is a fixed 96x155 grid, one cell per --px, and everything live is
+   placed on it as a fraction. That is what lets a drawn or imported faceplate
+   line up: the screen and the keys are at cells a picture can be drawn against.
+
+   The face is either this — the moulding, in CSS, exactly as it was before the
+   grid existed — or a picture, which is `PIX.case` from the Pixels tab or a file
+   the owner imported. `[data-case="art"]` on the root switches between them.
+
+   Both, rather than one: no pixel grid small enough to keep in a source file can
+   match a vector curve rendered at device resolution. The moulding has 2px
+   borders, a 1px seam and a smooth silhouette, and at 96 cells across one cell
+   is four screen pixels. A grid fine enough would be 384x620 — a quarter of a
+   megabyte of pixel rows. So the default stays the real thing, and the grid is
+   there for when you want your own. */
 .shell{
   position:relative;
   width:min(calc(var(--px)*96), 100%);aspect-ratio:96 / 155;
   margin:0 auto;
+}
+[data-case="art"] .shell{
   background-image:var(--case-art);
   background-size:100% 100%;background-repeat:no-repeat;
   image-rendering:pixelated;
 }
+/* The moulding fills the box below the crown, which is where the ridge stands.
+   Cells 0,4 96x149. */
+.moulding{
+  position:absolute;left:0;top:2.5806%;width:100%;height:96.129%;
+  border-radius:50% 50% 44% 44% / 20% 20% 15% 15%;
+  background-image:var(--speckles),linear-gradient(var(--shell) 0 100%);
+  background-size:var(--speckle-size),100% 100%;
+  border:2px solid var(--shell-edge);
+  /* one highlight along the crown, one shade along the base, one shadow under
+     the whole thing. Nothing else. */
+  box-shadow:
+    inset 0 3px 0 var(--shell-hi),
+    inset 0 -5px 0 var(--shell-lo),
+    0 calc(var(--px)*2) 0 #33200a;
+  pointer-events:none;
+}
+/* the mould seam, and the gate mark it runs to */
+.moulding::before{
+  content:"";position:absolute;left:50%;top:calc(var(--px)*-1);bottom:calc(var(--px)*-1);
+  width:1px;background:rgba(66,41,10,.30);
+  transform:translateX(calc(var(--px)*9));
+}
+.moulding::after{
+  content:"";position:absolute;right:calc(var(--px)*7);bottom:calc(var(--px)*3);
+  width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:rgba(66,41,10,.22);box-shadow:0 1px 0 rgba(255,236,196,.25);
+}
+[data-case="art"] .moulding,[data-case="art"] .scutes{display:none}
+
+/* Osteoderms over the crown. The look is here and the arithmetic is in
+   fitCrown(): each plate says where it sits along the ridge and how big it is,
+   and the function puts it on the real curve and turns it normal to the
+   surface. Nothing is mirrored and no two are the same width. */
+.scutes{position:absolute;left:0;right:0;top:2.5806%;height:0;pointer-events:none}
+.scutes i{position:absolute;
+  left:calc(50% + var(--x));width:var(--w);height:var(--h);
+  margin-left:calc(var(--w) / -2);
+  transform-origin:50% 100%;
+  background:var(--scute);
+  border:2px solid var(--shell-edge);border-bottom:0;
+  border-radius:62% 62% 0 0 / 90% 90% 0 0;
+  box-shadow:inset 0 2px 0 var(--shell-hi)}
+/* In cells, not in pixels. These were literal px, which held the ridge at one
+   absolute size while the case grew — on a bigger case it read as a smaller
+   ridge on a larger animal. Same numbers, divided by the four --px was when
+   they were written. */
+.scutes i:nth-child(1){--x:calc(var(--px)*-26); --w:calc(var(--px)*3); --h:calc(var(--px)*2)}
+.scutes i:nth-child(2){--x:calc(var(--px)*-19); --w:calc(var(--px)*5); --h:calc(var(--px)*4)}
+.scutes i:nth-child(3){--x:calc(var(--px)*-11); --w:calc(var(--px)*4); --h:calc(var(--px)*4)}
+.scutes i:nth-child(4){--x:calc(var(--px)*-4);  --w:calc(var(--px)*6); --h:calc(var(--px)*5)}
+.scutes i:nth-child(5){--x:calc(var(--px)*3);   --w:calc(var(--px)*5); --h:calc(var(--px)*5)}
+.scutes i:nth-child(6){--x:calc(var(--px)*12);  --w:calc(var(--px)*5); --h:calc(var(--px)*3)}
+.scutes i:nth-child(7){--x:calc(var(--px)*22);  --w:calc(var(--px)*4); --h:calc(var(--px)*2)}
+
 /* Boxes are placed in grid cells, written as fractions of the case rather than
    as multiples of --px. Both say the same thing when --px is right; only the
-   fraction is still right when it is not. --px is set by JS, and there is
-   always a moment after a resize when it is stale — the case overflowed the
-   window in exactly that gap. A fraction cannot: the shell caps at the width it
-   is given and everything in it follows.
+   fraction is still right when it is not — --px is set by JS, and there is
+   always a moment after a resize when it is stale. The case overflowed the
+   window in exactly that gap.
 
-   Cells, for reading against the artwork: head 5,14 86 wide; bezel 8,43 80x80;
-   keys 5,130 87 wide. */
+   Cells, for reading against a drawn faceplate: head 5,14 86x19; bone bezel
+   4,35 88x86; keys 7,121 82 wide. */
 .shell > *{position:absolute}
 .shellhead{left:5.2083%;  top:9.0323%;  width:89.5833%}
-.bezel    {left:8.3333%;  top:25.1613%; width:83.3333%; height:50.3226%}
+.bezel    {left:4.1667%;  top:22.5806%; width:91.6667%; height:55.4839%}
 .keys     {left:7.2917%;  top:78.0645%; width:85.4167%}
-.screw{display:none}                  /* painted into the art now */
 
 /* ---------- faceplate ---------- */
 .shellhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
@@ -174,14 +233,45 @@ body{
 #nestCount:empty{display:none}
 
 /* ---------- bone bezel ----------
-   Painted in the art. The box that is left only has to hold the live parts and
-   put the canvas exactly on the recess drawn for it. */
-.bezel{position:absolute;background:none;border:0;padding:0}
-.screen{position:absolute;inset:0;background:none;border:0;padding:3.75%}
+   Painted here when the moulding is, hidden when a picture is. The dark panel
+   inside it is placed as a fraction of it rather than by padding, so it holds
+   still when --px is momentarily stale: cells 8,39 80x78 of the case, which is
+   4,4 80x78 of this. */
+.bezel{
+  border-radius:calc(var(--px)*5);
+  background:var(--bezel);
+  border:2px solid var(--bezel-edge);
+  box-shadow:inset 0 2px 0 #f2ead2,inset 0 -3px 0 var(--bezel-lo),
+             0 calc(var(--px)*1) 0 rgba(66,41,10,.5)
+}
+[data-case="art"] .bezel{background:none;border:0;box-shadow:none;border-radius:0}
+/* Four fixings, not four of the same screw: two slotted, one cross, one plug.
+   Nobody reads them individually and everybody reads the difference. */
+.screw{position:absolute;width:calc(var(--px)*2);height:calc(var(--px)*2);border-radius:50%;
+  background:#b9aa85;box-shadow:inset 0 0 0 1px rgba(80,66,38,.7)}
+.screw::after{content:"";position:absolute;left:1px;top:calc(50% - .5px);
+  width:calc(100% - 2px);height:1px;background:rgba(70,58,32,.85)}
+.screw.tr::before{content:"";position:absolute;top:1px;left:calc(50% - .5px);
+  width:1px;height:calc(100% - 2px);background:rgba(70,58,32,.85)}
+.screw.br::after{display:none}
+.screw.tl{left:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.tr{right:calc(var(--px)*1.5);top:calc(var(--px)*1.5)}
+.screw.bl{left:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
+.screw.br{right:calc(var(--px)*1.5);bottom:calc(var(--px)*1.5)}
+[data-case="art"] .screw{display:none}
+
+.screen{
+  position:absolute;left:4.5455%;top:4.6512%;width:90.9091%;height:90.6977%;
+  border-radius:calc(var(--px)*3);padding:3.75%;
+  background:var(--bg);
+  border:2px solid #05090a;
+  box-shadow:inset 0 2px 0 #05090a
+}
+[data-case="art"] .screen{background:none;border:0;box-shadow:none;border-radius:0}
 .ident,.needs{position:static}
-/* The glass sits on the recess the artwork draws, at grid cells 6..74 across and
-   22..74 down of the dark panel — which is 14..82 and 65..117 of the case. A
-   hand-drawn faceplate can rely on those numbers. */
+/* The glass sits at cells 14,60 68x52 of the case — 6,21 of the dark panel. A
+   drawn faceplate can rely on those numbers; the canvas is centred in there at
+   whatever whole or half multiple of 224 fits. */
 .stage{position:absolute;left:7.5%;top:26.9231%;width:85%;height:66.6667%}
 .moodrow{position:absolute;left:3.75%;right:3.75%;bottom:2.5%}
 
