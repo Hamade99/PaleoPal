@@ -224,7 +224,7 @@ test('the case grid and the boxes placed on it agree', () => {
   const head = /'case': \{ w:(\d+), h:(\d+),/.exec(art);
   assert.ok(head, 'PIX.case exists');
   const W = +head[1], H = +head[2];
-  assert.deepEqual([W, H], [96, 160], 'the case grid is the size the layout assumes');
+  assert.deepEqual([W, H], [96, 155], 'the case grid is the size the layout assumes');
   const body = art.slice(art.indexOf("'case': {"));
   const rows = body.slice(body.indexOf('rows:['), body.indexOf('] },'))
     .split('\n').map(line => /'(.*)'/.exec(line)).filter(Boolean).map(m => m[1]);
@@ -262,28 +262,29 @@ test('the case grid and the boxes placed on it agree', () => {
   near(pct('.shellhead', 'top'),   14 / H * 100, 'head top');
   near(pct('.shellhead', 'width'), 86 / W * 100, 'head width');
   near(pct('.bezel', 'left'),    8 / W * 100, 'panel left');
-  near(pct('.bezel', 'top'),    41 / H * 100, 'panel top');
+  near(pct('.bezel', 'top'),    39 / H * 100, 'panel top');
   near(pct('.bezel', 'width'),  80 / W * 100, 'panel width');
-  near(pct('.bezel', 'height'), 80 / H * 100, 'panel height');
-  near(pct('.keys', 'left'),    8 / W * 100, 'keys left');
-  near(pct('.keys', 'top'),   126 / H * 100, 'keys top');
-  near(pct('.keys', 'width'),  78 / W * 100, 'keys width');
+  near(pct('.bezel', 'height'), 78 / H * 100, 'panel height');
+  near(pct('.keys', 'left'),    7 / W * 100, 'keys left');
+  near(pct('.keys', 'top'),   121 / H * 100, 'keys top');
+  near(pct('.keys', 'width'),  82 / W * 100, 'keys width');
 
   /* The key row has to stay on the moulding. The shell's base is an ellipse
      with rx 42 and ry 24 centred at (54,136), and the row used to run to x92 at
      y152 where the curve had already pulled in to x85 — the outer keys hung off
      the case entirely. */
-  const keyRight = 8 + 4*16 + 14, keyFoot = 126 + 22 + 1;
-  const half = 42 * Math.sqrt(1 - Math.pow((keyFoot - 136) / 24, 2));
-  assert.ok(keyRight <= 54 + half,
-    'at y' + keyFoot + ' the shell reaches x' + (54 + half).toFixed(1)
+  const keyRight = 7 + 4*17 + 14, keyFoot = 121 + 4 + 16 + 1;
+  const rx = 96*0.44, ry = (153-4)*0.15, cy = 153 - ry, cx = 96 - rx;
+  const half = rx * Math.sqrt(1 - Math.pow((keyFoot - cy) / ry, 2));
+  assert.ok(keyRight <= cx + half,
+    'at y' + keyFoot + ' the shell reaches x' + (cx + half).toFixed(1)
     + ' but the keys run to x' + keyRight);
-  assert.ok(8 >= 96 - (54 + half), 'and the left of the row is inside it too');
+  assert.ok(7 >= 96 - (cx + half), 'and the left of the row is inside it too');
   // the recess is a fraction of the panel, which is 80 cells square
   near(pct('.stage', 'left'),    6 / 80 * 100, 'recess left');
-  near(pct('.stage', 'top'),    22 / 80 * 100, 'recess top');
+  near(pct('.stage', 'top'),    21 / 78 * 100, 'recess top');
   near(pct('.stage', 'width'),  68 / 80 * 100, 'recess width');
-  near(pct('.stage', 'height'), 52 / 80 * 100, 'recess height');
+  near(pct('.stage', 'height'), 52 / 78 * 100, 'recess height');
 
   /* The canvas must fit the recess at 1:1 on the smallest case anyone can be
      shown, or the glass would have to take a fractional scale — the one thing

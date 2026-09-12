@@ -140,9 +140,9 @@ const pixZoom = p => Math.max(2, Math.min(22, Math.floor(Math.min(760 / p.w, 820
 /* The case is the one sprite whose size is a contract. The game's boxes are
    fractions of a 96x160 grid, and the recess, the key plates and the head are
    at cells the layout relies on, so it cannot be resized from here. */
-const CASE_ID = 'case', CASE_W = 96, CASE_H = 160;
-const CASE_CELLS = { recess:[14,63,68,52], screenBox:[8,41,80,80], keys:[8,126,14,22], keyStep:16,
-                     head:[5,14,86,19], glass:[20,68,56,42] };
+const CASE_ID = 'case', CASE_W = 96, CASE_H = 155;
+const CASE_CELLS = { recess:[14,60,68,52], screenBox:[8,39,80,78], keys:[7,125,14,16], keyStep:17,
+                     head:[5,14,86,19], glass:[20,65,56,42] };
 
 function pixBuild(){
   const p = PIX[pixId];
@@ -276,12 +276,14 @@ function caseState(text, bad){
    and anything else arrives distorted. The pixel size is only about not being
    scaled up on the largest screen the case can appear on. */
 function caseWarning(){
+  const cells = c => c[0] + '–' + (c[0]+c[2]) + ' across, ' + c[1] + '–' + (c[1]+c[3]) + ' down';
   $('caseWarn').innerHTML =
     '<b>' + CASE_IMPORT[0] + ' x ' + CASE_IMPORT[1] + '</b>, or anything else in the same '
-  + '<b>3:5</b> shape — it is stretched to the case, so a different ratio arrives squashed. '
-  + 'PNG with the outside transparent; the case is not a rectangle. JPEG will chew the hard '
-  + 'edges. Leave the screen (cells 14–82 across, 65–117 down), the five key plates '
-  + '(y130–152) and the head strip clear: the game draws those on top.';
+  + '<b>' + CASE_W + ':' + CASE_H + '</b> shape — it is stretched to the case, so a different '
+  + 'ratio arrives squashed. PNG with the outside transparent; the case is not a rectangle. '
+  + 'JPEG will chew the hard edges. Leave the glass (cells ' + cells(CASE_CELLS.recess) + '), '
+  + 'the five keys (' + cells(CASE_CELLS.keys) + ', in steps of ' + CASE_CELLS.keyStep + ') and '
+  + 'the head strip (' + cells(CASE_CELLS.head) + ') clear: the game draws those on top.';
 }
 
 function caseImport(file){

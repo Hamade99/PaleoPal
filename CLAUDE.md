@@ -88,18 +88,21 @@ rather than writing it again.
   highlight; nothing decorative is evenly spaced or mirrored. Stacking effects
   and spacing things perfectly is what made the first case look rendered
   rather than moulded.
-- **The case is a 96x160 sprite, and the boxes on it are fractions.** `PIX.case`
+- **The case is a 96x155 sprite, and the boxes on it are fractions.** 96:155 is
+  what the CSS case measured on a phone before it was a sprite (388x626), and
+  the whole point of the grid is to hold that look, not to replace it. `PIX.case`
   is the moulding, the crown ridge, the bezel, the screw heads and the shadow
   each key casts — not the keys, which are moulded in CSS with a highlight along
   the top and a shade along the bottom, because drawn flat into the art they
   read as green rectangles laid on the case rather than as something standing
   proud of it. It is edited in the Pixels tab like any other sprite, or replaced by
   an imported picture. Everything live sits on top at cells the stylesheet
-  writes as percentages: recess `14,63` `68x52`, keys `8,126` `14x22` in steps
-  of 16, panel `8,41` `80x80`, head `5,14`. The key row is held well inboard
-  because the shell's base curve pulls in to x85 by y152, and a row running to
-  x92 had its outer keys hanging off the moulding. Those numbers are in three
-  places —
+  writes as percentages: glass recess `14,60` `68x52`, keys `7,125` `14x16` in
+  steps of 17, panel `8,39` `80x78`, head `5,14` `86x19`. The key row is centred
+  and held inboard because the shell's base curve has pulled in to x90 by the
+  row's foot, and a wider row had its outer keys hanging off the moulding — the
+  test checks the row against that ellipse rather than trusting the numbers.
+  Those numbers are in three places —
   the art, `style.css` and `CASE_CELLS` in `tools/edit-ui.js` — and a Node test
   checks the first two against each other, because nothing at runtime would
   notice them drifting: the screen would just sit off the recess, which reads

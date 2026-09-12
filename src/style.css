@@ -98,7 +98,7 @@ body{
    now. What is left in the DOM is only what has to be live. */
 .shell{
   position:relative;
-  width:min(calc(var(--px)*96), 100%);aspect-ratio:96 / 160;
+  width:min(calc(var(--px)*96), 100%);aspect-ratio:96 / 155;
   margin:0 auto;
   background-image:var(--case-art);
   background-size:100% 100%;background-repeat:no-repeat;
@@ -114,9 +114,9 @@ body{
    Cells, for reading against the artwork: head 5,14 86 wide; bezel 8,43 80x80;
    keys 5,130 87 wide. */
 .shell > *{position:absolute}
-.shellhead{left:5.2083%;  top:8.75%;    width:89.5833%}
-.bezel    {left:8.3333%;  top:25.625%;  width:83.3333%; height:50%}
-.keys     {left:8.3333%;  top:78.75%;   width:81.25%}
+.shellhead{left:5.2083%;  top:9.0323%;  width:89.5833%}
+.bezel    {left:8.3333%;  top:25.1613%; width:83.3333%; height:50.3226%}
+.keys     {left:7.2917%;  top:78.0645%; width:85.4167%}
 .screw{display:none}                  /* painted into the art now */
 
 /* ---------- faceplate ---------- */
@@ -182,7 +182,7 @@ body{
 /* The glass sits on the recess the artwork draws, at grid cells 6..74 across and
    22..74 down of the dark panel — which is 14..82 and 65..117 of the case. A
    hand-drawn faceplate can rely on those numbers. */
-.stage{position:absolute;left:7.5%;top:27.5%;width:85%;height:65%}
+.stage{position:absolute;left:7.5%;top:26.9231%;width:85%;height:66.6667%}
 .moodrow{position:absolute;left:3.75%;right:3.75%;bottom:2.5%}
 
 /* ---------- identity ---------- */
@@ -281,11 +281,12 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
    one shade along the bottom and a hard drop onto the shell. Drawn flat into
    the art instead they read as green rectangles laid on the case rather than as
    something standing proud of it. */
-.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*2)}
+.keys{padding-top:calc(var(--px)*4)}
+.actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*3)}
 .act{
   background:var(--key);
   border:2px solid var(--key-edge);color:#dff0e4;
-  border-radius:calc(var(--px)*3);height:calc(var(--px)*22);
+  border-radius:calc(var(--px)*3);height:calc(var(--px)*16);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:calc(var(--px)*1);
   font-family:inherit;font-size:calc(var(--px)*3);letter-spacing:.4px;cursor:pointer;

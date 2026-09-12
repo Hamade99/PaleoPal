@@ -112,7 +112,7 @@ const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
    the game canvas must not be scaled fractionally at all — so the canvas takes
    the largest whole or half multiple of 224 that fits inside the recess drawn
    for it and is centred there, the way an LCD sits in a moulded opening. */
-const CASE_W = 96, CASE_H = 160;          // the grid the artwork is drawn on
+const CASE_W = 96, CASE_H = 155;          // the grid the artwork is drawn on
 const RECESS_W = 68, RECESS_H = 52;       // where the canvas floats, in cells
 /* The floor is not a matter of taste: below it the recess is smaller than the
    224x168 canvas, and the canvas would either be clipped by the moulding or
