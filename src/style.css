@@ -146,21 +146,34 @@ body{
   left:calc(50% + var(--x));width:var(--w);height:var(--h);
   margin-left:calc(var(--w) / -2);
   transform-origin:50% 100%;
-  background:var(--scute);
-  border:2px solid var(--shell-edge);border-bottom:0;
-  border-radius:62% 62% 0 0 / 90% 90% 0 0;
-  box-shadow:inset 0 2px 0 var(--shell-hi)}
-/* In cells, not in pixels. These were literal px, which held the ridge at one
-   absolute size while the case grew — on a bigger case it read as a smaller
-   ridge on a larger animal. Same numbers, divided by the four --px was when
-   they were written. */
-.scutes i:nth-child(1){--x:calc(var(--px)*-26); --w:calc(var(--px)*3); --h:calc(var(--px)*2)}
-.scutes i:nth-child(2){--x:calc(var(--px)*-19); --w:calc(var(--px)*5); --h:calc(var(--px)*4)}
-.scutes i:nth-child(3){--x:calc(var(--px)*-11); --w:calc(var(--px)*4); --h:calc(var(--px)*4)}
-.scutes i:nth-child(4){--x:calc(var(--px)*-4);  --w:calc(var(--px)*6); --h:calc(var(--px)*5)}
-.scutes i:nth-child(5){--x:calc(var(--px)*3);   --w:calc(var(--px)*5); --h:calc(var(--px)*5)}
-.scutes i:nth-child(6){--x:calc(var(--px)*12);  --w:calc(var(--px)*5); --h:calc(var(--px)*3)}
-.scutes i:nth-child(7){--x:calc(var(--px)*22);  --w:calc(var(--px)*4); --h:calc(var(--px)*2)}
+  /* A spine, not a row of bumps. Two clipped triangles, one inside the other:
+     the outer is the hard edge every surface on this case has and the inner is
+     the plate, split down the middle so one facet takes the light. Domes read as
+     thumbs standing on the shell; a point reads as an animal. */
+  background:var(--shell-edge);
+  clip-path:polygon(50% 0, 100% 100%, 0 100%);
+}
+.scutes i::before{
+  content:"";position:absolute;left:2px;right:2px;top:3px;bottom:0;
+  clip-path:polygon(50% 0, 100% 100%, 0 100%);
+  background:linear-gradient(100deg,var(--shell-hi) 0 38%,var(--scute) 38%);
+}
+/* Mirrored, and a ridge rather than a scatter: tallest over the crown, tapering
+   to either side. The house rule elsewhere is that nothing decorative is
+   mirrored — this one is, on the owner's call, because a dorsal ridge down the
+   centre line of an animal is the one thing on the case that has a centre line
+   of its own. */
+/* As tall as they can be — the moulding starts at cell 4 and a plate is rooted a
+   cell and a quarter inside it, so five cells is the tallest the middle one can
+   stand without leaving the case — and no wider than they are tall, which is
+   what makes them spines rather than shark fins. */
+.scutes i:nth-child(1){--x:calc(var(--px)*-25); --w:calc(var(--px)*3); --h:calc(var(--px)*2)}
+.scutes i:nth-child(2){--x:calc(var(--px)*-17); --w:calc(var(--px)*4); --h:calc(var(--px)*3)}
+.scutes i:nth-child(3){--x:calc(var(--px)*-9);  --w:calc(var(--px)*4); --h:calc(var(--px)*4)}
+.scutes i:nth-child(4){--x:calc(var(--px)*0);   --w:calc(var(--px)*5); --h:calc(var(--px)*5)}
+.scutes i:nth-child(5){--x:calc(var(--px)*9);   --w:calc(var(--px)*4); --h:calc(var(--px)*4)}
+.scutes i:nth-child(6){--x:calc(var(--px)*17);  --w:calc(var(--px)*4); --h:calc(var(--px)*3)}
+.scutes i:nth-child(7){--x:calc(var(--px)*25);  --w:calc(var(--px)*3); --h:calc(var(--px)*2)}
 
 /* Boxes are placed in grid cells, written as fractions of the case rather than
    as multiples of --px. Both say the same thing when --px is right; only the
@@ -323,11 +336,12 @@ body{
   box-shadow:0 0 0 2px #05090a,0 0 0 3px rgba(140,183,101,.14)}
 canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   touch-action:none;cursor:pointer}
-/* The power lamp, in the corner of the moulded opening rather than on the
-   glass: the recess is wider than the canvas by six cells a side, so there is
-   somewhere for it to sit that is part of the case and not part of the game. */
-.lamp{position:absolute;right:calc(var(--px)*1);bottom:calc(var(--px)*1);
-  width:calc(var(--px)*1.5);height:calc(var(--px)*1.5);border-radius:50%;background:var(--moss)}
+/* The power lamp, top right of the panel above the meters — a status light on
+   the case, not a mark on the picture. In the bottom corner of the glass it read
+   as something happening in the game. */
+.lamp{position:absolute;right:calc(var(--px)*1.5);top:calc(var(--px)*1.5);
+  width:calc(var(--px)*1.75);height:calc(var(--px)*1.75);border-radius:50%;
+  background:var(--moss);z-index:1}
 .lamp.rest{background:var(--sky)}
 .lamp.bad{background:var(--rust)}
 
@@ -379,7 +393,7 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
    one shade along the bottom and a hard drop onto the shell. Drawn flat into
    the art instead they read as green rectangles laid on the case rather than as
    something standing proud of it. */
-.keys{padding-top:calc(var(--px)*4)}
+.keys{padding-top:calc(var(--px)*2)}
 .actions{display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--px)*3)}
 .act{
   background:var(--key);

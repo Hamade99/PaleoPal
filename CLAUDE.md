@@ -88,6 +88,13 @@ rather than writing it again.
   highlight; nothing decorative is evenly spaced or mirrored. Stacking effects
   and spacing things perfectly is what made the first case look rendered
   rather than moulded.
+  The crown ridge is the one exception, on the owner's call: it is mirrored and
+  evenly spaced, tallest over the centre and tapering to either side, because a
+  dorsal ridge down the spine of an animal is the one thing on this case that
+  has a centre line of its own. The plates are pointed rather than domed for the
+  same reason — a dome reads as a thumb standing on the shell. Five cells is the
+  tallest the middle one can be: the moulding starts at cell 4 and a plate is
+  rooted a cell and a quarter inside it, so anything taller leaves the case.
 - **The case has two faces and one box.** The box is a fixed 96x155 grid, one
   cell per `--px`, and everything live is placed on it as a *fraction* of the
   case — never as a multiple of `--px`. Both say the same thing when `--px` is
