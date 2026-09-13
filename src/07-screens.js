@@ -187,6 +187,10 @@ function gridCell(g, box, opts){
     g.fillRect(x + 1, y + h - 10, w - 2, 9);
     text(g, opts.tag, x + w/2, y + h - 9, opts.tagCol || SC.dim, 'centre');
   }
+  /* A badge is a small sprite in the top right corner, for a yes-or-no about
+     the item that a word would spend the whole strip on. It sits two pixels in
+     from the corner, clear of the selection frame. */
+  if (opts.badge && PIX[opts.badge]) pixDraw(g, opts.badge, x + w - PIX[opts.badge].w - 2, y + 2, 1);
   if (opts.on){
     g.fillStyle = SC.moss;
     g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
@@ -236,9 +240,12 @@ SCREENS.feed = {
       const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
       gridCell(g, L.grid.box(i), {
         on: i === screenState.pick,
-        art: (gg, cx, cy) => drawItem(gg, f.id, Math.round(cx) - 4, Math.round(cy) - 4, 2),
-        tag: loved ? 'love' : hated ? 'no' : '',
-        tagCol: loved ? SC.moss : SC.rust
+        /* No tag strip, so the picture has the whole cell: centred on it, and
+           up to three times size, which brings a cycad painted in 4 x 5 cells
+           up to the size of the rest instead of leaving it a speck in a
+           square. */
+        art: (gg, cx, cy) => drawItemFit(gg, f.id, cx, cy + 2, 24, 24, 3),
+        badge: loved ? 'badge.love' : hated ? 'badge.no' : ''
       });
     });
     const f = FOODS[screenState.pick];

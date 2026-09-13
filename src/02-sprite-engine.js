@@ -189,11 +189,26 @@ function samplePath(pts, t){
   }
   return pts[pts.length-1];
 }
-/* A row of claws along a hand. These were ovals too, which at this size is a
-   row of beads on the end of an arm; what a theropod has there is two recurved
-   claws, which is also what the dossier claims it has. */
-function toes(g, x, y, n, dir, size){
-  for (let i=0;i<n;i++) claw(g, x + dir*i*size*1.5, y, dir, size*1.6, size*.66);
+/* A hand claw: hooked, and hanging. The rex's hand used to get two copies of
+   the foot claw — a flat wedge pointing straight forward — spaced so closely
+   they merged into one nail sticking out of the front of the arm, which read as
+   a spur rather than as fingers.
+
+   This one hangs straight down out of the hand and curls back at the tip, the
+   way a recurved claw flexes toward the palm. The centreline is a parabola,
+   `x = len*(.55t² - .25t)`: it holds the root's column for most of its length
+   and the tip ends nearly a third of the length behind it, which at three
+   pixels long is the one-pixel step that reads as a hook. A gentler curve
+   rounds away to a straight stick. The width tapers to a point; `w` is the
+   root width. Keep it to a few pixels: anything longer is a talon. */
+function handClaw(g, x, y, len, w){
+  const N = 4, L = [], R = [];
+  for (let i=0;i<=N;i++){
+    const t = i/N, cx = x + len*(.55*t*t - .25*t), cy = y + len*t;
+    const half = w/2 * (1 - t);
+    L.push([cx - half, cy]); R.push([cx + half, cy]);
+  }
+  poly(g, L.concat(R.reverse()));
 }
 function eyeAt(M, x, y, r, state){
   /* A shut eye is a line, not a shape. The lid used to be drawn as wide as the

@@ -129,13 +129,153 @@ function pickList(host, ids, current, onPick, labelOf){
 }
 
 /* ---- tab: pixels --------------------------------------------------------- */
-let pixId = Object.keys(PIX)[0], pixPen = 0, painting = 0;
+/* One or two panes, each its own sprite and its own pen. Two because a sprite
+   is often only half of something: `top.compy.a` is one stride of a run, and
+   whether it runs is only visible next to `.b`. The list picks for the active
+   pane, which is the one last clicked. */
+const pixPanes = [{ id: Object.keys(PIX)[0], pen: 0 }];
+let pixActive = 0, painting = 0, paintPane = -1;
 /* Zoom is per sprite, not a constant. A twelve-pixel icon wants every cell the
    size of a thumbnail; the case is 96x160 and at the same zoom would be a grid
    two thousand pixels across. Both axes are checked, because the case is far
    taller than it is wide and only fitting the width would still run it off the
-   bottom of the window. */
-const pixZoom = p => Math.max(2, Math.min(22, Math.floor(Math.min(760 / p.w, 820 / p.h))));
+   bottom of the window.
+
+   With two panes open both share the smaller zoom. A cell has to be the same
+   size in both, or comparing two sprites side by side compares their zooms
+   rather than their sizes.
+
+   The width is measured: the pane area is the flexible part of the row beside
+   the sprite list, so its width is what is left for grids, split between the
+   panes. A fixed budget put two panes of 400 next to a list in a column that
+   had 650, and both wrapped under the list, off the bottom of the first
+   screen. */
+const pixZoomOne = (p, wide) => Math.max(2, Math.min(22, Math.floor(Math.min(wide / p.w, 820 / p.h))));
+const pixZoom = () => {
+  if (pixView.zoom) return pixView.zoom;               // chosen by hand: the toolbar's − and +
+  const room = $('pixPanes').clientWidth || 760;
+  const n = pixPanes.length;
+  const wide = Math.max(80, (Math.min(room, 760 * n) - 18*(n - 1)) / n - 24);   // 24: card padding and border
+  return Math.min(...pixPanes.map(pn => pixZoomOne(PIX[pn.id], wide)));
+};
+
+/* ---- undo ----------------------------------------------------------------
+   A snapshot of a whole sprite is small (the case, the biggest, is 155 short
+   strings), so history is snapshots rather than a diff per cell. One entry per
+   gesture, not per cell: a stroke is begun on mouse down and committed on
+   mouse up, a slider or a colour picker on its first move and on `change`. An
+   entry that changed nothing is dropped, so clicking a cell that was already
+   that colour costs no undo step.
+
+   History is one stack across every sprite, in the order things were done.
+   Undoing a sprite that is not open opens it in the active pane: an undo you
+   cannot see happen is an undo you will press twice. */
+const PIX_UNDO_MAX = 300;
+const pixUndo = [], pixRedo = [];
+let pixPending = null;
+const pixSnap = id => { const p = PIX[id];
+  return { id, w: p.w, h: p.h, ox: p.ox||0, oy: p.oy||0, pal: p.pal.slice(), rows: p.rows.slice() }; };
+const pixSame = (a, b) => a.w === b.w && a.h === b.h && a.ox === b.ox && a.oy === b.oy &&
+  a.pal.join() === b.pal.join() && a.rows.join('\n') === b.rows.join('\n');
+/* `keepFloat` is for moving a selection. Anything else that is about to change
+   the sprite settles a floating selection first: the float restamps over the
+   base it was lifted from, so a flip or a fill made under it would be undone by
+   the next nudge. */
+function pixBegin(id, keepFloat){
+  if (!keepFloat && pixSel && pixSel.float) pixSel.float = null;
+  if (pixPending && pixPending.id !== id) pixCommit();
+  if (!pixPending) pixPending = pixSnap(id);
+}
+function pixCommit(){
+  const before = pixPending; pixPending = null;
+  if (!before || !PIX[before.id] || pixSame(before, pixSnap(before.id))) return;
+  pixUndo.push(before);
+  if (pixUndo.length > PIX_UNDO_MAX) pixUndo.shift();
+  pixRedo.length = 0;
+  pixHistoryButtons();
+}
+function pixRestore(from, to){
+  pixCommit();
+  const s = from.pop();
+  if (!s || !PIX[s.id]) return;
+  to.push(pixSnap(s.id));
+  const target = PIX[s.id];
+  Object.assign(target, { w: s.w, h: s.h, pal: s.pal.slice(), rows: s.rows.slice() });
+  // an origin of 0,0 is written as no origin at all, so it is removed, not zeroed
+  if (s.ox || s.oy){ target.ox = s.ox; target.oy = s.oy; } else { delete target.ox; delete target.oy; }
+  if (!pixPanes.some(pn => pn.id === s.id)) pixPanes[pixActive].id = s.id;
+  pixPanes.forEach(pn => { if (pn.pen >= PIX[pn.id].pal.length) pn.pen = 0; });
+  note((from === pixUndo ? 'Undid' : 'Redid') + ' a change to ' + s.id + '.');
+  rebuild();
+}
+/* ---- tools and view --------------------------------------------------------
+   One tool at a time, shared by both panes; the right button always erases,
+   whatever the tool, because reaching for the eraser in the middle of a stroke
+   is the single most common thing anyone does while drawing. Line and box show
+   where they will land while the button is held and write on release. */
+const PIX_TOOLS = [
+  { id:'select', label:'Select',  key:'s', tip:'Drag a box to select. Drag inside it to move it, Alt-drag to move a copy. '
+                                            + 'Arrows nudge (Shift: 4 cells), Delete clears, Esc deselects, Ctrl+A selects all. '
+                                            + 'Ctrl+C / X / V copy, cut and paste — into the other pane too.' },
+  { id:'pen',   label:'Pencil',  key:'b', tip:'Paint cells. Drags join up, however fast.' },
+  { id:'erase',  label:'Eraser',  key:'e', tip:'Clear cells. The right button erases with any tool.' },
+  { id:'fill',   label:'Fill',    key:'g', tip:'Flood a connected area of one colour.' },
+  { id:'line',   label:'Line',    key:'l', tip:'Drag from end to end.' },
+  { id:'rect',   label:'Box',     key:'r', tip:'Drag corner to corner. Shift for a filled box.' },
+  { id:'pick',   label:'Pick',    key:'i', tip:'Take the colour under the pointer. Alt-click does it with any tool.' },
+  { id:'origin', label:'Origin',  key:'o', tip:'Set the cell the game places this sprite by.' }
+];
+const pixView = { tool:'pen', grid:true, onion:false, zoom:0 };   // zoom 0: fit to the room
+let pixDrag = null;          // { pane, x0, y0, x1, y1, erase, fillBox } while a line or box is held
+let pixHover = null;         // { pane, x, y } under the pointer
+let pixLast = null;          // the last cell a pencil stroke touched, to join the next one to
+
+const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) &&
+  document.activeElement.type !== 'range' && document.activeElement.type !== 'color';
+window.addEventListener('keydown', e => {
+  if (tab !== 'pix' || painting || typing()) return;       // a number box keeps its own keys
+  const k = e.key.toLowerCase();
+  if (e.ctrlKey || e.metaKey){
+    if (k === 'z' && !e.shiftKey){ e.preventDefault(); pixSel = null; pixRestore(pixUndo, pixRedo); }
+    else if (k === 'y' || (k === 'z' && e.shiftKey)){ e.preventDefault(); pixSel = null; pixRestore(pixRedo, pixUndo); }
+    else if (k === 'a'){
+      e.preventDefault();
+      const p = PIX[pixPanes[pixActive].id];
+      pixSel = { pane: pixActive, x: 0, y: 0, w: p.w, h: p.h };
+      pixSetTool('select'); pixPaint();
+    }
+    else if (k === 'c'){ if (pixCopy()) e.preventDefault(); }
+    else if (k === 'x'){ if (pixCopy()){ e.preventDefault(); pixSelClear(); } }
+    else if (k === 'v'){ if (pixClip){ e.preventDefault(); pixPaste(); } }
+    return;
+  }
+  if (e.altKey) return;
+  if (pixSel){
+    const step = e.shiftKey ? 4 : 1;
+    const arrow = { arrowleft:[-step,0], arrowright:[step,0], arrowup:[0,-step], arrowdown:[0,step] }[k];
+    if (arrow){ e.preventDefault(); pixNudge(...arrow); return; }
+    if (k === 'delete' || k === 'backspace'){ e.preventDefault(); pixSelClear(); return; }
+    if (k === 'escape'){ pixSel = null; pixPaint(); return; }
+  }
+  const t = PIX_TOOLS.find(x => x.key === k);
+  if (t){ pixSetTool(t.id); e.preventDefault(); return; }
+  // 1-9 and 0 choose a palette colour in the active pane; [ and ] step through it
+  const pn = pixPanes[pixActive], n = PIX[pn.id].pal.length;
+  if (/^[0-9]$/.test(k)){ const c = (+k + 9) % 10; if (c < n) pixSetPen(pixActive, c); e.preventDefault(); }
+  else if (k === '[' || k === ']'){ pixSetPen(pixActive, (pn.pen + (k === ']' ? 1 : n - 1)) % n); e.preventDefault(); }
+  else if (k === '#'){ pixView.grid = !pixView.grid; pixToolbar(); pixPaint(); }
+  else if (k === '=' || k === '+' || k === '-'){ pixZoomStep(k === '-' ? -1 : 1); e.preventDefault(); }
+});
+function pixSetTool(id){
+  pixView.tool = id;
+  // a selection belongs to the select tool; kept under a pencil it would look like a mask, and is not one
+  if (id !== 'select' && pixSel){ pixSel = null; pixPaint(); }
+  pixToolbar();
+}
+function pixZoomStep(d){
+  pixView.zoom = Math.max(2, Math.min(40, (pixView.zoom || pixZoom()) + d * 2));
+  pixToolbar(); pixPaint();
+}
 
 /* The case is the one sprite whose size is a contract. The game's boxes are
    fractions of a 96x160 grid, and the recess, the key plates and the head are
@@ -144,106 +284,703 @@ const CASE_ID = 'case', CASE_W = 96, CASE_H = 155;
 const CASE_CELLS = { recess:[3,45,90,67], screenBox:[3,32,90,86], keys:[7,125,14,16], keyStep:17,
                      head:[5,10,86,19], glass:[5,46,86,65] };
 
-function pixBuild(){
-  const p = PIX[pixId];
-  pickList($('pixList'), Object.keys(PIX), () => pixId, id => { pixId = id; pixPen = 0; pixBuild(); });
+/* The sprite a second pane opens on. Frames come in pairs named .a and .b, so
+   the partner of one is the other; anything else opens on itself, and the list
+   is right there to change it. */
+function pixPartner(id){
+  const m = /^(.*\.)([ab])$/.exec(id), other = m && m[1] + (m[2] === 'a' ? 'b' : 'a');
+  return other && PIX[other] ? other : id;
+}
 
-  // the palette, as chips: the selected one is what the left button paints
-  const pal = $('pixPal'); pal.innerHTML = '';
-  p.pal.forEach((c, i) => {
-    const chip = mk('div', 'chip' + (i === pixPen ? ' on' : ''));
-    chip.style.background = c;
-    chip.title = c;
-    chip.onclick = () => {                       // in place: no rebuild needed
-      pixPen = i;
-      [...pal.children].forEach((el2, k) => el2.classList.toggle('on', k === i));
-    };
-    pal.appendChild(chip);
+/* Which pane is active is shown in place, not by rebuilding: the click that
+   makes a pane active is usually the first cell of a stroke, and a rebuild
+   would take the canvas out from under it. */
+function pixMarks(){
+  const two = pixPanes.length > 1;
+  [...$('pixPanes').children].forEach((c, k) => c.classList.toggle('on', two && k === pixActive));
+  [...$('pixList').children].forEach(b => {
+    b.classList.toggle('on', b.textContent === pixPanes[pixActive].id);
+    b.classList.toggle('two', two && pixPanes.some((pn, k) => k !== pixActive && pn.id === b.textContent));
   });
-  const add = mk('div', 'chip', '+');
-  add.style.cssText += ';display:flex;align-items:center;justify-content:center;color:#8fa39a';
-  add.onclick = () => { p.pal.push('#ffffff'); pixPen = p.pal.length - 1; rebuild(); };
-  pal.appendChild(add);
+}
 
-  // palette entries and the sprite's own size. A colour picker repaints; it
-  // also has to recolour its own chip, which the rebuild used to do for it.
-  const sw = $('pixSwatches'); sw.innerHTML = '';
-  p.pal.forEach((c, i) => colourRow(sw, PIX_CH[i], () => p.pal[i],
-    v => { p.pal[i] = v; pal.children[i].style.background = v; }));
-  const size = mk('div'); size.style.marginTop = '8px';
-  if (pixId === CASE_ID){
-    size.appendChild(mk('div', 'lblnote', CASE_W + ' x ' + CASE_H + ', fixed.'));
-    size.lastChild.style.cssText = 'color:#8fa39a;font-size:11px';
-  } else {
-    slider(size, 'width', () => p.w, v => pixResize(p, v, p.h), 4, 32, 1);
-    slider(size, 'height', () => p.h, v => pixResize(p, p.w, v), 4, 32, 1);
-  }
-  sw.appendChild(size);
+function pixToolbar(){
+  const host = $('pixTools'); host.innerHTML = '';
+  const group = label => { const g = mk('div', 'tgroup'); if (label) g.appendChild(mk('span', null, label)); host.appendChild(g); return g; };
+  const button = (g, text, on, tip, fn, key) => {
+    const b = mk('button', 'tbtn' + (on ? ' on' : ''), text);
+    if (key){ const k = mk('kbd', null, key.toUpperCase()); b.appendChild(k); }
+    b.title = tip || ''; b.onclick = fn; g.appendChild(b); return b;
+  };
+  const tools = group();
+  PIX_TOOLS.forEach(t => button(tools, t.label, pixView.tool === t.id, t.tip, () => pixSetTool(t.id), t.key));
 
+  const view = group('view');
+  button(view, 'Grid', pixView.grid, 'Cell lines on the grid (#)', () => { pixView.grid = !pixView.grid; pixToolbar(); pixPaint(); });
+  const onion = button(view, 'Onion', pixView.onion && pixPanes.length > 1,
+    'Show the other pane’s sprite faintly under this one, lined up on their origins',
+    () => { pixView.onion = !pixView.onion; pixToolbar(); pixPaint(); });
+  onion.disabled = pixPanes.length < 2;
+
+  const zoom = group('zoom');
+  button(zoom, '−', false, 'Zoom out (−)', () => pixZoomStep(-1));
+  const z = mk('span', null, pixZoom() + 'x'); z.style.cssText = 'min-width:34px;text-align:center;color:var(--bone);margin:0';
+  zoom.appendChild(z);
+  button(zoom, '+', false, 'Zoom in (+)', () => pixZoomStep(1));
+  button(zoom, 'Fit', !pixView.zoom, 'Size the grid to the room', () => { pixView.zoom = 0; pixToolbar(); pixPaint(); });
+
+  const hist = group();
+  const u = button(hist, 'Undo', false, 'Ctrl+Z', () => pixRestore(pixUndo, pixRedo));
+  const r = button(hist, 'Redo', false, 'Ctrl+Y', () => pixRestore(pixRedo, pixUndo));
+  u.id = 'pixUndoBtn'; r.id = 'pixRedoBtn';
+  pixHistoryButtons();
+}
+function pixHistoryButtons(){
+  if ($('pixUndoBtn')) $('pixUndoBtn').disabled = !pixUndo.length;
+  if ($('pixRedoBtn')) $('pixRedoBtn').disabled = !pixRedo.length;
+}
+function pixSetPen(i, c){
+  pixPanes[i].pen = c;
+  pixBuild();
+}
+
+function pixBuild(){
+  pixCommit();
+  // a selection that no longer fits its sprite, or its pane, goes
+  if (pixSel && (!pixPanes[pixSel.pane] || pixSel.x >= PIX[pixPanes[pixSel.pane].id].w
+                 || pixSel.y >= PIX[pixPanes[pixSel.pane].id].h)) pixSel = null;
+  pixToolbar();
+  pickList($('pixList'), Object.keys(PIX), () => pixPanes[pixActive].id,
+           id => { pixCommit(); if (pixSel && pixSel.pane === pixActive) pixSel = null;
+                   Object.assign(pixPanes[pixActive], { id, pen: 0 }); pixBuild(); });
+  const host = $('pixPanes'); host.innerHTML = '';
+  pixPanes.forEach((pn, i) => host.appendChild(pixPaneEl(pn, i)));
+  pixMarks();
   pixPaint();
 }
 
-function pixPaint(){
-  const p = PIX[pixId];
-  const PIX_Z = pixZoom(p);
-  const cv = $('pixGrid');
-  if (cv.width !== p.w * PIX_Z || cv.height !== p.h * PIX_Z){
-    cv.width = p.w * PIX_Z; cv.height = p.h * PIX_Z;
+function pixPaneEl(pn, i){
+  const p = PIX[pn.id];
+  const card = mk('div', 'card pane');
+  card.addEventListener('pointerdown', () => { if (pixActive !== i){ pixActive = i; pixMarks(); } }, true);
+
+  const head = mk('div', 'panehead');
+  head.appendChild(mk('b', null, pn.id));
+  head.appendChild(mk('span', null, p.w + ' x ' + p.h + (p.ox || p.oy ? ', origin ' + (p.ox||0) + ',' + (p.oy||0) : '')));
+  /* Food, hearts and the mess are drawn into places laid out for a set size.
+     Bigger grids are fine, and are shrunk to fit — say so, so a finer grid
+     reads as more detail rather than as a bigger sprite. */
+  const box = pixBoxOf(pn.id);
+  if (box && (p.w > box.w || p.h > box.h)){
+    const fits = mk('span', null, 'shown in ' + box.w + ' x ' + box.h);
+    fits.style.color = 'var(--gold)';
+    fits.title = 'The game fits this sprite into the ' + box.w + ' x ' + box.h + ' box its menus and slots were '
+               + 'laid out for, keeping its shape. A bigger grid adds detail, not size.';
+    head.appendChild(fits);
   }
+  const btn = mk('button', 'tab', pixPanes.length > 1 ? 'Close' : 'Open beside');
+  btn.style.padding = '2px 10px';
+  btn.onclick = () => {
+    pixCommit();
+    if (pixPanes.length > 1){ pixPanes.splice(i, 1); pixActive = 0; }
+    else { pixPanes.push({ id: pixPartner(pn.id), pen: 0 }); pixActive = 1; }
+    rebuild();
+  };
+  head.appendChild(btn);
+  card.appendChild(head);
+
+  /* Whole-sprite actions. Each is one undo step. Shifting wraps round rather
+     than pushing pixels off the edge, so nudging a drawing back and forth
+     never loses any of it. */
+  const ops = mk('div', 'ops');
+  const op = (text, tip, fn) => {
+    const b = mk('button', 'tbtn', text); b.title = tip;
+    b.onclick = () => { pixBegin(pn.id); fn(p); pixCommit(); rebuild(); };
+    ops.appendChild(b); return b;
+  };
+  op('Clear', 'Empty every cell. The palette stays.', q => { q.rows = q.rows.map(() => ' '.repeat(q.w)); });
+  op('Flip ↔', 'Mirror left to right', q => { q.rows = pixRows(q).map(r => [...r].reverse().join('')); });
+  op('Flip ↕', 'Mirror top to bottom', q => { q.rows = pixRows(q).reverse(); });
+  op('←', 'Shift one cell left, wrapping round', q => pixShift(q, -1, 0));
+  op('→', 'Shift one cell right, wrapping round', q => pixShift(q, 1, 0));
+  op('↑', 'Shift one cell up, wrapping round', q => pixShift(q, 0, -1));
+  op('↓', 'Shift one cell down, wrapping round', q => pixShift(q, 0, 1));
+  if (pixPanes.length > 1){
+    const other = pixPanes[1 - i].id;
+    op('Copy from ' + other, 'Replace this drawing with the other pane’s, lined up on their origins. '
+       + 'Colours this palette lacks are added to it.', q => pixCopyFrom(q, PIX[other]));
+  }
+  card.appendChild(ops);
+
+  // the palette, as chips, each with how many cells use it
+  const counts = pixCounts(p);
+  const pal = mk('div', 'pal');
+  p.pal.forEach((c, k) => {
+    const chip = mk('div', 'chip' + (k === pn.pen ? ' on' : ''));
+    chip.style.background = c;
+    chip.title = 'colour ' + ((k + 1) % 10 === 0 && k < 10 ? 0 : k + 1) + ' · ' + c + ' · ' + counts[k] + ' cells';
+    chip.appendChild(mk('i', null, counts[k] ? String(counts[k]) : ''));
+    chip.onclick = () => pixSetPen(i, k);
+    pal.appendChild(chip);
+  });
+  const add = mk('div', 'chip', '+');
+  add.title = 'Add a colour: a copy of the selected one, to adjust';
+  add.style.cssText += ';display:flex;align-items:center;justify-content:center;color:#8fa39a';
+  add.onclick = () => {
+    if (p.pal.length >= PIX_CH.length) return note('A sprite holds at most ' + PIX_CH.length + ' colours.', true);
+    pixBegin(pn.id); p.pal.push(p.pal[pn.pen] || '#ffffff'); pn.pen = p.pal.length - 1; pixCommit(); rebuild();
+  };
+  pal.appendChild(add);
+  card.appendChild(pal);
+
+  /* The selected colour, edited in one place: a picker for feel, a hex box for
+     a colour you already know. Dragging the picker is one undo step, begun on
+     its first `input` in the capture phase and committed on `change`. */
+  const ed = mk('div', 'coled');
+  ed.addEventListener('input', ev => { if (ev.target.type === 'color') pixBegin(pn.id); }, true);
+  ed.addEventListener('change', ev => { if (ev.target.type === 'color') pixCommit(); });
+  ed.appendChild(mk('span', null, 'colour ' + (pn.pen + 1)));
+  const pick = mk('input'); pick.type = 'color'; pick.value = p.pal[pn.pen] || '#ffffff';
+  const hex = mk('input'); hex.type = 'text'; hex.value = p.pal[pn.pen] || ''; hex.maxLength = 7; hex.spellcheck = false;
+  pick.oninput = () => { p.pal[pn.pen] = pick.value; hex.value = pick.value; pal.children[pn.pen].style.background = pick.value; changed(); };
+  hex.onchange = () => {
+    const v = hex.value.trim().toLowerCase().replace(/^([0-9a-f]{6})$/, '#$1');
+    if (!/^#[0-9a-f]{6}$/.test(v)){ hex.value = p.pal[pn.pen]; return note('A colour is #rrggbb.', true); }
+    pixBegin(pn.id); p.pal[pn.pen] = v; pixCommit(); rebuild();
+  };
+  ed.appendChild(pick); ed.appendChild(hex);
+  const dup = mk('button', 'tbtn', 'Duplicate'); dup.title = 'Add a copy of this colour and select it';
+  dup.onclick = () => add.onclick();
+  const del = mk('button', 'tbtn', 'Remove');
+  del.title = counts[pn.pen] ? 'Remove this colour. Its ' + counts[pn.pen] + ' cells become empty.' : 'Remove this unused colour';
+  del.disabled = p.pal.length < 2;
+  del.onclick = () => { pixBegin(pn.id); pixRemoveColour(p, pn.pen); pn.pen = Math.max(0, pn.pen - 1); pixCommit(); rebuild(); };
+  const sel = mk('button', 'tbtn', 'Replace in drawing…');
+  sel.title = 'Repaint every cell of this colour with another palette colour, then pick which';
+  sel.onclick = () => {
+    const to = prompt('Repaint colour ' + (pn.pen + 1) + ' as which colour number (1–' + p.pal.length + ')? 0 empties it.');
+    if (to === null) return;
+    const n = +to;
+    if (!Number.isInteger(n) || n < 0 || n > p.pal.length) return note('No colour ' + to + '.', true);
+    pixBegin(pn.id);
+    const from = PIX_CH[pn.pen], ch = n === 0 ? ' ' : PIX_CH[n - 1];
+    p.rows = pixRows(p).map(r => r.split(from).join(ch));
+    pixCommit(); rebuild();
+  };
+  ed.appendChild(dup); ed.appendChild(del); ed.appendChild(sel);
+  card.appendChild(ed);
+
+  const cv = mk('canvas');
+  cv.addEventListener('mousedown', e => pixDown(e, i));
+  cv.addEventListener('mousemove', e => pixMove(e, i));
+  cv.addEventListener('mouseleave', () => { if (pixHover && pixHover.pane === i){ pixHover = null; pixRepaintPane(i); pixReadout(i); } });
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  card.appendChild(cv);
+  card.appendChild(mk('div', 'readout', p.w + ' x ' + p.h));
+
+  /* Size and origin. Sliders are one undo step per drag, the same way the
+     colour picker is. */
+  const sw = mk('div'); sw.style.marginTop = '6px';
+  sw.addEventListener('input', () => pixBegin(pn.id), true);
+  sw.addEventListener('change', () => pixCommit());
+  if (pn.id === CASE_ID){
+    sw.appendChild(mk('div', null, CASE_W + ' x ' + CASE_H + ', fixed.'));
+    sw.lastChild.style.cssText = 'color:#8fa39a;font-size:11px';
+  } else {
+    /* Rows and columns one side at a time. The sliders under them still grow
+       and shrink from the right and the bottom, for big changes. */
+    const edges = mk('div', 'edges');
+    [['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']].forEach(([side, name]) => {
+      const cellEl = mk('div', 'edge');
+      cellEl.appendChild(mk('span', null, name));
+      [[1, '+', 'Add a ' + (side === 'top' || side === 'bottom' ? 'row' : 'column') + ' on the ' + side],
+       [-1, '−', 'Remove the ' + side + ' ' + (side === 'top' || side === 'bottom' ? 'row' : 'column')]].forEach(([d, t, tip]) => {
+        const b = mk('button', 'tbtn', t);
+        b.title = tip + (side === 'top' || side === 'left' ? '. A sprite with an origin keeps its art where the game draws it.' : '');
+        b.onclick = () => { pixBegin(pn.id); pixEdge(p, side, d); pixCommit(); rebuild(); };
+        cellEl.appendChild(b);
+      });
+      edges.appendChild(cellEl);
+    });
+    sw.appendChild(edges);
+    slider(sw, 'width', () => p.w, v => pixResize(p, v, p.h), 1, 48, 1);
+    slider(sw, 'height', () => p.h, v => pixResize(p, p.w, v), 1, 48, 1);
+    slider(sw, 'origin x', () => p.ox || 0, v => pixSetOrigin(p, v, p.oy || 0), 0, 47, 1);
+    slider(sw, 'origin y', () => p.oy || 0, v => pixSetOrigin(p, p.ox || 0, v), 0, 47, 1);
+  }
+  card.appendChild(sw);
+  return card;
+}
+
+/* ---- sprite helpers ------------------------------------------------------ */
+const pixRows = p => Array.from({length:p.h}, (_, y) => (p.rows[y] || '').padEnd(p.w).slice(0, p.w));
+function pixCounts(p){
+  const n = p.pal.map(() => 0);
+  for (const r of p.rows) for (const ch of r){ const k = PIX_CH.indexOf(ch); if (k >= 0 && k < n.length) n[k]++; }
+  return n;
+}
+function pixShift(p, dx, dy){
+  const src = pixRows(p);
+  p.rows = src.map((_, y) => {
+    const row = src[((y - dy) % p.h + p.h) % p.h];
+    return Array.from({length:p.w}, (_, x) => row[((x - dx) % p.w + p.w) % p.w]).join('');
+  });
+}
+function pixSetOrigin(p, x, y){
+  x = Math.max(0, Math.min(p.w - 1, x)); y = Math.max(0, Math.min(p.h - 1, y));
+  if (x || y){ p.ox = x; p.oy = y; } else { delete p.ox; delete p.oy; }
+}
+function pixRemoveColour(p, k){
+  const gone = PIX_CH[k];
+  p.rows = pixRows(p).map(r => [...r].map(ch => {
+    if (ch === gone) return ' ';
+    const j = PIX_CH.indexOf(ch);
+    return j > k ? PIX_CH[j - 1] : ch;
+  }).join(''));
+  p.pal.splice(k, 1);
+}
+/* The other frame, placed by origin: cell (x, y) here is the cell the same
+   distance from the other sprite's origin. Palettes are matched by colour, not
+   by index, since two frames drawn apart rarely number theirs the same. */
+function pixCopyFrom(p, src){
+  const rows = pixRows(src), dx = (src.ox||0) - (p.ox||0), dy = (src.oy||0) - (p.oy||0);
+  const map = {};
+  p.rows = Array.from({length:p.h}, (_, y) => Array.from({length:p.w}, (_, x) => {
+    const ch = (rows[y + dy] || '')[x + dx] || ' ';
+    if (ch === ' ') return ' ';
+    if (!(ch in map)){
+      const col = src.pal[PIX_CH.indexOf(ch)];
+      let k = p.pal.indexOf(col);
+      if (k < 0 && p.pal.length < PIX_CH.length){ p.pal.push(col); k = p.pal.length - 1; }
+      map[ch] = k < 0 ? ' ' : PIX_CH[k];
+    }
+    return map[ch];
+  }).join(''));
+}
+
+/* One pane's grid. Layered bottom to top: the checkerboard, the other frame
+   faint underneath (onion skin), this drawing, cell lines, the origin, the line
+   or box being dragged, and the cell under the pointer. */
+function pixGridPaint(cv, i, Z){
+  const pn = pixPanes[i], p = PIX[pn.id];
+  if (cv.width !== p.w * Z || cv.height !== p.h * Z){ cv.width = p.w * Z; cv.height = p.h * Z; }
   const g = cv.getContext('2d');
+  g.globalAlpha = 1;
   g.fillStyle = '#101a1c'; g.fillRect(0, 0, cv.width, cv.height);
+  g.fillStyle = '#162124';
+  for (let y=0;y<p.h;y++) for (let x=0;x<p.w;x++) if ((x + y) & 1) g.fillRect(x*Z, y*Z, Z, Z);
+
+  if (pixView.onion && pixPanes.length > 1){
+    g.globalAlpha = .28;
+    pixDraw(g, pixPanes[1 - i].id, (p.ox||0)*Z, (p.oy||0)*Z, Z);
+    g.globalAlpha = 1;
+  }
   for (let y=0;y<p.h;y++) for (let x=0;x<p.w;x++){
     const ch = (p.rows[y] || '')[x] || ' ';
-    if (ch !== ' '){ g.fillStyle = p.pal[PIX_CH.indexOf(ch)] || '#f0f'; g.fillRect(x*PIX_Z, y*PIX_Z, PIX_Z, PIX_Z); }
-    else if ((x + y) & 1){ g.fillStyle = '#162124'; g.fillRect(x*PIX_Z, y*PIX_Z, PIX_Z, PIX_Z); }
+    if (ch !== ' '){ g.fillStyle = p.pal[PIX_CH.indexOf(ch)] || '#f0f'; g.fillRect(x*Z, y*Z, Z, Z); }
   }
-  g.strokeStyle = 'rgba(143,163,154,.22)'; g.lineWidth = 1;
-  for (let x=0;x<=p.w;x++){ g.beginPath(); g.moveTo(x*PIX_Z+.5,0); g.lineTo(x*PIX_Z+.5,cv.height); g.stroke(); }
-  for (let y=0;y<=p.h;y++){ g.beginPath(); g.moveTo(0,y*PIX_Z+.5); g.lineTo(cv.width,y*PIX_Z+.5); g.stroke(); }
+  if (pixView.grid && Z >= 4){
+    g.strokeStyle = 'rgba(143,163,154,.22)'; g.lineWidth = 1;
+    for (let x=0;x<=p.w;x++){ g.beginPath(); g.moveTo(x*Z+.5,0); g.lineTo(x*Z+.5,cv.height); g.stroke(); }
+    for (let y=0;y<=p.h;y++){ g.beginPath(); g.moveTo(0,y*Z+.5); g.lineTo(cv.width,y*Z+.5); g.stroke(); }
+  }
   // the origin, for the sprites that are drawn around a point
-  if (p.ox || p.oy){
-    g.strokeStyle = '#e0ac48';
-    g.strokeRect((p.ox||0)*PIX_Z+.5, (p.oy||0)*PIX_Z+.5, PIX_Z-1, PIX_Z-1);
+  if (p.ox || p.oy || pixView.tool === 'origin'){
+    g.strokeStyle = '#e0ac48'; g.lineWidth = 2;
+    g.strokeRect((p.ox||0)*Z+1, (p.oy||0)*Z+1, Z-2, Z-2);
+    g.lineWidth = 1;
   }
+  if (pixDrag && pixDrag.pane === i){
+    g.fillStyle = pixDrag.erase ? 'rgba(194,96,60,.55)' : (p.pal[pn.pen] || '#fff');
+    for (const [x, y] of pixDragCells()) if (x >= 0 && y >= 0 && x < p.w && y < p.h) g.fillRect(x*Z, y*Z, Z, Z);
+  }
+  if (pixHover && pixHover.pane === i && !pixDrag){
+    g.strokeStyle = '#e9e1cb';
+    g.strokeRect(pixHover.x*Z+.5, pixHover.y*Z+.5, Z-1, Z-1);
+  }
+  // the selection, or the box being dragged out: marching ants, two tones so it shows on any colour
+  const box = pixMarquee && pixMarquee.pane === i
+    ? { x: Math.min(pixMarquee.x0, pixMarquee.x1), y: Math.min(pixMarquee.y0, pixMarquee.y1),
+        w: Math.abs(pixMarquee.x1 - pixMarquee.x0) + 1, h: Math.abs(pixMarquee.y1 - pixMarquee.y0) + 1 }
+    : pixSel && pixSel.pane === i ? pixSel : null;
+  if (box){
+    g.lineWidth = 2;
+    g.setLineDash([Math.max(3, Z/2), Math.max(3, Z/2)]);
+    g.strokeStyle = '#05090a'; g.lineDashOffset = 0;
+    g.strokeRect(box.x*Z+1, box.y*Z+1, box.w*Z-2, box.h*Z-2);
+    g.strokeStyle = '#e0ac48'; g.lineDashOffset = Math.max(3, Z/2);
+    g.strokeRect(box.x*Z+1, box.y*Z+1, box.w*Z-2, box.h*Z-2);
+    g.setLineDash([]); g.lineWidth = 1;
+  }
+}
 
-  // how it actually appears in the game, at one, two and four times
+function pixPaint(){
+  const Z = pixZoom(), cards = $('pixPanes').children;
+  pixPanes.forEach((pn, i) => {
+    const cv = cards[i] && cards[i].querySelector('canvas');
+    if (cv) pixGridPaint(cv, i, Z);
+  });
+
+  // how each actually appears in the game, at one, two and four times
   const pv = $('pixPreview'); pv.innerHTML = '';
-  const outline = pixId.slice(0,5) === 'icon.' ? '#141c1e' : pixId.slice(0,4) === 'hat.' ? '#241d13' : null;
-  /* The case skips the zoom strip. Three more copies of a 96x160 sprite is most
-     of the width of the window, and the assembled preview beside it says
-     everything they would have said and more. */
-  if (pixId !== CASE_ID){
+  pixPanes.forEach(pn => {
+    const id = pn.id, p = PIX[id];
+    /* The case skips the zoom strip. Three more copies of a 96x160 sprite is
+       most of the width of the window, and the assembled preview beside it
+       says everything they would have said and more. */
+    if (id === CASE_ID) return;
+    if (pixPanes.length > 1) pv.appendChild(mk('div', 'hint', id)).style.margin = '6px 0 2px';
+    const strip = mk('div', 'strip');
+    const outline = id.slice(0,5) === 'icon.' ? '#141c1e' : id.slice(0,4) === 'hat.' ? '#241d13' : null;
     const bare = makeCv(p.w, p.h);
-    pixDraw(readCtx(bare), pixId, p.ox||0, p.oy||0, 1);
-    [1,2,4].forEach(z => pv.appendChild(shot(bare, z, z + 'x')));
-    if (outline) pv.appendChild(shot(pixCanvas(pixId, outline), 4, 'outlined'));
-  }
+    pixDraw(readCtx(bare), id, p.ox||0, p.oy||0, 1);
+    [1,2,4].forEach(z => strip.appendChild(shot(bare, z, z + 'x')));
+    if (outline) strip.appendChild(shot(pixCanvas(id, outline), 4, 'outlined'));
+    pv.appendChild(strip);
+  });
 
-  $('caseCard').hidden = pixId !== CASE_ID;
-  if (pixId === CASE_ID){ casePaint(); $('caseWearing').textContent = caseLive(); }
+  const hasCase = pixPanes.some(pn => pn.id === CASE_ID);
+  $('caseCard').hidden = !hasCase;
+  if (hasCase){ casePaint(); $('caseWearing').textContent = caseLive(); }
+  $('pixAnimCard').hidden = pixPanes.length < 2;
+  pixAnimDraw();
+}
+
+/* Both sprites, one after the other, each placed by its own origin — which is
+   how the game draws them, so a frame whose origin is a cell off shows here as
+   the animal twitching sideways rather than as a number in a header. */
+let pixAnimFrame = 0;
+function pixAnimDraw(){
+  if (pixPanes.length < 2 || tab !== 'pix') return;
+  const ps = pixPanes.map(pn => PIX[pn.id]);
+  const x0 = Math.min(...ps.map(p => -(p.ox||0))), y0 = Math.min(...ps.map(p => -(p.oy||0)));
+  const x1 = Math.max(...ps.map(p => p.w - (p.ox||0))), y1 = Math.max(...ps.map(p => p.h - (p.oy||0)));
+  const bw = x1 - x0, bh = y1 - y0, Z = Math.max(2, Math.min(8, Math.floor(260 / bw))), gap = 8;
+  const cv = $('pixAnim');
+  const W_ = bw*Z + gap + bw, H_ = bh*Z;
+  if (cv.width !== W_ || cv.height !== H_){ cv.width = W_; cv.height = H_; }
+  const g = cv.getContext('2d');
+  g.fillStyle = '#101a1c'; g.fillRect(0, 0, W_, H_);
+  const id = pixPanes[pixAnimFrame % 2].id;
+  pixDraw(g, id, -x0*Z, -y0*Z, Z);                    // big
+  pixDraw(g, id, bw*Z + gap - x0, -y0, 1);            // and at the size the game draws it
+}
+function pixAnimTick(){
+  pixAnimFrame++;
+  pixAnimDraw();
+  setTimeout(pixAnimTick, 1000 / +$('pixFps').value);
 }
 
 function pixResize(p, w, h){
   p.rows = Array.from({length:h}, (_, y) => ((p.rows[y] || '').padEnd(w)).slice(0, w));
   p.w = w; p.h = h;
 }
-function pixAt(ev, erase){
-  const p = PIX[pixId], r = $('pixGrid').getBoundingClientRect();
-  const PIX_Z = pixZoom(p);
-  const x = Math.floor((ev.clientX - r.left) / PIX_Z), y = Math.floor((ev.clientY - r.top) / PIX_Z);
-  if (x < 0 || y < 0 || x >= p.w || y >= p.h) return;
-  const row = (p.rows[y] || '').padEnd(p.w);
-  const ch = erase ? ' ' : PIX_CH[pixPen];
-  if (row[x] === ch) return;
-  p.rows[y] = row.slice(0, x) + ch + row.slice(x + 1);
+/* ---- selection -------------------------------------------------------------
+   A box of cells, `pixSel = { pane, x, y, w, h }`, which may hang partly off
+   the grid after a move so that a drawing pushed to the edge can be pulled
+   back. Moving lifts the cells out, leaving a hole (or not, for a copy), and
+   restamps them over that base at every step — so dragging across other
+   pixels does not eat them until you let go. One drag or one nudge is one
+   undo step. */
+let pixSel = null, pixMarquee = null, pixMoving = null, pixClip = null;
+
+function pixSelCells(p, s){
+  const rows = pixRows(p);
+  return Array.from({length:s.h}, (_, y) => Array.from({length:s.w}, (_, x) => (rows[s.y + y] || '')[s.x + x] || ' '));
+}
+const pixInSel = (s, x, y) => x >= s.x && y >= s.y && x < s.x + s.w && y < s.y + s.h;
+function pixHole(p, s){
+  return pixRows(p).map((r, y) => [...r].map((ch, x) => pixInSel(s, x, y) ? ' ' : ch).join(''));
+}
+function pixStamp(base, p, cells, x0, y0){
+  const r = base.map(s => [...s]);
+  cells.forEach((row, y) => row.forEach((ch, x) => {
+    const X = x0 + x, Y = y0 + y;
+    if (ch !== ' ' && X >= 0 && Y >= 0 && X < p.w && Y < p.h) r[Y][X] = ch;
+  }));
+  return r.map(a => a.join(''));
+}
+/* Lifted pixels stay lifted. The first move of a selection takes its cells off
+   the canvas into `pixSel.float`, with `base` the canvas under them; every move
+   after that restamps the float over the base. The first version put the cells
+   back on the canvas at the end of each drag and lifted them again from the
+   canvas at the start of the next — so any cells that had been dragged past the
+   edge were clipped at the first release and were simply gone when the
+   selection was pulled back. Now they are kept until the selection is let go:
+   deselecting, another tool, or any edit that is not a move. */
+function pixLift(dup){
+  const pn = pixPanes[pixSel.pane], p = PIX[pn.id];
+  pixBegin(pn.id, true);
+  if (!pixSel.float)
+    pixSel.float = { cells: pixSelCells(p, pixSel), base: dup ? pixRows(p) : pixHole(p, pixSel) };
+  else if (dup)
+    pixSel.float.base = pixRows(p);           // leave a copy of what shows where it is
+  pixMoving = { pane: pixSel.pane };
+}
+function pixPlace(x, y){
+  const p = PIX[pixPanes[pixSel.pane].id], f = pixSel.float;
+  // keep at least one cell of the box on the grid, or there is nothing left to grab
+  pixSel.x = Math.max(1 - pixSel.w, Math.min(p.w - 1, x));
+  pixSel.y = Math.max(1 - pixSel.h, Math.min(p.h - 1, y));
+  p.rows = pixStamp(f.base, p, f.cells, pixSel.x, pixSel.y);
   changed();
 }
-$('pixGrid').addEventListener('mousedown', e => {
-  e.preventDefault(); painting = e.button === 2 ? 2 : 1; pixAt(e, painting === 2);
+function pixDrop(){ pixMoving = null; pixCommit(); }
+function pixNudge(dx, dy){
+  if (!pixSel) return;
+  pixLift(false); pixPlace(pixSel.x + dx, pixSel.y + dy); pixDrop();
+}
+function pixSelClear(){
+  if (!pixSel) return;
+  const id = pixPanes[pixSel.pane].id, p = PIX[id], f = pixSel.float;
+  pixBegin(id, true);
+  p.rows = f ? f.base : pixHole(p, pixSel);   // a floating selection takes all of itself away, off-grid cells too
+  pixSel.float = null;
+  pixCommit(); changed();
+}
+/* The clipboard holds colours, not palette letters, so a copy pasted into the
+   other pane lands in that sprite's own colours, adding any it lacks. A
+   floating selection copies all of itself, including cells off the grid. */
+function pixCopy(){
+  if (!pixSel) return false;
+  const p = PIX[pixPanes[pixSel.pane].id];
+  const cells = pixSel.float ? pixSel.float.cells : pixSelCells(p, pixSel);
+  pixClip = { x: pixSel.x, y: pixSel.y, w: pixSel.w, h: pixSel.h,
+              cells: cells.map(r => r.map(ch => ch === ' ' ? null : p.pal[PIX_CH.indexOf(ch)])) };
+  note('Copied ' + pixSel.w + ' x ' + pixSel.h + '.');
+  return true;
+}
+/* A paste arrives floating, so it can be dragged into place without losing
+   anything. It is centred on the pointer when the pointer is over this grid,
+   and otherwise lands where it was copied from — either way pulled inside the
+   grid when it fits. Put down with its corner at the pointer, as it first was,
+   anything pasted near the right or bottom came in hanging off the edge. */
+function pixPaste(){
+  if (!pixClip) return;
+  const i = pixActive, pn = pixPanes[i], p = PIX[pn.id];
+  pixBegin(pn.id);                            // settles any selection already floating
+  const cells = pixClip.cells.map(r => r.map(col => {
+    if (!col) return ' ';
+    let k = p.pal.indexOf(col);
+    if (k < 0 && p.pal.length < PIX_CH.length){ p.pal.push(col); k = p.pal.length - 1; }
+    return k < 0 ? ' ' : PIX_CH[k];
+  }));
+  const { w, h } = pixClip;
+  const want = pixHover && pixHover.pane === i
+    ? [pixHover.x - Math.floor((w - 1) / 2), pixHover.y - Math.floor((h - 1) / 2)]
+    : [pixClip.x, pixClip.y];
+  const fit = (v, size, room) => size <= room ? Math.max(0, Math.min(room - size, v)) : 0;
+  pixSel = { pane: i, x: fit(want[0], w, p.w), y: fit(want[1], h, p.h), w, h,
+             float: { cells, base: pixRows(p) } };
+  p.rows = pixStamp(pixSel.float.base, p, cells, pixSel.x, pixSel.y);
+  pixCommit();
+  pixView.tool = 'select';
+  rebuild();
+}
+/* How many painted cells of a floating selection are past the grid's edge,
+   so the readout can say they are still there. */
+function pixOffGrid(){
+  const f = pixSel && pixSel.float;
+  if (!f) return 0;
+  const p = PIX[pixPanes[pixSel.pane].id];
+  let n = 0;
+  f.cells.forEach((row, y) => row.forEach((ch, x) => {
+    const X = pixSel.x + x, Y = pixSel.y + y;
+    if (ch !== ' ' && (X < 0 || Y < 0 || X >= p.w || Y >= p.h)) n++;
+  }));
+  return n;
+}
+
+/* Grow or shrink the grid on one side. A row or column added at the top or
+   left moves the drawing down or right inside its box, so a sprite that has an
+   origin has it moved by the same amount: the art stays where the game puts it
+   and only the box around it changes. A sprite without one is placed by its
+   corner, and there nothing is moved. */
+function pixEdge(p, side, d){
+  const rows = pixRows(p), had = !!(p.ox || p.oy);
+  let ox = p.ox || 0, oy = p.oy || 0;
+  if (side === 'top' || side === 'bottom'){
+    if (d < 0 && p.h <= 1 || d > 0 && p.h >= 48) return;
+    if (side === 'top'){ if (d > 0) rows.unshift(' '.repeat(p.w)); else rows.shift(); oy += d; }
+    else { if (d > 0) rows.push(' '.repeat(p.w)); else rows.pop(); }
+    p.h += d;
+  } else {
+    if (d < 0 && p.w <= 1 || d > 0 && p.w >= 48) return;
+    const left = side === 'left';
+    for (let y = 0; y < rows.length; y++)
+      rows[y] = d > 0 ? (left ? ' ' + rows[y] : rows[y] + ' ') : (left ? rows[y].slice(1) : rows[y].slice(0, -1));
+    if (left) ox += d;
+    p.w += d;
+  }
+  p.rows = rows;
+  if (had) pixSetOrigin(p, ox, oy); else pixSetOrigin(p, Math.min(p.ox||0, p.w-1), Math.min(p.oy||0, p.h-1));
+  pixSel = null;
+}
+
+/* ---- drawing -------------------------------------------------------------- */
+const pixCanvasOf = i => $('pixPanes').children[i] && $('pixPanes').children[i].querySelector('canvas');
+/* The cell under the pointer, measured off the canvas as laid out, so a grid
+   the page has scaled still paints the cell you pointed at. May be outside
+   the sprite: a stroke dragged off the edge still has to join up on return. */
+function pixCell(ev, i){
+  const p = PIX[pixPanes[i].id], r = pixCanvasOf(i).getBoundingClientRect();
+  return [Math.floor((ev.clientX - r.left) / (r.width / p.w)), Math.floor((ev.clientY - r.top) / (r.height / p.h))];
+}
+function pixSet(p, x, y, ch){
+  if (x < 0 || y < 0 || x >= p.w || y >= p.h) return false;
+  const row = (p.rows[y] || '').padEnd(p.w);
+  if (row[x] === ch) return false;
+  p.rows[y] = row.slice(0, x) + ch + row.slice(x + 1);
+  return true;
+}
+/* Every cell on the straight line between two, so a fast drag is a stroke
+   rather than a trail of dots with gaps where the mouse outran the events. */
+function pixLine(x0, y0, x1, y1){
+  const out = [], dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  for (;;){
+    out.push([x0, y0]);
+    if (x0 === x1 && y0 === y1) return out;
+    const e2 = 2 * err;
+    if (e2 >= dy){ err += dy; x0 += sx; }
+    if (e2 <= dx){ err += dx; y0 += sy; }
+  }
+}
+function pixDragCells(){
+  const d = pixDrag;
+  if (d.kind === 'line') return pixLine(d.x0, d.y0, d.x1, d.y1);
+  const xa = Math.min(d.x0, d.x1), xb = Math.max(d.x0, d.x1), ya = Math.min(d.y0, d.y1), yb = Math.max(d.y0, d.y1);
+  const out = [];
+  for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++)
+    if (d.filled || x === xa || x === xb || y === ya || y === yb) out.push([x, y]);
+  return out;
+}
+// four-way flood: diagonal neighbours are a different area, the way they look
+function pixFlood(p, x, y, ch){
+  const rows = pixRows(p).map(r => [...r]), want = rows[y][x];
+  if (want === ch) return;
+  const stack = [[x, y]];
+  while (stack.length){
+    const [cx, cy] = stack.pop();
+    if (cx < 0 || cy < 0 || cx >= p.w || cy >= p.h || rows[cy][cx] !== want) continue;
+    rows[cy][cx] = ch;
+    stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+  }
+  p.rows = rows.map(r => r.join(''));
+}
+function pixRepaintPane(i){ const cv = pixCanvasOf(i); if (cv) pixGridPaint(cv, i, pixZoom()); }
+function pixReadout(i){
+  const card = $('pixPanes').children[i], el = card && card.querySelector('.readout');
+  if (!el) return;
+  const p = PIX[pixPanes[i].id];
+  let text = p.w + ' x ' + p.h;
+  if (pixHover && pixHover.pane === i){
+    const { x, y } = pixHover, ch = (p.rows[y] || '')[x] || ' ';
+    text += '   cell ' + x + ',' + y + '   ' + (ch === ' ' ? 'empty' : 'colour ' + (PIX_CH.indexOf(ch) + 1) + ' ' + p.pal[PIX_CH.indexOf(ch)]);
+  }
+  if (pixDrag && pixDrag.pane === i)
+    text += '   ' + (Math.abs(pixDrag.x1 - pixDrag.x0) + 1) + ' x ' + (Math.abs(pixDrag.y1 - pixDrag.y0) + 1);
+  if (pixMarquee && pixMarquee.pane === i)
+    text += '   selecting ' + (Math.abs(pixMarquee.x1 - pixMarquee.x0) + 1) + ' x ' + (Math.abs(pixMarquee.y1 - pixMarquee.y0) + 1);
+  else if (pixSel && pixSel.pane === i)
+    text += '   selected ' + pixSel.w + ' x ' + pixSel.h + ' at ' + pixSel.x + ',' + pixSel.y
+          + (pixOffGrid() ? '   ' + pixOffGrid() + ' cells held off the grid' : '');
+  el.textContent = text;
+}
+
+function pixDown(e, i){
+  e.preventDefault();
+  const pn = pixPanes[i], p = PIX[pn.id], [x, y] = pixCell(e, i);
+  const inside = x >= 0 && y >= 0 && x < p.w && y < p.h;
+  const right = e.button === 2, tool = pixView.tool;
+  if (!inside) return;
+  if (!right && tool === 'select'){
+    paintPane = i; painting = 1;
+    if (pixSel && pixSel.pane === i && pixInSel(pixSel, x, y)){
+      pixLift(e.altKey);
+      Object.assign(pixMoving, { gx: x, gy: y, sx: pixSel.x, sy: pixSel.y });
+    } else {
+      pixSel = null;
+      pixMarquee = { pane: i, x0: x, y0: y, x1: x, y1: y };
+      pixRepaintPane(i);
+    }
+    return;
+  }
+  if (!right && (e.altKey || tool === 'pick')){
+    const k = PIX_CH.indexOf((p.rows[y] || '')[x] || ' ');
+    if (k >= 0 && k < p.pal.length) pixSetPen(i, k);
+    return;
+  }
+  if (!right && tool === 'origin'){
+    pixBegin(pn.id); pixSetOrigin(p, x, y); pixCommit(); rebuild();
+    return;
+  }
+  const ch = right || tool === 'erase' ? ' ' : PIX_CH[pn.pen];
+  paintPane = i;
+  pixBegin(pn.id);
+  if (!right && tool === 'fill'){
+    pixFlood(p, x, y, ch); pixCommit(); changed();
+    return;
+  }
+  painting = right ? 2 : 1;
+  if (!right && (tool === 'line' || tool === 'rect')){
+    pixDrag = { pane: i, kind: tool, x0: x, y0: y, x1: x, y1: y, erase: false, filled: e.shiftKey };
+    pixRepaintPane(i); pixReadout(i);
+    return;
+  }
+  pixLast = [x, y];
+  if (pixSet(p, x, y, ch)) changed();
+}
+function pixMove(e, i){
+  const pn = pixPanes[i], p = PIX[pn.id], [x, y] = pixCell(e, i);
+  const inside = x >= 0 && y >= 0 && x < p.w && y < p.h;
+  const was = pixHover;
+  pixHover = inside ? { pane: i, x, y } : null;
+  if (painting && paintPane === i){
+    if (pixMoving){
+      pixPlace(pixMoving.sx + x - pixMoving.gx, pixMoving.sy + y - pixMoving.gy);
+    } else if (pixMarquee){
+      pixMarquee.x1 = Math.max(0, Math.min(p.w - 1, x)); pixMarquee.y1 = Math.max(0, Math.min(p.h - 1, y));
+      pixRepaintPane(i);
+    } else if (pixDrag){
+      pixDrag.x1 = Math.max(0, Math.min(p.w - 1, x)); pixDrag.y1 = Math.max(0, Math.min(p.h - 1, y));
+      pixDrag.filled = e.shiftKey;
+      pixRepaintPane(i);
+    } else if (pixLast){
+      const ch = painting === 2 || pixView.tool === 'erase' ? ' ' : PIX_CH[pn.pen];
+      let any = false;
+      for (const [cx, cy] of pixLine(pixLast[0], pixLast[1], x, y)) any = pixSet(p, cx, cy, ch) || any;
+      pixLast = [x, y];
+      if (any) changed(); else pixRepaintPane(i);
+    }
+  } else if (!was || !pixHover || was.x !== x || was.y !== y || was.pane !== i){
+    pixRepaintPane(i);
+  }
+  pixReadout(i);
+}
+// released anywhere, even off the grid: that is the end of the stroke
+window.addEventListener('mouseup', () => {
+  if (!painting) return;
+  if (pixMoving){ painting = 0; paintPane = -1; pixDrop(); return; }
+  if (pixMarquee){
+    const m = pixMarquee; pixMarquee = null; painting = 0; paintPane = -1;
+    // a click without a drag deselects, the way it does everywhere else
+    if (m.x0 !== m.x1 || m.y0 !== m.y1)
+      pixSel = { pane: m.pane, x: Math.min(m.x0, m.x1), y: Math.min(m.y0, m.y1),
+                 w: Math.abs(m.x1 - m.x0) + 1, h: Math.abs(m.y1 - m.y0) + 1 };
+    pixRepaintPane(m.pane); pixReadout(m.pane);
+    return;
+  }
+  const d = pixDrag;
+  if (d){
+    const pn = pixPanes[d.pane], p = PIX[pn.id];
+    for (const [x, y] of pixDragCells()) pixSet(p, x, y, PIX_CH[pn.pen]);
+    pixDrag = null;
+  }
+  painting = 0; paintPane = -1; pixLast = null;
+  pixCommit();
+  changed();
 });
-$('pixGrid').addEventListener('mousemove', e => { if (painting) pixAt(e, painting === 2); });
-window.addEventListener('mouseup', () => painting = 0);
-$('pixGrid').addEventListener('contextmenu', e => e.preventDefault());
 BUILD.pix = pixBuild;
 PAINT.pix = pixPaint;
 
@@ -847,6 +1584,18 @@ BUILD.gear = gearBuild;
 PAINT.gear = gearPaint;
 
 /* ---- go ------------------------------------------------------------------ */
+/* The pinned previews sit just under the header, and the header wraps to two
+   rows on a narrow window, so its height is measured rather than assumed. */
+{
+  const head = document.querySelector('header');
+  const setHead = () => document.documentElement.style.setProperty('--head', head.offsetHeight + 'px');
+  new ResizeObserver(setHead).observe(head);
+  setHead();
+}
+$('pixFps').oninput = () => { $('pixFpsOut').textContent = $('pixFps').value; };
+// the grid zoom follows the room beside the list, which a browser zoom changes
+window.addEventListener('resize', () => { if (tab === 'pix' && !painting) pixPaint(); });
+pixAnimTick();
 caseWarning();
 caseLoadSkin().then(pixBuild);
 /* Say up front which kind of Save this is. Opened through tools/edit.cmd, Save

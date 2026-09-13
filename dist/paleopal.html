@@ -244,6 +244,15 @@ body{
   box-shadow:inset 0 2px 0 var(--key-hi),inset 0 -2px 0 var(--key-lo),
              0 calc(var(--px)*1) 0 var(--key-edge)}
 .iconbtn.dev:hover{background:var(--key-hi)}
+/* Developer mode plays a copy of the nest, and says so on the case itself.
+   The tag hangs off the end of the lettering, not the plate: `.brand` spans
+   the full width of the head, so its own right edge is the edge of the case. */
+.devmode .brand span{position:relative}
+.devmode .brand span::after{content:'DEV';position:absolute;left:100%;top:50%;transform:translateY(-50%);
+  margin-left:calc(var(--px)*1.5);padding:0 calc(var(--px)*1);background:var(--rust);color:#fff;
+  font-size:calc(var(--px)*2.5);line-height:calc(var(--px)*4);border-radius:calc(var(--px)*1);
+  letter-spacing:0;pointer-events:none}
+.devmode .iconbtn.dev{background:var(--rust);border-color:#5e2413}
 #btnNest{position:relative}
 #nestCount{position:absolute;right:calc(var(--px)*-1);top:calc(var(--px)*-1);
   min-width:calc(var(--px)*4);height:calc(var(--px)*4);border-radius:calc(var(--px)*2);
@@ -754,9 +763,11 @@ const $     = id => document.getElementById(id);
 const HOUR  = 3600e3, MIN = 60e3;
 /* The clock the picture is drawn at: the sky phase, the sun and the moon.
    Normally the real one. The developer panel can pin it to an hour so night
-   can be looked at by day; it is a view and nothing else — the simulation,
-   ages and sleep keep reading the real clock, because anything that persists
-   runs on wall time. Not saved: a reload shows the real sky again. */
+   can be looked at by day. For the real nest it is a view and nothing else —
+   the simulation, ages and sleep keep reading the real clock, because anything
+   that persists runs on wall time. In developer mode, which plays a copy, the
+   pinned hour also decides bedtime (see isNight); needs, growth and age still
+   run on wall time there. Not saved: a reload shows the real sky again. */
 let devHour = null;
 function viewDate(){
   const d = new Date();
@@ -1065,7 +1076,7 @@ const PIX = {
       '            ',
       '            '
     ] },
-  'icon.joy': { w:12, h:12,
+  'icon.joy': { w:12, h:9,
     pal:['#c96f86','#8f3050','#f0a8b8'], rows:[
       '            ',
       '  001  001  ',
@@ -1075,10 +1086,7 @@ const PIX = {
       '  10000011  ',
       '   100011   ',
       '    1111    ',
-      '     11     ',
-      '            ',
-      '            ',
-      '            '
+      '     11     '
     ] },
   'icon.sound': { w:14, h:12,
     pal:['#3a2408','#1d4a33'], rows:[
@@ -1113,16 +1121,16 @@ const PIX = {
   'icon.bone': { w:12, h:12,
     pal:['#efe6cf','#b8ad90'], rows:[
       '            ',
-      '            ',
-      '            ',
-      ' 000    000 ',
-      ' 000    000 ',
-      ' 1100000011 ',
-      '   000000   ',
-      ' 0011111001 ',
-      ' 001    001 ',
-      ' 111    111 ',
-      '            ',
+      '      00    ',
+      '      00    ',
+      '      0001  ',
+      '     00011  ',
+      '    0001    ',
+      '   0001     ',
+      ' 00001      ',
+      ' 0001       ',
+      '   01       ',
+      '   01       ',
       '            '
     ] },
   'icon.nest': { w:12, h:12,
@@ -1155,15 +1163,15 @@ const PIX = {
       '      00012 '
     ] },
   'hat.cap': { w:12, h:11,
-    pal:['#b08a4a','#8a6a36'], rows:[
+    pal:['#b08a4a','#8a6a36','#503f21'], rows:[
       '            ',
-      '            ',
-      '   000000   ',
-      '   000000   ',
-      '   000000   ',
-      '   000000   ',
-      ' 1111111111 ',
-      ' 1111111111 ',
+      '  22222222  ',
+      '  20000002  ',
+      '  20000002  ',
+      '  20000002  ',
+      '222000000222',
+      '211111111112',
+      '211111111112',
       '            ',
       '            ',
       '            '
@@ -1210,44 +1218,52 @@ const PIX = {
       '            ',
       '            '
     ] },
-  'item.berry': { w:12, h:10, ox:2, oy:4,
-    pal:['#4e7a4a','#b83b45','#8f2b36','#e08a92'], rows:[
-      '            ',
-      '            ',
-      '    0       ',
-      '    0       ',
-      '  11112     ',
-      '  13112     ',
-      '  11112     ',
-      '  22222     ',
-      '            ',
-      '            '
+  'item.berry': { w:8, h:9, ox:2, oy:4,
+    pal:['#4e7a4a','#423388','#3f28aa','#9e98e7'], rows:[
+      '        ',
+      '   0 0  ',
+      '    0   ',
+      '    0   ',
+      '  11112 ',
+      '  13112 ',
+      '  11112 ',
+      '  22222 ',
+      '        '
     ] },
-  'item.fish': { w:12, h:10, ox:2, oy:4,
+  'item.fish': { w:9, h:6, ox:0, oy:2,
     pal:['#7fa3b8','#1a140e','#5b7c90','#c9dde6'], rows:[
-      '            ',
-      '            ',
-      '            ',
-      '            ',
-      '  01000022  ',
-      '  03300022  ',
-      '  22222222  ',
-      '            ',
-      '            ',
-      '            '
+      '         ',
+      '   22   2',
+      ' 20002 22',
+      '23200222 ',
+      '222222 22',
+      '         '
     ] },
-  'item.fern': { w:12, h:10, ox:2, oy:4,
+  'item.fern': { w:14, h:23, ox:6, oy:11,
     pal:['#3f6440','#6f9c55','#8fb763'], rows:[
-      '            ',
-      '            ',
-      '            ',
-      '            ',
-      '    0       ',
-      '   102      ',
-      '  21021     ',
-      '   102      ',
-      '    0       ',
-      '            '
+      '        002   ',
+      '       0022   ',
+      '02     022  20',
+      '002    02  200',
+      ' 0022 0022200 ',
+      '  0022022200  ',
+      '   00202200   ',
+      '    000200    ',
+      '02   0220   20',
+      '002  02    200',
+      ' 002202  2200 ',
+      '  00202 2200  ',
+      '   00022200   ',
+      '02  002200  20',
+      '002  02 0  200',
+      ' 0022 2  2200 ',
+      '  0022022200  ',
+      '   00202200   ',
+      '    000200    ',
+      '     0020     ',
+      '      02      ',
+      '      002     ',
+      '       022    '
     ] },
   'item.cycad': { w:12, h:10, ox:2, oy:4,
     pal:['#a8863c','#8a6b2c','#d0ae5c','#5a4a2a'], rows:[
@@ -1301,12 +1317,6 @@ const PIX = {
       '            ',
       '            '
     ] },
-  /* Seen from above, for the forage game, which is played looking down at the
-     pen. Two frames each: the legs trade places and the tail swings the other
-     way, which is a stride from this angle. They are ordinary PIX sprites, so
-     every pixel of them is editable in the Pixels tab like any other — which is
-     the point of them being pixels rather than another projection of the
-     procedural animal. Drawn facing +x and rotated to the heading. */
   'top.rex.a': { w:30, h:17, ox:15, oy:8,
     pal:['#241d13','#7e9c54','#a0b680','#5f713e','#e9dfba','#5b7940'], rows:[
       '           04440              ',
@@ -1473,11 +1483,30 @@ const PIX = {
       '   000    ',
       '   110    ',
       '  00000   ',
-      '  00000   ',
+      '  00011   ',
       ' 0110002  ',
-      ' 0000002  ',
-      ' 2222222  ',
+      '110000021 ',
+      '2222222222',
       '          '
+    ] },
+  'badge.love': { w:7, h:6,
+    pal:['#16120b','#d8546e','#f4a3b3'], rows:[
+      ' 00 00 ',
+      '0120110',
+      '0111110',
+      ' 01110 ',
+      '  010  ',
+      '   0   '
+    ] },
+  'badge.no': { w:7, h:7,
+    pal:['#16120b','#e0583c'], rows:[
+      '00   00',
+      '010 010',
+      ' 01010 ',
+      '  010  ',
+      ' 01010 ',
+      '010 010',
+      '00   00'
     ] },
   'heart': { w:8, h:7, ox:0, oy:1,
     pal:['#8f2f46','#f6b3c0','#e2697c'], rows:[
@@ -1489,18 +1518,6 @@ const PIX = {
       '  000   ',
       '   0    '
     ] },
-  /* The case itself, at one cell per `--px`.
-
-     The house rule was always that every size in the case is a multiple of
-     `--px`, which is another way of saying the case was already a low-resolution
-     picture scaled up — it just happened to be expressed as CSS boxes. Here it
-     is as the picture it always was, which is what makes it something that can
-     be drawn rather than typed.
-
-     96x160 cells. The live parts are NOT in here and must not be drawn over:
-     the canvas floats inside the recess at x14..82 y64..116, the five keys sit
-     on the plates at y128..150, and the meters, the name and the mood line are
-     DOM text over the dark panel. Everything else is yours. */
   'case': { w:96, h:155,
     pal:['#42290a','#c08f43','#dcb060','#8d6527','#a9782f','#d8ccac','#f2ead2','#a08e69','#5d5138','#0e1417','#05090a','#b9aa85','#33200a','#2a1b09','#362209','#a67a35'], rows:[
       '                                             0  0  0                                            ',
@@ -1650,8 +1667,8 @@ const PIX = {
       '        c000331111111111111111111111111113111111111111111111111111111111111111111133000c        ',
       '         cd00033111111111111111111111111111111111111111111111111111111111111111133000dc         ',
       '           c000033111111112111111111111111111111111111111111111111111111111111330000c           ',
-      '            cc00003331111111111111111111111111111111111111111111111111111113330000cc ff         ',
-      '              ccd00003333111111111111111111111111111111111111111111111133330000dcc   ff         ',
+      '            cc00003331111111111111111111111111111111111111111111111111111113330000cc            ',
+      '              ccd00003333111111111111111111111111111111111111111111111133330000dcc              ',
       '                 ccd00000333311111111111111111111111111111111111111333300000dcc                 ',
       '                    ccd00000033333333311111111111111111111333333333000000dcc                    ',
       '                       cccd000000000003333333333333333333300000000000dccc                       ',
@@ -1811,13 +1828,13 @@ const REX_TUNE = {
   withersH:25,
   bellyD:9,
   neckLen:26,
-  neckDrop:10,
+  neckDrop:7,
   headLen:32,
   headDepth:15.5,
-  tailLen:86.25,
+  tailLen:109,
   tailBase:18,
-  armLen:11,
-  fuzzLen:5.2
+  armLen:9.5,
+  fuzzLen:10
 };
 /*</data>*/
 /*<data:TRI_TUNE>*/
@@ -1839,7 +1856,7 @@ const TRI_TUNE = {
   headDepth:10.5,
   frillW:15.6,
   frillH:20.2,
-  frillTilt:-.47,
+  frillTilt:.4,
   hornLen:1.85,
   tailLen:70.16,
   tailBase:15,
@@ -2084,9 +2101,39 @@ function skinOf(spId, skinId){
    -------------------------------------------------------------------------- */
 /*<data:SPECIES_STAGE>*/
 const SPECIES_STAGE = {
-  rex:[{ headLen:23 }, { headLen:28 }, { headLen:30 }, {  }],
-  trike:[{ epi:.22 }, { epi:.17 }, { epi:.12 }, {  }],
-  brachio:[{  }, {  }, {  }, {  }]
+  rex:[
+    { headLen:23, headDepth:10, armLen:9.5, backH:23.5 },
+    { headLen:28 },
+    { headLen:30, muzzle:1.18 },
+    { s:1, armLen:8, head:1.24, limb:1.13 }
+  ],
+  trike:[
+    { epi:.22, rumpH:17 },
+    { epi:.17, hornBend:.05 },
+    { epi:.12, hornBend:.7 },
+    { hornBend:.85, horn:1.2, frill:1.27, frillTilt:.4 }
+  ],
+  brachio:[
+    {
+      tailLen:105.5,
+      bodyD:47,
+      hipBack:30.5,
+      neckLen:69.5,
+      headLen:19,
+      neckThick:29,
+      foreRatio:1.22,
+      hindH:53.5,
+      bulk:1.27,
+      muzzle:1.05,
+      neck:.64,
+      crestH:4,
+      shoulder:14,
+      hornBend:0
+    },
+    {  },
+    {  },
+    { tailLen:112.5 }
+  ]
 };
 /*</data>*/
 
@@ -2149,7 +2196,50 @@ const GEAR_FIT = {
     }
   },
   trike:{  },
-  brachio:{  }
+  brachio:{
+    frond:{
+      dx:-.9,
+      dy:1.5,
+      at:{
+        hatchling:{ dx:6, dy:2.3 },
+        juvenile:{ dx:-1.4, dy:2.4 },
+        subadult:{ dx:-.5, dy:-1.1 },
+        adult:{ dx:-2.1, dy:1.8 }
+      }
+    },
+    cap:{
+      at:{
+        hatchling:{ s:2.02, dx:5.5, dy:6.2 },
+        juvenile:{ s:1.98, dx:2.9, dy:7.6 },
+        subadult:{ s:2.05, dx:3.7, dy:9.2 },
+        adult:{ dy:7.3, s:1.68, dx:2.4 }
+      }
+    },
+    cone:{
+      at:{
+        hatchling:{ dx:6.2, dy:3.5, s:1.29 },
+        juvenile:{ dy:5.7, s:1.22, dx:1.8 },
+        subadult:{ dx:1.5, dy:5.9, s:1.21 },
+        adult:{ s:1.43, dx:2.4, dy:7.9 }
+      }
+    },
+    hardhat:{
+      at:{
+        adult:{ s:1.4, dy:8.5, dx:3.6 },
+        hatchling:{ dx:4.1, dy:5.5, s:1.71 },
+        juvenile:{ s:1.55, dx:2.4, dy:6.6 },
+        subadult:{ s:1.37, dx:2.5, dy:8.1 }
+      }
+    },
+    crown:{
+      at:{
+        hatchling:{ s:1.72, dx:6.9, dy:7.5 },
+        juvenile:{ s:1.58, dx:3.8, dy:5.7 },
+        subadult:{ s:1.35, dx:2.2, dy:7.2 },
+        adult:{ s:1.24, dx:2.1, dy:7 }
+      }
+    }
+  }
 };
 /*</data>*/
 
@@ -2167,7 +2257,24 @@ function gearFor(spId, hatId, stage){
 const HABITAT_ART = {
   valley:{
     horizon:108,
-    range:{ points:[[-112, 58], [-84, 38], [-62, 50], [-34, 26], [-2, 50], [36, 36], [66, 54], [116, 22], [148, 46], [194, 32], [230, 52], [268, 20], [298, 42], [336, 32]] },
+    range:{
+      points:[
+        [-112, 58],
+        [-84, 38],
+        [-62, 50],
+        [-34, 26],
+        [-2, 50],
+        [36, 36],
+        [66, 54],
+        [116, 22],
+        [148, 46],
+        [194, 32],
+        [230, 52],
+        [268, 20],
+        [298, 42],
+        [336, 32]
+      ]
+    },
     skyline:[
       [-112, 66],
       [-96, 52],
@@ -2195,7 +2302,17 @@ const HABITAT_ART = {
   },
   lagoon:{
     horizon:98,
-    range:{ points:[[112, 97], [126, 91], [138, 84], [146, 86], [156, 80], [166, 88], [182, 97]] },
+    range:{
+      points:[
+        [112, 97],
+        [126, 91],
+        [138, 84],
+        [146, 86],
+        [156, 80],
+        [166, 88],
+        [182, 97]
+      ]
+    },
     skyline:[
       [-112, 70],
       [-100, 62],
@@ -2228,7 +2345,23 @@ const HABITAT_ART = {
   },
   ashfall:{
     horizon:111,
-    range:{ points:[[-112, 50], [-90, 30], [-74, 42], [-52, 22], [-30, 46], [-8, 40], [30, 58], [210, 58], [246, 36], [266, 46], [290, 20], [312, 40], [336, 28]] },
+    range:{
+      points:[
+        [-112, 50],
+        [-90, 30],
+        [-74, 42],
+        [-52, 22],
+        [-30, 46],
+        [-8, 40],
+        [30, 58],
+        [210, 58],
+        [246, 36],
+        [266, 46],
+        [290, 20],
+        [312, 40],
+        [336, 28]
+      ]
+    },
     skyline:[
       [-112, 60],
       [-94, 74],
@@ -2258,7 +2391,18 @@ const HABITAT_ART = {
   },
   gorge:{
     horizon:104,
-    range:{ points:[[-112, 36], [-74, 36], [-64, 46], [-26, 46], [-16, 38], [52, 38], [62, 50], [104, 50]] },
+    range:{
+      points:[
+        [-112, 36],
+        [-74, 36],
+        [-64, 46],
+        [-26, 46],
+        [-16, 38],
+        [52, 38],
+        [62, 50],
+        [104, 50]
+      ]
+    },
     skyline:[
       [-112, 46],
       [-96, 54],
@@ -2289,7 +2433,25 @@ const HABITAT_ART = {
   },
   boreal:{
     horizon:106,
-    range:{ snow:30, points:[[-112, 52], [-86, 24], [-64, 40], [-34, 12], [-4, 42], [28, 28], [66, 50], [118, 8], [156, 34], [198, 20], [236, 44], [280, 2], [310, 30], [336, 18]] },
+    range:{
+      snow:30,
+      points:[
+        [-112, 52],
+        [-86, 24],
+        [-64, 40],
+        [-34, 12],
+        [-4, 42],
+        [28, 28],
+        [66, 50],
+        [118, 8],
+        [156, 34],
+        [198, 20],
+        [236, 44],
+        [280, 2],
+        [310, 30],
+        [336, 18]
+      ]
+    },
     skyline:[
       [-112, 50],
       [-98, 34],
@@ -2580,6 +2742,97 @@ function pixCanvas(id, outline){
   pixCache.set(key, c);
   return c;
 }
+/* ------------------------------ boxed sprites -------------------------------
+   Some sprites are drawn into a place that was laid out for them: a food item
+   into a cell of the Feed menu, a shop row, a spot on the ground; a heart into a
+   nine-pixel pip of the bond row. Those places were sized for the grid the art
+   happened to be drawn on, and the art was drawn at a fixed scale, so drawing
+   the fern again on a finer grid for more detail made it bigger — 14 x 23 cells
+   came out twice the height of its cell and ran over the menu around it.
+
+   A grid is resolution, not size. Each kind of boxed sprite has the box its
+   callers were laid out for, as [w, h, ox, oy] in cells: the size and the origin
+   of the sprites that were there when the layouts were made. Anything that fits
+   is drawn exactly as it always was, by its own origin. Anything bigger is
+   scaled down to fit that box at the caller's scale, centred in it — or, for the
+   mess, standing on its foot, because the mess sits on the ground line — and
+   drawn from a baked canvas with no smoothing, so it stays hard-edged. Sprites
+   are never scaled up: a small sprite is small because it was drawn small. */
+const PIX_BOX = {
+  item:  { w:12, h:10, ox:2, oy:4 },
+  heart: { w:8,  h:7,  ox:0, oy:1 },
+  mess:  { w:10, h:9,  ox:4, oy:7, foot:true }
+};
+function pixBoxOf(id){ return id.slice(0, 5) === 'item.' ? PIX_BOX.item : PIX_BOX[id] || null; }
+
+/* The sprite on its own canvas in one flat colour, for the outline stamps. */
+function pixFlatCanvas(id, flat){
+  if (!flat) return pixCanvas(id);
+  const key = id + '|flat:' + flat;
+  if (pixCache.has(key)) return pixCache.get(key);
+  const p = PIX[id], c = makeCv(p.w + PIX_PAD*2, p.h + PIX_PAD*2);
+  c.pad = PIX_PAD;
+  pixDraw(readCtx(c), id, (p.ox || 0) + PIX_PAD, (p.oy || 0) + PIX_PAD, 1, flat);
+  pixCache.set(key, c);
+  return c;
+}
+
+/* Like pixDraw, and called the same way — (x, y) is where the box's origin
+   goes — but a sprite bigger than its box is shrunk to fit it. */
+function pixDrawBoxed(g, id, x, y, s, flat){
+  const p = PIX[id], box = pixBoxOf(id);
+  if (!p) return;
+  s = s || 1;
+  const fit = box ? Math.min(1, box.w / p.w, box.h / p.h) : 1;
+  if (fit >= 1) return pixDraw(g, id, x, y, s, flat);
+  const w = Math.max(1, Math.round(p.w * s * fit)), h = Math.max(1, Math.round(p.h * s * fit));
+  const bx = x - box.ox * s, by = y - box.oy * s;
+  const dx = Math.round(bx + (box.w * s - w) / 2);
+  const dy = Math.round(box.foot ? by + box.h * s - h : by + (box.h * s - h) / 2);
+  const was = g.imageSmoothingEnabled;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(pixFlatCanvas(id, flat), PIX_PAD, PIX_PAD, p.w, p.h, dx, dy, w, h);
+  g.imageSmoothingEnabled = was;
+}
+
+/* The cells a sprite actually paints, { x0, y0, x1, y1 }, or null if none.
+   A grid is drawn with whatever margin the artist left, and an origin is
+   wherever it suits the game, so neither says where the picture is. */
+function pixInk(id){
+  const key = id + '|ink';
+  if (pixCache.has(key)) return pixCache.get(key);
+  const p = PIX[id];
+  let ink = null;
+  if (p) p.rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === ' ' || x >= p.w || y >= p.h) return;
+    if (!ink) ink = { x0: x, y0: y, x1: x, y1: y };
+    else { ink.x0 = Math.min(ink.x0, x); ink.x1 = Math.max(ink.x1, x); ink.y0 = Math.min(ink.y0, y); ink.y1 = Math.max(ink.y1, y); }
+  }));
+  pixCache.set(key, ink);
+  return ink;
+}
+
+/* A picture for a cell: the painted part of the sprite, as big as fits in
+   maxW x maxH up to `cap` times, centred on (cx, cy). Scales of one and up are
+   whole numbers, so every cell is the same size on screen; below one it
+   shrinks by what it has to. The margin and the origin are both ignored — the
+   Feed menu placed items by their origin, as if every one were a 12 x 10 grid
+   with its origin at 2,4, which put a fish with its origin at 0,2 and a fern on
+   a 14 x 23 grid well off the middle of their cells. */
+function pixDrawFit(g, id, cx, cy, maxW, maxH, cap){
+  const ink = pixInk(id);
+  if (!ink) return;
+  const iw = ink.x1 - ink.x0 + 1, ih = ink.y1 - ink.y0 + 1;
+  let k = Math.min(maxW / iw, maxH / ih, cap || Infinity);
+  if (k >= 1) k = Math.floor(k);
+  const w = Math.max(1, Math.round(iw * k)), h = Math.max(1, Math.round(ih * k));
+  const was = g.imageSmoothingEnabled;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(pixCanvas(id), PIX_PAD + ink.x0, PIX_PAD + ink.y0, iw, ih,
+              Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
+  g.imageSmoothingEnabled = was;
+}
+
 /* Anything the editor changes has to drop the caches, or the game goes on
    showing what it baked before the edit. */
 function pixInvalidate(){ pixCache.clear(); if (typeof HATS === 'object') for (const k in HATS) delete HATS[k]; }
@@ -2682,11 +2935,20 @@ function mixCol(a, b, t){
    between different materials. Sharing `horn`, a ceratopsian's beak was two
    near-white blobs stuck on the front of a tan face with nothing dividing
    them from the horn sheaths above. A species that does not set `spec.beak`
-   gets its horn colour here and nothing changes for it. */
-const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
+   gets its horn colour here and nothing changes for it.
+
+   `rim` is a dark border for a limb held against the body, which is the one
+   place the silhouette outline cannot help: the rex's arm is the same material
+   ramp as the chest it lies on, and on a speckled coat it vanished into the
+   flank. It sits under `limb`, so a shape a pixel fatter than the limb leaves
+   a pixel of rim showing round it, and it is masked to pixels already on the
+   body — off the body the ordinary outline is already doing the job, and a
+   rim there only made the arm look thicker. The coat is kept off it. */
+const LAYERS = ['far','skin','rim','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
 const BODY_TOP    = LAYERS.indexOf('head');
 const BELLY_LAYER = LAYERS.indexOf('belly');
 const MARK_LAYER  = LAYERS.indexOf('mark');
+const RIM_LAYER   = LAYERS.indexOf('rim');
 /* Countershading belongs to the trunk, the skull and the jaw. It is kept off
    the limbs — near-side limbs carry their own lit ramp and far-side limbs are
    held back in shade, and letting the belly claim either bleached every leg to
@@ -2701,6 +2963,10 @@ function buildMaterials(spec){
        as legs, which on the four-legged animals is half the sprite. */
     far:    { r: shiftRamp(skin, -1), lit:.55 },
     skin:   { r: skin,                lit:1 },
+    /* the coat's own dark, pulled toward the outline: a green rim on a green
+       coat and a rust one on a rust coat, so it reads as the arm's shadow
+       rather than as a black line drawn round it */
+    rim:    { r: ramp(mixCol(spec.crest, spec.outline, .45)), lit:0 },
     limb:   { r: shiftRamp(skin, 0),  lit:1.1 },
     /* display structures: a frill or a plate carries its own colour, which is
        standard in modern reconstructions and is also the only thing that
@@ -2752,7 +3018,9 @@ function composeSprite(layerCanvases, mats, w, h){
     const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
     if (li === MARK_LAYER){
       // a coat rides the body, and stops where the countershading starts
-      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && id[i] <= BODY_TOP) id[i] = li;
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && id[i] <= BODY_TOP && id[i] !== RIM_LAYER) id[i] = li;
+    } else if (li === RIM_LAYER){
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0) id[i] = li;
     } else if (li === BELLY_LAYER){
       for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && BELLY_OK[id[i]]) id[i] = li;
     } else {
@@ -3029,11 +3297,26 @@ function samplePath(pts, t){
   }
   return pts[pts.length-1];
 }
-/* A row of claws along a hand. These were ovals too, which at this size is a
-   row of beads on the end of an arm; what a theropod has there is two recurved
-   claws, which is also what the dossier claims it has. */
-function toes(g, x, y, n, dir, size){
-  for (let i=0;i<n;i++) claw(g, x + dir*i*size*1.5, y, dir, size*1.6, size*.66);
+/* A hand claw: hooked, and hanging. The rex's hand used to get two copies of
+   the foot claw — a flat wedge pointing straight forward — spaced so closely
+   they merged into one nail sticking out of the front of the arm, which read as
+   a spur rather than as fingers.
+
+   This one hangs straight down out of the hand and curls back at the tip, the
+   way a recurved claw flexes toward the palm. The centreline is a parabola,
+   `x = len*(.55t² - .25t)`: it holds the root's column for most of its length
+   and the tip ends nearly a third of the length behind it, which at three
+   pixels long is the one-pixel step that reads as a hook. A gentler curve
+   rounds away to a straight stick. The width tapers to a point; `w` is the
+   root width. Keep it to a few pixels: anything longer is a talon. */
+function handClaw(g, x, y, len, w){
+  const N = 4, L = [], R = [];
+  for (let i=0;i<=N;i++){
+    const t = i/N, cx = x + len*(.55*t*t - .25*t), cy = y + len*t;
+    const half = w/2 * (1 - t);
+    L.push([cx - half, cy]); R.push([cx + half, cy]);
+  }
+  poly(g, L.concat(R.reverse()));
 }
 function eyeAt(M, x, y, r, state){
   /* A shut eye is a line, not a shape. The lid used to be drawn as wide as the
@@ -3632,10 +3915,30 @@ function drawRex(M, P){
   }
   // the ventral countershading is painted from the spine by paintBelly
 
-  // two-fingered hand, palm turned inward the way a theropod wrist actually sits
+  /* Two-fingered hand, palm turned inward the way a theropod wrist actually
+     sits. The arm lies against the chest in the same colours as the chest, so
+     it carries a rim: the same tube a pixel wider each side on `rim`, which
+     the compositor keeps to body pixels. It starts a little way down the upper
+     arm, so the shoulder grows out of the body instead of being cut out of it.
+
+     Sizes that must survive every stage are set in screen pixels. `px` is one
+     pixel in local units; at a hatchling's scale a unit is a third of a pixel,
+     and a claw sized in units there was simply not drawn. */
+  const px = 1 / (st.s * SPECIES.rex.scale);
   const ax = withX + 9, ay = withY + 22*lM;
-  tube(M.limb, [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]], [10*lM, 7.2*lM, 5.4*lM]);
-  toes(M.horn, ax-T_.armLen*23/11*lM, ay+6*lM, 2, -1, Math.max(1.3, 2.3*lM));
+  const arm = [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]];
+  const armW = [10*lM, 7.2*lM, 5.4*lM];
+  tube(M.limb, arm, armW);
+  const hand = arm[2], handR = armW[2]/2;
+  tube(M.rim, [samplePath(arm, .30), arm[1], hand], [armW[1]*1.2 + 2*px, armW[1] + 2*px, armW[2] + 2*px]);
+  oval(M.rim, hand[0], hand[1], handR + px, handR + px);
+  oval(M.limb, hand[0], hand[1], handR, handR);            // a rounded hand, not a cut end
+  /* Two claws hanging from the underside of the hand, the front one a touch
+     longer. Rooted only a pixel inside the hand and a clear gap apart: set
+     closer, or deeper, the two merged into one cream stub. */
+  const clawY = hand[1] + handR - .8*px, clawX = hand[0] - handR*.55;
+  handClaw(M.horn, clawX,          clawY, 3.6*px, 1.5*px);
+  handClaw(M.horn, clawX + 2.6*px, clawY, 3.0*px, 1.5*px);
 
   /* Near limb: a heavy drumstick over the femur, then shank and bird foot. The
      keratin layer goes to legStep rather than being drawn over afterwards —
@@ -6461,7 +6764,7 @@ function stepParts(dt){
 }
 /* Seven across rather than five, with a rim and a highlight. The old one was
    a 5x5 blob that vanished against the animal. The art is in PIX now. */
-function heartPx(g,x,y){ pixDraw(g, 'heart', x, y, 1); }
+function heartPx(g,x,y){ pixDrawBoxed(g, 'heart', x, y, 1); }
 function drawParts(g){
   for (const p of parts){
     const x = Math.round(p.x), y = Math.round(p.y), fade = p.age/p.life;
@@ -6482,9 +6785,15 @@ function drawParts(g){
    Both are entries in PIX. `flat` paints every pixel one colour, which is what
    gives a food item the hard outline every animal in this game has — a green
    fern frond on a green grass line is otherwise invisible, and a bounding
-   rectangle comes out as a black plaque instead of an outline. */
-function drawItem(g, id, x, y, s, flat){ pixDraw(g, 'item.' + id, x, y, s || 1, flat); }
-function drawMess(g, x, y){ pixDraw(g, 'mess', x, y, 1); }
+   rectangle comes out as a black plaque instead of an outline.
+
+   Boxed, so a food redrawn on a finer grid keeps its size and gains detail
+   instead of growing out of its cell. See PIX_BOX in 00-art.js. */
+function drawItem(g, id, x, y, s, flat){ pixDrawBoxed(g, 'item.' + id, x, y, s || 1, flat); }
+/* A food as a picture in a cell or a row: centred on its painted pixels and
+   sized to the space. drawItem is for items in the world, placed by origin. */
+function drawItemFit(g, id, cx, cy, maxW, maxH, cap){ pixDrawFit(g, 'item.' + id, cx, cy, maxW, maxH, cap); }
+function drawMess(g, x, y){ pixDrawBoxed(g, 'mess', x, y, 1); }
 
 /* ==========================================================================
    CARE SIM
@@ -6500,6 +6809,16 @@ function drawMess(g, x, y){ pixDraw(g, 'mess', x, y, 1); }
 const SAVE_VERSION = 2;
 const SAVE_KEY = 'paleopal:save:2';
 const BACKUP_KEY = 'paleopal:save:backup';
+/* Developer mode plays a copy. Turning it on writes the nest to DEV_SAVE_KEY
+   and reloads onto that copy; from then on every save goes there, so nothing
+   done while testing — the tools, or ordinary play at odd hours — touches the
+   real nest. Turning it off deletes the copy and reloads onto the real save,
+   which catches up on the time spent away like any other absence. The switch
+   is its own Store key rather than a field on the save, so the copy cannot
+   carry it into the real nest. */
+const DEV_SAVE_KEY = 'paleopal:save:dev', DEV_MODE_KEY = 'paleopal:dev:on';
+let devMode = false;
+const saveKey = () => devMode ? DEV_SAVE_KEY : SAVE_KEY;
 const MAX_PETS = 6;
 
 const FOODS = [
@@ -6739,7 +7058,12 @@ const hasIll   = (id, pet = S) => pet.ills.some(ill => ill.id === id);
    tuned not to wrap (1 to 9) is "after bed and before wake". Equal hours mean
    no night at all. */
 const isNight  = (now = Date.now()) => {
-  const hour = new Date(now).getHours(), b = SIM.bedHour, w = SIM.wakeHour;
+  /* In developer mode a pinned sky clock is the clock bedtime is judged by,
+     for the live tick only — a catch-up over hours past still reads the hours
+     they actually were. Outside developer mode the pin is a view and nothing
+     else, as it always was. */
+  const live = devMode && devHour !== null && Math.abs(now - Date.now()) < 5*MIN;
+  const hour = live ? Math.floor(devHour) : new Date(now).getHours(), b = SIM.bedHour, w = SIM.wakeHour;
   return b > w ? (hour >= b || hour < w) : (hour >= b && hour < w);
 };
 
@@ -6868,9 +7192,18 @@ function simulate(pet, ms, online, now = Date.now()){
      Now the late-hours count only fills while someone keeps it up. */
   const sleepy = isNight(now);
   const justWoken = now - (pet.wokeAt || 0) < WAKE_GRACE;
-  if (!asleep && (n.energy <= 6 || (sleepy && !justWoken))) setSleep(true, online, pet);
-  if (asleep && !pet.vet && !sleepy && n.energy >= 99) setSleep(false, online, pet);
-  if (asleep && !pet.vet && !sleepy && n.energy > 72) setSleep(false, online, pet);
+  /* In developer mode, waking an animal or putting it down holds until it is
+     released: the night rule, the grace period and the energy floor all stand
+     aside. Outside it they do not — which is why a wake at 21:11 was taken back
+     by the next tick. A collapse still wins; that is a vet, not a bedtime. */
+  const held = devMode && devSleepHold && devSleepHold.pet === pet && !pet.vet;
+  if (held){
+    if (asleep !== (devSleepHold.state === 'asleep')) setSleep(devSleepHold.state === 'asleep', online, pet);
+  } else {
+    if (!asleep && (n.energy <= 6 || (sleepy && !justWoken))) setSleep(true, online, pet);
+    if (asleep && !pet.vet && !sleepy && n.energy >= 99) setSleep(false, online, pet);
+    if (asleep && !pet.vet && !sleepy && n.energy > 72) setSleep(false, online, pet);
+  }
 
   const st = stageIdx(pet);
   observePet(pet, undefined, now);
@@ -6994,8 +7327,9 @@ function tuckIn(){
   if (!hatched()) return;
   if (S.vet) return refuse(S.name + ' is already down.');
   if (S.asleep) return refuse(S.name + ' is already asleep.');
-  if (S.needs.energy > 70) return refuse('Too wide awake to settle. Try below 70 energy.');
+  if (S.needs.energy > 70 && !devMode) return refuse('Too wide awake to settle. Try below 70 energy.');
   setSleep(true, true);
+  if (devMode) devSleepHold = { pet: S, state: 'asleep' };
   S.bond = clamp(S.bond + 1.5, 0, 100);
   S.nightAwake = 0;
   S.wokeAt = 0;
@@ -7019,6 +7353,7 @@ function wakeUp(){
   if (!S.asleep) return refuse(S.name + ' is already awake.');
   setSleep(false, true);
   S.wokeAt = Date.now();
+  if (devMode) devSleepHold = { pet: S, state: 'awake' };
   S.needs.energy = clamp(S.needs.energy - 4, 0, 100);
   S.bond = clamp(S.bond - 2, 0, 100);
   if (isNight()) S.nightAwake += .5;
@@ -7161,8 +7496,16 @@ function releasePet(i){
 
    `G.dev` gates the button in the top bar; long-pressing the brand plate
    toggles it. It ships on. See ROADMAP.md — it comes off before release.
+
+   The tools only work in developer mode, on a copy of the nest (see
+   DEV_SAVE_KEY). Outside it the panel offers the switch and nothing else, so
+   testing can never change the animal someone is actually raising.
    ========================================================================== */
 const DEV_COINS = 99999;
+/* Which way the player last forced sleep, in developer mode: { pet, state }.
+   A knob like SIM and devHour, not a field — it is never saved, a reload
+   clears it, and the rules take over again. */
+let devSleepHold = null;
 
 /* Tuning is kept apart from the nest: only the values that differ from the
    shipped ones, under SIM_KEY, and read back field by field so a stale or
@@ -7210,7 +7553,49 @@ const DEV = {
   },
   setBond(v){ S.bond = clamp(v, 0, 100); DEV.done('Bond set to ' + Math.round(S.bond) + '.'); },
   collapse(){ S.health = 0; S.vet = true; S.asleep = true; DEV.done(S.name + ' has collapsed.'); },
-  toggleSleep(){ S.asleep = !S.asleep; DEV.done(S.asleep ? 'Asleep.' : 'Awake.'); },
+  /* Forced, and held: see devSleepHold. Waking writes wokeAt the way wakeUp()
+     does, so letting go of the hold hands the rules an animal that was woken. */
+  toggleSleep(){
+    const wake = S.asleep;
+    setSleep(!wake, false);
+    if (wake) S.wokeAt = Date.now();
+    devSleepHold = { pet: S, state: wake ? 'awake' : 'asleep' };
+    DEV.done(wake ? 'Awake, and it stays up until you let the rules decide.'
+                  : 'Asleep, and it stays down until you let the rules decide.');
+  },
+  releaseSleep(){ devSleepHold = null; DEV.done('Bedtime rules are back in charge.'); },
+
+  /* --- the mode itself --- */
+  async enter(){
+    saveBlocked = true;
+    try {
+      await saveQueue;
+      G.lastSeen = Date.now();
+      await Store.set(SAVE_KEY, JSON.stringify(G));          // the real nest, as it is right now
+      await Store.set(DEV_SAVE_KEY, JSON.stringify(G));      // and the copy developer mode will play
+      await Store.set(DEV_MODE_KEY, '1');
+      location.reload();
+    } catch (error){ saveBlocked = false; storageNotice('Could not start developer mode. Nothing was changed.'); }
+  },
+  async exit(){
+    saveBlocked = true;
+    try {
+      await saveQueue;
+      await Store.del(DEV_MODE_KEY);
+      await Store.del(DEV_SAVE_KEY);
+      location.reload();
+    } catch (error){ saveBlocked = false; storageNotice('Could not leave developer mode. Try again.'); }
+  },
+  /* Throw the copy away and take a fresh one of the real nest as it is now. */
+  async restart(){
+    saveBlocked = true;
+    try {
+      await saveQueue;
+      const real = await Store.get(SAVE_KEY);
+      if (real) await Store.set(DEV_SAVE_KEY, real); else await Store.del(DEV_SAVE_KEY);
+      location.reload();
+    } catch (error){ saveBlocked = false; storageNotice('Could not copy the real nest in. The copy is unchanged.'); }
+  },
 
   /* --- illness --- */
   toggleIll(id){
@@ -8769,6 +9154,10 @@ function gridCell(g, box, opts){
     g.fillRect(x + 1, y + h - 10, w - 2, 9);
     text(g, opts.tag, x + w/2, y + h - 9, opts.tagCol || SC.dim, 'centre');
   }
+  /* A badge is a small sprite in the top right corner, for a yes-or-no about
+     the item that a word would spend the whole strip on. It sits two pixels in
+     from the corner, clear of the selection frame. */
+  if (opts.badge && PIX[opts.badge]) pixDraw(g, opts.badge, x + w - PIX[opts.badge].w - 2, y + 2, 1);
   if (opts.on){
     g.fillStyle = SC.moss;
     g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
@@ -8818,9 +9207,12 @@ SCREENS.feed = {
       const loved = sp.likes.includes(f.id), hated = sp.dislikes.includes(f.id);
       gridCell(g, L.grid.box(i), {
         on: i === screenState.pick,
-        art: (gg, cx, cy) => drawItem(gg, f.id, Math.round(cx) - 4, Math.round(cy) - 4, 2),
-        tag: loved ? 'love' : hated ? 'no' : '',
-        tagCol: loved ? SC.moss : SC.rust
+        /* No tag strip, so the picture has the whole cell: centred on it, and
+           up to three times size, which brings a cycad painted in 4 x 5 cells
+           up to the size of the rest instead of leaving it a speck in a
+           square. */
+        art: (gg, cx, cy) => drawItemFit(gg, f.id, cx, cy + 2, 24, 24, 3),
+        badge: loved ? 'badge.love' : hated ? 'badge.no' : ''
       });
     });
     const f = FOODS[screenState.pick];
@@ -9239,7 +9631,7 @@ function bondCanvas(on){
     /* One heart, drawn twice: in its own colours when the pip is earned and
        flat grey when it is not. It used to be a second hand-written copy of
        the same seven-by-six heart that the particles use. */
-    pixDraw(g, 'heart', i*PIP_W, 1, 1, i < on ? null : '#232e31');
+    pixDrawBoxed(g, 'heart', i*PIP_W, 1, 1, i < on ? null : '#232e31');   // a finer heart shrinks into its pip
   }
   c.style.cssText = 'width:' + (BOND_PIPS*PIP_W*2) + 'px;height:' + (PIP_H*2) +
                     'px;image-rendering:pixelated;display:block';
@@ -9539,7 +9931,9 @@ function paintChrome(){
     const n = document.createElement('i'); n.className = 'nub'; careBtn.appendChild(n);
   }
   $('nestCount').textContent = G.pets.length > 1 ? G.pets.length : '';
-  $('btnDev').hidden = !G.dev;
+  $('btnDev').hidden = !G.dev && !devMode;     // never hide the way out of developer mode
+  // a copy has to look like one, or a test run gets mistaken for the real animal
+  document.body.classList.toggle('devmode', devMode);
   paintSound();
 }
 
@@ -9652,7 +10046,7 @@ function mountArt(root){
       slot.appendChild(c);
     } else {
       const c = makeCv(30,30), g = readCtx(c);
-      g.imageSmoothingEnabled = false; drawItem(g, id, 5, 9, 3);
+      g.imageSmoothingEnabled = false; drawItemFit(g, id, 15, 15, 26, 26, 3);
       slot.appendChild(c);
     }
   });
@@ -9728,6 +10122,7 @@ const SHEETS = {
         releasePet(G.active);
       };
       rows[2].onclick = () => {
+        if (devMode) return refuse('Leave developer mode before wiping the nest.');
         if (!armedW){ armedW = true; rows[2].querySelector('.px').textContent = 'sure?'; setTimeout(()=>{armedW=false; if(openPanel==='dossier') renderSheet('dossier');}, 3000); return; }
         // a deliberate wipe clears the safety net too, which is what the row promises
         saveBlocked = true;
@@ -9773,20 +10168,40 @@ const SHEETS = {
       `<summary>${title}<small>${hint}</small></summary><div class="devbody">${body}</div></details>`;
     const alive = hatched(), st = alive ? stageIdx() : -1;
 
-    let html = `<h2>Developer tools</h2>
-      <p class="lede">A test harness. Everything here writes the same fields the
-      simulation writes. Long-press the PALEOPAL plate to hide this button.</p>
-      <div class="devstrip" id="devstrip"></div>`;
+    /* Off: the switch, and what it does. Nothing else, because nothing else
+       here is safe to press on the real nest. */
+    if (!devMode){
+      b.innerHTML = `<h2>Developer tools</h2>
+        <p class="lede">Developer mode plays a copy of your nest. Waking, bedtime, the
+        clock, meters, coins and rates can all be forced there, and none of it touches
+        the nest you are actually raising. Leave it and you are back where you were,
+        caught up on the time that passed.</p>` +
+        chips([['Start developer mode', 'enter'], ['Close panel', 'close']]) +
+        `<p class="tiny">Long-press the PALEOPAL plate to hide this button.</p>`;
+      b.querySelectorAll('[data-dev]').forEach(c => c.onclick = () => devAction(c.getAttribute('data-dev')));
+      return;
+    }
 
-    html += sec('time', 'Time and sleep', 'sky clock, bedtime',
+    let html = `<h2>Developer mode</h2>
+      <p class="lede">You are playing a copy. Nothing here reaches your real nest, and
+      leaving throws the copy away.</p>` +
+      chips([['Leave developer mode', 'exit', 'warn'], ['Copy my real nest in again', 'restart']]) +
+      `<div class="devstrip" id="devstrip"></div>`;
+
+    const held = alive && devSleepHold && devSleepHold.pet === S;
+    html += sec('time', 'Time and sleep', held ? 'sleep held' : 'sky clock, bedtime',
       pick([['Real', null], ['Dawn', 6.5], ['Day', 12], ['Dusk', 19.5], ['Night', 23]],
            ([, h]) => devHour === h, ([, h]) => 'clock:' + h, ([l]) => l) +
-      slider('Sky clock', 'clock', 0, 23.75, .25) +
-      `<p class="tiny">Moves the sky, the sun and the moon only. The animal keeps real time.</p>` +
+      slider('Clock', 'clock', 0, 23.75, .25) +
+      `<p class="tiny">Moves the sky, and decides whether it is bedtime. Real time still
+      runs for hunger, growth and age.</p>` +
       `<div class="devsub">Sleep window</div>` +
       slider('Bedtime', 'tune:bedHour', 0, 23, 1) +
       slider('Wakes at', 'tune:wakeHour', 0, 23, 1) +
-      (alive ? chips([[S.asleep ? 'Wake it up' : 'Put it to sleep', 'toggleSleep']]) : ''));
+      (alive ? chips([[S.asleep ? 'Wake it up' : 'Put it to sleep', 'toggleSleep']].concat(
+                     held ? [['Let the rules decide', 'releaseSleep']] : [])) +
+               `<p class="tiny">${held ? 'Held ' + devSleepHold.state + ': bedtime, tiredness and the wake grace are ignored until you let go.'
+                                       : 'Waking or settling it here, or from Care, holds until you let the rules decide.'}</p>` : ''));
 
     if (alive){
       html += sec('meters', 'Meters', 'drag to set',
@@ -9920,7 +10335,8 @@ function paintDev(){
     const cells = [
       ['Stage', alive ? STAGE[stageIdx()].label : 'egg'],
       [devHour === null ? 'Sky' : 'Sky · pinned', fmtHour(d.getHours() + d.getMinutes()/60) + ' ' + skyPhase(d)],
-      ['Sleep', !alive ? '—' : S.vet ? 'collapsed' : S.asleep ? 'asleep' : isNight() ? 'bedtime' : 'awake'],
+      ['Sleep', !alive ? '—' : S.vet ? 'collapsed' : (S.asleep ? 'asleep' : isNight() ? 'up late' : 'awake')
+                + (devSleepHold && devSleepHold.pet === S ? ' · held' : '')],
       ['Health', alive ? Math.round(S.health) : '—'],
       ['Growth', alive ? Math.round(S.growth) + ' min' : '—'],
       ['Coins', Math.floor(G.coins)]
@@ -10086,7 +10502,8 @@ function save(){
   if (!G || saveBlocked) return saveQueue;
   G.lastSeen = Date.now();
   const snapshot = JSON.stringify(G);
-  saveQueue = saveQueue.then(() => Store.set(SAVE_KEY, snapshot)).then(() => storageNotice(''))
+  const key = saveKey();                       // the copy, in developer mode
+  saveQueue = saveQueue.then(() => Store.set(key, snapshot)).then(() => storageNotice(''))
     .catch(() => storageNotice('Saving failed. Export your nest from the dossier before closing.'));
   return saveQueue;
 }
@@ -10100,6 +10517,8 @@ function exportText(raw, filename){
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function importNest(){
+  // an import replaces the real save, which developer mode promises not to touch
+  if (devMode) return refuse('Leave developer mode before importing a nest.');
   const input = document.createElement('input');
   input.type = 'file'; input.accept = '.json,application/json';
   input.onchange = async () => {
@@ -10184,10 +10603,18 @@ async function boot(){
   paintCase();
   loadCaseSkin();
   G = freshGame();
-  // before the save loads, so the catch-up tick runs at the tuned rates
-  await loadTuning();
+  try { devMode = (await Store.get(DEV_MODE_KEY)) === '1'; } catch (error){ devMode = false; }
+  /* Tuned rates are a developer-mode thing: the real nest always runs at the
+     shipped ones, so a slider left moved while testing cannot quietly change
+     how the animal someone is raising gets hungry. Loaded before the save, so
+     the catch-up tick runs at the rates that apply. */
+  if (devMode) await loadTuning();
   let loaded;
-  try { loaded = loadSave(await Store.get(SAVE_KEY)); }
+  try {
+    let raw = await Store.get(saveKey());
+    if (devMode && !raw) raw = await Store.get(SAVE_KEY);   // a copy that went missing: take a new one
+    loaded = loadSave(raw);
+  }
   catch(error){
     saveBlocked = true;
     storageNotice('Storage is unavailable. Existing saves are protected. Export this session before closing, then reload to retry.');
@@ -10198,10 +10625,10 @@ async function boot(){
     // an upgraded save is written back at once, so a crash before the next
     // autosave cannot leave the old shape sitting on disk
     if (loaded.from !== SAVE_VERSION) {
-      try { await Store.set(SAVE_KEY, JSON.stringify(G)); }
+      try { await Store.set(saveKey(), JSON.stringify(G)); }
       catch(error){ storageNotice('Upgraded nest could not be saved. Export a backup.'); }
     }
-  } else if (loaded.keep){
+  } else if (loaded.keep && !devMode){         // an unreadable copy is not worth the real backup slot
     // A save we cannot read is still the player's. Park it under the backup
     // key and tell them, rather than starting over in silence.
     try { await Store.set(BACKUP_KEY, loaded.keep); }

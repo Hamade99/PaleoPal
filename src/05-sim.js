@@ -12,6 +12,16 @@
 const SAVE_VERSION = 2;
 const SAVE_KEY = 'paleopal:save:2';
 const BACKUP_KEY = 'paleopal:save:backup';
+/* Developer mode plays a copy. Turning it on writes the nest to DEV_SAVE_KEY
+   and reloads onto that copy; from then on every save goes there, so nothing
+   done while testing — the tools, or ordinary play at odd hours — touches the
+   real nest. Turning it off deletes the copy and reloads onto the real save,
+   which catches up on the time spent away like any other absence. The switch
+   is its own Store key rather than a field on the save, so the copy cannot
+   carry it into the real nest. */
+const DEV_SAVE_KEY = 'paleopal:save:dev', DEV_MODE_KEY = 'paleopal:dev:on';
+let devMode = false;
+const saveKey = () => devMode ? DEV_SAVE_KEY : SAVE_KEY;
 const MAX_PETS = 6;
 
 const FOODS = [
@@ -251,7 +261,12 @@ const hasIll   = (id, pet = S) => pet.ills.some(ill => ill.id === id);
    tuned not to wrap (1 to 9) is "after bed and before wake". Equal hours mean
    no night at all. */
 const isNight  = (now = Date.now()) => {
-  const hour = new Date(now).getHours(), b = SIM.bedHour, w = SIM.wakeHour;
+  /* In developer mode a pinned sky clock is the clock bedtime is judged by,
+     for the live tick only — a catch-up over hours past still reads the hours
+     they actually were. Outside developer mode the pin is a view and nothing
+     else, as it always was. */
+  const live = devMode && devHour !== null && Math.abs(now - Date.now()) < 5*MIN;
+  const hour = live ? Math.floor(devHour) : new Date(now).getHours(), b = SIM.bedHour, w = SIM.wakeHour;
   return b > w ? (hour >= b || hour < w) : (hour >= b && hour < w);
 };
 
@@ -380,9 +395,18 @@ function simulate(pet, ms, online, now = Date.now()){
      Now the late-hours count only fills while someone keeps it up. */
   const sleepy = isNight(now);
   const justWoken = now - (pet.wokeAt || 0) < WAKE_GRACE;
-  if (!asleep && (n.energy <= 6 || (sleepy && !justWoken))) setSleep(true, online, pet);
-  if (asleep && !pet.vet && !sleepy && n.energy >= 99) setSleep(false, online, pet);
-  if (asleep && !pet.vet && !sleepy && n.energy > 72) setSleep(false, online, pet);
+  /* In developer mode, waking an animal or putting it down holds until it is
+     released: the night rule, the grace period and the energy floor all stand
+     aside. Outside it they do not — which is why a wake at 21:11 was taken back
+     by the next tick. A collapse still wins; that is a vet, not a bedtime. */
+  const held = devMode && devSleepHold && devSleepHold.pet === pet && !pet.vet;
+  if (held){
+    if (asleep !== (devSleepHold.state === 'asleep')) setSleep(devSleepHold.state === 'asleep', online, pet);
+  } else {
+    if (!asleep && (n.energy <= 6 || (sleepy && !justWoken))) setSleep(true, online, pet);
+    if (asleep && !pet.vet && !sleepy && n.energy >= 99) setSleep(false, online, pet);
+    if (asleep && !pet.vet && !sleepy && n.energy > 72) setSleep(false, online, pet);
+  }
 
   const st = stageIdx(pet);
   observePet(pet, undefined, now);
@@ -506,8 +530,9 @@ function tuckIn(){
   if (!hatched()) return;
   if (S.vet) return refuse(S.name + ' is already down.');
   if (S.asleep) return refuse(S.name + ' is already asleep.');
-  if (S.needs.energy > 70) return refuse('Too wide awake to settle. Try below 70 energy.');
+  if (S.needs.energy > 70 && !devMode) return refuse('Too wide awake to settle. Try below 70 energy.');
   setSleep(true, true);
+  if (devMode) devSleepHold = { pet: S, state: 'asleep' };
   S.bond = clamp(S.bond + 1.5, 0, 100);
   S.nightAwake = 0;
   S.wokeAt = 0;
@@ -531,6 +556,7 @@ function wakeUp(){
   if (!S.asleep) return refuse(S.name + ' is already awake.');
   setSleep(false, true);
   S.wokeAt = Date.now();
+  if (devMode) devSleepHold = { pet: S, state: 'awake' };
   S.needs.energy = clamp(S.needs.energy - 4, 0, 100);
   S.bond = clamp(S.bond - 2, 0, 100);
   if (isNight()) S.nightAwake += .5;
@@ -673,8 +699,16 @@ function releasePet(i){
 
    `G.dev` gates the button in the top bar; long-pressing the brand plate
    toggles it. It ships on. See ROADMAP.md — it comes off before release.
+
+   The tools only work in developer mode, on a copy of the nest (see
+   DEV_SAVE_KEY). Outside it the panel offers the switch and nothing else, so
+   testing can never change the animal someone is actually raising.
    ========================================================================== */
 const DEV_COINS = 99999;
+/* Which way the player last forced sleep, in developer mode: { pet, state }.
+   A knob like SIM and devHour, not a field — it is never saved, a reload
+   clears it, and the rules take over again. */
+let devSleepHold = null;
 
 /* Tuning is kept apart from the nest: only the values that differ from the
    shipped ones, under SIM_KEY, and read back field by field so a stale or
@@ -722,7 +756,49 @@ const DEV = {
   },
   setBond(v){ S.bond = clamp(v, 0, 100); DEV.done('Bond set to ' + Math.round(S.bond) + '.'); },
   collapse(){ S.health = 0; S.vet = true; S.asleep = true; DEV.done(S.name + ' has collapsed.'); },
-  toggleSleep(){ S.asleep = !S.asleep; DEV.done(S.asleep ? 'Asleep.' : 'Awake.'); },
+  /* Forced, and held: see devSleepHold. Waking writes wokeAt the way wakeUp()
+     does, so letting go of the hold hands the rules an animal that was woken. */
+  toggleSleep(){
+    const wake = S.asleep;
+    setSleep(!wake, false);
+    if (wake) S.wokeAt = Date.now();
+    devSleepHold = { pet: S, state: wake ? 'awake' : 'asleep' };
+    DEV.done(wake ? 'Awake, and it stays up until you let the rules decide.'
+                  : 'Asleep, and it stays down until you let the rules decide.');
+  },
+  releaseSleep(){ devSleepHold = null; DEV.done('Bedtime rules are back in charge.'); },
+
+  /* --- the mode itself --- */
+  async enter(){
+    saveBlocked = true;
+    try {
+      await saveQueue;
+      G.lastSeen = Date.now();
+      await Store.set(SAVE_KEY, JSON.stringify(G));          // the real nest, as it is right now
+      await Store.set(DEV_SAVE_KEY, JSON.stringify(G));      // and the copy developer mode will play
+      await Store.set(DEV_MODE_KEY, '1');
+      location.reload();
+    } catch (error){ saveBlocked = false; storageNotice('Could not start developer mode. Nothing was changed.'); }
+  },
+  async exit(){
+    saveBlocked = true;
+    try {
+      await saveQueue;
+      await Store.del(DEV_MODE_KEY);
+      await Store.del(DEV_SAVE_KEY);
+      location.reload();
+    } catch (error){ saveBlocked = false; storageNotice('Could not leave developer mode. Try again.'); }
+  },
+  /* Throw the copy away and take a fresh one of the real nest as it is now. */
+  async restart(){
+    saveBlocked = true;
+    try {
+      await saveQueue;
+      const real = await Store.get(SAVE_KEY);
+      if (real) await Store.set(DEV_SAVE_KEY, real); else await Store.del(DEV_SAVE_KEY);
+      location.reload();
+    } catch (error){ saveBlocked = false; storageNotice('Could not copy the real nest in. The copy is unchanged.'); }
+  },
 
   /* --- illness --- */
   toggleIll(id){

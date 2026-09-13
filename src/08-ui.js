@@ -35,7 +35,7 @@ function bondCanvas(on){
     /* One heart, drawn twice: in its own colours when the pip is earned and
        flat grey when it is not. It used to be a second hand-written copy of
        the same seven-by-six heart that the particles use. */
-    pixDraw(g, 'heart', i*PIP_W, 1, 1, i < on ? null : '#232e31');
+    pixDrawBoxed(g, 'heart', i*PIP_W, 1, 1, i < on ? null : '#232e31');   // a finer heart shrinks into its pip
   }
   c.style.cssText = 'width:' + (BOND_PIPS*PIP_W*2) + 'px;height:' + (PIP_H*2) +
                     'px;image-rendering:pixelated;display:block';
@@ -335,7 +335,9 @@ function paintChrome(){
     const n = document.createElement('i'); n.className = 'nub'; careBtn.appendChild(n);
   }
   $('nestCount').textContent = G.pets.length > 1 ? G.pets.length : '';
-  $('btnDev').hidden = !G.dev;
+  $('btnDev').hidden = !G.dev && !devMode;     // never hide the way out of developer mode
+  // a copy has to look like one, or a test run gets mistaken for the real animal
+  document.body.classList.toggle('devmode', devMode);
   paintSound();
 }
 
@@ -448,7 +450,7 @@ function mountArt(root){
       slot.appendChild(c);
     } else {
       const c = makeCv(30,30), g = readCtx(c);
-      g.imageSmoothingEnabled = false; drawItem(g, id, 5, 9, 3);
+      g.imageSmoothingEnabled = false; drawItemFit(g, id, 15, 15, 26, 26, 3);
       slot.appendChild(c);
     }
   });
@@ -524,6 +526,7 @@ const SHEETS = {
         releasePet(G.active);
       };
       rows[2].onclick = () => {
+        if (devMode) return refuse('Leave developer mode before wiping the nest.');
         if (!armedW){ armedW = true; rows[2].querySelector('.px').textContent = 'sure?'; setTimeout(()=>{armedW=false; if(openPanel==='dossier') renderSheet('dossier');}, 3000); return; }
         // a deliberate wipe clears the safety net too, which is what the row promises
         saveBlocked = true;
@@ -569,20 +572,40 @@ const SHEETS = {
       `<summary>${title}<small>${hint}</small></summary><div class="devbody">${body}</div></details>`;
     const alive = hatched(), st = alive ? stageIdx() : -1;
 
-    let html = `<h2>Developer tools</h2>
-      <p class="lede">A test harness. Everything here writes the same fields the
-      simulation writes. Long-press the PALEOPAL plate to hide this button.</p>
-      <div class="devstrip" id="devstrip"></div>`;
+    /* Off: the switch, and what it does. Nothing else, because nothing else
+       here is safe to press on the real nest. */
+    if (!devMode){
+      b.innerHTML = `<h2>Developer tools</h2>
+        <p class="lede">Developer mode plays a copy of your nest. Waking, bedtime, the
+        clock, meters, coins and rates can all be forced there, and none of it touches
+        the nest you are actually raising. Leave it and you are back where you were,
+        caught up on the time that passed.</p>` +
+        chips([['Start developer mode', 'enter'], ['Close panel', 'close']]) +
+        `<p class="tiny">Long-press the PALEOPAL plate to hide this button.</p>`;
+      b.querySelectorAll('[data-dev]').forEach(c => c.onclick = () => devAction(c.getAttribute('data-dev')));
+      return;
+    }
 
-    html += sec('time', 'Time and sleep', 'sky clock, bedtime',
+    let html = `<h2>Developer mode</h2>
+      <p class="lede">You are playing a copy. Nothing here reaches your real nest, and
+      leaving throws the copy away.</p>` +
+      chips([['Leave developer mode', 'exit', 'warn'], ['Copy my real nest in again', 'restart']]) +
+      `<div class="devstrip" id="devstrip"></div>`;
+
+    const held = alive && devSleepHold && devSleepHold.pet === S;
+    html += sec('time', 'Time and sleep', held ? 'sleep held' : 'sky clock, bedtime',
       pick([['Real', null], ['Dawn', 6.5], ['Day', 12], ['Dusk', 19.5], ['Night', 23]],
            ([, h]) => devHour === h, ([, h]) => 'clock:' + h, ([l]) => l) +
-      slider('Sky clock', 'clock', 0, 23.75, .25) +
-      `<p class="tiny">Moves the sky, the sun and the moon only. The animal keeps real time.</p>` +
+      slider('Clock', 'clock', 0, 23.75, .25) +
+      `<p class="tiny">Moves the sky, and decides whether it is bedtime. Real time still
+      runs for hunger, growth and age.</p>` +
       `<div class="devsub">Sleep window</div>` +
       slider('Bedtime', 'tune:bedHour', 0, 23, 1) +
       slider('Wakes at', 'tune:wakeHour', 0, 23, 1) +
-      (alive ? chips([[S.asleep ? 'Wake it up' : 'Put it to sleep', 'toggleSleep']]) : ''));
+      (alive ? chips([[S.asleep ? 'Wake it up' : 'Put it to sleep', 'toggleSleep']].concat(
+                     held ? [['Let the rules decide', 'releaseSleep']] : [])) +
+               `<p class="tiny">${held ? 'Held ' + devSleepHold.state + ': bedtime, tiredness and the wake grace are ignored until you let go.'
+                                       : 'Waking or settling it here, or from Care, holds until you let the rules decide.'}</p>` : ''));
 
     if (alive){
       html += sec('meters', 'Meters', 'drag to set',
@@ -716,7 +739,8 @@ function paintDev(){
     const cells = [
       ['Stage', alive ? STAGE[stageIdx()].label : 'egg'],
       [devHour === null ? 'Sky' : 'Sky · pinned', fmtHour(d.getHours() + d.getMinutes()/60) + ' ' + skyPhase(d)],
-      ['Sleep', !alive ? '—' : S.vet ? 'collapsed' : S.asleep ? 'asleep' : isNight() ? 'bedtime' : 'awake'],
+      ['Sleep', !alive ? '—' : S.vet ? 'collapsed' : (S.asleep ? 'asleep' : isNight() ? 'up late' : 'awake')
+                + (devSleepHold && devSleepHold.pet === S ? ' · held' : '')],
       ['Health', alive ? Math.round(S.health) : '—'],
       ['Growth', alive ? Math.round(S.growth) + ' min' : '—'],
       ['Coins', Math.floor(G.coins)]
@@ -882,7 +906,8 @@ function save(){
   if (!G || saveBlocked) return saveQueue;
   G.lastSeen = Date.now();
   const snapshot = JSON.stringify(G);
-  saveQueue = saveQueue.then(() => Store.set(SAVE_KEY, snapshot)).then(() => storageNotice(''))
+  const key = saveKey();                       // the copy, in developer mode
+  saveQueue = saveQueue.then(() => Store.set(key, snapshot)).then(() => storageNotice(''))
     .catch(() => storageNotice('Saving failed. Export your nest from the dossier before closing.'));
   return saveQueue;
 }
@@ -896,6 +921,8 @@ function exportText(raw, filename){
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function importNest(){
+  // an import replaces the real save, which developer mode promises not to touch
+  if (devMode) return refuse('Leave developer mode before importing a nest.');
   const input = document.createElement('input');
   input.type = 'file'; input.accept = '.json,application/json';
   input.onchange = async () => {
@@ -980,10 +1007,18 @@ async function boot(){
   paintCase();
   loadCaseSkin();
   G = freshGame();
-  // before the save loads, so the catch-up tick runs at the tuned rates
-  await loadTuning();
+  try { devMode = (await Store.get(DEV_MODE_KEY)) === '1'; } catch (error){ devMode = false; }
+  /* Tuned rates are a developer-mode thing: the real nest always runs at the
+     shipped ones, so a slider left moved while testing cannot quietly change
+     how the animal someone is raising gets hungry. Loaded before the save, so
+     the catch-up tick runs at the rates that apply. */
+  if (devMode) await loadTuning();
   let loaded;
-  try { loaded = loadSave(await Store.get(SAVE_KEY)); }
+  try {
+    let raw = await Store.get(saveKey());
+    if (devMode && !raw) raw = await Store.get(SAVE_KEY);   // a copy that went missing: take a new one
+    loaded = loadSave(raw);
+  }
   catch(error){
     saveBlocked = true;
     storageNotice('Storage is unavailable. Existing saves are protected. Export this session before closing, then reload to retry.');
@@ -994,10 +1029,10 @@ async function boot(){
     // an upgraded save is written back at once, so a crash before the next
     // autosave cannot leave the old shape sitting on disk
     if (loaded.from !== SAVE_VERSION) {
-      try { await Store.set(SAVE_KEY, JSON.stringify(G)); }
+      try { await Store.set(saveKey(), JSON.stringify(G)); }
       catch(error){ storageNotice('Upgraded nest could not be saved. Export a backup.'); }
     }
-  } else if (loaded.keep){
+  } else if (loaded.keep && !devMode){         // an unreadable copy is not worth the real backup slot
     // A save we cannot read is still the player's. Park it under the backup
     // key and tell them, rather than starting over in silence.
     try { await Store.set(BACKUP_KEY, loaded.keep); }

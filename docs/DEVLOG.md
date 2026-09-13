@@ -1915,6 +1915,79 @@ After:
 Left alone, mites come at about 12 hours and the blues at about 28. Neglect
 still makes an animal ill; looking after it now mostly does not.
 
+## Session 18 — the rex's hands, a pixel editor you can work in, and developer mode
+
+**The rex's arms.** The arm lay against the chest in the chest's own ramp, so
+on a speckled coat like Canopy it disappeared. There is a `rim` material now,
+under `limb` in `LAYERS`: the arm tube is drawn one screen pixel fatter on it,
+and the compositor keeps it to pixels already on the body, so the border shows
+where the arm crosses the chest and nowhere else. Its colour is the coat's crest
+mixed toward the outline, so it reads as the arm's shadow rather than a black
+line. The coat pattern is masked off it. The hand had two copies of the foot
+claw, flat wedges pointing forward, close enough to merge into one spur.
+`handClaw()` replaces `toes()`: two short claws that hang from the underside of
+the hand and hook back a pixel at the tip. Claw length and rim width are in
+screen pixels (`px = 1 / (st.s * scale)`), because at a hatchling's scale a
+sprite unit is a third of a pixel and a claw sized in units was not drawn.
+
+**The pixel editor.** Asked for in four rounds, each tried headless before it
+was called done.
+
+- *Undo.* Whole-sprite snapshots, one per gesture: a stroke from mouse down to
+  mouse up, a slider or colour picker from its first `input` to `change`. One
+  stack across every sprite; undoing a sprite that is not open opens it.
+- *Two panes.* Open beside puts a second sprite next to the first at a shared
+  zoom, so a cell is the same size in both. The partner of `.a` is `.b`. The
+  preview column flips between them on their origins at a chosen frame rate.
+  Onion skin shows the other frame faintly underneath.
+- *Tools.* Pencil (joined up, however fast the drag), eraser, fill, line, box,
+  pick, origin, and select; the right button always erases and Alt-click picks.
+  Per pane: clear, flips, wrapping shifts, copy from the other pane matched by
+  colour, a palette with cell counts, and one editor for the selected colour.
+- *Selection.* Drag to select, drag inside to move, Alt-drag for a copy, arrows
+  to nudge, Ctrl+C/X/V across panes. A selection keeps its lifted cells in
+  `pixSel.float` until it is let go, so cells dragged past the edge come back
+  when dragged in. The first version restamped at every release and lost them.
+  A paste is centred on the pointer and pulled inside the grid.
+- *Edges.* Add or remove a row or column on any side. A sprite with an origin
+  has it moved with the art, so the game draws it where it did.
+- *The layout.* Species, Growth, Coats and Pixels keep controls on the left and
+  the preview pinned on the right under a measured header. At a high browser
+  zoom the preview used to wrap under the sliders.
+
+**A grid is resolution, not size.** The owner redrew the fern on a 14x23 grid,
+and the Feed menu, the shop and the ground drew it at a fixed scale, twice the
+height of its cell. `PIX_BOX` in `00-art.js` records the box each kind of boxed
+sprite was laid out for: 12x10 for items, 8x7 for the heart, 10x9 for the mess.
+`pixDrawBoxed()` draws anything that fits exactly as before and shrinks anything
+bigger into the box, hard-edged. For cells and rows, `pixDrawFit()` goes further:
+it measures the painted cells (`pixInk()`) and centres those, sized to the space
+in whole steps up to 3x. The Feed menu had placed every item by its origin as if
+it were a 12x10 grid with the origin at 2,4, which put the fish and the new fern
+well off the middle of their cells. Love and dislike are a corner sprite now,
+`badge.love` and `badge.no`, instead of a word across the bottom of the cell.
+
+**Developer mode.** At 21:11 the owner woke the rex from the developer panel and
+it was asleep again within a second. `DEV.toggleSleep` flipped `asleep` without
+writing `wokeAt`, so the next tick saw bedtime and no recent wake. And the wake
+from Care only buys `WAKE_GRACE`. The owner also asked that testing stop
+changing the real nest.
+
+The tools now only work in developer mode, which plays a copy. Entering saves
+the nest, copies it to `DEV_SAVE_KEY`, sets `DEV_MODE_KEY` and reloads;
+`saveKey()` sends every save to the copy. Leaving deletes both and reloads onto
+the real save, which catches up like any absence. Import and wipe refuse
+while it is on, and the case carries a DEV tag. Inside it, and only there:
+
+- tuned `SIM` rates apply, and the real nest runs on `SIM_DEFAULTS`;
+- a pinned `devHour` decides bedtime for the live tick;
+- a wake or a tuck-in, from the panel or from Care, sets `devSleepHold`, which
+  sets the night rule, the grace and the energy floor aside until "Let the rules
+  decide". Tuck-in skips its energy refusal. Waking still costs what it costs.
+
+`devSleepHold` is a knob like `SIM` and `devHour`: never saved, cleared by a
+reload. Outside developer mode the sleep rules are unchanged.
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

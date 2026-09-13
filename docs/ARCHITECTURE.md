@@ -313,3 +313,18 @@ way `simulate()` would have.
 The `dev` sheet in `08-ui.js` is the only view of it, and `G.dev` gates the
 button in the top bar. It ships **on**; long-pressing the brand plate toggles
 it. See `ROADMAP.md`.
+
+The tools only act in **developer mode**, which plays a copy of the nest.
+Entering saves the real nest, copies it to `DEV_SAVE_KEY`, sets `DEV_MODE_KEY`
+and reloads; `saveKey()` then sends every save to the copy. Leaving deletes both
+keys and reloads onto the real save, which catches up like any absence. Import
+and wipe refuse while it is on. Inside it, and only there:
+
+- tuned `SIM` rates apply (the real nest always runs on `SIM_DEFAULTS`);
+- a pinned `devHour` decides bedtime for the live tick, through `isNight()`;
+- waking or settling the animal, from the panel or from Care, sets
+  `devSleepHold`, which sets the night rule, the wake grace and the energy
+  floor aside until it is released. It is a knob, not a field, and a reload
+  clears it.
+
+The case shows a DEV tag on the brand plate while it is on.

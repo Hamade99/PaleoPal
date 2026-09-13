@@ -85,9 +85,11 @@ const $     = id => document.getElementById(id);
 const HOUR  = 3600e3, MIN = 60e3;
 /* The clock the picture is drawn at: the sky phase, the sun and the moon.
    Normally the real one. The developer panel can pin it to an hour so night
-   can be looked at by day; it is a view and nothing else — the simulation,
-   ages and sleep keep reading the real clock, because anything that persists
-   runs on wall time. Not saved: a reload shows the real sky again. */
+   can be looked at by day. For the real nest it is a view and nothing else —
+   the simulation, ages and sleep keep reading the real clock, because anything
+   that persists runs on wall time. In developer mode, which plays a copy, the
+   pinned hour also decides bedtime (see isNight); needs, growth and age still
+   run on wall time there. Not saved: a reload shows the real sky again. */
 let devHour = null;
 function viewDate(){
   const d = new Date();

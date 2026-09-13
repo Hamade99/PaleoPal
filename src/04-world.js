@@ -2121,7 +2121,7 @@ function stepParts(dt){
 }
 /* Seven across rather than five, with a rim and a highlight. The old one was
    a 5x5 blob that vanished against the animal. The art is in PIX now. */
-function heartPx(g,x,y){ pixDraw(g, 'heart', x, y, 1); }
+function heartPx(g,x,y){ pixDrawBoxed(g, 'heart', x, y, 1); }
 function drawParts(g){
   for (const p of parts){
     const x = Math.round(p.x), y = Math.round(p.y), fade = p.age/p.life;
@@ -2142,6 +2142,12 @@ function drawParts(g){
    Both are entries in PIX. `flat` paints every pixel one colour, which is what
    gives a food item the hard outline every animal in this game has — a green
    fern frond on a green grass line is otherwise invisible, and a bounding
-   rectangle comes out as a black plaque instead of an outline. */
-function drawItem(g, id, x, y, s, flat){ pixDraw(g, 'item.' + id, x, y, s || 1, flat); }
-function drawMess(g, x, y){ pixDraw(g, 'mess', x, y, 1); }
+   rectangle comes out as a black plaque instead of an outline.
+
+   Boxed, so a food redrawn on a finer grid keeps its size and gains detail
+   instead of growing out of its cell. See PIX_BOX in 00-art.js. */
+function drawItem(g, id, x, y, s, flat){ pixDrawBoxed(g, 'item.' + id, x, y, s || 1, flat); }
+/* A food as a picture in a cell or a row: centred on its painted pixels and
+   sized to the space. drawItem is for items in the world, placed by origin. */
+function drawItemFit(g, id, cx, cy, maxW, maxH, cap){ pixDrawFit(g, 'item.' + id, cx, cy, maxW, maxH, cap); }
+function drawMess(g, x, y){ pixDrawBoxed(g, 'mess', x, y, 1); }

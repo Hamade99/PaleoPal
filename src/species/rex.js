@@ -228,10 +228,30 @@ function drawRex(M, P){
   }
   // the ventral countershading is painted from the spine by paintBelly
 
-  // two-fingered hand, palm turned inward the way a theropod wrist actually sits
+  /* Two-fingered hand, palm turned inward the way a theropod wrist actually
+     sits. The arm lies against the chest in the same colours as the chest, so
+     it carries a rim: the same tube a pixel wider each side on `rim`, which
+     the compositor keeps to body pixels. It starts a little way down the upper
+     arm, so the shoulder grows out of the body instead of being cut out of it.
+
+     Sizes that must survive every stage are set in screen pixels. `px` is one
+     pixel in local units; at a hatchling's scale a unit is a third of a pixel,
+     and a claw sized in units there was simply not drawn. */
+  const px = 1 / (st.s * SPECIES.rex.scale);
   const ax = withX + 9, ay = withY + 22*lM;
-  tube(M.limb, [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]], [10*lM, 7.2*lM, 5.4*lM]);
-  toes(M.horn, ax-T_.armLen*23/11*lM, ay+6*lM, 2, -1, Math.max(1.3, 2.3*lM));
+  const arm = [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]];
+  const armW = [10*lM, 7.2*lM, 5.4*lM];
+  tube(M.limb, arm, armW);
+  const hand = arm[2], handR = armW[2]/2;
+  tube(M.rim, [samplePath(arm, .30), arm[1], hand], [armW[1]*1.2 + 2*px, armW[1] + 2*px, armW[2] + 2*px]);
+  oval(M.rim, hand[0], hand[1], handR + px, handR + px);
+  oval(M.limb, hand[0], hand[1], handR, handR);            // a rounded hand, not a cut end
+  /* Two claws hanging from the underside of the hand, the front one a touch
+     longer. Rooted only a pixel inside the hand and a clear gap apart: set
+     closer, or deeper, the two merged into one cream stub. */
+  const clawY = hand[1] + handR - .8*px, clawX = hand[0] - handR*.55;
+  handClaw(M.horn, clawX,          clawY, 3.6*px, 1.5*px);
+  handClaw(M.horn, clawX + 2.6*px, clawY, 3.0*px, 1.5*px);
 
   /* Near limb: a heavy drumstick over the femur, then shank and bird foot. The
      keratin layer goes to legStep rather than being drawn over afterwards —

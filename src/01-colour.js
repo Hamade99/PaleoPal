@@ -77,11 +77,20 @@ function mixCol(a, b, t){
    between different materials. Sharing `horn`, a ceratopsian's beak was two
    near-white blobs stuck on the front of a tan face with nothing dividing
    them from the horn sheaths above. A species that does not set `spec.beak`
-   gets its horn colour here and nothing changes for it. */
-const LAYERS = ['far','skin','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
+   gets its horn colour here and nothing changes for it.
+
+   `rim` is a dark border for a limb held against the body, which is the one
+   place the silhouette outline cannot help: the rex's arm is the same material
+   ramp as the chest it lies on, and on a speckled coat it vanished into the
+   flank. It sits under `limb`, so a shape a pixel fatter than the limb leaves
+   a pixel of rim showing round it, and it is masked to pixels already on the
+   body — off the body the ordinary outline is already doing the job, and a
+   rim there only made the arm look thicker. The coat is kept off it. */
+const LAYERS = ['far','skin','rim','limb','shield','jaw','head','belly','mark','crest','mouth','horn','beak','sclera','pupil','glint'];
 const BODY_TOP    = LAYERS.indexOf('head');
 const BELLY_LAYER = LAYERS.indexOf('belly');
 const MARK_LAYER  = LAYERS.indexOf('mark');
+const RIM_LAYER   = LAYERS.indexOf('rim');
 /* Countershading belongs to the trunk, the skull and the jaw. It is kept off
    the limbs — near-side limbs carry their own lit ramp and far-side limbs are
    held back in shade, and letting the belly claim either bleached every leg to
@@ -96,6 +105,10 @@ function buildMaterials(spec){
        as legs, which on the four-legged animals is half the sprite. */
     far:    { r: shiftRamp(skin, -1), lit:.55 },
     skin:   { r: skin,                lit:1 },
+    /* the coat's own dark, pulled toward the outline: a green rim on a green
+       coat and a rust one on a rust coat, so it reads as the arm's shadow
+       rather than as a black line drawn round it */
+    rim:    { r: ramp(mixCol(spec.crest, spec.outline, .45)), lit:0 },
     limb:   { r: shiftRamp(skin, 0),  lit:1.1 },
     /* display structures: a frill or a plate carries its own colour, which is
        standard in modern reconstructions and is also the only thing that
@@ -147,7 +160,9 @@ function composeSprite(layerCanvases, mats, w, h){
     const d = readCtx(layerCanvases[li]).getImageData(0,0,w,h).data;
     if (li === MARK_LAYER){
       // a coat rides the body, and stops where the countershading starts
-      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && id[i] <= BODY_TOP) id[i] = li;
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && id[i] <= BODY_TOP && id[i] !== RIM_LAYER) id[i] = li;
+    } else if (li === RIM_LAYER){
+      for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0) id[i] = li;
     } else if (li === BELLY_LAYER){
       for (let i=0;i<n;i++) if (d[i*4+3] >= 118 && id[i] >= 0 && BELLY_OK[id[i]]) id[i] = li;
     } else {

@@ -52,6 +52,60 @@
                cursor:pointer;font:inherit;padding:0 6px;line-height:18px}
   select{background:#0e1417;color:var(--bone);border:1px solid var(--line);font:inherit;padding:3px}
   #err{color:var(--rust);padding:0 14px;white-space:pre-wrap}
+  /* Controls on the left, the picture on the right, and the two never trade
+     places. The tabs used to be one wrapping row of cards, so at a browser
+     zoom where the row no longer fitted, the preview wrapped under the
+     sliders and every adjustment meant scrolling down to look and back up to
+     move the next one. The left side still wraps its own cards; the right
+     side is pinned under the header and scrolls on its own if it is taller
+     than the window. `--head` is the header's real height, measured, because
+     the header wraps too. */
+  .split{display:flex;gap:18px;align-items:flex-start}
+  .split > .ctl{flex:1 1 auto;min-width:0;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .split > .pv{flex:0 1 46%;min-width:180px;position:sticky;top:calc(var(--head,48px) + 8px);
+               max-height:calc(100vh - var(--head,48px) - 16px);overflow:auto}
+  .pv canvas{max-width:100%;height:auto}
+  /* On the Pixels tab the list and the panes never wrap: a pane that wraps
+     goes under the list, below the fold, which is exactly where the other
+     frame of a pair must not be. The panes share whatever is left and the
+     zoom is sized to it, so the sliders inside a pane have to be able to
+     shrink too — at their usual 150px they held each pane wider than its grid
+     and that alone pushed the second one down. */
+  #tab-pix .split > .ctl{flex-wrap:nowrap}
+  #pixPanes{min-width:0;display:flex;gap:18px;align-items:flex-start}
+  /* the toolbar: tools on the left, view switches on the right */
+  #pixTools{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-bottom:12px;padding:6px 10px}
+  .tgroup{display:flex;gap:2px;align-items:center}
+  .tgroup > span{color:var(--dim);font-size:11px;margin-right:4px}
+  .tbtn{background:#0e1417;color:var(--dim);border:1px solid var(--line);font:inherit;font-size:12px;
+        padding:3px 8px;cursor:pointer;line-height:16px;white-space:nowrap}
+  .tbtn:hover{color:var(--bone);border-color:var(--dim)}
+  .tbtn.on{background:#2c4a3c;color:var(--bone);border-color:var(--moss)}
+  .tbtn kbd{font:inherit;font-size:10px;color:var(--gold);margin-left:4px}
+  .tbtn:disabled{opacity:.4;cursor:default}
+  .ops{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:6px}
+  .pane .pal .chip{position:relative}
+  .pane .pal .chip i{position:absolute;right:1px;bottom:0;font:9px ui-monospace,monospace;font-style:normal;
+                     color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}
+  .coled{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 8px;font-size:12px;color:var(--dim)}
+  .coled input[type=color]{width:44px;height:26px}
+  .coled input[type=text]{width:74px;background:#0e1417;color:var(--bone);border:1px solid var(--line);
+                          font:inherit;padding:2px 4px}
+  .readout{color:var(--dim);font-size:11px;height:16px;margin-top:4px;white-space:nowrap;overflow:hidden}
+  .pane canvas{cursor:crosshair}
+  .edges{display:grid;grid-template-columns:repeat(2,auto);gap:2px 12px;justify-content:start;margin:2px 0 6px}
+  .edge{display:flex;gap:2px;align-items:center}
+  .edge span{min-width:46px;color:var(--dim);font-size:12px}
+  .edge .tbtn{padding:1px 8px}
+  .pane{position:relative;flex:0 1 auto;min-width:0}
+  .pane label span{min-width:58px}
+  .pane label input[type=range]{width:auto;flex:1 1 60px;min-width:40px}
+  .pane .sw b{min-width:20px}
+  .pane.on{border-color:var(--moss)}
+  .panehead{display:flex;gap:8px;align-items:center;margin-bottom:6px;color:var(--dim);font-size:12px}
+  .panehead b{color:var(--bone);font-weight:normal}
+  .panehead button{margin-left:auto}
+  .list button.two{box-shadow:inset 3px 0 0 var(--gold);color:var(--bone)}
 </style>
 </head>
 <body>
@@ -68,21 +122,36 @@
 <div id="err"></div>
 
 <main id="tab-pix" class="on">
-  <p class="hint">Every small sprite in the game. Left-click paints with the selected
-  colour, right-click erases. The palette is per sprite — change a swatch and every
-  pixel using it changes with it.</p>
-  <div class="cols">
+  <p class="hint">Every small sprite in the game. The left button uses the tool, the right
+  button always erases, and Alt-click picks up a colour. The palette is per sprite —
+  change a colour and every pixel using it changes with it. Keys: the letter on each tool,
+  <b>1</b>–<b>0</b> and <b>[ ]</b> for colours, <b>+ −</b> zoom, <b>#</b> grid,
+  <b>Ctrl+Z</b> undo, <b>Ctrl+Y</b> redo. <b>Select</b> (S) boxes a region: drag inside to
+  move it, Alt-drag for a copy, arrows nudge, Ctrl+C/X/V copy, cut and paste. <b>Open beside</b> puts a second sprite next to
+  this one at the same zoom; the list picks for whichever pane is outlined.</p>
+  <div class="split">
+  <div class="ctl">
     <div class="card list" id="pixList"></div>
-    <div class="card">
-      <div class="pal" id="pixPal"></div>
-      <canvas id="pixGrid"></canvas>
+    <div style="flex:1 1 0;min-width:0">
+      <div id="pixTools" class="card"></div>
+      <div id="pixPanes"></div>
     </div>
+  </div>
+  <div class="pv">
     <div class="card">
       <h2>As drawn</h2>
-      <div class="strip" id="pixPreview"></div>
-      <h2 style="margin-top:12px">Palette</h2>
-      <div id="pixSwatches"></div>
+      <div id="pixPreview"></div>
+      <div id="pixAnimCard" hidden>
+        <h2 style="margin-top:12px">Both, in turn</h2>
+        <p class="hint" style="margin-bottom:6px">Flipped on their origins, the way the game
+        flips an <b>.a</b> and a <b>.b</b>.</p>
+        <label><span>frames a second</span><input id="pixFps" type="range" min="1" max="16" step="1" value="6"><output id="pixFpsOut">6</output></label>
+        <canvas id="pixAnim"></canvas>
+      </div>
     </div>
+  </div>
+  </div>
+  <div class="cols" style="margin-top:14px">
     <div class="card" id="caseCard" hidden>
       <h2>The whole thing</h2>
       <p class="hint" style="max-width:32ch;margin-bottom:8px">Everything live is drawn
@@ -112,32 +181,38 @@
   <br>Pick a single stage to change one species at one age without touching the
   others — a row you edit there is <b class="pin">pinned</b> for that stage
   only, and × puts it back to inherited.</p>
-  <div class="cols">
-    <div class="card">
-      <div class="list" id="spList" style="max-height:none"></div>
-      <select id="spStage" style="margin-top:8px;width:100%"></select>
+  <div class="split">
+    <div class="ctl">
+      <div class="card">
+        <div class="list" id="spList" style="max-height:none"></div>
+        <select id="spStage" style="margin-top:8px;width:100%"></select>
+      </div>
+      <div class="card"><h2>Proportions</h2><div id="spTune"></div></div>
+      <div class="card"><h2>Colours</h2><div id="spCols"></div></div>
     </div>
-    <div class="card"><h2>Proportions</h2><div id="spTune"></div></div>
-    <div class="card"><h2>Colours</h2><div id="spCols"></div></div>
-    <div class="card"><h2>Every stage</h2><div class="strip" id="spPreview"></div></div>
+    <div class="pv card"><h2>Every stage</h2><div class="strip" id="spPreview"></div></div>
   </div>
 </main>
 
 <main id="tab-stages">
   <p class="hint">One row per growth stage, shared by every species. These are what
   make growing up a change in shape rather than a change in size.</p>
-  <div class="card" style="display:inline-block"><div id="stTable"></div></div>
-  <div style="margin-top:14px" id="stPreview"></div>
+  <div class="split">
+    <div class="ctl"><div class="card"><div id="stTable"></div></div></div>
+    <div class="pv card" id="stPreview"></div>
+  </div>
 </main>
 
 <main id="tab-coats">
   <p class="hint">A coat swaps the three body ramps and paints a pattern onto the mark
   layer. Patterns are drawn from the animal's own spine, so they follow whatever
   shape the proportions give it.</p>
-  <div class="cols">
-    <div class="card list" id="coatList"></div>
-    <div class="card"><h2>Colours</h2><div id="coatCols"></div></div>
-    <div class="card"><h2>Worn</h2><div class="strip" id="coatPreview"></div></div>
+  <div class="split">
+    <div class="ctl">
+      <div class="card list" id="coatList"></div>
+      <div class="card"><h2>Colours</h2><div id="coatCols"></div></div>
+    </div>
+    <div class="pv card"><h2>Worn</h2><div class="strip" id="coatPreview"></div></div>
   </div>
 </main>
 

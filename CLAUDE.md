@@ -183,6 +183,14 @@ rather than writing it again.
   block nothing claims is silently dropped on save, so that is checked at
   load. After changing any of it, call `artChanged()`: seven caches hold baked
   results and forgetting one shows a stale sprite.
+- **A sprite's grid is its resolution, not its size.** The owner redraws art on
+  finer grids for detail, and anything drawn at a fixed scale then grows out of
+  the place laid out for it. A sprite drawn into a slot goes through
+  `pixDrawBoxed()` (placed by origin, shrunk to its `PIX_BOX`). A sprite drawn as
+  a picture in a cell or row goes through `pixDrawFit()` (centred on its painted
+  cells, sized to the space). A new kind of slotted sprite gets a `PIX_BOX`
+  entry. Placing an item by a hardcoded origin offset is how the Feed menu put
+  the fish and the fern off the middle of their cells.
 - **The world is wider than the screen, by extension and not by scale.**
   `bakeBg` translates by `BG_PAD_X`/`BG_PAD_Y` once, so every literal
   coordinate in `04-world.js` still means what it meant and the hatchling's
@@ -211,11 +219,17 @@ rather than writing it again.
   fields, and both stay off the nest's save: `SIM` (the per-hour rates, the
   sleep window and a growth multiplier, persisted under its own Store key
   `SIM_KEY` on the machine that tuned it) and `devHour` (the clock the sky is
-  drawn at, which is a view only — the simulation keeps real time, and a
-  reload clears it). A new rate the tick reads goes in `SIM_DEFAULTS`, not in a
-  literal. The panel is built once and repainted by `paintDev()`: a slider
-  writes on `input` and saves on `change`, and nothing rebuilds while one is
-  being dragged.
+  drawn at — a reload clears it). A new rate the tick reads goes in
+  `SIM_DEFAULTS`, not in a literal. The panel is built once and repainted by
+  `paintDev()`: a slider writes on `input` and saves on `change`, and nothing
+  rebuilds while one is being dragged.
+  All of it acts only in **developer mode**, which plays a copy of the nest
+  under `DEV_SAVE_KEY`; the real nest runs on `SIM_DEFAULTS` and the real
+  clock. In that mode, and only there, a pinned `devHour` decides bedtime and
+  `devSleepHold` keeps a forced wake or sleep in place against the rules — both
+  knobs, never saved. Anything new that writes the save goes through
+  `saveKey()`, and anything that would replace the real save refuses while
+  `devMode` is on.
 - **Check a player-facing change along the player's path.** Setting state from
   the console proves the renderer works and nothing else. All five head hats
   could be bought, were charged for and showed as owned, and not one of them

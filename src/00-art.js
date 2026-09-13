@@ -160,7 +160,7 @@ const PIX = {
       '            ',
       '            '
     ] },
-  'icon.joy': { w:12, h:12,
+  'icon.joy': { w:12, h:9,
     pal:['#c96f86','#8f3050','#f0a8b8'], rows:[
       '            ',
       '  001  001  ',
@@ -170,10 +170,7 @@ const PIX = {
       '  10000011  ',
       '   100011   ',
       '    1111    ',
-      '     11     ',
-      '            ',
-      '            ',
-      '            '
+      '     11     '
     ] },
   'icon.sound': { w:14, h:12,
     pal:['#3a2408','#1d4a33'], rows:[
@@ -208,16 +205,16 @@ const PIX = {
   'icon.bone': { w:12, h:12,
     pal:['#efe6cf','#b8ad90'], rows:[
       '            ',
-      '            ',
-      '            ',
-      ' 000    000 ',
-      ' 000    000 ',
-      ' 1100000011 ',
-      '   000000   ',
-      ' 0011111001 ',
-      ' 001    001 ',
-      ' 111    111 ',
-      '            ',
+      '      00    ',
+      '      00    ',
+      '      0001  ',
+      '     00011  ',
+      '    0001    ',
+      '   0001     ',
+      ' 00001      ',
+      ' 0001       ',
+      '   01       ',
+      '   01       ',
       '            '
     ] },
   'icon.nest': { w:12, h:12,
@@ -250,15 +247,15 @@ const PIX = {
       '      00012 '
     ] },
   'hat.cap': { w:12, h:11,
-    pal:['#b08a4a','#8a6a36'], rows:[
+    pal:['#b08a4a','#8a6a36','#503f21'], rows:[
       '            ',
-      '            ',
-      '   000000   ',
-      '   000000   ',
-      '   000000   ',
-      '   000000   ',
-      ' 1111111111 ',
-      ' 1111111111 ',
+      '  22222222  ',
+      '  20000002  ',
+      '  20000002  ',
+      '  20000002  ',
+      '222000000222',
+      '211111111112',
+      '211111111112',
       '            ',
       '            ',
       '            '
@@ -305,44 +302,52 @@ const PIX = {
       '            ',
       '            '
     ] },
-  'item.berry': { w:12, h:10, ox:2, oy:4,
-    pal:['#4e7a4a','#b83b45','#8f2b36','#e08a92'], rows:[
-      '            ',
-      '            ',
-      '    0       ',
-      '    0       ',
-      '  11112     ',
-      '  13112     ',
-      '  11112     ',
-      '  22222     ',
-      '            ',
-      '            '
+  'item.berry': { w:8, h:9, ox:2, oy:4,
+    pal:['#4e7a4a','#423388','#3f28aa','#9e98e7'], rows:[
+      '        ',
+      '   0 0  ',
+      '    0   ',
+      '    0   ',
+      '  11112 ',
+      '  13112 ',
+      '  11112 ',
+      '  22222 ',
+      '        '
     ] },
-  'item.fish': { w:12, h:10, ox:2, oy:4,
+  'item.fish': { w:9, h:6, ox:0, oy:2,
     pal:['#7fa3b8','#1a140e','#5b7c90','#c9dde6'], rows:[
-      '            ',
-      '            ',
-      '            ',
-      '            ',
-      '  01000022  ',
-      '  03300022  ',
-      '  22222222  ',
-      '            ',
-      '            ',
-      '            '
+      '         ',
+      '   22   2',
+      ' 20002 22',
+      '23200222 ',
+      '222222 22',
+      '         '
     ] },
-  'item.fern': { w:12, h:10, ox:2, oy:4,
+  'item.fern': { w:14, h:23, ox:6, oy:11,
     pal:['#3f6440','#6f9c55','#8fb763'], rows:[
-      '            ',
-      '            ',
-      '            ',
-      '            ',
-      '    0       ',
-      '   102      ',
-      '  21021     ',
-      '   102      ',
-      '    0       ',
-      '            '
+      '        002   ',
+      '       0022   ',
+      '02     022  20',
+      '002    02  200',
+      ' 0022 0022200 ',
+      '  0022022200  ',
+      '   00202200   ',
+      '    000200    ',
+      '02   0220   20',
+      '002  02    200',
+      ' 002202  2200 ',
+      '  00202 2200  ',
+      '   00022200   ',
+      '02  002200  20',
+      '002  02 0  200',
+      ' 0022 2  2200 ',
+      '  0022022200  ',
+      '   00202200   ',
+      '    000200    ',
+      '     0020     ',
+      '      02      ',
+      '      002     ',
+      '       022    '
     ] },
   'item.cycad': { w:12, h:10, ox:2, oy:4,
     pal:['#a8863c','#8a6b2c','#d0ae5c','#5a4a2a'], rows:[
@@ -396,12 +401,6 @@ const PIX = {
       '            ',
       '            '
     ] },
-  /* Seen from above, for the forage game, which is played looking down at the
-     pen. Two frames each: the legs trade places and the tail swings the other
-     way, which is a stride from this angle. They are ordinary PIX sprites, so
-     every pixel of them is editable in the Pixels tab like any other — which is
-     the point of them being pixels rather than another projection of the
-     procedural animal. Drawn facing +x and rotated to the heading. */
   'top.rex.a': { w:30, h:17, ox:15, oy:8,
     pal:['#241d13','#7e9c54','#a0b680','#5f713e','#e9dfba','#5b7940'], rows:[
       '           04440              ',
@@ -568,11 +567,30 @@ const PIX = {
       '   000    ',
       '   110    ',
       '  00000   ',
-      '  00000   ',
+      '  00011   ',
       ' 0110002  ',
-      ' 0000002  ',
-      ' 2222222  ',
+      '110000021 ',
+      '2222222222',
       '          '
+    ] },
+  'badge.love': { w:7, h:6,
+    pal:['#16120b','#d8546e','#f4a3b3'], rows:[
+      ' 00 00 ',
+      '0120110',
+      '0111110',
+      ' 01110 ',
+      '  010  ',
+      '   0   '
+    ] },
+  'badge.no': { w:7, h:7,
+    pal:['#16120b','#e0583c'], rows:[
+      '00   00',
+      '010 010',
+      ' 01010 ',
+      '  010  ',
+      ' 01010 ',
+      '010 010',
+      '00   00'
     ] },
   'heart': { w:8, h:7, ox:0, oy:1,
     pal:['#8f2f46','#f6b3c0','#e2697c'], rows:[
@@ -584,18 +602,6 @@ const PIX = {
       '  000   ',
       '   0    '
     ] },
-  /* The case itself, at one cell per `--px`.
-
-     The house rule was always that every size in the case is a multiple of
-     `--px`, which is another way of saying the case was already a low-resolution
-     picture scaled up — it just happened to be expressed as CSS boxes. Here it
-     is as the picture it always was, which is what makes it something that can
-     be drawn rather than typed.
-
-     96x160 cells. The live parts are NOT in here and must not be drawn over:
-     the canvas floats inside the recess at x14..82 y64..116, the five keys sit
-     on the plates at y128..150, and the meters, the name and the mood line are
-     DOM text over the dark panel. Everything else is yours. */
   'case': { w:96, h:155,
     pal:['#42290a','#c08f43','#dcb060','#8d6527','#a9782f','#d8ccac','#f2ead2','#a08e69','#5d5138','#0e1417','#05090a','#b9aa85','#33200a','#2a1b09','#362209','#a67a35'], rows:[
       '                                             0  0  0                                            ',
@@ -745,8 +751,8 @@ const PIX = {
       '        c000331111111111111111111111111113111111111111111111111111111111111111111133000c        ',
       '         cd00033111111111111111111111111111111111111111111111111111111111111111133000dc         ',
       '           c000033111111112111111111111111111111111111111111111111111111111111330000c           ',
-      '            cc00003331111111111111111111111111111111111111111111111111111113330000cc ff         ',
-      '              ccd00003333111111111111111111111111111111111111111111111133330000dcc   ff         ',
+      '            cc00003331111111111111111111111111111111111111111111111111111113330000cc            ',
+      '              ccd00003333111111111111111111111111111111111111111111111133330000dcc              ',
       '                 ccd00000333311111111111111111111111111111111111111333300000dcc                 ',
       '                    ccd00000033333333311111111111111111111333333333000000dcc                    ',
       '                       cccd000000000003333333333333333333300000000000dccc                       ',
@@ -906,13 +912,13 @@ const REX_TUNE = {
   withersH:25,
   bellyD:9,
   neckLen:26,
-  neckDrop:10,
+  neckDrop:7,
   headLen:32,
   headDepth:15.5,
-  tailLen:86.25,
+  tailLen:109,
   tailBase:18,
-  armLen:11,
-  fuzzLen:5.2
+  armLen:9.5,
+  fuzzLen:10
 };
 /*</data>*/
 /*<data:TRI_TUNE>*/
@@ -934,7 +940,7 @@ const TRI_TUNE = {
   headDepth:10.5,
   frillW:15.6,
   frillH:20.2,
-  frillTilt:-.47,
+  frillTilt:.4,
   hornLen:1.85,
   tailLen:70.16,
   tailBase:15,
@@ -1179,9 +1185,39 @@ function skinOf(spId, skinId){
    -------------------------------------------------------------------------- */
 /*<data:SPECIES_STAGE>*/
 const SPECIES_STAGE = {
-  rex:[{ headLen:23 }, { headLen:28 }, { headLen:30 }, {  }],
-  trike:[{ epi:.22 }, { epi:.17 }, { epi:.12 }, {  }],
-  brachio:[{  }, {  }, {  }, {  }]
+  rex:[
+    { headLen:23, headDepth:10, armLen:9.5, backH:23.5 },
+    { headLen:28 },
+    { headLen:30, muzzle:1.18 },
+    { s:1, armLen:8, head:1.24, limb:1.13 }
+  ],
+  trike:[
+    { epi:.22, rumpH:17 },
+    { epi:.17, hornBend:.05 },
+    { epi:.12, hornBend:.7 },
+    { hornBend:.85, horn:1.2, frill:1.27, frillTilt:.4 }
+  ],
+  brachio:[
+    {
+      tailLen:105.5,
+      bodyD:47,
+      hipBack:30.5,
+      neckLen:69.5,
+      headLen:19,
+      neckThick:29,
+      foreRatio:1.22,
+      hindH:53.5,
+      bulk:1.27,
+      muzzle:1.05,
+      neck:.64,
+      crestH:4,
+      shoulder:14,
+      hornBend:0
+    },
+    {  },
+    {  },
+    { tailLen:112.5 }
+  ]
 };
 /*</data>*/
 
@@ -1244,7 +1280,50 @@ const GEAR_FIT = {
     }
   },
   trike:{  },
-  brachio:{  }
+  brachio:{
+    frond:{
+      dx:-.9,
+      dy:1.5,
+      at:{
+        hatchling:{ dx:6, dy:2.3 },
+        juvenile:{ dx:-1.4, dy:2.4 },
+        subadult:{ dx:-.5, dy:-1.1 },
+        adult:{ dx:-2.1, dy:1.8 }
+      }
+    },
+    cap:{
+      at:{
+        hatchling:{ s:2.02, dx:5.5, dy:6.2 },
+        juvenile:{ s:1.98, dx:2.9, dy:7.6 },
+        subadult:{ s:2.05, dx:3.7, dy:9.2 },
+        adult:{ dy:7.3, s:1.68, dx:2.4 }
+      }
+    },
+    cone:{
+      at:{
+        hatchling:{ dx:6.2, dy:3.5, s:1.29 },
+        juvenile:{ dy:5.7, s:1.22, dx:1.8 },
+        subadult:{ dx:1.5, dy:5.9, s:1.21 },
+        adult:{ s:1.43, dx:2.4, dy:7.9 }
+      }
+    },
+    hardhat:{
+      at:{
+        adult:{ s:1.4, dy:8.5, dx:3.6 },
+        hatchling:{ dx:4.1, dy:5.5, s:1.71 },
+        juvenile:{ s:1.55, dx:2.4, dy:6.6 },
+        subadult:{ s:1.37, dx:2.5, dy:8.1 }
+      }
+    },
+    crown:{
+      at:{
+        hatchling:{ s:1.72, dx:6.9, dy:7.5 },
+        juvenile:{ s:1.58, dx:3.8, dy:5.7 },
+        subadult:{ s:1.35, dx:2.2, dy:7.2 },
+        adult:{ s:1.24, dx:2.1, dy:7 }
+      }
+    }
+  }
 };
 /*</data>*/
 
@@ -1262,7 +1341,24 @@ function gearFor(spId, hatId, stage){
 const HABITAT_ART = {
   valley:{
     horizon:108,
-    range:{ points:[[-112, 58], [-84, 38], [-62, 50], [-34, 26], [-2, 50], [36, 36], [66, 54], [116, 22], [148, 46], [194, 32], [230, 52], [268, 20], [298, 42], [336, 32]] },
+    range:{
+      points:[
+        [-112, 58],
+        [-84, 38],
+        [-62, 50],
+        [-34, 26],
+        [-2, 50],
+        [36, 36],
+        [66, 54],
+        [116, 22],
+        [148, 46],
+        [194, 32],
+        [230, 52],
+        [268, 20],
+        [298, 42],
+        [336, 32]
+      ]
+    },
     skyline:[
       [-112, 66],
       [-96, 52],
@@ -1290,7 +1386,17 @@ const HABITAT_ART = {
   },
   lagoon:{
     horizon:98,
-    range:{ points:[[112, 97], [126, 91], [138, 84], [146, 86], [156, 80], [166, 88], [182, 97]] },
+    range:{
+      points:[
+        [112, 97],
+        [126, 91],
+        [138, 84],
+        [146, 86],
+        [156, 80],
+        [166, 88],
+        [182, 97]
+      ]
+    },
     skyline:[
       [-112, 70],
       [-100, 62],
@@ -1323,7 +1429,23 @@ const HABITAT_ART = {
   },
   ashfall:{
     horizon:111,
-    range:{ points:[[-112, 50], [-90, 30], [-74, 42], [-52, 22], [-30, 46], [-8, 40], [30, 58], [210, 58], [246, 36], [266, 46], [290, 20], [312, 40], [336, 28]] },
+    range:{
+      points:[
+        [-112, 50],
+        [-90, 30],
+        [-74, 42],
+        [-52, 22],
+        [-30, 46],
+        [-8, 40],
+        [30, 58],
+        [210, 58],
+        [246, 36],
+        [266, 46],
+        [290, 20],
+        [312, 40],
+        [336, 28]
+      ]
+    },
     skyline:[
       [-112, 60],
       [-94, 74],
@@ -1353,7 +1475,18 @@ const HABITAT_ART = {
   },
   gorge:{
     horizon:104,
-    range:{ points:[[-112, 36], [-74, 36], [-64, 46], [-26, 46], [-16, 38], [52, 38], [62, 50], [104, 50]] },
+    range:{
+      points:[
+        [-112, 36],
+        [-74, 36],
+        [-64, 46],
+        [-26, 46],
+        [-16, 38],
+        [52, 38],
+        [62, 50],
+        [104, 50]
+      ]
+    },
     skyline:[
       [-112, 46],
       [-96, 54],
@@ -1384,7 +1517,25 @@ const HABITAT_ART = {
   },
   boreal:{
     horizon:106,
-    range:{ snow:30, points:[[-112, 52], [-86, 24], [-64, 40], [-34, 12], [-4, 42], [28, 28], [66, 50], [118, 8], [156, 34], [198, 20], [236, 44], [280, 2], [310, 30], [336, 18]] },
+    range:{
+      snow:30,
+      points:[
+        [-112, 52],
+        [-86, 24],
+        [-64, 40],
+        [-34, 12],
+        [-4, 42],
+        [28, 28],
+        [66, 50],
+        [118, 8],
+        [156, 34],
+        [198, 20],
+        [236, 44],
+        [280, 2],
+        [310, 30],
+        [336, 18]
+      ]
+    },
     skyline:[
       [-112, 50],
       [-98, 34],
@@ -1675,6 +1826,97 @@ function pixCanvas(id, outline){
   pixCache.set(key, c);
   return c;
 }
+/* ------------------------------ boxed sprites -------------------------------
+   Some sprites are drawn into a place that was laid out for them: a food item
+   into a cell of the Feed menu, a shop row, a spot on the ground; a heart into a
+   nine-pixel pip of the bond row. Those places were sized for the grid the art
+   happened to be drawn on, and the art was drawn at a fixed scale, so drawing
+   the fern again on a finer grid for more detail made it bigger — 14 x 23 cells
+   came out twice the height of its cell and ran over the menu around it.
+
+   A grid is resolution, not size. Each kind of boxed sprite has the box its
+   callers were laid out for, as [w, h, ox, oy] in cells: the size and the origin
+   of the sprites that were there when the layouts were made. Anything that fits
+   is drawn exactly as it always was, by its own origin. Anything bigger is
+   scaled down to fit that box at the caller's scale, centred in it — or, for the
+   mess, standing on its foot, because the mess sits on the ground line — and
+   drawn from a baked canvas with no smoothing, so it stays hard-edged. Sprites
+   are never scaled up: a small sprite is small because it was drawn small. */
+const PIX_BOX = {
+  item:  { w:12, h:10, ox:2, oy:4 },
+  heart: { w:8,  h:7,  ox:0, oy:1 },
+  mess:  { w:10, h:9,  ox:4, oy:7, foot:true }
+};
+function pixBoxOf(id){ return id.slice(0, 5) === 'item.' ? PIX_BOX.item : PIX_BOX[id] || null; }
+
+/* The sprite on its own canvas in one flat colour, for the outline stamps. */
+function pixFlatCanvas(id, flat){
+  if (!flat) return pixCanvas(id);
+  const key = id + '|flat:' + flat;
+  if (pixCache.has(key)) return pixCache.get(key);
+  const p = PIX[id], c = makeCv(p.w + PIX_PAD*2, p.h + PIX_PAD*2);
+  c.pad = PIX_PAD;
+  pixDraw(readCtx(c), id, (p.ox || 0) + PIX_PAD, (p.oy || 0) + PIX_PAD, 1, flat);
+  pixCache.set(key, c);
+  return c;
+}
+
+/* Like pixDraw, and called the same way — (x, y) is where the box's origin
+   goes — but a sprite bigger than its box is shrunk to fit it. */
+function pixDrawBoxed(g, id, x, y, s, flat){
+  const p = PIX[id], box = pixBoxOf(id);
+  if (!p) return;
+  s = s || 1;
+  const fit = box ? Math.min(1, box.w / p.w, box.h / p.h) : 1;
+  if (fit >= 1) return pixDraw(g, id, x, y, s, flat);
+  const w = Math.max(1, Math.round(p.w * s * fit)), h = Math.max(1, Math.round(p.h * s * fit));
+  const bx = x - box.ox * s, by = y - box.oy * s;
+  const dx = Math.round(bx + (box.w * s - w) / 2);
+  const dy = Math.round(box.foot ? by + box.h * s - h : by + (box.h * s - h) / 2);
+  const was = g.imageSmoothingEnabled;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(pixFlatCanvas(id, flat), PIX_PAD, PIX_PAD, p.w, p.h, dx, dy, w, h);
+  g.imageSmoothingEnabled = was;
+}
+
+/* The cells a sprite actually paints, { x0, y0, x1, y1 }, or null if none.
+   A grid is drawn with whatever margin the artist left, and an origin is
+   wherever it suits the game, so neither says where the picture is. */
+function pixInk(id){
+  const key = id + '|ink';
+  if (pixCache.has(key)) return pixCache.get(key);
+  const p = PIX[id];
+  let ink = null;
+  if (p) p.rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === ' ' || x >= p.w || y >= p.h) return;
+    if (!ink) ink = { x0: x, y0: y, x1: x, y1: y };
+    else { ink.x0 = Math.min(ink.x0, x); ink.x1 = Math.max(ink.x1, x); ink.y0 = Math.min(ink.y0, y); ink.y1 = Math.max(ink.y1, y); }
+  }));
+  pixCache.set(key, ink);
+  return ink;
+}
+
+/* A picture for a cell: the painted part of the sprite, as big as fits in
+   maxW x maxH up to `cap` times, centred on (cx, cy). Scales of one and up are
+   whole numbers, so every cell is the same size on screen; below one it
+   shrinks by what it has to. The margin and the origin are both ignored — the
+   Feed menu placed items by their origin, as if every one were a 12 x 10 grid
+   with its origin at 2,4, which put a fish with its origin at 0,2 and a fern on
+   a 14 x 23 grid well off the middle of their cells. */
+function pixDrawFit(g, id, cx, cy, maxW, maxH, cap){
+  const ink = pixInk(id);
+  if (!ink) return;
+  const iw = ink.x1 - ink.x0 + 1, ih = ink.y1 - ink.y0 + 1;
+  let k = Math.min(maxW / iw, maxH / ih, cap || Infinity);
+  if (k >= 1) k = Math.floor(k);
+  const w = Math.max(1, Math.round(iw * k)), h = Math.max(1, Math.round(ih * k));
+  const was = g.imageSmoothingEnabled;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(pixCanvas(id), PIX_PAD + ink.x0, PIX_PAD + ink.y0, iw, ih,
+              Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
+  g.imageSmoothingEnabled = was;
+}
+
 /* Anything the editor changes has to drop the caches, or the game goes on
    showing what it baked before the edit. */
 function pixInvalidate(){ pixCache.clear(); if (typeof HATS === 'object') for (const k in HATS) delete HATS[k]; }
