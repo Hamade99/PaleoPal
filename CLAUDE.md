@@ -102,11 +102,13 @@ rather than writing it again.
   and at 96 cells across one cell is four screen pixels; a grid fine enough
   would be 384x620, a quarter of a megabyte of pixel rows. The default stays the
   real thing and the grid is there for when someone wants their own.
-  Cells: head `5,14` `86x19`, bone bezel `3,32` `90x87`, dark panel `6,35`
+  Cells: head `5,10` `86x19`, bone bezel `3,32` `90x87`, dark panel `6,35`
   `84x81` (`3,3` of the bezel), glass recess `6,48` `84x62` — the panel's full
   width — and keys `7,121`, `14x16` in steps of 17 four cells below the bezel.
   `RECESS_W`/`RECESS_H` in `08-ui.js` must match the recess or the glass will
-  not take the step it could. Those
+  not take the step it could, and `LCD_STEPS` is in quarters rather than halves
+  — whatever is left between one step and the next is dead black panel around
+  the picture, and on a 360-wide phone halves left ten cells a side. Those
   numbers are in three places — the art, `style.css` and `CASE_CELLS` in
   `tools/edit-ui.js` — and a Node test checks the first two against each other,
   because nothing at runtime would notice them drifting: the screen would just

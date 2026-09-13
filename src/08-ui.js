@@ -99,7 +99,14 @@ function buildChrome(){
    on, and every one-pixel line in the interface shows it. Whole and half steps
    keep the ratio regular, and the case is sized so that a phone gets 1.5x and
    a desktop 2x. */
-const LCD_STEPS = [1, 1.5, 2, 2.5, 3];
+/* Quarter steps, not halves. The glass takes the largest step that fits the
+   recess, so whatever is left over between one step and the next is dead black
+   panel around the picture — and on a 360-wide phone that was ten cells a side,
+   the game sitting at 1x inside a recess with room for a third more. A quarter
+   step puts a four-pixel beat in the scaling where a half step puts a two-pixel
+   one; at the pixel densities a phone has, neither is visible, and the choice is
+   between a beat nobody can see and a border everybody can. */
+const LCD_STEPS = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3];
 
 /* The case is a fixed 96x160 grid and `--px` is how big one cell of it is, so
    fitting the case to the window is one number. Both axes matter now: the old

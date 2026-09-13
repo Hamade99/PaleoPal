@@ -259,7 +259,7 @@ test('the case grid and the boxes placed on it agree', () => {
     assert.ok(Math.abs(got - want) < 0.01, what + ': ' + got + '% should be ' + want.toFixed(4) + '%');
 
   near(pct('.shellhead', 'left'),   5 / W * 100, 'head left');
-  near(pct('.shellhead', 'top'),   14 / H * 100, 'head top');
+  near(pct('.shellhead', 'top'),   10 / H * 100, 'head top');
   near(pct('.shellhead', 'width'), 86 / W * 100, 'head width');
   near(pct('.bezel', 'left'),    3 / W * 100, 'bezel left');
   near(pct('.bezel', 'top'),    32 / H * 100, 'bezel top');

@@ -171,7 +171,7 @@ body{
    Cells, for reading against a drawn faceplate: head 5,14 86x19; bone bezel
    4,35 88x86; keys 7,121 82 wide. */
 .shell > *{position:absolute}
-.shellhead{left:5.2083%;  top:9.0323%;  width:89.5833%}
+.shellhead{left:5.2083%;  top:6.4516%;  width:89.5833%}
 .bezel    {left:3.125%;   top:20.6452%; width:93.75%;    height:56.129%}
 .keys     {left:7.2917%;  top:78.0645%; width:85.4167%}
 
@@ -184,7 +184,6 @@ body{
   flex:0 0 100%;text-align:center;position:relative;
   font-weight:700;font-size:calc(var(--px)*5);letter-spacing:2px;
   color:var(--stamp);text-shadow:0 1px 0 rgba(255,236,196,.45);
-  padding-left:calc(var(--px)*9);
 }
 .brand span{color:#22503a}
 .brand .rivet{position:absolute;left:50%;bottom:calc(var(--px)*-2);
