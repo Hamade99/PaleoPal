@@ -313,11 +313,14 @@ test('every background crop is 4:3, whole-pixel, and lands on the ground line', 
   const core=fs.readFileSync(path.join(__dirname,'../src/00-core.js'),'utf8');
   const read=name=>Number(new RegExp(name+'\\s*=\\s*(-?\\d+)').exec(core)[1]);
   const W=read('const W'),H=read('H'),GROUND=read('GROUND'),BG_W=read('const BG_W'),BG_H=read('BG_H');
-  const BG_G=GROUND+read('const BG_PAD_X = 28, BG_PAD_Y');
+  const BG_PAD_X=read('BG_PAD_X'),BG_PAD_Y=read('BG_PAD_Y'),BG_G=GROUND+BG_PAD_Y;
   const crops=JSON.parse('['+/const BG_CROP = \[([^\]]*(?:\][^\]]*)*?)\n\];/.exec(core)[1]
     .replace(/\/\/[^\n]*/g,'').replace(/\s+/g,'').replace(/,$/,'')+']');
   assert.equal(crops.length,4);
-  assert.equal(BG_G,175);
+  assert.equal(BG_G,280);
+  /* Growing up has to be seen: each stage pulls back at least a fifth. At
+     1.06 a step the view barely changed between juvenile and subadult. */
+  for (let i=1;i<4;i++) assert.ok(crops[i][2]/crops[i-1][2]>=1.2,'stage '+i+' pulls back far enough');
   crops.forEach(([sx,sy,sw,sh],i)=>{
     assert.ok([sx,sy,sw,sh].every(Number.isInteger),'stage '+i+' crop is whole pixels');
     assert.equal(sw*H,sh*W,'stage '+i+' crop is 4:3');
@@ -325,7 +328,7 @@ test('every background crop is 4:3, whole-pixel, and lands on the ground line', 
     assert.equal(sx*2+sw,BG_W,'stage '+i+' crop is horizontally centred');
     assert.ok(sx>=0&&sy>=0&&sx+sw<=BG_W&&sy+sh<=BG_H,'stage '+i+' crop is inside the world');
   });
-  assert.deepEqual(crops[0],[BG_W-W>>1,BG_H-H-7,W,H],"the hatchling sees today's picture at 1:1");
+  assert.deepEqual(crops[0],[BG_PAD_X,BG_PAD_Y,W,H],'the hatchling sees its view at 1:1');
   assert.deepEqual(crops[3],[0,0,BG_W,BG_H],'the adult sees all of it');
 });
 

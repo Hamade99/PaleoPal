@@ -17,8 +17,15 @@ const W = 224, H = 168, GROUND = 140;
    The ground line is what fixes every number here. It has to land at the same
    fraction of the height in the world as it does on the screen, or the animal
    — which is drawn in screen space and never moves — would leave the grass as
-   the view pulled back. 140/168 is 175/210, and that single constraint gives
-   the padding: 28 columns each side, 35 rows of sky above, 7 of ground below.
+   the view pulled back. 140/168 is 280/336, and that single constraint gives
+   the padding: 112 columns each side, 140 rows of sky above, 28 of ground below.
+
+   The world was 280x210 first, and adult saw it at 0.8 — four steps so close
+   together that growing up hardly changed the view. It is twice the screen
+   each way now, and each growth spurt pulls back about a quarter. That much
+   new ground is not the old picture carried on: every habitat's margins and
+   sky were painted for what should be there, and a new habitat has to be
+   painted to the full world, not to the screen.
 
    The painters keep working in the old coordinates. bakeBg translates by the
    padding once and every literal position in 04-world.js stays exactly as it
@@ -31,14 +38,14 @@ const W = 224, H = 168, GROUND = 140;
    file: the sky dither, the grass, the dirt and the cliffs are per-pixel
    fillRect(x, y, 1, 1) loops, and at a fractional scale those become
    fractional rects that antialias into mush. */
-const BG_W = 280, BG_H = 210;                    // the world, 4:3 like the screen
-const BG_PAD_X = 28, BG_PAD_Y = 35;              // where today's picture sits in it
-const BG_G = GROUND + BG_PAD_Y;                  // 175 — the ground line, in world space
-/* The world's edges in the painters' own coordinates, where today's picture is
-   still 0..W and 0..H. */
-const BG_L = -BG_PAD_X, BG_R = W + BG_PAD_X;     // -28 … 252
-const BG_T = -BG_PAD_Y, BG_B = BG_H - BG_PAD_Y;  // -35 … 175
-const BG_SPAN = BG_R - BG_L;                     // 280, for the full-width fills
+const BG_W = 448, BG_H = 336;                    // the world, 4:3 like the screen
+const BG_PAD_X = 112, BG_PAD_Y = 140;            // where the hatchling's view sits in it
+const BG_G = GROUND + BG_PAD_Y;                  // 280 — the ground line, in world space
+/* The world's edges in the painters' own coordinates, where the hatchling's
+   view is still 0..W and 0..H. */
+const BG_L = -BG_PAD_X, BG_R = W + BG_PAD_X;     // -112 … 336
+const BG_T = -BG_PAD_Y, BG_B = BG_H - BG_PAD_Y;  // -140 … 196
+const BG_SPAN = BG_R - BG_L;                     // 448, for the full-width fills
 
 /* How much of the world is on screen, one crop per growth stage.
 
@@ -51,20 +58,24 @@ const BG_SPAN = BG_R - BG_L;                     // 280, for the full-width fill
    that and the crop samples on half-pixels, which softens the whole backdrop
    instead of only reducing it.
 
+   The widths step by about 1.26 each time — 224, 280, 352, 448 — so the three
+   growth spurts are three equal-looking pulls back rather than two nudges and
+   a jump.
+
    The reduction is real and was accepted for the sake of seeing the world:
-   with smoothing off this drops rows and columns, about one in ten at juvenile
-   and one in five at adult, and what suffers is the one-pixel detail — the lit
-   top edge of the grass, the specular on the river, the ordered dither in the
-   sky. The hatchling crop is scale 1.0 over the old picture, so a newly
-   hatched animal sees exactly what the game drew before any of this existed.
+   with smoothing off this drops rows and columns, one in five at juvenile and
+   one in two at adult, and what suffers is the one-pixel detail — the lit top
+   edge of the grass, the specular on the river, the ordered dither in the sky.
+   The hatchling crop is scale 1.0, so a newly hatched animal sees its world
+   pixel for pixel.
 
    Here rather than in the renderer because the editor draws these as guides
    over a backdrop being painted, and the editor does not load the renderer. */
 const BG_CROP = [
-  [28, 35, 224, 168],        // hatchling  1.000 — today's picture, untouched
-  [16, 20, 248, 186],        // juvenile   0.903
-  [ 8, 10, 264, 198],        // subadult   0.848
-  [ 0,  0, 280, 210]         // adult      0.800 — the whole world
+  [112, 140, 224, 168],      // hatchling  1.000 — pixel for pixel
+  [ 84, 105, 280, 210],      // juvenile   0.800
+  [ 48,  60, 352, 264],      // subadult   0.636
+  [  0,   0, 448, 336]       // adult      0.500 — the whole world
 ];
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const lerp  = (a,b,t) => a + (b-a)*t;
@@ -72,6 +83,17 @@ const rnd   = (a,b) => a + Math.random()*(b-a);
 const pick  = a => a[(Math.random()*a.length)|0];
 const $     = id => document.getElementById(id);
 const HOUR  = 3600e3, MIN = 60e3;
+/* The clock the picture is drawn at: the sky phase, the sun and the moon.
+   Normally the real one. The developer panel can pin it to an hour so night
+   can be looked at by day; it is a view and nothing else — the simulation,
+   ages and sleep keep reading the real clock, because anything that persists
+   runs on wall time. Not saved: a reload shows the real sky again. */
+let devHour = null;
+function viewDate(){
+  const d = new Date();
+  if (devHour !== null) d.setHours(Math.floor(devHour), Math.round((devHour % 1) * 60), 0, 0);
+  return d;
+}
 
 /* ---------- storage: works as artifact, as a file, and inside a webview ---- */
 const Store = {

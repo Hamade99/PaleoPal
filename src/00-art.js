@@ -1262,7 +1262,13 @@ function gearFor(spId, hatId, stage){
 const HABITAT_ART = {
   valley:{
     horizon:108,
+    range:{ points:[[-112, 58], [-84, 38], [-62, 50], [-34, 26], [-2, 50], [36, 36], [66, 54], [116, 22], [148, 46], [194, 32], [230, 52], [268, 20], [298, 42], [336, 32]] },
     skyline:[
+      [-112, 66],
+      [-96, 52],
+      [-78, 60],
+      [-60, 44],
+      [-44, 63],
       [-28, 73],
       [-12, 61],
       [0, 70],
@@ -1273,14 +1279,25 @@ const HABITAT_ART = {
       [183, 64],
       [224, 82],
       [243, 65],
-      [252, 74]
+      [262, 76],
+      [284, 50],
+      [302, 68],
+      [318, 57],
+      [336, 72]
     ],
     slot:[38, 140],
     item:'fern'
   },
   lagoon:{
     horizon:98,
+    range:{ points:[[112, 97], [126, 91], [138, 84], [146, 86], [156, 80], [166, 88], [182, 97]] },
     skyline:[
+      [-112, 70],
+      [-100, 62],
+      [-86, 72],
+      [-70, 79],
+      [-52, 88],
+      [-38, 93],
       [-28, 94],
       [-17, 88],
       [-7, 94],
@@ -1295,14 +1312,24 @@ const HABITAT_ART = {
       [224, 94],
       [237, 91],
       [246, 94],
-      [252, 94]
+      [270, 94],
+      [290, 87],
+      [304, 90],
+      [320, 77],
+      [336, 72]
     ],
     slot:[187, 140],
     item:'fish'
   },
   ashfall:{
     horizon:111,
+    range:{ points:[[-112, 50], [-90, 30], [-74, 42], [-52, 22], [-30, 46], [-8, 40], [30, 58], [210, 58], [246, 36], [266, 46], [290, 20], [312, 40], [336, 28]] },
     skyline:[
+      [-112, 60],
+      [-94, 74],
+      [-76, 56],
+      [-56, 70],
+      [-40, 62],
       [-28, 71],
       [-11, 84],
       [0, 82],
@@ -1314,14 +1341,25 @@ const HABITAT_ART = {
       [194, 83],
       [224, 70],
       [239, 81],
-      [252, 67]
+      [252, 67],
+      [268, 78],
+      [288, 58],
+      [306, 72],
+      [322, 64],
+      [336, 76]
     ],
     slot:[42, 140],
     item:'rock'
   },
   gorge:{
     horizon:104,
+    range:{ points:[[-112, 36], [-74, 36], [-64, 46], [-26, 46], [-16, 38], [52, 38], [62, 50], [104, 50]] },
     skyline:[
+      [-112, 46],
+      [-96, 54],
+      [-80, 42],
+      [-60, 58],
+      [-42, 52],
       [-28, 61],
       [-15, 54],
       [0, 58],
@@ -1335,14 +1373,24 @@ const HABITAT_ART = {
       [200, 54],
       [224, 57],
       [241, 51],
-      [252, 60]
+      [252, 60],
+      [270, 48],
+      [292, 56],
+      [314, 40],
+      [336, 50]
     ],
     slot:[185, 140],
     item:'rock'
   },
   boreal:{
     horizon:106,
+    range:{ snow:30, points:[[-112, 52], [-86, 24], [-64, 40], [-34, 12], [-4, 42], [28, 28], [66, 50], [118, 8], [156, 34], [198, 20], [236, 44], [280, 2], [310, 30], [336, 18]] },
     skyline:[
+      [-112, 50],
+      [-98, 34],
+      [-84, 52],
+      [-66, 26],
+      [-48, 48],
       [-28, 63],
       [-11, 80],
       [0, 82],
@@ -1356,7 +1404,12 @@ const HABITAT_ART = {
       [195, 69],
       [224, 55],
       [237, 73],
-      [252, 48]
+      [252, 48],
+      [268, 62],
+      [288, 30],
+      [306, 52],
+      [322, 38],
+      [336, 56]
     ],
     slot:[40, 140],
     item:'cycad'
@@ -1399,9 +1452,9 @@ const POSE_ART = {
 const BIOME_ART = {
   valley:{
     id:'valley',
-    name:'Fern valley',
+    name:'Mystical valley',
     cost:0,
-    note:'Open ground under a live volcano. Where every animal starts.',
+    note:'Open ground under one ancient, impossible araucaria. Where every animal starts.',
     sky:{
       night:['#0a1124', '#28374f'],
       dawn:['#2c3f70', '#e39a6c'],
@@ -1640,5 +1693,7 @@ function artChanged(){
   if (typeof warmQueue  !== 'undefined') warmQueue.length = 0;
   if (typeof bgCache    !== 'undefined') bgCache.clear();
   if (typeof skyCache   !== 'undefined') skyCache.clear();
+  if (typeof skyViewCache !== 'undefined') skyViewCache.clear();
+  if (typeof thumbCache !== 'undefined') thumbCache.clear();
   stageCache.clear();
 }

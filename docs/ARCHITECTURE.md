@@ -92,9 +92,11 @@ Otherwise:
 
 1. baked backdrop for the current sky phase (cached per phase)
 2. stars, sun or moon on a clock-driven arc, parallax clouds, pterosaur, pond
-3. the volcano's plume and crater glow, and a rank of grass on the ground
-   line — the three things in the backdrop that move, and therefore the three
-   that cannot be baked into it
+3. the habitat's `live` layer — the ash flats' plume and crater glow, the
+   gorge's spray, surf, aurora — and the pond's ripples, drawn in world space
+   and blitted through the backdrop's crop; then a rank of grass on the ground
+   line. These are the things in the backdrop that move, and therefore the
+   things that cannot be baked into it
 4. mode content — egg choice, hatching, habitat, or a minigame
 5. foreground cycads the animal walks behind
 6. a time-of-day tint
@@ -120,11 +122,20 @@ Otherwise:
 | The screen font | `src/03-font.js` |
 | Colours, layout, buttons | `src/style.css` |
 | The crown ridge's plates | `--x/--w/--h` in `src/style.css`; the arc in `fitCrown()` in `src/08-ui.js` |
-| The volcano and its plume | `drawVolcano` (baked) and `drawPlume` (live), `src/04-world.js` |
+| The ash flats' volcano and its plume | `drawVolcano` (baked) and `drawPlume` (live), `src/04-world.js` |
+| The valley's giant araucaria | `drawGiantTree` and `GIANT`, `src/04-world.js` |
+| The gorge's fall | `drawFalls` (baked) and `drawFallsSpray` (live), shaped by `FALLS`, `src/04-world.js` |
+| The gorge's pool, outflow and stream | `gorgeFloor`, `gorgeStreamTop`, `gorgeChannel`, `src/04-world.js` |
+| The ash flats' lava fields, flank channel, vents | `ASH_FIELDS`, `ashCracks`, `ashFlow`, `ashVents` (shared by bake and `drawAshfall`), `src/04-world.js` |
+| The polar dawn's great peak | `drawPolarPeak` and `PEAK`, `src/04-world.js` |
+| Pond ripples | `pond:[x0, x1]` on the habitat in `BIOME_PAINT`; none drawn without one |
+| Sun, moon, stars, clouds | drawn in the sky, behind the land: the callback to `drawHabitatView()` in `drawScene` |
 | The case: shell, bezel, keys | `src/style.css`, `index.html` — and `PIX.case` for the drawn face |
 | Where anything sits on the case | a fraction of the 96x155 grid, in `src/style.css`; see the cell list in CLAUDE.md |
 | An age, a habitat, a coat, a hat | all on the pet: `S.born`, `S.biome`, `S.skin`, `S.hat` |
-| A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
+| A developer switch | a method on `DEV` in `src/05-sim.js`, a chip or slider in the `dev` sheet (`src/08-ui.js`) |
+| A simulation rate or the sleep window | `SIM_DEFAULTS` in `src/05-sim.js`; tuned live through `SIM` |
+| The clock the sky is drawn at | `viewDate()` and `devHour` in `src/00-core.js` — view only |
 | Checking any of the art | `tools/sheet.html` |
 | Changing any of the art | `tools/edit.cmd`, or `python tools/edit.py` |
 | A new editable sprite | an entry in `PIX`, and a marker if it is a new block |
@@ -159,7 +170,24 @@ of the gorge).
 
 Anything in a habitat that moves has to be in `live`, because the backdrop is
 baked once per biome and phase and then cached — the volcano's smoke sat still
-for the whole life of this project for exactly that reason.
+for the whole life of this project for exactly that reason. `live` paints in the
+same world coordinates as the landmark, onto a transparent world-sized canvas
+that `drawHabitatLive()` blits through the same `BG_CROP` as the backdrop. Drawn
+straight onto the screen it only lined up at hatchling, and as the view widened
+the crater's lava floated off the top of the cone.
+
+The world is 448x336, twice the screen each way, and `BG_CROP` shows it at
+1.0, 0.8, 0.64 and 0.5 by growth stage. The sky is not in the bake:
+`skyView()` paints it per habitat, phase and stage at screen resolution, and
+`drawHabitatView()` draws that sky and then the cropped bake. Use it anywhere a
+habitat is shown. Each habitat in `HABITAT_ART` has a skyline from -112 to 336,
+and a `range` — a high far silhouette, optionally with a `snow` row — that
+`farRange()` paints behind the skyline planes. A new habitat is painted to the
+whole world, margins and sky included.
+
+Each landmark belongs to one habitat. The valley's is an old-growth araucaria
+(`drawGiantTree`), which stands on the near ridge rather than behind it; the
+volcano is the ash flats' alone.
 
 `HABITAT_ART` owns distinct skyline points, horizon heights and interaction
 slots. Tapping the prop sends the active animal to that slot. On arrival,

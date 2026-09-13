@@ -433,8 +433,11 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   background:var(--rust);border:1px solid #40140a}
 
 /* moulded nameplate and speaker slots */
+/* Three and a half cells under the keys' drop shadow rather than one: at one
+   the nameplate and its grilles sat hard against the bottom of the green keys
+   and read as a label stuck to them rather than moulded into the shell. */
 .plate{display:flex;align-items:center;justify-content:center;gap:calc(var(--px)*2);
-  margin-top:calc(var(--px)*1);
+  margin-top:calc(var(--px)*3.5);
   font-size:calc(var(--px)*2.75);letter-spacing:2.4px;color:var(--stamp);
   text-shadow:0 1px 0 rgba(255,240,204,.5)}
 .grille{width:calc(var(--px)*8);height:calc(var(--px)*2);
@@ -453,7 +456,9 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
   border:2px solid var(--bezel-edge);border-bottom:0;
   border-radius:calc(var(--px)*4) calc(var(--px)*4) 0 0;
   padding:calc(var(--px)*3) calc(var(--px)*3) calc(var(--px)*4 + var(--safe));z-index:6;
-  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:84vh;overflow-y:auto
+  transition:transform .26s cubic-bezier(.2,.9,.3,1);max-height:84vh;overflow-y:auto;
+  /* the face joins "fi" into one glyph that reads as an A: "Aelds" */
+  font-variant-ligatures:none
 }
 .sheet.on{transform:translate(-50%,0)}
 .sheet.dock{max-height:52vh}
@@ -502,6 +507,36 @@ canvas#scene{display:block;width:100%;height:auto;image-rendering:pixelated;
 .chip:active{transform:translateY(calc(var(--px)*0.75));box-shadow:none}
 .chip.on{background:var(--key);border-color:var(--key-edge);color:#dff0e4}
 .chip.warn{color:#f0b7a3;border-color:#7a3a2b}
+
+/* ---------- developer panel ----------
+   Sections fold, so the one being worked in is the only one taking room; the
+   strip at the top is the state at a glance and repaints every second; a
+   slider row is name, track, number, and the track is the key colour so it
+   reads as part of the case rather than a browser control. */
+.devstrip{display:grid;grid-template-columns:repeat(3,1fr);gap:calc(var(--px)*1.5);
+  margin:0 0 calc(var(--px)*3)}
+.devstrip div{background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--px)*2);
+  padding:calc(var(--px)*1.25) calc(var(--px)*2);font-size:calc(var(--px)*2.75);color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.devstrip b{display:block;font-size:calc(var(--px)*3.5);color:var(--bone);font-weight:700}
+.devsec{border:1px solid var(--line);border-radius:calc(var(--px)*2.5);margin:0 0 calc(var(--px)*2);
+  background:rgba(255,255,255,.015)}
+.devsec>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:calc(var(--px)*2);
+  padding:calc(var(--px)*2) calc(var(--px)*2.75);font-size:calc(var(--px)*3.5);color:var(--bone);font-weight:700}
+.devsec>summary::-webkit-details-marker{display:none}
+.devsec>summary::before{content:"▸";color:var(--dim);font-size:calc(var(--px)*3);transition:transform .15s}
+.devsec[open]>summary::before{transform:rotate(90deg)}
+.devsec>summary small{font-weight:400;font-size:calc(var(--px)*2.75);color:var(--dim);margin-left:auto}
+.devbody{padding:0 calc(var(--px)*2.75) calc(var(--px)*1.5)}
+.devsub{font-size:calc(var(--px)*2.75);color:var(--dim);letter-spacing:.4px;text-transform:uppercase;
+  margin:calc(var(--px)*1.5) 0 calc(var(--px)*1.5)}
+.devrow{display:grid;grid-template-columns:calc(var(--px)*24) 1fr calc(var(--px)*11);align-items:center;
+  gap:calc(var(--px)*2);margin:0 0 calc(var(--px)*1.75);font-size:calc(var(--px)*3.25);color:var(--bone)}
+.devrow input[type=range]{width:100%;accent-color:var(--key);cursor:pointer;margin:0}
+.devrow output{text-align:right;color:var(--gold, #e3b95c);font-variant-numeric:tabular-nums}
+.devrow.off output{color:var(--dim)}
+.devsec .chips{margin-bottom:calc(var(--px)*1.75)}
+.devsec .tiny{margin:0 0 calc(var(--px)*1.5)}
 
 .log{font-size:calc(var(--px)*3.25);line-height:1.6;color:var(--bone);
   border-left:2px solid var(--line);padding:2px 0 2px calc(var(--px)*2.5);

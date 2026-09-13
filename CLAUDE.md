@@ -185,8 +185,13 @@ rather than writing it again.
   results and forgetting one shows a stale sprite.
 - **The world is wider than the screen, by extension and not by scale.**
   `bakeBg` translates by `BG_PAD_X`/`BG_PAD_Y` once, so every literal
-  coordinate in `04-world.js` still means what it meant and today's picture
-  sits unmoved in the middle of a 280x210 world. Widen a full-width loop to
+  coordinate in `04-world.js` still means what it meant and the hatchling's
+  view sits in the middle of a 448x336 world — twice the screen each way, so
+  each growth spurt pulls back about a quarter. A new habitat is painted to
+  that whole world: its `range`, its skyline out to -112 and 336, and its
+  margins drawn for what belongs there rather than the middle carried on. The
+  sky is not baked; `skyView()` paints it in screen space per stage, because a
+  dither reduced by half comes out as stripes. Widen a full-width loop to
   `BG_L`..`BG_R` rather than scaling anything: the painters are per-pixel
   `fillRect(x, y, 1, 1)` loops and a fractional scale turns them to mush.
   `BG_CROP` is four views of that one canvas, anchored on the ground line so
@@ -202,7 +207,15 @@ rather than writing it again.
   pixels and gives up the title, which is the least useful text on the screen.
   `refuse()` passes `bad`, and a refusal is red on all three surfaces.
 - **The developer tools are a harness, not a cheat menu.** Anything added to
-  `DEV` must write the same fields the simulation writes.
+  `DEV` must write the same fields the simulation writes. Two knobs are not
+  fields, and both stay off the nest's save: `SIM` (the per-hour rates, the
+  sleep window and a growth multiplier, persisted under its own Store key
+  `SIM_KEY` on the machine that tuned it) and `devHour` (the clock the sky is
+  drawn at, which is a view only — the simulation keeps real time, and a
+  reload clears it). A new rate the tick reads goes in `SIM_DEFAULTS`, not in a
+  literal. The panel is built once and repainted by `paintDev()`: a slider
+  writes on `input` and saves on `change`, and nothing rebuilds while one is
+  being dragged.
 - **Check a player-facing change along the player's path.** Setting state from
   the console proves the renderer works and nothing else. All five head hats
   could be bought, were charged for and showed as owned, and not one of them

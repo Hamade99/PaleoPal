@@ -196,13 +196,19 @@ function gridCell(g, box, opts){
 
 /* the caption block under a grid: name on the left, price on the right, then
    the note wrapped underneath */
-function caption(g, y, name, right, rightCol, note){
+/* `maxY`, when given, is the first row the note may not reach: lines that
+   would run past it are dropped, never drawn under whatever sits there. */
+function caption(g, y, name, right, rightCol, note, maxY){
   g.fillStyle = SC.line;
   g.fillRect(PAD, y, W - PAD*2, 1);
   y += 4;
   text(g, name, PAD, y, SC.bone);
   if (right) text(g, right, W - PAD, y, rightCol || SC.gold, 'right');
-  if (note) textBlock(g, note, PAD, y + 10, W - PAD*2, SC.dim, 8);
+  if (note){
+    let lines = wrapText(note, W - PAD*2);
+    if (maxY !== undefined) lines = lines.slice(0, Math.max(0, Math.floor((maxY - (y + 10) - FONT_H) / 8) + 1));
+    lines.forEach((line, i) => text(g, line, PAD, y + 10 + i*8, SC.dim));
+  }
   return y;
 }
 
@@ -267,9 +273,10 @@ function rowsLayout(items, top, h){
 function listRow(g, box, label, right, opts){
   opts = opts || {};
   const [x, y, w, h] = box;
+  const ty = y + Math.floor((h - FONT_H) / 2);          // centred in whatever height the row is
   panel(g, x, y, w, h, opts.on ? SC.sel : SC.panel);
-  text(g, fit(label, w - 60), x + 4, y + 4, opts.dim ? SC.dim : SC.bone);
-  if (right) text(g, right, x + w - 4, y + 4, opts.rightCol || SC.gold, 'right');
+  text(g, fit(label, w - 60), x + 4, ty, opts.dim ? SC.dim : SC.bone);
+  if (right) text(g, right, x + w - 4, ty, opts.rightCol || SC.gold, 'right');
   if (opts.on){
     g.fillStyle = SC.moss;
     g.fillRect(x, y, w, 1); g.fillRect(x, y+h-1, w, 1);
@@ -281,7 +288,11 @@ function listRow(g, box, label, right, opts){
 SCREENS.play = {
   layout(){
     const keys = Object.keys(GAMES);
-    return { keys, rows: rowsLayout(keys.concat(['trick']), BAR_H + 5) };
+    /* Rows eleven high rather than fifteen. Six rows at fifteen left two lines
+       between the list and the challenge bar, and a game's record plus its
+       blurb is five, so the blurb ran on underneath the bar where nobody could
+       read it — for every game, and not for the trick, whose note is short. */
+    return { keys, rows: rowsLayout(keys.concat(['trick']), BAR_H + 4, 11) };
   },
   draw(g, L){
     const frame = screenFrame(g, 'PLAY');
@@ -291,14 +302,19 @@ SCREENS.play = {
     listRow(g, L.rows.box(L.keys.length), 'Ask for a trick', trickReady ? 'free' : 'bond 3',
             { on: screenState.pick === L.keys.length, dim: !trickReady,
               rightCol: trickReady ? SC.moss : SC.dim });
-    const pick = screenState.pick;
-    const record = pick < L.keys.length ? S.records[L.keys[pick]+':'+S.sp+':'+stageIdx()] : null;
-    const note = pick < L.keys.length ? 'Best '+(record?.best || 0)+' / Week '+(record?.week === challengeWeek() ? record.weekly : 0)+'\n'+GAMES[L.keys[pick]].blurb
+    const pick = screenState.pick, isGame = pick < L.keys.length;
+    const record = isGame ? S.records[L.keys[pick]+':'+S.sp+':'+stageIdx()] : null;
+    const note = isGame ? GAMES[L.keys[pick]].blurb
                : trickReady ? 'A quick burst of joy, and it costs nothing.'
                             : 'Unlocks at three bond hearts. Petting is what builds them.';
-    caption(g, L.rows.bottom + 3, '', '', null, note);
-    L.act = actionBar(g, pick < L.keys.length ? 'WEEKLY CHALLENGE' : 'ASK',
+    L.act = actionBar(g, isGame ? 'WEEKLY CHALLENGE' : 'ASK',
                       SC.moss, pick === L.keys.length && !trickReady);
+    /* The record goes on the caption's own line, name side and price side, so
+       the blurb gets every line down to the bar — and stops above it. */
+    caption(g, L.rows.bottom + 2,
+            isGame ? 'Best ' + (record?.best || 0) : '',
+            isGame ? 'This week ' + (record?.week === challengeWeek() ? record.weekly : 0) : '',
+            SC.gold, note, L.act[1] - 2);
     L.close = frame.close;
   },
   tap(mx, my, L){
@@ -392,9 +408,9 @@ SCREENS.care = {
     caption(g, L.rows.bottom + 3, '', '', null,
             onRest ? rest.note
           : S.ills.length ? REMEDIES[screenState.pick].note
-          : 'Illness has causes, not luck. Treats upset the stomach, late '
-          + 'nights bring a chill, a filthy pen invites mites, and joy at '
-          + 'zero turns into the blues.');
+          : 'Illness has causes, not luck. Treats upset the stomach, being '
+          + 'kept up late brings a chill, a pen left filthy for hours invites '
+          + 'mites, and joy left low turns into the blues.');
     L.act = onRest
       ? actionBar(g, S.asleep ? 'WAKE' : 'SETTLE DOWN', rest.col, !S.asleep && S.needs.energy > 70)
       : actionBar(g, 'TREAT', SC.moss, !S.ills.length);
@@ -482,6 +498,13 @@ SCREENS.shop = {
   layout(){
     if (!SHELVES.includes(screenState.shelf)) screenState.shelf = 'coat';
     const sh = shelfItems(screenState.shelf);
+    /* A shelf opens on what the animal already has on, not on whatever happens
+       to be first: the first thing anyone wants to know in a shop is what they
+       are wearing now. Only when the shelf changes, so a tap elsewhere sticks. */
+    if (screenState.pickShelf !== screenState.shelf){
+      screenState.pickShelf = screenState.shelf;
+      screenState.pick = Math.max(0, sh.items.findIndex(it => sh.worn(it)));
+    }
     if (typeof screenState.pick !== 'number' || screenState.pick >= sh.items.length) screenState.pick = 0;
     return { sh, grid: gridLayout(sh.items, BAR_H + 16, sh.cols) };
   },
@@ -514,7 +537,7 @@ SCREENS.shop = {
     if (hit(L.close, mx, my)) return closeScreen();
     for (let i = 0; i < L.tabs.length; i++)
       if (hit(L.tabs[i], mx, my)){
-        if (screenState.shelf !== SHELVES[i]){ screenState.shelf = SHELVES[i]; screenState.pick = 0; SFX.pop(); }
+        if (screenState.shelf !== SHELVES[i]){ screenState.shelf = SHELVES[i]; SFX.pop(); }   // layout() picks what is worn
         return;
       }
     for (let i = 0; i < L.sh.items.length; i++)

@@ -122,24 +122,51 @@ function drawRex(M, P){
        margins it runs between are straight. */
     const uTip = [hx - sn*.91, lipTip - hh*.02];
     const lTip = about([hinge[0] - jawLength*.96, hinge[1] + fh*.06], jawA, hinge);
-    const gape = [hinge, uTip, lTip];
+    /* Nothing is drawn in the gape: seen from the side, the space between the
+       jaws is open and whatever is behind the head shows through. Filled with
+       mouth lining, the whole gap was a flesh-coloured wedge; filled dark, a
+       cavity the side view cannot see into. Flesh shows only at the corner of
+       the mouth, where the lips fold in at the hinge: a small triangle a
+       quarter of the way along each margin. */
+    const corner = .28;
     M.mouth.beginPath();
-    M.mouth.moveTo(gape[0][0], gape[0][1]);
-    for (let i=1;i<gape.length;i++) M.mouth.lineTo(gape[i][0], gape[i][1]);
+    M.mouth.moveTo(hinge[0], hinge[1]);
+    M.mouth.lineTo(lerp(hinge[0], uTip[0], corner), lerp(hinge[1], uTip[1], corner));
+    M.mouth.lineTo(lerp(hinge[0], lTip[0], corner), lerp(hinge[1], lTip[1], corner));
     M.mouth.closePath(); M.mouth.fill();
-    /* Teeth. The large ones are maxillary; the dentary shows tips only, which
-       is both what the animal had and what reads at this size. */
-    const tw = Math.max(.9, 1.25*hM);
-    for (let i=0;i<5;i++){
-      const u = .18 + i*.17;
-      oval(M.horn, lerp(hinge[0],uTip[0],u), lerp(hinge[1],uTip[1],u) + hh*.10,
-           tw, Math.max(1.3, (2.4 - i*.22)*hM));
-    }
-    for (let i=0;i<4;i++){
-      const u = .26 + i*.18;
-      oval(M.horn, lerp(hinge[0],lTip[0],u), lerp(hinge[1],lTip[1],u) - hh*.08,
-           tw*.8, Math.max(1.0, 1.5*hM));
-    }
+    /* Teeth ride the oral margins themselves, the same points the skull and
+       the mandible are drawn through. They were ovals set on the straight
+       hinge-to-tip chord, and the margin is not straight — it bows down
+       through the tooth row — so the upper teeth hung loose under the lip and
+       the lower ones floated in the open gape. Each is now a point rooted a
+       little inside its jaw: base on the margin, tip out into the gape, raked
+       back the way a theropod tooth curves. Premaxillary teeth at the front
+       are small, the maxillary row is the big one, tapering toward the cheek;
+       the dentary shows shorter points.
+
+       On `sclera`, not `horn`. Horn takes the full lighting pass, and a tooth
+       is a pixel or two wide, so every pixel of it is edge: the shaded side
+       of that ramp turned the front teeth tan. Enamel and the white of the eye
+       are the same flat ivory at this size, and they never touch. */
+    const tooth = (g, x, y, len, half, dir) => {
+      g.beginPath();
+      g.moveTo(x - half, y); g.lineTo(x + half, y);
+      g.lineTo(x + len*.28, y + dir*len);                // raked back: −x is forward
+      g.closePath(); g.fill();
+    };
+    const upper = [[hx - sn*.90, lipTip], [hx - sn*.46, lipMid], [hx + 8, lipBack - hh*.02]];
+    // sized so the row reads at adult: at 2.8 long the biggest tooth came out a two-pixel tick
+    [.55, 1, 1, .95, .8, .6].forEach((size, i) => {
+      const [bx, by] = samplePath(upper, .05 + i*.14);
+      tooth(M.sclera, bx, by - .7, Math.max(1.8, 3.8*hM*size), Math.max(.9, 1.3*hM*(.55 + .45*size)), 1);
+    });
+    M.sclera.save(); M.sclera.translate(hinge[0], hinge[1]); M.sclera.rotate(jawA);
+    const lower = [[-jawLength*.93, fh*.06], [-jawLength*.42, -dep(.42)*.10], [-2, -hh*.11]];
+    [.6, .9, .9, .75, .55].forEach((size, i) => {
+      const [bx, by] = samplePath(lower, .07 + i*.16);
+      tooth(M.sclera, bx, by + .7, Math.max(1.4, 2.7*hM*size), Math.max(.8, 1.05*hM), -1);
+    });
+    M.sclera.restore();
   } else {
     // shut: lips cover the teeth, so all that shows is the oral margin itself
     tube(M.mouth, [[hx+10, lipBack+hh*.02],[hx-sn*.46, lipMid],[hx-sn*.91, lipTip-hh*.02]],

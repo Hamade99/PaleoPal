@@ -71,10 +71,12 @@ function drawBrachio(M, P){
     const uTip = [hx - sn*.96, lipY - hh*.08];
    const lTip = [jHinge[0] - jawLength*.98*Math.cos(jawA) - hh*.02*Math.sin(jawA),
               jHinge[1] - jawLength*.98*Math.sin(jawA) + hh*.02*Math.cos(jawA)];
+    // the gape is left open, flesh only in the corner at the hinge (see the note in rex.js)
+    const corner = .28;
     M.mouth.beginPath();
     M.mouth.moveTo(jHinge[0], jHinge[1]);
-    M.mouth.lineTo(uTip[0], uTip[1]);
-    M.mouth.lineTo(lTip[0], lTip[1]);
+    M.mouth.lineTo(lerp(jHinge[0], uTip[0], corner), lerp(jHinge[1], uTip[1], corner));
+    M.mouth.lineTo(lerp(jHinge[0], lTip[0], corner), lerp(jHinge[1], lTip[1], corner));
     M.mouth.closePath(); M.mouth.fill();
   } else {
     tube(M.mouth, [[hx+4*hM, hy+hh*.30],[hx-sn*.44, lipY+hh*.02],[hx-sn*.92, lipY-hh*.08]],

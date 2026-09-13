@@ -146,28 +146,34 @@ function drawScene(now){
     sc.draw(ctx, screenLayout);
     return;
   }
-  const phase = skyPhase(new Date());
+  const phase = skyPhase(viewDate());
   /* A game that looks down at the pen paints every pixel of the screen itself,
      so baking and blitting a habitat behind it is work nobody sees. */
   if (mode === 'game' && GAMES[game.kind].top){ drawGame(now, phase); return; }
-  const [sx, sy, sw, sh] = BG_CROP[bgStage()];
-  ctx.drawImage(bakeBg(phase), sx, sy, sw, sh, 0, 0, W, H);
+  /* The stars, the sun or moon and the clouds are in the sky, so they go
+     between the sky and the land. Drawn over the finished backdrop, the sun
+     sat in the middle of the valley's tree crown at subadult and adult, and
+     clouds drifted across the faces of mountains they are miles behind. */
+  drawHabitatView(ctx, phase, biomeId(), bgStage(), () => {
+    if (phase === 'night'){
+      for (const s of STARS){
+        const tw = Math.sin(now/520 + s.p);
+        if (tw > .15){ ctx.fillStyle = tw > .8 ? '#ffffff' : 'rgba(232,228,200,.8)'; ctx.fillRect(s.x|0, s.y|0, 1, 1); }
+      }
+    }
+    drawSkyBody(ctx, phase, now);
+    drawClouds(ctx, phase);
+  });
 
   /* Everything below is drawn live over the backdrop and knows nothing about
      it, which is what makes the place move. */
-  if (phase === 'night'){
-    for (const s of STARS){
-      const tw = Math.sin(now/520 + s.p);
-      if (tw > .15){ ctx.fillStyle = tw > .8 ? '#ffffff' : 'rgba(232,228,200,.8)'; ctx.fillRect(s.x|0, s.y|0, 1, 1); }
-    }
-  }
-  drawSkyBody(ctx, phase, now);
-  // whatever this habitat has that moves: a plume, surf, a fall, an aurora
-  const live = (BIOMES[biomeId()] || BIOMES.valley).live;
-  if (live) live(ctx, phase, now);
+  /* Whatever this habitat has that moves — a plume, surf, a fall, an aurora —
+     through the same crop as the backdrop it belongs to. Drawn in screen space
+     it matched the picture only at hatchling, and from juvenile on the lava
+     and smoke hung in the sky above a cone that had shrunk away beneath them. */
+  drawHabitatLive(ctx, phase, now, bgStage());
   drawClouds(ctx, phase);
   drawFlyers(ctx);
-  drawWater(ctx, phase, now);
   drawGrassLine(ctx, phase, now);
   if (phase !== 'night') drawMotes(ctx, phase);
 
@@ -993,7 +999,7 @@ const tugCursor = () => game.grip < .5 ? game.grip * 2 : 2 - game.grip * 2;
 const tugWindow = () => .20 + stageIdx() * .03;
 
 function drawTug(now){
-  const phase = skyPhase(new Date());
+  const phase = skyPhase(viewDate());
   const midX = Math.round(W/2 - game.pull * 30);
 
   /* Both animals, leaning away from the vine. The rival is the same species at
@@ -1104,7 +1110,7 @@ function leapJump(){
 /* The track, overdrawn so the habitat props do not sit still behind a running
    animal. Three scroll rates: scrub, ground, fringe. */
 function drawLeapGround(){
-  const S_ = skyOf(skyPhase(new Date()));
+  const S_ = skyOf(skyPhase(viewDate()));
   const grass = S_.grass, grassLit = mixHex(S_.grass, S_.low, .40);
   const grassDark = mixHex(S_.grass, '#000000', .34);
   const d0 = S_.dirt, d1 = mixHex(S_.dirt,'#000000',.26), d2 = mixHex(S_.dirt, S_.low,.22);
@@ -1155,7 +1161,7 @@ function drawLeapGround(){
    the screen now, every blade a different height, scrolling fastest of the
    three layers — which is the layer that actually sells the speed. */
 function drawLeapTufts(){
-  const S_ = skyOf(skyPhase(new Date()));
+  const S_ = skyOf(skyPhase(viewDate()));
   const near = mixHex(S_.grass, '#000000', .52);
   const nearLit = mixHex(S_.grass, '#000000', .34);
   for (let x=0;x<W;x++){
@@ -1190,7 +1196,7 @@ function drawObstacle(g, o){
        each side, the earth under the lip is exposed and darker, the water
        sits down inside it, and the far wall is in shadow. Depth is what makes
        a hazard read as something to jump rather than something to step in. */
-    const S_ = skyOf(skyPhase(new Date()));
+    const S_ = skyOf(skyPhase(viewDate()));
     const soil = mixHex(S_.dirt, '#000000', .52);            // the cut bank
     const deep = mixHex(S_.water, '#000000', .34);
     const body = S_.water;

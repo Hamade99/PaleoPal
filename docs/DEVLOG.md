@@ -1547,6 +1547,374 @@ and sized the canvas for a box it did not have: 364 into 358, where `max-width`
 clamped it to a scale of 1.598 and put the world's pixel grid on a fraction —
 the one thing the discrete steps exist to prevent.
 
+## Session 17 — habitats that hold together as the view widens
+
+**Owner's report.** Three things. The fern valley and the ash flats shared one
+volcano. As an animal grew and the view widened, the crater rim with its lava and
+smoke came away from the cone and floated in the sky: attached at hatchling,
+clear of the mountain by adult. And the top of the gorge's fall looked wrong,
+most of all at adult.
+
+**The floating rim was never the volcano.** The backdrop is baked into the
+280x210 world and shown through `BG_CROP`, but `drawScene` called the biome's
+`live` painter straight onto the screen at the landmark's own coordinates.
+Those only agree while the crop is scale 1 at offset (28, 35), which is the
+hatchling crop. From juvenile on, the cone shrank and moved down under a crater
+glow and plume that stayed put. The same fault ran the fall's spray streaks up
+past its top into open sky, put the pond's ripples off the pond, and kept surf,
+ash and aurora to the old 224-wide strip. It went unseen because session 15
+checked the zoom against baked backdrops, and nothing baked moves.
+
+`drawHabitatLive()` paints `live` and the pond ripples onto a transparent
+world-sized canvas, with the bake's translate, and blits it through the same
+crop with nearest-neighbour sampling. A baked pixel and a live pixel at one world
+coordinate now land on one screen pixel at every stage. The widened painters
+loop `BG_L`..`BG_R`, the plume climbs to `BG_T`, and ash falls from there.
+
+**One volcano, one habitat.** The ash flats had been drawing the valley's
+mountain at a different seat, on the story that the two were one valley either
+side of an afternoon. On screen that read as two habitats with the same
+landmark, which is what a landmark exists to prevent. The volcano is the ash
+flats' alone now, seated at x 120 with no borrowing. The valley's landmark, the
+owner's pick from four, is an old-growth araucaria (`drawGiantTree`). It is a
+long bare trunk with lost-limb stubs and a flared foot under a few overlapping
+ragged tiers, and it stands on the near ridge (`landmarkFront`), rooted at
+`ridgeY(NEAR_RIDGE, x)`. The treeline's small araucaria scaled up was not an
+option: at three times the height that shape is a lollipop.
+
+**The fall is cut into the lip.** The old fall was a dark box from row 24 to the
+pool, and row 24 is above the cliff's own edge. The water came out of a
+flat-topped chimney standing proud of the wall, against the sky. Now
+`gorgeTop()` takes a notch out of `gorgeLip()`: flat under the water, rising on
+a parabola of fixed depth to the untouched edge. The depth is fixed rather than
+read off each column, or the lip's hash comes through as steps. The brink sits
+below every column of lip across the notch, so the notch is never a step up. The
+water shows a bright crest a pixel proud of the floor and two glassy rows, then
+a sheet that spreads with the square root of the drop. Its edges break in
+four-row blocks off `hash1`, and the rock beside it is dark where the spray
+keeps it wet. The right wall of the notch catches the light and the left does
+not. The spray streaks hold a fraction of the sheet's width, so none runs off
+its edge. The fall moved from x 150 to 158. At 150 the notch's left shoulder
+began while the cliff was still climbing, and the two slopes met in a spike
+beside the water.
+
+**Not done.** `drawWater`'s ripples are centred on x 177 in every habitat, but
+only the valley has a pond there. The polar dawn's is at 192, and the other
+three habitats have none, so the ripples lie on bare ash, sand and dirt. That
+predates this session, and it is more visible now that the ripples sit where
+the world puts them.
+
+### The second half: a world twice the screen
+
+**Owner's request.** The valley's tree could be far larger and more
+impressive, and it stood on top of its hill without following the hill's
+curve. And the zoom should be bigger for every habitat, now and in future, with
+bigger steps between stages. That meant painting a larger picture and more
+detail, not stretching the old one out.
+
+**Numbers.** The world is 448x336, twice the screen each way. The crops are
+224, 280, 352 and 448 wide, about 1.26 a step; they were 1.06 to 1.1. The ground
+line fixes the rest: it sits at 280 in world rows, so the padding is 112 columns
+a side, 140 rows of sky above and 28 of ground below. The crop test no longer
+hard-codes the old padding, and it now asserts that each stage pulls back at
+least a fifth.
+
+**Halving the view breaks two ordered dithers.** Nearest-neighbour at 0.5
+keeps one pixel in four of a 4x4 Bayer pattern. The sky's gradient came out as
+horizontal stripes, and at 0.8 and 0.64 the dirt beat against the sampling grid
+into a waffle. Two different fixes:
+
+- The **sky** is no longer baked. `skyView(biome, phase, stage)` paints it into
+  a screen-sized canvas: each screen row asks which world row it shows, and the
+  dither is laid at screen pixels. Every stage gets a crisp gradient. Above the
+  old top of the sky it carries on for four more bands toward a deeper zenith,
+  because a hundred and forty rows of one colour read as a wall. At hatchling
+  the rows are exactly the bands they always were. `drawHabitatView()` draws the
+  sky and then the crop, and the renderer, the editor's glass preview and the
+  shop's thumbnails all go through it.
+- The **dirt** uses hashed noise instead of the Bayer pattern, because reduced
+  noise is still noise.
+
+**A far side.** Under a sky that tall, the three skyline planes sat along the
+bottom of a blue wall. Each habitat now has a `range` in `HABITAT_ART`, its own
+high silhouette drawn by `farRange()`. The valley gets soft ridges, the ash
+flats jagged old cones, and the gorge the flat tops of more plateau. The
+lagoon's is a single island on the horizon, and the polar dawn's is a massif
+with snow caps. Two first attempts failed:
+
+- Mixed toward the horizon colour alone, a range came out paler than its sky,
+  which reads as snow or a wall. It now takes the sky's own blue too.
+- Lit faces run full height from ridge to horizon drew a hard seam at every
+  change of slope, like organ pipes. The lit face is now a band under the
+  ridgeline, in blocks of three columns. Snow is a cap whose depth follows the
+  peak, never a band with a ruled bottom edge.
+
+Every skyline now runs from -112 to 336 with new points on both sides.
+
+**The giant.** It is redrawn at the scale of the new world: a crown from the
+adult's sky down to the top of the hatchling's view, about 260 wide. A newly
+hatched animal sees a trunk and the lowest sprays hanging in, and the whole
+tree only appears as it grows. What didn't work on the way:
+
+- Narrow foliage tiers spaced up the trunk made a stack of slabs with sky
+  between them. The crown is now broad, overlapping masses (`giantClump`,
+  unions of lobes drawn column by column like a cumulus). The back masses are
+  shaded rather than hazed, because hazed they read as clouds caught in the
+  branches.
+- Each mass's underside curls up at both ends. Flat to the last column, the
+  masses were hedges cut square.
+- Limbs (`giantLimb`) leave from the trunk's edge. Started on its axis, each
+  limb's lit top edge crossed the trunk and the trunk had rungs.
+- Roots drawn one by one with their own lifts stood up in spikes where they
+  crossed near the trunk. They are now a buttress skirt, whose height falls off
+  smoothly with distance and is measured up from `ridgeY()` at every column.
+  Root ridges run down the skirt and out along the slope, filled to the ground
+  so they lie on the hill.
+
+The rest is detail: a furrowed bark whose fissures follow the lean, a hollow, moss
+on the shaded side, grey moss and lianas hanging from the crown, and tree ferns
+among the roots for scale.
+
+**The margins, one habitat at a time.** Each got something that belongs to
+that place, found only as the view widens:
+
+- The **valley** has a fallen giant on the left: a trunk of the same kind down
+  on its side, with its root plate torn up on end and ferns growing on it.
+- The **lagoon** has a sea arch hazed out in the right-hand water and smaller
+  stacks at different distances. Open sea, not a row of teeth.
+- The **ash flats** have a parasitic cone out on the left, cold except for a
+  warm lip. At a height of 56 only its tip cleared the near ridge, so it
+  stands 92. The plume went from fourteen puffs to thirty over a slower
+  cycle, because fourteen spread up the new sky were a string of bubbles.
+- The **gorge** has its far wall on the left, hazed and falling away toward
+  the middle. Past the hatchling's view the plateau steps up into a higher
+  tier. A cliff on one side with open country on the other had been an
+  escarpment.
+- The **polar dawn** has a nunatak on the left, a dark spur standing up
+  through the ice with snow on its ledges.
+
+**Cost.** Bakes got cheaper, not dearer, because the sky left the bake: 6 to
+40ms per habitat and phase, against 25 to 48 before. The live layer is 0.7ms a
+frame on the bigger canvas.
+
+### Third pass: the sun, the ash, the gorge floor, a mountain, the shop
+
+**Owner's report.** At subadult and adult the sun sat in the middle of the
+valley's tree. The valley becomes the Mystical valley. The ash flats were
+boring. The gorge's floor and pool looked poor, especially at hatchling. The
+polar dawn wanted a huge mountain on the left, twice the size of the spur that
+was there, seen whole at adult and only just at subadult. And the shop should
+open each shelf on what is in use, not on its first item.
+
+**The sky is behind the land.** Stars, sun, moon and clouds were drawn over
+the finished backdrop, so the sun hung in front of the crown and clouds crossed
+the faces of mountains. `drawHabitatView()` takes a callback, run between the
+sky and the bake, and `drawScene` draws the sky's contents there. The crown now
+covers the sun and it shows through the gaps between masses.
+
+**Ripples only where there is a pond.** `pond:[x0, x1]` on a habitat in
+`BIOME_PAINT` places `drawWater()`'s ripples; a habitat without one gets none.
+
+**The ash flats have things happening.** Geometry shared by the bake and the
+live layer, computed once: `ashCracks()`, `ashFlow()` and `ashVents()`.
+- Two **lava crust fields** on the flats, black plates with red cracks. The
+  cracks lie where a pixel's two nearest plate centres are nearly equally far,
+  as cooling crust splits; a thresholded sine would lay them in rows. Each plate
+  breathes on its own phase, so the glow moves across the field.
+- A **lava channel** down the volcano's right flank, holding a fraction of the
+  cone's width, with a hot knot travelling down it.
+- **Fumaroles** on the near ridge, with sulphur crusts and steam.
+- **Columnar basalt** at both edges of the view.
+- **Bombs** thrown from the crater on parabolas, and **lightning** in the ash
+  column a few times a minute. The lightning's flash was first one translucent
+  disc, and it read as a moon rising out of the plume; it is three faint soft
+  layers now.
+
+**The gorge floor.** The old plunge pool was drawn in `drawFalls` before the
+grass, and only its bright top row showed above the tufts — a pale plate on
+the lawn. The floor owns the pool now:
+- It is sunk into the ground, darkest at the near edge, with glints in short
+  dashes and foam only where the fall lands, and grey mossy stones on the rim.
+- An **outflow channel** runs from the pool down through the soil to the
+  stream, instead of the stream appearing from nowhere.
+- The **stream** has a near bank of lit wet gravel over a dark cut edge, water
+  going from shallows to deep, and stones with foam wakes. Flecks move along it
+  and down the channel in the live layer.
+- **Moss** lies in clumps of different sizes nudged off their cells. On a fixed
+  3x2 grid it lined up into floor tiles.
+
+**The polar dawn's peak** (`drawPolarPeak`, `PEAK`) replaces the spur. A
+subadult sees only a slope at the edge of the view, and a juvenile none of it.
+Three things went wrong on the way:
+- At a profile exponent of .42 the summit was a cusp and the mountain read as
+  a needle. It is .62 with a rounded cap.
+- With a left flank as steep as the right, the frame cut it off a few columns
+  past the summit and the peak stood against the edge as a sliver. The left
+  flank is a long high shoulder running out of the world.
+- Rock in per-pixel blocks of four was a checkerboard. It is sheared blocks nine
+  by seven along the slope. Spindrift off the summit came out as a row of dots
+  and reached into the subadult's view, so there is none.
+
+**The shop** opens each shelf on what the animal has in use: the coat it
+wears, the headgear on its head, the habitat it is in. `layout()` picks it
+only when the shelf changes, so a tap elsewhere sticks.
+
+### Fourth pass: the case, the play screen, wash
+
+**Owner's report.** The mood line under the glass ("Norbert is fast asleep")
+was cut off at the right. The word "Bond" beside the hearts should go. The
+nameplate on the case, with its grilles, sat too close to the green keys. On
+the play screen a game's record and description ran on underneath the WEEKLY
+CHALLENGE bar and were unreadable, for every game but the trick. Wash should
+clean one mess at a time. And, on the polar dawn: take the trade and make the
+peak a massif.
+
+**The mood line fits itself.** It stays one line, since an absolutely placed
+box that grows eventually grows over something. `fitMood()` steps the type
+down a quarter of a cell at a time, measuring the laid-out box at each step.
+The name holds its place down to 2.5 cells. Below that the name gives way to
+"It", and the type can go down to 2. The name is written in full in the header
+just above the glass, so it is the one word that can go. Shrinking alone was
+not enough: "is too weak to stand. Take it to the vet." and the illness lines
+after a fourteen-letter name fit a 360-wide phone at no size. Every real line
+was checked at 360, 375 and 1280 wide. Only past all of that does the
+stylesheet's ellipsis take over. It runs
+after every `refresh()` and on resize. The hearts no longer carry a label, which
+gives the line that room back.
+
+**The nameplate** sits 3.5 cells under the keys' shadow instead of 1.
+
+**The play screen.** Six rows at fifteen high left two lines between the list
+and the bar, and a game needed five: the record, then a three- or four-line
+blurb. The rows are eleven high now, with `listRow` centring its text in
+whatever height it is given. The record moves onto the caption's own line:
+Best on the left, This week on the right. `caption()` takes a `maxY` and drops
+any line that would reach it rather than draw under the bar. Every game's last
+line now ends at least twelve rows above the bar.
+
+**Wash, one at a time.** Each press cleans the mess nearest the animal, for a
+coin and ten hygiene. The last one adds the rinse, 22 hygiene and 4 joy, so a
+full clean pays exactly what the old scrub-everything did. With nothing left to
+clean, a press is the rinse on its own. Checked through the key on the case.
+
+**The peak.** Seated at x -84 with flanks of 180 and 140 and a profile exponent
+of .82 under a wider rounded cap. A subadult sees its right shoulder and a
+juvenile a corner of its foot: the owner's trade.
+
+### Fifth pass: an open mouth is open
+
+**Owner's report.** When the rex eats, the whole gap between its jaws is flesh
+coloured, which is anatomically wrong and looks goofy. Only a small section
+where the jaws meet should show skin.
+
+**Nothing is drawn in the gape.** Seen from the side, the space between the
+jaws is open, and whatever is behind the head shows through it. `mouth` keeps
+only a small triangle at the hinge, a quarter of the way along each margin:
+the corner of the mouth, where the lips fold in. The teeth are still `horn` on
+the margins.
+
+A dark cavity was tried first, as a material of its own (`maw`) under `mouth`.
+It read as a hole the side view could see into, and the owner preferred the gap
+empty, so the material was taken back out rather than left costing an idle
+canvas on every bake. The triceratops and the brachiosaurus drew the same
+flesh-coloured wedge and take the same change. The shut lip line is still
+`mouth`.
+
+### Sixth pass: the developer panel, reorganised and tunable
+
+**Owner's request.** Reorganise the developer ("god mode") panel and make it
+nicer. Allow day and night to be changed, the sleep times, the hunger and
+energy meters — everything should be tunable.
+
+**Built once, repainted.** `refresh()` runs every second, and it rebuilt
+whatever panel was open. That was harmless while the panel was all chips, but
+a slider rebuilt mid-drag loses the pointer after one step. That is the trap
+the editor already records, so the dev panel is exempt: `refresh()` calls
+`paintDev()`, which rewrites the status strip and moves every slider that is
+not being dragged to its live value. A click on a chip still rebuilds through
+`DEV.done()`, which is fine, because the click has finished. The scroll
+position and which sections are open survive the rebuild.
+
+**Layout.** A status strip (stage, sky clock and phase, sleep state, health,
+growth, coins), then folding sections: Time and sleep, Meters, Growth, Rates,
+Illness, Pen and habitat, Species, Purse and keeper. Time and Meters start
+open. Habitats had a `DEV.setBiome` and no control; they have chips now. Mess
+is set as a count rather than one press at a time.
+
+**Two knobs that are not fields**, both off the nest's save:
+- **`SIM`**: the per-hour rates for hunger, hygiene, joy, energy awake and
+  asleep, the sleep window, and a growth multiplier. The tick and the Care
+  screen's copy read it; the literals it replaced are gone. Only values that
+  differ from `SIM_DEFAULTS` are stored, under `SIM_KEY`, and read back field by
+  field. A sleep window tuned not to wrap midnight is now handled: 1 to 9 means
+  after 1 and before 9.
+- **`devHour`**: the clock the sky, sun and moon are drawn at, through
+  `viewDate()`. It is a view only. The simulation, ages and sleep keep reading
+  real time, because anything that persists runs on wall time. A reload clears
+  it. To see an animal put itself to bed, move the bedtime slider to now.
+
+Slider writes (`setNeed`, `setHealth`, `setBondTo`, `setGrowth`, `setTune`,
+`setClock`) touch the same fields the simulation writes and nothing else.
+`commit()` saves when a drag lets go.
+
+### Seventh pass: the rex's teeth, and illness that a good keeper rarely sees
+
+**Owner's report.** The rex's teeth were not placed in the jaws, and the front
+ones looked yellowed. Diseases happen too often: what is the current rate?
+
+**Teeth ride the margins.** They were ovals on the straight chord from the
+hinge to each jaw tip. The upper oral margin bows down through the tooth row,
+so the upper teeth hung loose under the lip, and the lower ones floated in the
+open gape. Each is now a pointed tooth sampled with `samplePath()` along the
+same points the skull and mandible are drawn through. The base sits just inside
+its jaw and the tip points into the gape, raked back. The upper row has small
+premaxillary teeth, a big maxillary run, and a taper toward the cheek; the
+lower row is carried through the mandible's own transform. The first size came
+out as two-pixel ticks at adult and was enlarged.
+
+They are on `sclera`, not `horn`. A tooth is a pixel or two wide, so every
+pixel of it is edge, and horn's full lighting ramp turned the front ones tan.
+Enamel and the white of the eye are the same flat ivory at this size, and the
+two never touch.
+
+**Measuring the rate.** Rather than read it off the code, a week was run
+through the real tick in the test harness. A keeper visits at set hours,
+feeding, washing, playing and treating, and never wakes the animal. Before:
+
+| Keeping | Illnesses in 7 days |
+| --- | --- |
+| 08:00, 13:00 and 19:00 | 30 (10 chill, 11 mites, 9 blues) |
+| 08:00 and 19:00 | 33 (9 chill, 13 mites, 11 blues) |
+| 19:00 only | 22, and a collapse |
+
+Left alone, mites came at 8.5 hours and the blues at about 21. An animal left
+at 20:00 caught a chill in four hours.
+
+**The chills were a bug.** An animal only settled after dark once energy was
+under 30, and it woke itself at 99 even at three in the morning. So a rested
+animal stayed up past bedtime on its own, and staying up past bedtime is the
+chill's cause. That was an illness with no cause the player could see, against
+"illness has causes, not dice". It now goes down at bedtime whatever its
+energy, and never wakes on its own before morning. The late-hours count only
+fills while someone keeps it up.
+
+**Onset moved into `SIM`**, with a slider for each in the developer panel's
+Rates section. Mites need clean under 15 for four hours (was under 20 for
+two). The blues need joy under 10 for four hours (was under 15 for two and a
+half). Chill and bellyache keep their thresholds, since both follow straight
+from something the player did. The Care screen's copy reads the live values.
+
+After:
+
+| Keeping | Illnesses in 7 days |
+| --- | --- |
+| 08:00, 13:00 and 19:00 | 0 |
+| 08:00 and 19:00 | 4 (all blues) |
+| 19:00 only | 14, and a collapse |
+
+Left alone, mites come at about 12 hours and the blues at about 28. Neglect
+still makes an animal ill; looking after it now mostly does not.
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.

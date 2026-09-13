@@ -130,6 +130,35 @@ const RECESS_W = 88, RECESS_H = 67;       // where the canvas floats, in cells
    because the glass took the room the meters were using. */
 const PX_MIN = 2.8, PX_MAX = 9;
 
+/* The mood line is pinned to one line, so a long name and a long mood ran off
+   its right end — "Norbert is fast asl…". Rather than clip, the type steps
+   down a quarter of a cell at a time until the line fits, to no smaller than
+   two cells; only past that does the ellipsis in the stylesheet take over.
+   Measured, not estimated: the box has already been laid out and knows. */
+/* Past the smallest size the name gives way to "It": the name is written in
+   full in the header right above the glass, so it is the one part of the line
+   that can go without losing anything. "is too weak to stand. Take it to the
+   vet." after a fourteen-letter name did not fit a phone at any size. */
+const MOOD_SIZES = [3.25, 3, 2.75, 2.5, 2.25, 2];
+function fitMood(){
+  const el = $('mood');
+  if (!el) return;
+  const fits = () => el.scrollWidth <= el.clientWidth + 1;
+  const shrink = floor => {
+    for (const s of MOOD_SIZES){
+      if (s < floor) break;
+      el.style.fontSize = 'calc(var(--px)*' + s + ')';
+      if (fits()) return true;
+    }
+    return false;
+  };
+  /* The name keeps its place only down to two and a half cells; below that
+     "It" at a readable size beats a name in type too small to read. */
+  if (shrink(2.5)) return;
+  const name = el.firstChild;
+  if (name && name.nodeType === 3 && el.querySelector('em')){ name.textContent = 'It '; shrink(0); }
+  else shrink(0);
+}
 function fitScreen(){
   const app = $('app');
   if (!app) return;
@@ -243,7 +272,7 @@ function fitCrown(){
    frame or two and the observer closes it. */
 if (window.ResizeObserver){
   const app = document.getElementById('app');
-  if (app) new ResizeObserver(() => { fitScreen(); fitCrown(); }).observe(app);
+  if (app) new ResizeObserver(() => { fitScreen(); fitCrown(); fitMood(); }).observe(app);
 }
 let fitTimer = 0;
 window.addEventListener('resize', () => {
@@ -344,11 +373,12 @@ function refresh(){
      disagree, and the subtitle is the one nobody was reading. */
   $('dSub').textContent = st.label + ' ' + sp.common;
   $('mood').innerHTML = escapeHTML(S.name) + ' <em>' + escapeHTML(moodOf().line) + '</em>';
+  fitMood();
   const bondEl = $('bond');
   const pips = bondPips();
   if (bondEl.dataset.pips !== String(pips)){
     bondEl.dataset.pips = String(pips);
-    bondEl.innerHTML = '<span>Bond</span>';
+    bondEl.innerHTML = '';                     // the hearts say what they are; the word took the mood line's room
     bondEl.appendChild(bondCanvas(pips));
   }
   const tags = [];
@@ -364,7 +394,10 @@ function refresh(){
     + tags.slice(0,3).map(([c,t]) => `<span class="tag ${c}"><i class="dot"></i>${t}</span>`).join('');
   lamp.className = 'lamp' + (S.vet || S.ills.length ? ' bad' : S.asleep ? ' rest' : '');
   paintChrome();
-  if (openPanel) renderSheet(openPanel);
+  /* The developer panel is repainted, not rebuilt: this runs every second, and
+     rebuilding it removed the slider under the pointer mid-drag. */
+  if (openPanel === 'dev') paintDev();
+  else if (openPanel) renderSheet(openPanel);
 }
 
 /* -------------------------------- sheets ---------------------------------- */
@@ -430,9 +463,9 @@ const SHEETS = {
     let html = '';
     const petName = escapeHTML(S.name);
     const n = S.needs, hr = new Date().getHours();
-    const untilBed = ((BED_HOUR - hr) + 24) % 24;
-    const hoursLeft = (n.energy / (ENERGY_AWAKE * trait('tempo').energy)).toFixed(1);
-    const hoursFull = ((100 - n.energy) / ENERGY_ASLEEP).toFixed(1);
+    const untilBed = ((SIM.bedHour - hr) + 24) % 24;
+    const hoursLeft = (n.energy / Math.max(.01, SIM.energyAwake * trait('tempo').energy)).toFixed(1);
+    const hoursFull = ((100 - n.energy) / Math.max(.01, SIM.energyAsleep)).toFixed(1);
     html = `<h2>Vitals</h2><p class="lede">What each meter does, and how fast it moves for this animal.</p>
       <div class="stats">
         <div class="stat"><b>Hunger</b><span>${Math.round(n.hunger)}%</span></div>
@@ -440,11 +473,11 @@ const SHEETS = {
         <div class="stat"><b>Clean</b><span>${Math.round(n.hygiene)}%</span></div>
         <div class="stat"><b>Joy</b><span>${Math.round(n.joy)}%</span></div>
       </div>
-      <div class="log"><time>Energy</time>Falls about ${(ENERGY_AWAKE * trait('tempo').energy).toFixed(1)} points an hour awake, and comes back at ${ENERGY_ASLEEP} an hour asleep. At this level ${petName} has roughly ${hoursLeft} waking hours left, and a full night takes about ${hoursFull} hours.</div>
-      <div class="log"><time>Sleep</time>${petName} settles itself between ${BED_HOUR}:00 and ${WAKE_HOUR}:00, or any time energy drops under 6. It wakes on its own once rested. Bedtime is in about ${untilBed} hours. Keeping it up more than two hours past bedtime brings on a chill.</div>
-      <div class="log"><time>Hunger</time>Falls about ${(7.5*trait('appetite').hunger).toFixed(1)} an hour. Under 22 it starts nosing at the dirt; at zero, health follows it down.</div>
-      <div class="log"><time>Clean</time>Falls 4 an hour, and drops 11 more with every mess. Under 20 invites mites.</div>
-      <div class="log"><time>Joy</time>Falls about ${(6*trait('tempo').joy*trait('social').lonely).toFixed(1)} an hour. Games, tricks and petting bring it back. Under 15 for long enough turns into the blues.</div>
+      <div class="log"><time>Energy</time>Falls about ${(SIM.energyAwake * trait('tempo').energy).toFixed(1)} points an hour awake, and comes back at ${SIM.energyAsleep} an hour asleep. At this level ${petName} has roughly ${hoursLeft} waking hours left, and a full night takes about ${hoursFull} hours.</div>
+      <div class="log"><time>Sleep</time>${petName} settles itself between ${SIM.bedHour}:00 and ${SIM.wakeHour}:00, or any time energy drops under 6. It wakes on its own once rested. Bedtime is in about ${untilBed} hours. Keeping it up more than ${SIM.chillAfter + SIM.chillHours} hours past bedtime brings on a chill.</div>
+      <div class="log"><time>Hunger</time>Falls about ${(SIM.hunger*trait('appetite').hunger).toFixed(1)} an hour. Under 22 it starts nosing at the dirt; at zero, health follows it down.</div>
+      <div class="log"><time>Clean</time>Falls ${SIM.hygiene} an hour, and drops 11 more with every mess. Left under ${SIM.mitesBelow} for ${SIM.mitesHours} hours, it brings on mites.</div>
+      <div class="log"><time>Joy</time>Falls about ${(SIM.joy*trait('tempo').joy*trait('social').lonely).toFixed(1)} an hour. Games, tricks and petting bring it back. Left under ${SIM.bluesBelow} for ${SIM.bluesHours} hours, it turns into the blues.</div>
       <div class="hr"></div>`;
     html += rowHTML('', 'Tuck it in', S.asleep ? S.name + ' is already asleep.' :
       n.energy > 70 ? 'Available once energy drops below 70.' : 'Settle it early and skip the late night. Builds a little trust.',
@@ -515,53 +548,108 @@ const SHEETS = {
     b.appendChild(backup);
   },
 
-  /* Developer tools. Chips rather than rows: every control here is a single
-     switch and the whole harness has to fit on one screen so a sprite can be
-     stepped through four stages without scrolling. */
+  /* Developer tools, as folding sections under a status strip. Chips are
+     switches; sliders are values. The panel is built here once per chip press
+     and otherwise only repainted by paintDev(), because a slider rebuilt while
+     it is being dragged loses the pointer after one step. */
   dev(b, sp){
-    const chips = (rows) => `<div class="chips">` + rows.map(([label, act, cls]) =>
+    const scroller = $('sheet'), scroll = scroller.scrollTop;
+    const chips = rows => `<div class="chips">` + rows.map(([label, act, cls]) =>
       `<button class="chip ${cls||''}" data-dev="${act}">${label}</button>`).join('') + `</div>`;
-    const st = hatched() ? stageIdx() : -1;
+    const pick = (items, on, act, label) => `<div class="chips">` + items.map(it =>
+      `<button class="chip${on(it) ? ' on' : ''}" data-dev="${act(it)}">${label(it)}</button>`).join('') + `</div>`;
+    const slider = (label, key, min, max, step) => {
+      const v = devValue(key);
+      return `<label class="devrow"><span>${label}</span>` +
+        `<input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-set="${key}">` +
+        `<output>${devFmt(key, v)}</output></label>`;
+    };
+    const sec = (id, title, hint, body) =>
+      `<details class="devsec" data-sec="${id}"${devOpen.has(id) ? ' open' : ''}>` +
+      `<summary>${title}<small>${hint}</small></summary><div class="devbody">${body}</div></details>`;
+    const alive = hatched(), st = alive ? stageIdx() : -1;
+
     let html = `<h2>Developer tools</h2>
       <p class="lede">A test harness. Everything here writes the same fields the
-      simulation writes, so nothing below can reach a state the game could not.
-      Long-press the PALEOPAL plate to hide this button.</p>`;
+      simulation writes. Long-press the PALEOPAL plate to hide this button.</p>
+      <div class="devstrip" id="devstrip"></div>`;
 
-    html += `<p class="note" style="margin-bottom:7px">Coins · ${Math.floor(G.coins)}</p>`;
-    html += chips([['Fill purse','fillPurse'],['+100','add100'],['+1000','add1000'],['Empty','emptyPurse','warn']]);
+    html += sec('time', 'Time and sleep', 'sky clock, bedtime',
+      pick([['Real', null], ['Dawn', 6.5], ['Day', 12], ['Dusk', 19.5], ['Night', 23]],
+           ([, h]) => devHour === h, ([, h]) => 'clock:' + h, ([l]) => l) +
+      slider('Sky clock', 'clock', 0, 23.75, .25) +
+      `<p class="tiny">Moves the sky, the sun and the moon only. The animal keeps real time.</p>` +
+      `<div class="devsub">Sleep window</div>` +
+      slider('Bedtime', 'tune:bedHour', 0, 23, 1) +
+      slider('Wakes at', 'tune:wakeHour', 0, 23, 1) +
+      (alive ? chips([[S.asleep ? 'Wake it up' : 'Put it to sleep', 'toggleSleep']]) : ''));
 
-    if (hatched()){
-      html += `<p class="note" style="margin-bottom:7px">Growth stage</p>`;
-      html += `<div class="chips">` + STAGE.map((s2,i) =>
-        `<button class="chip${i === st ? ' on' : ''}" data-dev="stage${i}">${s2.label}</button>`).join('') + `</div>`;
+    if (alive){
+      html += sec('meters', 'Meters', 'drag to set',
+        DEV_NEEDS.map(([k, l]) => slider(l, 'need:' + k, 0, 100, 1)).join('') +
+        slider('Health', 'health', 0, 100, 1) + slider('Bond', 'bond', 0, 100, 1) +
+        chips([['Fill all', 'fillNeeds'], ['Drain to 8', 'drainNeeds', 'warn'], ['Collapse', 'collapse', 'warn']]));
 
-      html += `<p class="note" style="margin-bottom:7px">Needs · health ${Math.round(S.health)} · bond ${Math.round(S.bond)}</p>`;
-      html += chips([['Fill every meter','fillNeeds'],['Drain to 8','drainNeeds','warn'],
-                     ['Max bond','maxBond'],['Zero bond','zeroBond','warn'],
-                     [S.asleep ? 'Wake up' : 'Sleep','toggleSleep'],['Collapse','collapse','warn']]);
-
-      html += `<p class="note" style="margin-bottom:7px">Illness</p>`;
-      html += `<div class="chips">` + Object.keys(ILLS).map(id =>
-        `<button class="chip${hasIll(id) ? ' on' : ''}" data-dev="ill:${id}">${ILLS[id].name}</button>`).join('') +
-        `<button class="chip" data-dev="cureAll">Cure all</button></div>`;
-
-      html += `<p class="note" style="margin-bottom:7px">Pen · ${S.mess.length} mess</p>`;
-      html += chips([['Drop a mess','addMess'],['Clear','clearMess'],['Unlock every coat and hat','unlockAll']]);
+      html += sec('growth', 'Growth', STAGE[st].label.toLowerCase(),
+        pick(STAGE.map((s2, i) => i), i => i === st, i => 'stage' + i, i => STAGE[i].label) +
+        slider('Minutes kept', 'growth', 0, GROWTH_GATES[GROWTH_GATES.length-1] + 60, 1) +
+        `<p class="tiny">Stages turn at ${GROWTH_GATES.join(', ')} well-kept minutes.</p>`);
     }
 
-    html += `<p class="note" style="margin-bottom:7px">Skeleton${hatched() ? ' · ' + SPECIES[S.sp].common : ''}</p>`;
-    html += `<div class="chips">` + Object.keys(SPECIES).map(id =>
-      `<button class="chip${hatched() && S.sp === id ? ' on' : ''}" data-dev="sp:${id}">${SPECIES[id].common}</button>`).join('') +
-      (S && S.sp && !S.born ? `<button class="chip" data-dev="hatchNow">Hatch now</button>` : '') + `</div>`;
+    html += sec('rates', 'Rates', 'per hour, every animal',
+      slider('Hunger', 'tune:hunger', 0, 60, .5) +
+      slider('Energy awake', 'tune:energyAwake', 0, 60, .5) +
+      slider('Energy asleep', 'tune:energyAsleep', 0, 120, 1) +
+      slider('Clean', 'tune:hygiene', 0, 40, .5) +
+      slider('Joy', 'tune:joy', 0, 40, .5) +
+      slider('Growth speed', 'tune:growth', 0, 20, .5) +
+      `<div class="devsub">Illness onset</div>` +
+      slider('Mites: clean <', 'tune:mitesBelow', 0, 50, 1) +
+      slider('Mites after (h)', 'tune:mitesHours', 0, 12, .25) +
+      slider('Blues: joy <', 'tune:bluesBelow', 0, 50, 1) +
+      slider('Blues after (h)', 'tune:bluesHours', 0, 12, .25) +
+      slider('Chill: late (h)', 'tune:chillAfter', 0, 8, .25) +
+      slider('Chill after (h)', 'tune:chillHours', 0, 6, .25) +
+      slider('Belly: treats', 'tune:bellyTreats', 1, 10, 1) +
+      slider('Belly after (h)', 'tune:bellyHours', 0, 3, .25) +
+      chips([['Reset to shipped values', 'resetTune']]) +
+      `<p class="tiny">Kept on this device, never in the nest's save.</p>`);
 
-    html += `<p class="note" style="margin-bottom:7px">Keeper · day ${G.streak}</p>`;
-    html += chips([[G.sound ? 'Sound on' : 'Sound off','sound'],['Bump streak','bumpStreak']]);
-    html += `<p class="tiny">Growth stages are set by parking well-kept minutes on a gate
-      (${GROWTH_GATES.join(', ')}), which is exactly how the simulation moves them.</p>`;
+    if (alive){
+      html += sec('illness', 'Illness', S.ills.length ? S.ills.length + ' active' : 'well',
+        pick(Object.keys(ILLS), id => hasIll(id), id => 'ill:' + id, id => ILLS[id].name) +
+        chips([['Cure all', 'cureAll']]));
 
-    html += `<div class="chips" style="margin-top:12px"><button class="chip" data-dev="close">Close panel</button></div>`;
+      html += sec('pen', 'Pen and habitat', BIOMES[biomeId()].name.toLowerCase(),
+        `<div class="devsub">Mess on the ground</div>` +
+        pick([0, 1, 2, 3, 4], n => S.mess.length === n, n => 'mess:' + n, n => String(n)) +
+        `<div class="devsub">Habitat</div>` +
+        pick(BIOME_IDS, id => biomeId() === id, id => 'biome:' + id, id => BIOMES[id].name) +
+        chips([['Unlock every coat, hat and habitat', 'unlockAll']]));
+    }
+
+    html += sec('species', 'Species', alive ? SPECIES[S.sp].common : 'no animal yet',
+      pick(Object.keys(SPECIES), id => alive && S.sp === id, id => 'sp:' + id, id => SPECIES[id].common) +
+      (S && S.sp && !S.born ? chips([['Hatch now', 'hatchNow']]) : ''));
+
+    html += sec('keeper', 'Purse and keeper', 'day ' + G.streak,
+      chips([['+100', 'add100'], ['+1000', 'add1000'], ['Fill purse', 'fillPurse'], ['Empty', 'emptyPurse', 'warn']]) +
+      chips([[G.sound ? 'Sound on' : 'Sound off', 'sound'], ['Bump streak', 'bumpStreak']]));
+
+    html += chips([['Close panel', 'close']]);
     b.innerHTML = html;
+
     b.querySelectorAll('[data-dev]').forEach(c => c.onclick = () => devAction(c.getAttribute('data-dev')));
+    b.querySelectorAll('details.devsec').forEach(d => d.addEventListener('toggle', () => {
+      if (d.open) devOpen.add(d.dataset.sec); else devOpen.delete(d.dataset.sec);
+    }));
+    b.querySelectorAll('input[data-set]').forEach(inp => {
+      inp.addEventListener('pointerdown', () => { devDragging = inp; });
+      inp.addEventListener('input', () => devSet(inp.dataset.set, +inp.value, inp));
+      inp.addEventListener('change', () => { devDragging = null; DEV.commit(); });
+    });
+    paintDev();
+    scroller.scrollTop = scroll;
   },
 
   away(b, sp){
@@ -578,11 +666,88 @@ const SHEETS = {
   }
 };
 
+/* --------------------------- developer panel state -------------------------
+   Which sections are open and which slider is held survive a rebuild; they are
+   the panel's memory of what the person using it was doing. */
+const devOpen = new Set(['time', 'meters']);
+let devDragging = null;
+const DEV_NEEDS = [['hunger', 'Hunger'], ['energy', 'Energy'], ['hygiene', 'Clean'], ['joy', 'Joy']];
+const fmtHour = h => String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.round((h % 1) * 60)).padStart(2, '0');
+
+/* The live value behind a slider key, as the slider should show it. */
+function devValue(key){
+  if (key === 'clock'){ const d = viewDate(); return devHour !== null ? devHour : d.getHours() + Math.floor(d.getMinutes()/15)*.25; }
+  if (key.startsWith('tune:')) return SIM[key.slice(5)];
+  if (!hatched()) return 0;
+  if (key.startsWith('need:')) return Math.round(S.needs[key.slice(5)]);
+  if (key === 'health') return Math.round(S.health);
+  if (key === 'bond')   return Math.round(S.bond);
+  if (key === 'growth') return Math.round(S.growth);
+  return 0;
+}
+function devFmt(key, v){
+  if (key === 'clock' || key === 'tune:bedHour' || key === 'tune:wakeHour') return fmtHour(+v);
+  if (key === 'tune:growth') return '×' + (+v).toFixed(1);
+  if (key.startsWith('tune:')) return (+v).toFixed(1);
+  return String(Math.round(v));
+}
+/* A slider moved: write the one field, update its own number, repaint the
+   game. No rebuild and no save — the save happens on `change`. */
+function devSet(key, v, inp){
+  if (key === 'clock') DEV.setClock(v);
+  else if (key.startsWith('need:')) DEV.setNeed(key.slice(5), v);
+  else if (key === 'health') DEV.setHealth(v);
+  else if (key === 'bond') DEV.setBondTo(v);
+  else if (key === 'growth') DEV.setGrowth(v);
+  else if (key.startsWith('tune:')) DEV.setTune(key.slice(5), v);
+  const row = inp.closest('.devrow');
+  row.querySelector('output').textContent = devFmt(key, v);
+  row.classList.remove('off');
+  refresh();
+}
+/* The every-second repaint: the status strip, and every slider except the one
+   in the hand moves to its live value — meters drain while you watch. */
+function paintDev(){
+  const body = $('sheetBody');
+  if (openPanel !== 'dev' || !body) return;
+  const strip = $('devstrip');
+  if (strip){
+    const d = viewDate(), alive = hatched();
+    const cells = [
+      ['Stage', alive ? STAGE[stageIdx()].label : 'egg'],
+      [devHour === null ? 'Sky' : 'Sky · pinned', fmtHour(d.getHours() + d.getMinutes()/60) + ' ' + skyPhase(d)],
+      ['Sleep', !alive ? '—' : S.vet ? 'collapsed' : S.asleep ? 'asleep' : isNight() ? 'bedtime' : 'awake'],
+      ['Health', alive ? Math.round(S.health) : '—'],
+      ['Growth', alive ? Math.round(S.growth) + ' min' : '—'],
+      ['Coins', Math.floor(G.coins)]
+    ];
+    strip.innerHTML = cells.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('');
+  }
+  body.querySelectorAll('input[data-set]').forEach(inp => {
+    if (inp === devDragging) return;
+    const key = inp.dataset.set, v = devValue(key);
+    inp.value = v;
+    const row = inp.closest('.devrow');
+    row.querySelector('output').textContent = devFmt(key, v);
+    row.classList.toggle('off', key === 'clock' && devHour === null);
+  });
+}
+/* A drag can end off the control, where `change` never fires on some
+   browsers; letting go anywhere ends it. */
+window.addEventListener('pointerup', () => { if (devDragging){ devDragging = null; DEV.commit(); } });
+
 /* One switch per chip. Kept out of the sheet body so the panel stays a view. */
 function devAction(a){
   if (a.startsWith('stage')) return DEV.setStage(+a.slice(5));
   if (a.startsWith('ill:'))  return DEV.toggleIll(a.slice(4));
   if (a.startsWith('sp:'))   return DEV.becomeSpecies(a.slice(3));
+  if (a.startsWith('mess:')) return DEV.setMess(+a.slice(5));
+  if (a.startsWith('biome:')) return DEV.setBiome(a.slice(6));
+  if (a.startsWith('clock:')){
+    const h = a.slice(6) === 'null' ? null : +a.slice(6);
+    DEV.setClock(h);
+    return DEV.done(h === null ? 'The sky follows the real clock again.' : 'The sky is pinned at ' + fmtHour(h) + '.');
+  }
   switch (a){
     case 'add100':  return DEV.addCoins(100);
     case 'add1000': return DEV.addCoins(1000);
@@ -815,6 +980,8 @@ async function boot(){
   paintCase();
   loadCaseSkin();
   G = freshGame();
+  // before the save loads, so the catch-up tick runs at the tuned rates
+  await loadTuning();
   let loaded;
   try { loaded = loadSave(await Store.get(SAVE_KEY)); }
   catch(error){

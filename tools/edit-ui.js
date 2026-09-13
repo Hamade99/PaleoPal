@@ -386,8 +386,7 @@ function caseCell(i){ return [i[0]*CASE_PZ, i[1]*CASE_PZ, i[2]*CASE_PZ, i[3]*CAS
 function caseGlass(){
   const cv = makeCv(W, H), g = readCtx(cv);
   g.imageSmoothingEnabled = false;
-  const [sx, sy, sw, sh] = BG_CROP[3];
-  g.drawImage(bakeBg('day', 'valley'), sx, sy, sw, sh, 0, 0, W, H);
+  drawHabitatView(g, 'day', 'valley', 3);
   const f = frameOf('rex', 3, 'idle', 0, false, 'wild');
   g.drawImage(f.cv, Math.round(W/2 - f.ox), GROUND - f.oy);
   return cv;

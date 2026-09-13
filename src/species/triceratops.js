@@ -214,10 +214,12 @@ function drawTrike(M, P){
     const uTip = [hx + beakTip + sn*.06, lipY - hh*.04];
     const lTip = [jHinge[0] + (beakL*.86)*Math.cos(jawA) - (hh*.06)*Math.sin(jawA),
                   jHinge[1] + (beakL*.86)*Math.sin(jawA) + (hh*.06)*Math.cos(jawA)];
+    // the gape is left open, flesh only in the corner at the hinge (see the note in rex.js)
+    const corner = .28;
     M.mouth.beginPath();
     M.mouth.moveTo(jHinge[0], jHinge[1]);
-    M.mouth.lineTo(uTip[0], uTip[1]);
-    M.mouth.lineTo(lTip[0], lTip[1]);
+    M.mouth.lineTo(lerp(jHinge[0], uTip[0], corner), lerp(jHinge[1], uTip[1], corner));
+    M.mouth.lineTo(lerp(jHinge[0], lTip[0], corner), lerp(jHinge[1], lTip[1], corner));
     M.mouth.closePath(); M.mouth.fill();
   } else {
     tube(M.mouth, [[hx+6*hM, lipY+hh*.06],[hx-sn*.38, lipY+hh*.04],[hx-sn*.86, lipY-hh*.02]],

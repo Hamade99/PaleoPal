@@ -50,7 +50,7 @@ Nothing here is started. Ordered roughly by value.
 
 ## Known rough edges
 
-- The volcano's foot is hidden by the ridge in front of it. That is deliberate
+- The ash flats' volcano has its foot hidden by the ridge in front of it. That is deliberate
   — it is what puts it behind the range rather than in the pen — but it does
   mean the ash apron at its base is never seen.
 - The screen font has no descenders. In a seven-row cell with the x-height on

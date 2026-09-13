@@ -110,12 +110,17 @@ this came from research during development rather than from memory.
 
 ## The five habitats
 
-- **Fern valley** — the default: open ground under an active stratovolcano.
+- **Mystical valley** (the valley was "Fern valley" until session 17) — the default: open ground under one old-growth araucarian,
+  standing head and shoulders over the wood. Mesozoic araucarians grew into
+  emergent giants; the fossil logs of the Petrified Forest are estimated from
+  trees up to about sixty metres tall. An old one sheds its lower limbs and
+  carries its crown in a few ragged tiers at the top of a long bare trunk.
 - **Salt lagoon** — a warm shallow sea behind a sand bar, with sea stacks.
   Stacks are undercut at the waterline, which is what distinguishes one from a
   rock that happens to be in the sea.
-- **Ash flats** — the same valley after an eruption. Standing dead snags, ash
-  drifts, and bone half-buried in it, which is what an ash fall preserves.
+- **Ash flats** — ground under an erupting stratovolcano. Standing dead snags,
+  ash drifts, and bone half-buried in it, which is what an ash fall preserves.
+  The volcano is this habitat's alone.
 - **Fern gorge** — a cut in a plateau with a fall at its head. Bedded cliff
   faces broken by vertical joints, moss on the wet ledges.
 - **Polar dawn** — high-latitude forest under a glacier front. Polar dinosaur

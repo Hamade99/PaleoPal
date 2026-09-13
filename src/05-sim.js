@@ -60,9 +60,34 @@ const TRAITS = {
 const NAMES = ['Pebble','Norbert','Tiny','Bonk','Fern','Cleo','Spike','Dot','Pip','Tank','Mochi','Juniper','Rust','Marrow','Basil','Willow','Grub','Tuck'];
 const GROWTH_GATES = [20, 90, 240];      // minutes of well-cared-for time
 
-/* sleep window, in local hours */
-const BED_HOUR = 21, WAKE_HOUR = 6;
-const ENERGY_AWAKE = 8.5, ENERGY_ASLEEP = 20;   // points per hour
+/* The simulation's rates and its sleep window, in one place so the developer
+   panel can turn them. These are the shipped values; `SIM` is what the tick
+   reads, and it only differs from `SIM_DEFAULTS` on a machine where someone has
+   tuned it (kept under its own Store key, never in the nest's save).
+
+     hunger, hygiene, joy   points lost per hour awake (before traits)
+     energyAwake/Asleep     points lost awake, regained asleep, per hour
+     bedHour, wakeHour      the local-hour sleep window
+     growth                 multiplier on well-kept minutes toward the next stage
+
+   Illness onset. Each illness has a cause the player controls and a length of
+   time that cause has to hold before the animal falls ill; the time runs back
+   down while the cause is absent. Nothing here is a roll.
+     mitesBelow/Hours       hygiene under this for this long
+     bluesBelow/Hours       joy under this for this long
+     chillAfter/Hours       kept awake past bedtime this long, then this long more
+     bellyTreats/Hours      this many treats within the hour, held this long
+
+   Mites and the blues were under 20 for two hours and under 15 for two and a
+   half. Run through a week of twice-a-day visits that fed, washed, played with
+   and treated the animal, those gave eleven to thirteen cases each — illness
+   several times a day for someone doing everything right. */
+const SIM_DEFAULTS = Object.freeze({ hunger:7.5, hygiene:4.0, joy:6.0, energyAwake:8.5, energyAsleep:20,
+                                     bedHour:21, wakeHour:6, growth:1,
+                                     mitesBelow:15, mitesHours:4, bluesBelow:10, bluesHours:4,
+                                     chillAfter:2, chillHours:1, bellyTreats:3, bellyHours:.25 });
+const SIM = Object.assign({}, SIM_DEFAULTS);
+const SIM_KEY = 'paleopal-dev-tuning';
 /* How long an animal woken by hand stays up before the night rule may put it
    back under. Without it, waking a tired animal at night was undone by the
    very next tick half a second later, which is what made sleep feel like a
@@ -222,7 +247,13 @@ function ageLabel(pet = S){
   return String(Math.floor(d)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' D';
 }
 const hasIll   = (id, pet = S) => pet.ills.some(ill => ill.id === id);
-const isNight  = (now = Date.now()) => { const hour = new Date(now).getHours(); return hour >= BED_HOUR || hour < WAKE_HOUR; };
+/* A window that wraps midnight (21 to 6) is "after bed or before wake"; one
+   tuned not to wrap (1 to 9) is "after bed and before wake". Equal hours mean
+   no night at all. */
+const isNight  = (now = Date.now()) => {
+  const hour = new Date(now).getHours(), b = SIM.bedHour, w = SIM.wakeHour;
+  return b > w ? (hour >= b || hour < w) : (hour >= b && hour < w);
+};
 
 function logEvent(txt, pet = S, now = Date.now()){
   pet.log.unshift({ t:now, txt });
@@ -293,17 +324,18 @@ function simulate(pet, ms, online, now = Date.now()){
   const tA = trait('appetite', pet), tT = trait('tempo', pet), tS = trait('social', pet);
   const asleep = pet.asleep;
 
-  n.hunger  = clamp(n.hunger  - 7.5 * tA.hunger * h * (asleep ? .45 : 1), 0, 100);
-  n.hygiene = clamp(n.hygiene - 4.0 * h * (asleep ? .5 : 1), 0, 100);
-  n.joy     = clamp(n.joy     - 6.0 * tT.joy * h * (asleep ? .3 : 1) * tS.lonely, 0, 100);
-  n.energy  = asleep ? clamp(n.energy + ENERGY_ASLEEP * h, 0, 100)
-                     : clamp(n.energy - ENERGY_AWAKE * tT.energy * h, 0, 100);
+  n.hunger  = clamp(n.hunger  - SIM.hunger  * tA.hunger * h * (asleep ? .45 : 1), 0, 100);
+  n.hygiene = clamp(n.hygiene - SIM.hygiene * h * (asleep ? .5 : 1), 0, 100);
+  n.joy     = clamp(n.joy     - SIM.joy     * tT.joy * h * (asleep ? .3 : 1) * tS.lonely, 0, 100);
+  n.energy  = asleep ? clamp(n.energy + SIM.energyAsleep * h, 0, 100)
+                     : clamp(n.energy - SIM.energyAwake * tT.energy * h, 0, 100);
 
   if (!asleep && isNight(now-ms/2)) pet.nightAwake += h; else pet.nightAwake = Math.max(0, pet.nightAwake - h*.5);
 
   pet.treats = pet.treats.filter(time => now - time < HOUR);
-  const risks = { bellyache:pet.treats.length >= 3, chill:pet.nightAwake > 2, mites:n.hygiene < 20, blues:n.joy < 15 };
-  const limits = { bellyache:.25, chill:1, mites:2, blues:2.5 };
+  const risks = { bellyache:pet.treats.length >= SIM.bellyTreats, chill:pet.nightAwake > SIM.chillAfter,
+                  mites:n.hygiene < SIM.mitesBelow, blues:n.joy < SIM.bluesBelow };
+  const limits = { bellyache:SIM.bellyHours, chill:SIM.chillHours, mites:SIM.mitesHours, blues:SIM.bluesHours };
   for (const id in risks){
     pet.exposure[id] = risks[id] ? pet.exposure[id] + h : Math.max(0, pet.exposure[id] - h);
     if (!hasIll(id, pet) && pet.exposure[id] >= limits[id]) fallIll(id, pet, now);
@@ -321,7 +353,7 @@ function simulate(pet, ms, online, now = Date.now()){
 
   const cs = careScore(pet);
   const rate = pet.vet ? 0 : cs > .6 ? 1 : cs > .35 ? .5 : .12;
-  pet.growth += (ms/MIN) * rate;
+  pet.growth += (ms/MIN) * rate * SIM.growth;
 
   if (!asleep && !pet.vet){
     pet.messTimer = (pet.messTimer || (18 + simulationRandom(pet)*14)*MIN) - ms;
@@ -339,10 +371,17 @@ function simulate(pet, ms, online, now = Date.now()){
      may take it back, so there is time to feed, wash and play — which is the
      only reason anyone wakes one. Running the tank right down still overrules
      that: at six energy it drops wherever it stands, grace or no grace. */
+  /* It goes down at bedtime whatever its energy, and it sleeps through the
+     night. Before, it only settled after dark once energy was under thirty,
+     and it woke on its own at 99 even at three in the morning — so a rested
+     animal stayed up past bedtime on its own account, and staying up past
+     bedtime is exactly what brings on a chill. Nine chills a week for a keeper
+     who never once woke it: an illness with no cause the player could see.
+     Now the late-hours count only fills while someone keeps it up. */
   const sleepy = isNight(now);
   const justWoken = now - (pet.wokeAt || 0) < WAKE_GRACE;
-  if (!asleep && (n.energy <= 6 || (sleepy && n.energy < 30 && !justWoken))) setSleep(true, online, pet);
-  if (asleep && !pet.vet && n.energy >= 99) setSleep(false, online, pet);
+  if (!asleep && (n.energy <= 6 || (sleepy && !justWoken))) setSleep(true, online, pet);
+  if (asleep && !pet.vet && !sleepy && n.energy >= 99) setSleep(false, online, pet);
   if (asleep && !pet.vet && !sleepy && n.energy > 72) setSleep(false, online, pet);
 
   const st = stageIdx(pet);
@@ -409,16 +448,32 @@ function swallow(id){
   say(loved ? 'Its favourite. Gone in one gulp.' : hated ? 'It eats it. Slowly. Resentfully.' : 'Nom.');
   refresh();
 }
+/* One press, one mess: the one nearest the animal goes first. The pen clean
+   pays what a whole scrub always paid — a coin and ten hygiene a mess, and the
+   rinse on top once the last one is gone — so washing one at a time costs
+   presses, not care. With nothing left to clean it is the rinse on its own. */
 function scrub(){
   if (S.asleep) return refuse(S.name + ' is asleep.');
-  const n = S.mess.length;
-  S.mess.forEach(m => emit('spark', m.x, GROUND-6, 4));
-  S.mess = [];
-  G.coins += n;
-  S.needs.hygiene = clamp(S.needs.hygiene + 22 + n*10, 0, 100);
-  S.needs.joy = clamp(S.needs.joy + 4, 0, 100);
   SFX.wash();
-  say(n ? 'Scrubbed clean. Found ' + n + ' coin' + (n>1?'s':'') + ' in the muck.' : 'A good rinse.');
+  if (S.mess.length){
+    let k = 0;
+    S.mess.forEach((m, i) => { if (Math.abs(m.x - dino.x) < Math.abs(S.mess[k].x - dino.x)) k = i; });
+    const [m] = S.mess.splice(k, 1);
+    emit('spark', m.x, GROUND-6, 6);
+    G.coins += 1;
+    S.needs.hygiene = clamp(S.needs.hygiene + 10, 0, 100);
+    if (S.mess.length){
+      say('One cleaned up, and a coin in it. ' + numWord(S.mess.length) + ' to go.');
+      return refresh();
+    }
+    S.needs.hygiene = clamp(S.needs.hygiene + 22, 0, 100);
+    S.needs.joy = clamp(S.needs.joy + 4, 0, 100);
+    say('That was the last of it. Found a coin in the muck.');
+  } else {
+    S.needs.hygiene = clamp(S.needs.hygiene + 22, 0, 100);
+    S.needs.joy = clamp(S.needs.joy + 4, 0, 100);
+    say('A good rinse.');
+  }
   emit('spark', dino.x, GROUND-30, 8);
   refresh();
 }
@@ -621,6 +676,23 @@ function releasePet(i){
    ========================================================================== */
 const DEV_COINS = 99999;
 
+/* Tuning is kept apart from the nest: only the values that differ from the
+   shipped ones, under SIM_KEY, and read back field by field so a stale or
+   hand-edited entry can only set a known rate to a finite number. */
+function saveTuning(){
+  const diff = {};
+  for (const k in SIM_DEFAULTS) if (SIM[k] !== SIM_DEFAULTS[k]) diff[k] = SIM[k];
+  return Promise.resolve().then(() => Store.set(SIM_KEY, JSON.stringify(diff))).catch(() => {});
+}
+async function loadTuning(){
+  try {
+    const raw = await Store.get(SIM_KEY);
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    for (const k in SIM_DEFAULTS) if (typeof o[k] === 'number' && Number.isFinite(o[k])) SIM[k] = o[k];
+  } catch (error) { /* unreadable tuning is no tuning */ }
+}
+
 const DEV = {
   /* --- purse --- */
   fillPurse(){ G.coins = DEV_COINS; DEV.done('Purse filled.'); },
@@ -693,6 +765,29 @@ const DEV = {
 
   /* --- time --- */
   bumpStreak(){ G.streak += 1; G.lastDay = new Date().toDateString(); DEV.done('Streak is ' + G.streak + '.'); },
+  /* The clock the sky is drawn at: an hour, or null for the real one. A view
+     only — see viewDate() — so it writes nothing the simulation reads. */
+  setClock(hour){ devHour = hour === null ? null : ((hour % 24) + 24) % 24; },
+
+  /* --- sliders ---
+     A slider fires on every step of travel, so these write the field and
+     nothing else: no message, no save, no rebuilding the panel under the
+     pointer. The panel repaints; `commit()` saves once the drag lets go. */
+  setNeed(k, v){ if (hatched() && k in S.needs) S.needs[k] = clamp(v, 0, 100); },
+  setHealth(v){ if (hatched()) S.health = clamp(v, 0, 100); },
+  setBondTo(v){ if (hatched()) S.bond = clamp(v, 0, 100); },
+  /* Growth moves stageSeen with it, the way setStage does, so dragging across
+     a gate does not announce a growth spurt on the next tick. */
+  setGrowth(m){ if (!hatched()) return; S.growth = Math.max(0, m); S.stageSeen = stageIdx(); },
+  setTune(k, v){ if (k in SIM_DEFAULTS && Number.isFinite(v)) SIM[k] = v; },
+  commit(){ save(); saveTuning(); },
+  resetTune(){ Object.assign(SIM, SIM_DEFAULTS); saveTuning(); DEV.done('Rates and sleep hours are back to the shipped values.'); },
+  setMess(n){
+    if (!hatched()) return;
+    S.mess = S.mess.slice(0, n);
+    while (S.mess.length < n) S.mess.push({ x: rnd(28, W-28) });
+    DEV.done(n ? numWord(n) + ' in the pen.' : 'Pen cleaned.');
+  },
 
   done(msg){
     save(); refresh(); paintChrome();
