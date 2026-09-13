@@ -57,7 +57,7 @@ not persist: particles, walking, animation timing, minigames.
 ## The sprite pipeline
 
 See `SPRITE-PIPELINE.md`. In short: each species draw function paints flat
-shapes onto twelve **material layers**; the compositor turns those layers into
+shapes onto fifteen **material layers**; the compositor turns those layers into
 lit, outlined pixels. Frames are baked lazily and cached by
 `species|skin|stage|anim|frame|eye`.
 
@@ -119,9 +119,11 @@ Otherwise:
 | A new shop shelf | a key in `SHELVES` and a case in `shelfItems()`, `src/07-screens.js` |
 | The screen font | `src/03-font.js` |
 | Colours, layout, buttons | `src/style.css` |
-| The crown ridge's plates | `--x/--w/--h` in `src/style.css`; the arc in `fitCrown()` |
+| The crown ridge's plates | `--x/--w/--h` in `src/style.css`; the arc in `fitCrown()` in `src/08-ui.js` |
 | The volcano and its plume | `drawVolcano` (baked) and `drawPlume` (live), `src/04-world.js` |
-| The case: shell, bezel, keys | `src/style.css`, `index.html` |
+| The case: shell, bezel, keys | `src/style.css`, `index.html` — and `PIX.case` for the drawn face |
+| Where anything sits on the case | a fraction of the 96x155 grid, in `src/style.css`; see the cell list in CLAUDE.md |
+| An age, a habitat, a coat, a hat | all on the pet: `S.born`, `S.biome`, `S.skin`, `S.hat` |
 | A developer switch | a method on `DEV` in `src/05-sim.js`, a chip in the `dev` sheet |
 | Checking any of the art | `tools/sheet.html` |
 | Changing any of the art | `tools/edit.cmd`, or `python tools/edit.py` |

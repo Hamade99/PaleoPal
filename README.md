@@ -57,7 +57,7 @@ src/
   species/            one file per animal, plus the registry
   04-world.js         backdrop, parallax, particles, props
   05-sim.js           needs, illness, bond, the nest, actions
-  06-render.js        behaviour, draw loop, feeding, the three minigames
+  06-render.js        behaviour, draw loop, feeding, the five minigames
   07-screens.js       the menus, drawn inside the screen
   08-ui.js            case chrome, prose panels, input, save/load, main loop
   style.css

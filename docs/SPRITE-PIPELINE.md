@@ -69,6 +69,27 @@ frame, so feet always reach the floor regardless of body bob.
 **The sprite faces −x. A planted foot must travel toward +x.** Getting that
 backwards is what produced the moonwalk in session 3.
 
+### Feet are flat underneath
+
+`drawFoot` has four kinds — `hoof`, `pad`, `column` and the default bird foot —
+and every one of them meets the ground as a straight line at `ty`, the contact
+point the gait solver already computes. Nothing is drawn below it.
+
+They were ovals, which put a rounded sole on a standing animal: across four
+growth stages and thirty poses that is the most visible thing about how an
+animal meets the ground, and it read as a doll on stands rather than as weight
+on soil. Use `poly()` for a sole, not `blob()` — `blob` rounds everything it is
+given, which is right for a ribcage and wrong for anything that has to be flat
+or come to a point.
+
+Claws go on with the foot, never placed afterwards by the species. `claw()`
+draws a wedge whose base is set back inside the toe, so it cannot float off the
+shape it grows from — which is exactly what happened when the rex hung three
+ovals at a typed offset from the toe target and landed them seven pixels clear
+of the foot on an adult. Pass the keratin layer to `legStep` and let `drawFoot`
+place them. The far-side legs pass none, which is why the claws you can see are
+the ones on the near foot.
+
 The walk cycle is twelve frames, and idle is four. Both are generated rather
 than typed out — see `poseCycle` — because the only reason they used to be six
 and two was that a bake cost eight milliseconds and every pose is one.
@@ -188,10 +209,16 @@ crawls between animation frames.
 
 ## 8. Anchors
 
-Each draw function returns `{ eye, eyeR, mouth, hat, top }` in local units. The
-baker converts them to trimmed-sprite pixel coordinates and adds `hs`, the head
-scale. Headgear and the feeding animation use these anchors rather than guessed
-offsets, which is why gear stays put across stages and animations.
+Each draw function returns `{ eye, eyeR, mouth, hat, hatW, top, spine }` in
+local units. The baker converts them to trimmed-sprite pixel coordinates and
+adds `hs`, the head scale. Headgear and the feeding animation use these anchors
+rather than guessed offsets, which is why gear stays put across stages and
+animations.
+
+A draw function used to hand back two more — `parts`, a set of drag landmarks,
+and `joints`, a published skeleton. Both belonged to editor tabs that were
+removed in session 16; `DEVLOG.md` has why, and what the skeleton proved, if
+direct authorship is ever picked up again.
 
 ## 9. Eye states
 

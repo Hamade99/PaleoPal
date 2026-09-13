@@ -15,7 +15,7 @@ Nothing here is started. Ordered roughly by value.
 - **Capacitor wrap.** `Store` in `00-core.js` already falls back through
   `window.storage` → `localStorage`; that is the only line the wrap should need
   to touch.
-- **Economy balance pass.** Coin income (digs, mess, three games, daily streak)
+- **Economy balance pass.** Coin income (digs, mess, five games, daily streak)
   against sinks (food, remedies, vet, headgear, coats) has never been tuned
   against a real play session.
 
@@ -32,7 +32,6 @@ Nothing here is started. Ordered roughly by value.
 - Breeding or trait inheritance between animals in the nest.
 - Habitat *decoration* — props you place yourself. The five habitats are a
   coin sink now, but they are bought whole and cannot be arranged.
-- Per-game high scores and a weekly best.
 
 ## Engineering
 
@@ -42,14 +41,12 @@ Nothing here is started. Ordered roughly by value.
 - No accessibility pass: no keyboard path through the sheets, no reduced-motion
   handling beyond a CSS transition disable, no screen-reader labels on the
   meters.
-- No automated tests in the repo. The Playwright scripts used during the
-  structure pass (boot and hatch, render every screen, drive every save path)
-  live outside it and should be brought in. `tools/sheet.html` covers the art
-  by eye but nothing covers behaviour.
 - The species files share nothing. Each is a hand-tuned list of control points,
   so a fourth animal means re-deriving all of it and any global change to how
   bodies are built is three edits in three schemes. Worth extracting a shared
-  skeleton before Stegosaurus, not after.
+  skeleton before Stegosaurus, not after. Session 15 built one and session 16
+  took it out with the editor tab that drove it — `DEVLOG.md` has what it proved
+  and what it cost, which is the place to start rather than from scratch.
 
 ## Known rough edges
 
@@ -59,12 +56,10 @@ Nothing here is started. Ordered roughly by value.
 - The screen font has no descenders. In a seven-row cell with the x-height on
   rows two to six there is nowhere for one to go, so `g`, `p`, `q` and `y` ride
   high. Legible, but it is the first thing anyone will notice.
-- River leap and Snack run do not scale to the animal's growth stage. Forage
-  does — running speed and reach both come off `stageIdx()`, and the playtest
-  numbers separate a hatchling from an adult by about a third.
-- Forage tops out at whatever the spawn rate allows: an adult driven well
-  clears nearly every find, so the ceiling is the game's, not the player's.
-  Fine for thirty seconds; it would need a ramp to carry a longer round.
+- Forage and nest guard top out at whatever the spawn rate allows: an adult
+  driven well clears nearly everything, so the ceiling is the game's and not the
+  player's. Fine for thirty seconds; either would need a ramp to carry a longer
+  round.
 - Araucaria and tree fern silhouettes are in the treeline now, but at
   twenty-odd pixels tall the difference between them and a conifer is two or
   three pixels of crown. They read as variety rather than as species.

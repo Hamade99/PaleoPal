@@ -42,14 +42,16 @@ more than the list below.
 
 ### Fit and feel
 
-- **Screen shape.** `fitScreen()` picks a whole or half multiple of 224 that
-  fits the width. Phones are much taller and narrower than a desktop window, and
-  the case has never been checked on one. Notches and the gesture bar need
-  `env(safe-area-inset-*)`; there is a `--safe` variable in `style.css` but only
-  the bottom is used.
-- **Touch targets.** The five keys are fine. The in-screen menus hit-test against
-  a 224-pixel-wide canvas, so a list row is about 6mm on a phone and a grid cell
-  about 8mm. Under a thumb that is marginal. Worth measuring before deciding.
+- **Screen shape.** Done in session 16, but only in an emulator. `fitScreen()`
+  now fits both axes and picks an eighth multiple of 224; the case is a fixed
+  96x155 grid checked from 320 to 1920 with no overflow either way. Notches and
+  the gesture bar still need `env(safe-area-inset-*)` — there is a `--safe`
+  variable in `style.css` and only the bottom is used.
+- **Touch targets.** The five keys and the four head keys are 48px or better as
+  of session 16, and nothing DOM over the glass can take a tap any more. The
+  in-screen menus still hit-test against a 224-pixel canvas, but the glass is
+  half again the size it was, so a list row is nearer 9mm than 6mm. Worth
+  measuring on a real device rather than an emulator.
 - **The rename field** opens the on-screen keyboard, which resizes the viewport
   and will move the case under it.
 - **Long-press** on the brand plate toggles the dev button. On a touch screen
@@ -112,6 +114,33 @@ answer could take.
 ## Done so far
 
 Newest first. `DEVLOG.md` has the reasoning; this is the index.
+
+**Session 16 — the editor cut back, and the case as data.** Ten editor tabs
+down to five; `src/02-rig.js` and `src/00-bg-art.js` deleted along with the
+hand-drawn parts, the rig and the eight painting colours. The case became a
+fixed 96x155 grid with everything on it placed as a fraction, so it can be drawn
+in the Pixels tab or replaced by an imported picture — with the CSS moulding
+kept as the default, because no pixel grid that fits in a source file can match
+a vector curve at device resolution. Forage rebuilt top-down with its own
+sprites; tug of war and nest guard added; an age counter in days; habitats moved
+onto the pet; feet given flat soles and wedge claws; messages routed to whatever
+surface the player is looking at; a mobile pass at 48px targets.
+
+**Session 15 — a wider world, and a rig that was rejected.** The backdrop became
+280x210 by extension rather than magnification, with the view pulling back a
+notch at each growth spurt. Hand-drawn parts, per-species painting colours and a
+published skeleton were built and then removed in session 16; the editor work
+that came with them was the reason.
+
+**Session 14 — simulation, progression and a test suite.** Growth parity between
+the active pet and the roster, overnight catch-up, save validation and version
+handling. The Playwright and Node checks moved into the repo — including the
+harness that plays every minigame against a competent player and an idle one and
+fails if the two scores are close.
+
+**Session 13 — saving, and making it work in Firefox.** The editor writes
+`src/00-art.js` through `tools/edit.py` rather than a download, because Firefox
+has no writable-file API and is not getting one.
 
 **Session 12 — the art editor.** All twenty-nine small sprites (action icons,
 meter glyphs, case buttons, headgear, food, mess, heart) converted from

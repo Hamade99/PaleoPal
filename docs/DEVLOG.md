@@ -1305,8 +1305,8 @@ grows, reaching full size at adult.
 
 **The plan was written twice.** The first draft was written from the request
 and was wrong in four load-bearing places, each of which would have cost a
-rebuild. They are recorded in `docs/PLAN-DRAW-AND-ZOOM.md` rather than deleted,
-because each is a trap that is cheap to fall into twice:
+rebuild. They are recorded here rather than dropped, because each is a trap that
+is cheap to fall into twice:
 
 | It assumed | The code says |
 | --- | --- |
@@ -1440,6 +1440,113 @@ only thing separating asleep from ill.
 
 ---
 
+## Session 16 — cutting the editor back, and the case as data
+
+**Owner's verdict, carried over from session 15.** *"this whole designer
+realistically needs a complete redesign."* Session 15 had answered a complaint
+about "a million dropdowns" by tidying the same tool, which did not help; it
+also left three planning documents — `ARCHITECTURE-REVIEW.md`,
+`EDITOR-REDESIGN.md` and `PLAN-DRAW-AND-ZOOM.md` — describing a direction that
+has now been taken out. They are deleted. What was worth keeping out of them is
+here.
+
+### The editor, cut from ten tabs to five
+
+Kept: Pixels, Species, Growth, Coats, Headgear. Removed with all their
+machinery: Body, Draw, Rig, Habitats, Backdrop.
+
+Gone with them: `src/02-rig.js` and `src/00-bg-art.js` deleted, and `PART_PIX`,
+`PART_UNITS`, `PART_MATS`, `RIG_PARTS`, `BG_PIX` and the eight `ink0..ink7`
+layers. `LAYERS` went back to fifteen real materials from twenty-three, and
+`drawLayers` folded into `bakeOnce` once nothing outside the baker needed a
+half-built sprite. Editor 2,676 lines to 1,077; built game 411KB to 355KB.
+
+**What the architecture review had got right, and is worth not re-deriving.**
+The shape of an animal lives in code and is only reachable through numbers
+invented as go-betweens — `headLen`, `frillH` — which are dials somebody wired
+to the shape rather than the shape itself. That diagnosis stands. Its proposed
+answer was to make each animal a published skeleton plus a flat list of parts,
+and the additive half of that was built and did work: a horn added from the
+editor grew, turned, walked and lit correctly with no code written for it.
+
+It was removed anyway, because the owner's problem was the tool and not the
+model, and a rig nobody could drive is a rig that costs maintenance and returns
+nothing. If direct authorship is picked up again, start from that result rather
+than from the tool: the shapes are outlines, not bitmaps, which is why they can
+be rigged at all — and the mistake session 15 made was introducing pixel grids,
+the one kind of art that cannot be, into the only pipeline whose strength is
+that it does not use them.
+
+**BIOME_ART stayed.** Only the Habitats *tab* went; the data still draws the
+five habitats and is still editable by hand behind its marker.
+
+### The case became data, and then became two things
+
+The case was CSS: a border-radius silhouette, a cast speckle, seven crown plates
+placed by `fitCrown()`, four screw heads, five painted keys. None of it could be
+drawn by hand and none of it could be replaced.
+
+It is a fixed 96x155 grid now, one cell per `--px`, with everything live placed
+on it as a *fraction* of the case. That is what lets a drawn or imported
+faceplate line up, and it had to come first: the case had no fixed aspect at all
+— its height was whatever its contents came to, and the ratio ran .60 to .70
+across viewports, so no single picture could fit it.
+
+**Then the part that took several attempts.** Redrawing the case as a 96x155
+sprite lands close and never identical, and after three rounds of it the reason
+was clear rather than a matter of more care: the moulding has 2px borders, a 1px
+seam and a silhouette the browser renders as a curve at device resolution, and
+at 96 cells across one cell is four screen pixels. A grid fine enough would be
+384x620 — a quarter of a megabyte of pixel rows in a source file.
+
+So the case has **two faces and one box**. The face is either the moulding, in
+CSS, exactly as it always was, or a picture — `PIX.case` from the Pixels tab, or
+an imported file. `data-case="art"` on the root switches. The default is the
+moulding, so it is the case this game has always had by construction rather than
+by anybody's eye.
+
+An imported case lives in `Store` on the machine that imported it, so the
+project still ships no image assets; promoting one into `src/00-art.js` is a
+separate press in the editor because it is a separate decision.
+
+### What else shipped
+
+- **Top-down forage**, with PIX sprites for the three species and the compy —
+  drawn facing +x and rotated to the heading, which is the one projection that
+  can be rotated honestly. Three grounds from the round's seed, a burst pickup.
+- **Two games.** Tug of war is the competitive one: a rival of the same species
+  and age, and a grip window rather than a mash. Nest guard reuses the top-down
+  view for triage rather than routing, and runs on `runSpeed` — the pen speed
+  falls with age while reach rises and the two cancelled exactly, which had a
+  hatchling and an adult scoring the same round.
+- **An age counter**, wall clock from `S.born`, per animal, on the glass.
+- **Habitats moved onto the pet.** Buying opens a place to the nest; moving
+  moves the animal you are looking at.
+- **Feet are flat underneath.** Every one was an oval, so all three animals
+  stood balanced on a ball, and the rex's claws were placed by a typed offset
+  that landed them seven pixels in front of the foot they grow from. Claws are
+  wedges drawn by `drawFoot` itself now.
+- **Messages go where the player is looking** — a screen's title bar, a strip
+  under a game's clock, or the habitat bubble. The DOM bubble floats over the
+  middle of the glass, and the glass, when a menu is open, *is* the menu.
+- **Mobile.** 48px targets on the head keys; nothing DOM over the glass may take
+  a tap; the glass climbs in eighths so the leftover between one scale step and
+  the next stops being a band of dead panel.
+
+### Two bugs worth remembering
+
+**`getComputedStyle` does not resolve custom properties.** `fitCrown` read plate
+sizes out of `--h`, got back the `calc()` as written, and `parseFloat` of
+`"calc(4.16px*5)"` is `NaN` — which fell through to a height of zero and buried
+the whole crown ridge inside the shell. Measure the box; it is already resolved
+and cannot lie about itself.
+
+**A constant that mirrors the stylesheet will drift from it.** `fitScreen`
+computed the glass opening from `RECESS_W`/`RECESS_H` instead of looking at it,
+and sized the canvas for a box it did not have: 364 into 358, where `max-width`
+clamped it to a scale of 1.598 and put the world's pixel grid on a fraction —
+the one thing the discrete steps exist to prevent.
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.
@@ -1454,4 +1561,13 @@ only thing separating asleep from ill.
 - **The screen is the interface.** Menus live inside the glass; the case does
   not change while you play. Long prose is the one exception.
 - **One grid, one edge, no symmetry.** In the case, and for the same reason in
-  the screens.
+  the screens. One exception, added in session 16 on the owner's call: the crown
+  ridge is mirrored and evenly spaced, because a dorsal ridge down the spine of
+  an animal is the one thing on this case with a centre line of its own.
+- **The case has two faces and one box.** A fixed 96x155 grid with everything
+  live placed on it as a fraction; the face is the CSS moulding by default, or a
+  picture — `PIX.case`, or an imported file. Keep both: no pixel grid that fits
+  in a source file can match a vector curve rendered at device resolution.
+- **No image assets, still.** An imported case lives in `Store` on the machine
+  that imported it. Promoting one into the project is a separate, deliberate
+  press.
