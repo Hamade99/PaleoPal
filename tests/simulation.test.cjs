@@ -261,15 +261,18 @@ test('the case grid and the boxes placed on it agree', () => {
   near(pct('.shellhead', 'left'),   5 / W * 100, 'head left');
   near(pct('.shellhead', 'top'),   10 / H * 100, 'head top');
   near(pct('.shellhead', 'width'), 86 / W * 100, 'head width');
-  near(pct('.bezel', 'left'),    3 / W * 100, 'bezel left');
-  near(pct('.bezel', 'top'),    32 / H * 100, 'bezel top');
-  near(pct('.bezel', 'width'),  90 / W * 100, 'bezel width');
-  near(pct('.bezel', 'height'), 87 / H * 100, 'bezel height');
-  // the dark panel is a fraction of the bezel: cells 6,35 84x81 of the case
-  near(pct('.screen', 'left'),    3 / 90 * 100, 'panel left');
-  near(pct('.screen', 'top'),     3 / 87 * 100, 'panel top');
-  near(pct('.screen', 'width'),  84 / 90 * 100, 'panel width');
-  near(pct('.screen', 'height'), 81 / 87 * 100, 'panel height');
+  near(pct('.bezel', 'left'),    2 / W * 100, 'bezel left');
+  near(pct('.bezel', 'top'),    31 / H * 100, 'bezel top');
+  near(pct('.bezel', 'width'),  92 / W * 100, 'bezel width');
+  near(pct('.bezel', 'height'), 88 / H * 100, 'bezel height');
+  /* The dark panel, as a fraction of the bezel. The bone frame around it is a
+     cell and two fifths: at two cells the opening came out half a cell short of
+     a scale step and the glass sat back down a rung, which is a lot of black
+     border to pay for a tidier number. */
+  near(pct('.screen', 'left'),    1.4 / 92 * 100, 'panel left');
+  near(pct('.screen', 'top'),     1.4 / 88 * 100, 'panel top');
+  near(pct('.screen', 'width'),  89.2 / 92 * 100, 'panel width');
+  near(pct('.screen', 'height'), 85.2 / 88 * 100, 'panel height');
   near(pct('.keys', 'left'),    7 / W * 100, 'keys left');
   near(pct('.keys', 'top'),   121 / H * 100, 'keys top');
   near(pct('.keys', 'width'),  82 / W * 100, 'keys width');
@@ -286,8 +289,8 @@ test('the case grid and the boxes placed on it agree', () => {
     + ' but the keys run to x' + keyRight);
   assert.ok(7 >= 96 - (cx + half), 'and the left of the row is inside it too');
   // the recess is a fraction of the panel, which is 80 cells square
-  near(pct('.stage', 'top'),    13 / 81 * 100, 'recess top');
-  near(pct('.stage', 'height'), 62 / 81 * 100, 'recess height');
+  near(pct('.stage', 'top'),    12.6 / 85.2 * 100, 'recess top');
+  near(pct('.stage', 'height'),   67 / 85.2 * 100, 'recess height');
   near(pct('.stage', 'width'), 100, 'the recess is the full width of the panel');
 
   /* The canvas must fit the recess at 1:1 on the smallest case anyone can be
@@ -296,7 +299,7 @@ test('the case grid and the boxes placed on it agree', () => {
   const ui = fs.readFileSync(path.join(__dirname, '../src/08-ui.js'), 'utf8');
   const pxMin = parseFloat(/PX_MIN = ([\d.]+)/.exec(ui)[1]);
   const rw = parseFloat(/RECESS_W = (\d+)/.exec(ui)[1]), rh = parseFloat(/RECESS_H = (\d+)/.exec(ui)[1]);
-  assert.deepEqual([rw, rh], [84, 62], 'fitScreen measures the recess the stylesheet draws');
+  assert.deepEqual([rw, rh], [88, 67], 'the recess fallback matches the stylesheet');
   assert.ok(rw * pxMin >= 224 && rh * pxMin >= 168,
     'at PX_MIN=' + pxMin + ' the recess is ' + (rw * pxMin) + 'x' + (rh * pxMin)
     + ', too small for a 224x168 canvas');

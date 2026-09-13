@@ -141,8 +141,8 @@ const pixZoom = p => Math.max(2, Math.min(22, Math.floor(Math.min(760 / p.w, 820
    fractions of a 96x160 grid, and the recess, the key plates and the head are
    at cells the layout relies on, so it cannot be resized from here. */
 const CASE_ID = 'case', CASE_W = 96, CASE_H = 155;
-const CASE_CELLS = { recess:[6,48,84,62], screenBox:[6,35,84,81], keys:[7,125,14,16], keyStep:17,
-                     head:[5,10,86,19], glass:[8,48,80,60] };
+const CASE_CELLS = { recess:[3,45,90,67], screenBox:[3,32,90,86], keys:[7,125,14,16], keyStep:17,
+                     head:[5,10,86,19], glass:[5,46,86,65] };
 
 function pixBuild(){
   const p = PIX[pixId];

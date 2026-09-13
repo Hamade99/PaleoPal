@@ -172,7 +172,7 @@ body{
    4,35 88x86; keys 7,121 82 wide. */
 .shell > *{position:absolute}
 .shellhead{left:5.2083%;  top:6.4516%;  width:89.5833%}
-.bezel    {left:3.125%;   top:20.6452%; width:93.75%;    height:56.129%}
+.bezel    {left:2.0833%;  top:20%;      width:95.8333%;  height:56.7742%}
 .keys     {left:7.2917%;  top:78.0645%; width:85.4167%}
 
 /* ---------- faceplate ---------- */
@@ -257,10 +257,10 @@ body{
 [data-case="art"] .screw{display:none}
 
 .screen{
-  position:absolute;left:3.3333%;top:3.4483%;width:93.3333%;height:93.1034%;
-  border-radius:calc(var(--px)*3);padding:2%;
+  position:absolute;left:1.5217%;top:1.5909%;width:96.9565%;height:96.8182%;
+  border-radius:calc(var(--px)*3);padding:1.2%;
   background:var(--bg);
-  border:2px solid #05090a;
+  border:1px solid #05090a;
   box-shadow:inset 0 2px 0 #05090a
 }
 [data-case="art"] .screen{background:none;border:0;box-shadow:none;border-radius:0}
@@ -270,7 +270,7 @@ body{
    can rely on those numbers; the canvas is centred in there at whatever whole or
    half multiple of 224 fits, which on a phone is now one and a half rather than
    one. */
-.stage{position:absolute;left:0;top:16.0494%;width:100%;height:76.5432%}
+.stage{position:absolute;left:0;top:14.7887%;width:100%;height:78.6385%}
 /* Never in the way. This is one line of prose and a row of pips, none of it
    interactive, and it is drawn after the canvas — so when the line wrapped it
    grew upward over the glass and swallowed taps meant for the row underneath.

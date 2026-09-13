@@ -102,13 +102,20 @@ rather than writing it again.
   and at 96 cells across one cell is four screen pixels; a grid fine enough
   would be 384x620, a quarter of a megabyte of pixel rows. The default stays the
   real thing and the grid is there for when someone wants their own.
-  Cells: head `5,10` `86x19`, bone bezel `3,32` `90x87`, dark panel `6,35`
-  `84x81` (`3,3` of the bezel), glass recess `6,48` `84x62` — the panel's full
-  width — and keys `7,121`, `14x16` in steps of 17 four cells below the bezel.
-  `RECESS_W`/`RECESS_H` in `08-ui.js` must match the recess or the glass will
-  not take the step it could, and `LCD_STEPS` is in quarters rather than halves
-  — whatever is left between one step and the next is dead black panel around
-  the picture, and on a 360-wide phone halves left ten cells a side. Those
+  Cells: head `5,10` `86x19`, bone bezel `2,31` `92x88`, dark panel `3.4,32.4`
+  `89.2x85.2` (a bone frame of 1.4 cells), glass recess `3.4,45` `89.2x67` — the
+  panel's full width — and keys `7,121`, `14x16` in steps of 17 four cells below
+  the bezel. The bone frame is 1.4 and not 2 because at 2 the opening came out
+  half a cell short of a scale step and the glass sat back down a rung, which is
+  a lot of black border to pay for a tidier number.
+  `fitScreen()` **measures** `.stage` rather than computing it from
+  `RECESS_W`/`RECESS_H`, which are only a fallback: the moment the constants and
+  the stylesheet disagreed the glass was sized for an opening it did not have —
+  364 into a 358 box, where `max-width` clamped it to a scale of 1.598 and put
+  the world's pixel grid on a fraction, the one thing the steps exist to
+  prevent. `LCD_STEPS` is in eighths: whatever is left between one step and the
+  next is dead black panel around the picture, and halves left ten cells a side
+  on a 360-wide phone. Those
   numbers are in three places — the art, `style.css` and `CASE_CELLS` in
   `tools/edit-ui.js` — and a Node test checks the first two against each other,
   because nothing at runtime would notice them drifting: the screen would just

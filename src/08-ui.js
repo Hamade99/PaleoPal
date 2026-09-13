@@ -105,8 +105,10 @@ function buildChrome(){
    the game sitting at 1x inside a recess with room for a third more. A quarter
    step puts a four-pixel beat in the scaling where a half step puts a two-pixel
    one; at the pixel densities a phone has, neither is visible, and the choice is
-   between a beat nobody can see and a border everybody can. */
-const LCD_STEPS = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3];
+   between a beat nobody can see and a border everybody can. Eighths for the same
+   reason again — the ladder is only worth climbing in rungs small enough that
+   the last one does not leave a band of dead panel round the picture. */
+const LCD_STEPS = Array.from({length:17}, (_, i) => 1 + i/8);
 
 /* The case is a fixed 96x160 grid and `--px` is how big one cell of it is, so
    fitting the case to the window is one number. Both axes matter now: the old
@@ -120,7 +122,7 @@ const LCD_STEPS = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3];
    the largest whole or half multiple of 224 that fits inside the recess drawn
    for it and is centred there, the way an LCD sits in a moulded opening. */
 const CASE_W = 96, CASE_H = 155;          // the grid the artwork is drawn on
-const RECESS_W = 84, RECESS_H = 62;       // where the canvas floats, in cells
+const RECESS_W = 88, RECESS_H = 67;       // where the canvas floats, in cells
 /* The floor is not a matter of taste: below it the recess is smaller than the
    224x168 canvas, and the canvas would either be clipped by the moulding or
    take a fractional scale to fit. 224/84 is 2.67 and 168/61 is 2.76, so 2.8 is
@@ -137,9 +139,17 @@ function fitScreen(){
   const px = clamp(Math.min(availW / CASE_W, availH / CASE_H), PX_MIN, PX_MAX);
   document.documentElement.style.setProperty('--px', px + 'px');
 
+  /* Measure the opening rather than compute it. `RECESS_W`/`RECESS_H` are the
+     cells the stylesheet is supposed to draw, and the moment the two disagree
+     the glass is sized for an opening it does not have — it was handed 364 into
+     a 358-wide box, where `max-width` clamped it to a scale of 1.598 and put the
+     world's pixel grid on a fraction, which is the one thing the steps exist to
+     prevent. The box knows how big it is. */
+  const stage = document.querySelector('.stage');
+  const box = stage ? stage.getBoundingClientRect() : { width: RECESS_W*px, height: RECESS_H*px };
   let best = W;
   for (const k of LCD_STEPS)
-    if (W * k <= RECESS_W * px && H * k <= RECESS_H * px) best = W * k;
+    if (W * k <= box.width && H * k <= box.height) best = W * k;
   document.documentElement.style.setProperty('--lcd-w', best + 'px');
 }
 
