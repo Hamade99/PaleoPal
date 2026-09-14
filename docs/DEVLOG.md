@@ -1988,6 +1988,326 @@ while it is on, and the case carries a DEV tag. Inside it, and only there:
 `devSleepHold` is a knob like `SIM` and `devHour`: never saved, cleared by a
 reload. Outside developer mode the sleep rules are unchanged.
 
+---
+
+## Session 19 — animals that lie down, and a tug of war you can read
+
+**Owner's request.** Three things. Sleeping animals should be in a *realistic*
+sleeping position, researched first and then translated so it reads on the
+glass, and whatever is decided has to hold for species not written yet. Tug of
+war is not intuitive — "I get that you tap when the slider is in the green bar,
+but it doesn't translate to the actual game". And two full-grown animals in that
+game take up a huge amount of the screen and look clunky: smaller, more in
+frame, possibly a different backdrop, and the opponent should always be in a
+different coat.
+
+### What a sleeping dinosaur actually looks like
+
+Four sources, and they do not all say the same thing, which is the point:
+
+- ***Mei long*** and ***Sinornithoides***, both preserved curled up: hindlimbs
+  folded beneath the body, forelimbs tucked in, neck curved round so the snout
+  lies beside a forelimb. This is the "tuck-in" posture of a roosting bird, and
+  a second *Mei* specimen (DNHM D2154) has it too, so it is the species'
+  habitual sleeping position and not one animal's death pose.
+- **SGDS.18.T1**, an Early Jurassic theropod resting trace from the Moenave
+  Formation: both pedes with long metatarsal impressions, both hands palms
+  medial, a tail drag, and an ischial callosity mark. A big theropod squats —
+  heels down, sitting on the root of the tail — and gets up again with a normal
+  *Eubrontes* step.
+- **Ceratopsians** rest on the brisket. The wide pelvis, the broad chest and the
+  gastralia are what a sternally recumbent animal needs, and the posture is the
+  one a heavy quadruped can get out of in a hurry.
+- **Sauropods** have nothing like either. No specimen is preserved curled or
+  recumbent, and nothing that size could fold itself and stand back up; most
+  large animals can sleep on their feet, and the honest reading is that these
+  did. **They doze standing here** — see the owner's rejection below, which
+  arrived at the same answer from the other direction.
+
+**So there is no one sleeping pose, and the pose table cannot carry one.**
+`POSES.sleep` was `body: -2.5` and a droop: a crouch with the eyes shut, which
+is why it read as "standing, sulking" rather than as asleep. It is authored art
+now, in `POSE_ART` next to eat and cheer, and it carries two knobs the other
+poses leave at zero:
+
+- **`fold`** — how far the animal has settled onto the ground.
+- **`curl`** — how far the neck has come back and the head down.
+
+Each species reads them itself, because what a resting theropod does with its
+legs is not what a resting sauropod does with its neck. A fourth species gets to
+answer both questions its own way, and if it answers neither it simply stands
+there with its eyes shut, which is where this started.
+
+**The legs needed a second solver.** `legStep` takes the hip height *as* the leg
+length, so dropping the body shortens the bones: the old sleep pose was an
+animal standing on stumps. `legFold` takes the standing length separately, keeps
+the bones, and plants the ankle behind the hip at a distance that leaves the leg
+folded — the knee swings out, the shank comes back down, and the metatarsus lies
+flat. The heel coming down is the whole difference between a bird standing and a
+bird sitting.
+
+**What each species does with it:**
+
+| | `fold` | `curl` |
+| --- | --- | --- |
+| rex | hip to 38% of standing, tail laid out, belly low but clear | neck shortened, chin down near the soil |
+| trike | hip to wherever the belly touches — a *fraction* buried the brisket at one stage and left it hovering at another, because `bulk` deepens the belly faster than `limb` lengthens the leg | head lowered only. The frill and two brow horns are a metre of bone in front of the shoulder and there is nowhere to put them |
+| brachio | *not* down — the weight settles a tenth onto slightly bent legs, and it stays on its feet | neck out of its sixty degrees, arcing forward, head hanging at about knee height |
+
+**The tuck was tried on the rex and rejected.** That skull is forty-odd units
+long against a thirty-four unit trunk; tucking it laid a tyrannosaur's face
+across its own ribs. The tuck belongs to small maniraptorans and the sprite
+should not claim otherwise — the dossier rule applies to posture as much as to
+geometry. The crouch is what the trace fossil actually shows.
+
+The tail lays down with the square of the distance out it, plus a flat third,
+because SGDS.18.T1 has that ischial mark between the two heels: a tail that only
+touches at the tip leaves the whole animal hovering on two toes.
+
+### Owner's rejection: two animals with no legs
+
+First pass shipped all three lying down. Owner: the rex's legs "look a bit off
+... they are not visible, only the front thighs", and the brachiosaur "looks
+extremely silly, you cant see any of the legs on him, he looks like an amputee".
+
+**Both were true, and the second one was a design error rather than a bug.**
+
+**`legFold` was solving the joint instead of placing it,** and that was the rex.
+Handing `limbIK` an ankle behind the hip and letting `bend` find the knee is the
+obvious thing to write and it is wrong: with the hip barely a bone's length off
+the ground, the perpendicular `bend` swings the knee along points *downward*, so
+the knee came out on the soil under the belly and the whole leg stacked up
+inside the drumstick. What reached the glass was a haunch with two claws under
+it.
+
+The joint is placed now. A folded leg lies flat — the femur forward and almost
+level, because it has nowhere else to go; the shank back down to the soil; the
+metatarsus forward again from the heel. That last stretch is the one that
+matters: it is the only part that clears the body, and a sitting bird is a body
+with its toes out in front of it. Two more things had to move with it:
+
+- the drumstick over the femur rides **high beside the body** when folded
+  (`haunch`), because the femur is lying level and the muscle on it goes with
+  it. Left at its standing depth it covered the shank and the foot in front of
+  it, which is the whole of what there was to see.
+- the squat is shallower — the hip settles to half of standing height rather
+  than 38% — because the belly has to clear the foot. At 38% there was nothing
+  between the soil and the belly for a leg to be drawn in.
+
+The same fix gave the Triceratops two visible folded legs, which it did not have
+before either; nobody had complained, because on that animal the failure looked
+like a low-slung body rather than a missing limb.
+
+**The rex's arm** was a second casualty of the same area: `curl` lays the head
+down over the chest and the arm rides between the two. It swings down now — the
+whole chain rotates about the shoulder, so the wrist, hand, rim and claws all
+follow — until the hand is on the soil, which is also the posture SGDS.18.T1
+preserves.
+
+**The sauropod could not be drawn lying down at all.** Its body is a closed tube
+from shoulder to tail resting on its own radius, so a folded limb finishes up
+*inside* the silhouette with nothing below the belly to break out into. Raising
+the body until a knee showed put about two pixels of knee below the belly on an
+adult, which is not a fix.
+
+*Curling it up like a cat was tried at the owner's suggestion and rejected.* The
+theory was sound — a curled cat has no visible legs either and nobody reads it
+as an amputee, because the tail coming round and the head coming back say what
+the shape is. Both ends were turned inward: the tail swept up and over the rump,
+the neck laid back along the body with the head resting on it. It came out an
+unreadable lump with a hook on it. At this size you could not tell which end was
+the head, and the tail arc read as a separate object rather than as part of the
+animal. Two things defeated it: the tail is too short relative to the barrel to
+come round the front, where a cat's goes, and anything that *does* come to rest
+on the body is on `skin` like the body, so it merges into it and simply makes
+the animal fatter.
+
+So the brachiosaur dozes on its feet, which is where the research pointed before
+the first pass overrode it for the sake of a consistent "everybody lies down".
+It is a better answer than either thing it replaced: the three species now rest
+in three genuinely different ways, which is the whole premise. And a standing
+sauropod with its neck hanging at knee height is still the largest silhouette
+change any of them makes, because idle carries that head three body-depths in
+the air.
+
+The neck stops at knee height and not on the ground. A sauropod with its head on
+the soil is drinking.
+
+The tail comes down with it, on a second pass — the first droop was five units
+and the owner rightly called the tail still "erect". It aims the tip at a
+quarter of the hip's height now, rather than dropping it by a fixed number of
+units: the tail stations are literal offsets from the hip and do *not* scale
+with `limb`, so a drop tuned on an adult put a hatchling's tip in the soil. It
+stays clear of the ground at every stage, because a sauropod's tail is stiffened
+and does not lie on it.
+
+### Tug of war
+
+**The timing had no connection to the fiction.** A green window and a sweeping
+cursor in a bar along the bottom of the glass, with two animals pulling a rope
+above it and nothing saying the two were about the same thing.
+
+**The track is the vine now.** The window is a stretch of it whipped with cord —
+where there is something to hold — and the cursor is your animal's grip running
+the rope looking for it. Tap when the grip reaches the binding. That is one
+sentence about a rope rather than two facts to be matched up.
+
+Three things sit on that rope and they get three hues, because the first pass
+drew the grip and the knot both bone-white at the same size and they were
+impossible to tell apart: the **grip** is what moves (white), the **binding** is
+where to tap (gold when a pull would land), the **knot** is the score (rust
+red — the centre flag a real tug-of-war rope carries). The rope is a three-pixel
+dark cord with one lit pixel, because a two-pixel brown cord vanished wherever
+it crossed the araucaria's roots.
+
+The animal braces too, on the frame the tap would land in. That is the tell
+that survives at any size — but the two `wary` frames differ by half a local
+unit of body height, which is no pixels at all, so the brace is three pixels of
+lean away from the rope. It is the same three pixels the lurch of a landed pull
+uses, so it reads as the wind-up for it. Both outcomes now throw dirt: a good
+pull kicks soil back under the animal's own feet, a slip kicks it forward from
+under them.
+
+**The end is drawn on the ground.** A scratch from one line to the other, a
+notch at the centre, and the knot's shadow sliding along it.
+
+*Second pass, on the owner's note that the markers were too heavy for the rope
+and the ground marks did not say what they were for.* Three things came out of
+it, and the middle one was a plain mistake:
+
+- **The grip and the knot were sized for a bar, not a cord.** The grip was
+  5x9 and the knot 8x7 with a tail, against three pixels of rope. They are a
+  3x5 bead and a 4-wide band now — things sitting on a rope rather than over it.
+- **The two ends of the scratch mean opposite things and were drawn
+  identically,** both in the same dark red. Drag the knot to the near line and
+  the end is yours; let it reach the far one and the rival takes it. The near
+  post is green and the far one red, and the near one is painted in the *bright*
+  of its ramp because it stands on grass that is also green.
+- **The knot takes the colour of the ground under it** — the same green or red
+  the furrow between the centre notch and the knot is lit in, rope-coloured at
+  dead even. Fixed red said "bad" in the moment the player was winning, which
+  is the opposite of what the only moving score on the screen should do.
+
+The lit stretch of furrow is the part that answers "how is this going" without
+being read: it is ground gained, shown as ground.
+
+**Two bugs found on the way:**
+
+- **The slide was inverted.** `myX = 46 - pull*18`, and `pull` rises as you are
+  being *beaten* — so both animals moved toward your own end when you were
+  losing. The picture said you were winning while the score said you were not,
+  in the one game whose whole appeal is that you are up against somebody.
+- **The rival could wear your coat.** It took `coats[1]`, which is not the same
+  thing as "not yours". A player who had bought the second coat and was wearing
+  it met a rival in it, which is the one case where telling the two animals
+  apart matters most.
+
+**Framing.** Both animals are capped on height *and* width — the constraint here
+is horizontal, two animals nose to nose with their tails at the bezels, and
+capped on height alone an adult tyrannosaur came out seventy-six pixels long.
+Where they stand is measured off the baked frame rather than typed, so the
+longest tail stays on the glass whichever species is playing. The habitat behind
+them takes the subadult crop instead of the closest one, through a `crop` key on
+the game: minigames had always taken the tightest view, which for this one put
+the grass as big as the animals standing on it.
+
+The knot slides further than the animals do, and that is not a cheat — the rope
+pays out through the losing animal's teeth, which is the same thing a slip is.
+It buys a knot that swings eighty pixels across the scratch without dragging a
+tail off the edge.
+
+**One thing that had to be fixed twice.** Drawing the rope as two spans meeting
+at the knot put the knot exactly over its ground mark, which is the whole
+scoreboard — but the two spans are different lengths and the *difference is the
+score*, so parameterised by the curve's own `t` the grip crawled up the long
+side and shot across the short one, and the window changed width on the glass
+depending on who was winning. In a game that is nothing but timing, that is the
+timing moving with the score. Everything on the rope is placed by arc length
+now.
+
+**Also:** `tugFit()` measures a baked frame, so only the draw may call it. The
+node harness that plays whole thirty-second rounds headless has the simulation
+modules loaded and not the sprite engine, and the dust a pull throws is a thing
+the *step* does — so the draw publishes where the animal is standing on `game`
+and the step reads that.
+
+---
+
+## Session 20 — the state you could not play out of
+
+**Owner's question.** "I think the game can get stuck. If you have no money to
+go to the vet, but your dino is asleep/sick, you can't play games to get more
+coins — is that correct?"
+
+**Correct, and worse.** The state was driven in the real page and every action
+tried. All seven refuse:
+
+| | |
+| --- | --- |
+| play a game | *Rex is asleep.* |
+| scrub the pen | *Rex is asleep.* |
+| wake it | *It has collapsed, and needs a vet.* |
+| feed it | *Not enough coins.* |
+| pet it, visit the habitat | no effect |
+| call the vet | *The vet costs 30 coins.* |
+| six hours of simulation, four minutes of frames | 0 coins, 0 mess |
+
+The mechanism is that collapse sets **two** fields at once, `vet` *and*
+`asleep`, and the gates are written against those two and nothing else. Digging
+and the minigames check `vet`; scrubbing and feeding check `asleep`; waking it
+— the obvious escape — explicitly refuses while `vet` is set, and should,
+because the animal has not fallen asleep. And a collapsed animal makes no new
+mess, so the one source that never asks permission has nothing left to pay for.
+
+Not a permanent softlock. The daily bonus pays 8, then 11, then 14 — **three
+consecutive real days** of opening a game that cannot be played, and a missed
+day resets the streak and the count. The other exit is that `newEgg()` is free,
+so a player who worked it out could hatch a spare and raise it to pay for the
+first. Neither is a design.
+
+**Owner's call, and it is the right one:** *"You should just be able to play
+games to earn money, that should be the default. Coins are mostly for
+accessories and food, and every now and then for medicine."*
+
+So the minigames are the earner and nothing gates them but sleep. Illness never
+gated them and still does not; collapse no longer does either. Sleep still
+refuses, because waking is free and is the player's call to make. A round heals
+nothing, so the vet is still what puts the animal right — it is just payable
+now. One round of four of the five games covers the fee from zero; tug takes two.
+
+Two consequences that had to follow:
+
+- **"Too weak to stand" is no longer true**, so the mood line and the Care
+  screen say *worn out and down* instead. Every state has to be readable, and
+  it also has to be true.
+- **The Care screen tells you how to fill the purse** when it is short, because
+  from that screen that is the only thing the player can act on.
+
+There is a test now — a collapsed animal with an empty purse plays a full
+thirty-second round and must finish able to afford the vet. It also asserts
+sleep still refuses, so nobody re-closes that door from the other side.
+
+### Saying which medicine
+
+Second half of the same note: the illness descriptions should hint at what they
+need. The Care screen named the illness and then offered four equal answers to
+it, which is a guess the first few times.
+
+Both halves fixed. Each symptom now names what the animal wants **in the words
+its remedy is described in** — sharp/settle, hot/warm, grit/grit, no shelf/no
+bottle — held to the length it had, because the screen reserves room for
+exactly the lines the text wraps to and two illnesses have to fit above five
+rows. And only the remedies that treat something the animal actually has are
+lit; the rest go dim, cost included. That last part says it with no words at
+all, and it is the half that works at a glance.
+
+**And the fault that comment warns about, committed again.** The collapsed
+branch of the Care screen typed its own sentence at the top of `draw`, while
+`layout` measured `careStatus()` — which returns the *asleep* line, because
+collapse sets `asleep` too. Lengthening that sentence drew the first row
+straight through it. The line lives in `careStatus()` now and both read it,
+which is what the comment asked for in the first place.
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.
@@ -1996,9 +2316,19 @@ reload. Outside developer mode the sleep rules are unchanged.
 - **Illness has causes, not dice.** Every condition traces to something the
   player did or failed to do.
 - **No permadeath.** Collapse and a paid vet visit instead.
+- **No state the nest cannot be played out of.** Anything priced in coins needs
+  an earner that state does not close. The minigames are that earner, and
+  nothing gates them but sleep — which is free to undo.
 - **Wall-clock time everywhere.** Never frame time for anything that persists.
 - **Cuteness through proportion.** Bigger skull, bigger eye, shorter snout,
   rounder body. Never by removing a diagnostic feature.
+- **Posture is a claim, like anatomy.** How an animal rests is as much a thing
+  the sprite asserts as how many fingers it has, and the evidence for it is
+  different per clade — a bird-style tuck for small maniraptorans, a
+  heels-down squat for big theropods, sternal recumbency for ceratopsians,
+  and nothing at all for sauropods, which stay on their feet. So `fold` and
+  `curl` are knobs each species answers for itself, not one pose the table
+  imposes on all of them. A species is allowed to answer "I don't".
 - **The screen is the interface.** Menus live inside the glass; the case does
   not change while you play. Long prose is the one exception.
 - **One grid, one edge, no symmetry.** In the case, and for the same reason in

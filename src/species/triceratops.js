@@ -48,6 +48,7 @@ function drawTrike(M, P){
   const hF = st.horn, sM = st.snout, fM = st.frill, bend = st.hornBend;
   const bk = st.bulk, tor = st.torso;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+  const fold = P.fold||0, curl = P.curl||0;
   const TL = T_.tailLen;
 
   /* The frame the animal hangs on. Three heights along the top — withers,
@@ -56,17 +57,39 @@ function drawTrike(M, P){
      one for the whole belly, which is a loaf with a head on it, and no amount
      of moving the corners fixed that. */
   const hipX  = T_.hipBack*tor, shX = -T_.shoulder*tor;
-  const hipY  = -T_.hipH*lM - bob;
+  /* A resting ceratopsian goes down onto its brisket — sternal recumbency, the
+     way a cow or a rhinoceros lies — with the limbs folded beside the body and
+     the weight on the wide, heavily built belly rather than on the legs. It is
+     the posture the gastralia and the broad pelvis are built for, and it is
+     the one a big animal can get up from in a hurry.
+
+     So the settled hip is not a fraction of standing height: it is whatever
+     puts the belly on the ground. Picked as a fraction it either left the
+     animal hovering or buried the brisket in the soil, and which of the two
+     depended on the growth stage, because `bulk` deepens the belly faster than
+     `limb` lengthens the leg. */
+  const standH = T_.hipH*lM, bellyD = T_.bellyD*lM*bk;
+  const hipY  = lerp(-standH, -bellyD - 1, fold) - bob;
   const shY   = hipY + T_.shoulderDrop*lM;          // glenoid: how far the front leg is shorter
   const withY = shY - T_.withersH*lM;              // shoulder hump: the high point
   const backY = hipY - T_.backH*lM;                // mid back, below the withers
   const rumpY = hipY - T_.rumpH*lM;                // rising again over the hip
-  const bellyY = hipY + T_.bellyD*lM*bk;
+  const bellyY = hipY + bellyD;
   const chestY = hipY + T_.chestD*lM*bk;           // the chest hangs lower than the waist
   const T = d => hipX + d*tM;
+  // the tail comes to rest along the ground; see the note in rex.js
+  const lay = t => fold * (-hipY - 2) * t * t;
 
-  legStep(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
-  legStep(M.far, shX-6,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE);
+  /* Folded, the legs are solved from their standing length rather than from
+     the hip height, or the bones shorten with the squat. The front pair is
+     shorter than the back pair by the shoulder drop, and always was. */
+  const leg = (g, lx, ly, ph, w, cfg, hg, stand) => fold > 0
+    ? legFold(g, lx, ly, stand, w, cfg, hg)
+    : legStep(g, lx, ly, ph, w, cfg, hg);
+  const foreH = standH - T_.shoulderDrop*lM;
+
+  leg(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND, null, standH);
+  leg(M.far, shX-6,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE, null, foreH);
 
   /* One closed mass: chest, barrel, hips and tail. The neck is deliberately
      NOT in here — see below. */
@@ -75,13 +98,13 @@ function drawTrike(M, P){
     [shX+1,       withY],                          // withers
     [5,           backY],                          // mid back
     [hipX-2,      rumpY],                          // haunch
-    [T(TL*13/62), hipY-T_.tailBase*lM*bk + sw*1.5],// the tail leaves the hips deep
-    [T(TL*30/62), hipY-T_.tailBase*.62*lM + sw*3],
-    [T(TL*46/62), hipY-T_.tailBase*.36*lM + sw*5],
-    [T(TL),       hipY-T_.tailBase*.10*lM + sw*7], // tip
-    [T(TL*58/62), hipY+1*lM + sw*7],
-    [T(TL*38/62), hipY+3.5*lM + sw*4],
-    [T(TL*16/62), hipY+5*lM*bk + sw*1.5],
+    [T(TL*13/62), hipY-T_.tailBase*lM*bk + sw*1.5 + lay(13/62)],// the tail leaves the hips deep
+    [T(TL*30/62), hipY-T_.tailBase*.62*lM + sw*3 + lay(30/62)],
+    [T(TL*46/62), hipY-T_.tailBase*.36*lM + sw*5 + lay(46/62)],
+    [T(TL),       hipY-T_.tailBase*.10*lM + sw*7 + lay(1)], // tip
+    [T(TL*58/62), hipY+1*lM + sw*7 + lay(58/62)],
+    [T(TL*38/62), hipY+3.5*lM + sw*4 + lay(38/62)],
+    [T(TL*16/62), hipY+5*lM*bk + sw*1.5 + lay(16/62)],
     [hipX+2,      hipY+5.75*lM*bk],                // under the haunch, no shelf
     [hipX-6,      bellyY],                         // flank
     [6,           bellyY - T_.waistD*lM],          // waist
@@ -100,8 +123,13 @@ function drawTrike(M, P){
   /* The head is carried forward of the shoulder, at about shoulder height.
      `neckLen` is the whole run from the glenoid to the occiput; the neck
      starts a third of the way along it and the skull hangs off the rest. */
+  /* Asleep the head comes down until the beak is close to the soil. It cannot
+     be tucked: the frill and the two brow horns are a metre of bone in front
+     of the shoulder and there is nowhere on this animal to put them, which is
+     the honest difference between a ceratopsian at rest and a theropod. So
+     `curl` lowers rather than folds, and the frill stays up where it is. */
   const nkX = shX - T_.neckLen*nM*.35, nkY = withY + T_.neckDrop*lM;
-  const hx = nkX - T_.neckLen*nM*.65 - 9*hM*sM, hy = nkY + 6*lM + dr*5;
+  const hx = nkX - T_.neckLen*nM*.65 - 9*hM*sM, hy = nkY + 6*lM + dr*5 + curl*9*lM;
   const sn = T_.headLen*hM*sM, hh = T_.headDepth*hM;
 
   /* Frill: a shield standing behind the skull.
@@ -265,8 +293,8 @@ function drawTrike(M, P){
 
   // the ventral countershading is painted from the spine by paintBelly
 
-  legStep(M.limb, hipX-1, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
-  legStep(M.limb, shX+3,  shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
+  leg(M.limb, hipX-1, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn, standH);
+  leg(M.limb, shX+3,  shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn, foreH);
 
   eyeAt(M, ex, ey, 3.4*hM, P.eye);
 
@@ -277,10 +305,10 @@ function drawTrike(M, P){
     [shX+5,   hipY-T_.backH*.75*lM, 16*lM],   // shoulder
     [5,       hipY-T_.backH*.70*lM, 17*lM],
     [hipX,    hipY-T_.rumpH*.72*lM, 16*lM],   // hips
-    [T(TL*15/62), hipY-7*lM,   10*lM],   // tail base
-    [T(TL*32/62), hipY-6*lM,    7*lM],
-    [T(TL*48/62), hipY-4*lM,    4.5*lM],
-    [T(TL),     hipY-2*lM,    2.0*lM]  // tail tip
+    [T(TL*15/62), hipY-7*lM + lay(15/62),  10*lM],   // tail base
+    [T(TL*32/62), hipY-6*lM + lay(32/62),   7*lM],
+    [T(TL*48/62), hipY-4*lM + lay(48/62),   4.5*lM],
+    [T(TL),     hipY-2*lM + lay(1),       2.0*lM]  // tail tip
   ];
 
   /* Headgear goes on the skull roof, not on the frill. The crown of the frill

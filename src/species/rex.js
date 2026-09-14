@@ -7,17 +7,46 @@ function drawRex(M, P){
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const bk = st.bulk, tor = st.torso, fz = st.fuzz, bs = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+  const fold = P.fold||0, curl = P.curl||0;
 
   /* Skeleton landmarks. Hip is the acetabulum; everything else hangs off it.
 
      `torso` shortens the trunk in young animals and `bulk` deepens it, which
      between them are most of the difference between a leggy slab-sided
      juvenile and a barrel-chested adult. Before they existed the three older
-     stages were one animal at three sizes. */
-  const hipX = 16,  hipY = -T_.hipH*lM - bob;
+     stages were one animal at three sizes.
+
+     `fold` squats the animal. A resting theropod brings the whole metatarsus
+     down onto the ground and sits back on its haunches, which is the posture
+     preserved in SGDS.18.T1 — an Early Jurassic resting trace that carries
+     both heel impressions, a tail drag and an ischial callosity — and it is
+     the same crouch a bird sits in. The hip comes down to about a third of
+     standing height and the belly with it; `standH` is kept because the folded
+     leg has to hold its bone lengths rather than shrink to the new hip. */
+  const standH = T_.hipH*lM;
+  const hipX = 16,  hipY = -standH*(1 - .50*fold) - bob;
   const backY = hipY - T_.backH*lM, withX = -T_.shoulder*tor, withY = hipY - T_.withersH*lM;
-  const bellyY = hipY + T_.bellyD*lM*bk, throatY = hipY + T_.bellyD/3*lM*bk;
-  const hx = withX - T_.neckLen*nM - 4*hM, hy = withY - T_.neckDrop*nM - 2 + dr*9;
+  const bellyY = hipY + T_.bellyD*lM*bk*(1 + .15*fold), throatY = hipY + T_.bellyD/3*lM*bk;
+  /* `curl` shortens the neck and lays the head down on the soil.
+
+     Not the Mei long tuck, and that is deliberate. The tuck — neck folded
+     round, snout under a forelimb — is known from small maniraptorans, and it
+     needs a head that will fit against its own flank. This skull is forty-odd
+     units long against a thirty-four unit trunk; nothing that shape has ever
+     been drawn tucked, and trying it here just laid a rex's face across its
+     own ribs. What a big theropod is actually known to have done is crouch,
+     which is what `fold` does, and the chin going down is what makes a crouch
+     read as asleep rather than as watchful. */
+  const hx = withX - T_.neckLen*nM*(1 - .30*curl) - 4*hM;
+  const hy = withY - T_.neckDrop*nM - 2 + dr*9 + curl*13*lM;
+  /* The tail lays out along the soil instead of being carried. Most of the
+     drop runs with the square of the distance out the tail, so the far half is
+     what comes to rest — but not all of it: a third is flat, because the tail
+     base has to come down too. SGDS.18.T1 preserves an ischial callosity
+     impression between the two heel marks, which is to say the animal was
+     sitting on the root of its tail, and a tail that only touches at the tip
+     leaves the whole body hovering on two toes. */
+  const lay = t => fold * (-hipY + 4) * (.33 + .67*t*t);
   const sM = st.snout;
   /* Skull depth at the orbit, and at the muzzle. A young tyrannosaur carries a
      shallow snout in front of a large braincase; the deep boxy skull is an
@@ -28,25 +57,40 @@ function drawRex(M, P){
   const sn = T_.headLen*hM*sM;
   const T = d => hipX + d*tM;
 
+  /* Standing the legs step; folded they are solved from the standing length
+     instead of from the hip height, or the bones would shorten with the squat
+     and the animal would rest on stumps. */
+  const leg = (g, lx, ly, ph, w, cfg, hg) => fold > 0
+    ? legFold(g, lx, ly, standH, w, cfg, hg)
+    : legStep(g, lx, ly, ph, w, cfg, hg);
+
+  /* The drumstick over the femur. Squatted, the femur is lying forward and
+     almost level, so the muscle on it rides high beside the body instead of
+     hanging to the ground — and it has to, or it covers the folded shank and
+     the foot in front of it. Left at its standing depth the whole leg was
+     inside this one shape and the animal read as legless. */
+  const haunch = 1 - .52*fold;
+
   // far limb first, behind everything
-  blob(M.far, [[hipX+9*lM, hipY-11*lM],[hipX+12*lM, hipY+4*lM],[hipX+2*lM, hipY+15*lM],
-               [hipX-9*lM, hipY+13*lM],[hipX-13*lM, hipY-1*lM],[hipX-8*lM, hipY-11*lM]]);
-  legStep(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 14*lM, REX_GAIT);
+  blob(M.far, [[hipX+9*lM, hipY-11*lM],[hipX+12*lM, hipY+4*lM*haunch],[hipX+2*lM, hipY+15*lM*haunch],
+               [hipX-9*lM, hipY+13*lM*haunch],[hipX-13*lM, hipY-1*lM],[hipX-8*lM, hipY-11*lM]]);
+  leg(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 14*lM, REX_GAIT);
 
   // one continuous mass from nape to tail tip: neck, ribcage, hips and tail
   const TL = T_.tailLen;
-  const topLine = [[hx+11, hy-hh*.35],[withX, withY],[0, backY-1],[hipX+7, backY+1],[T(TL*23/72), hipY-T_.tailBase*lM+sw*2]];
+  const topLine = [[hx+11, hy-hh*.35],[withX, withY],[0, backY-1],[hipX+7, backY+1],
+                   [T(TL*23/72), hipY-T_.tailBase*lM+sw*2+lay(23/72)]];
   blob(M.skin, [
     [hx+11, hy-hh*.35],                     // nape at the skull
     [withX, withY],                         // withers
     [0, backY-1],                           // back
     [hipX+7, backY+1],                      // over the hips
-    [T(TL*23/72), hipY-T_.tailBase*lM*bk+sw*2],   // deep tail base
-    [T(TL*48/72), hipY-13*lM+sw*4],
-    [T(TL),     hipY-7*lM+sw*6],                // tail tip
-    [T(TL*70/72), hipY-4*lM+sw*6],
-    [T(TL*43/72), hipY-1*lM+sw*4],
-    [T(TL*17/72), hipY+4*lM*bk],
+    [T(TL*23/72), hipY-T_.tailBase*lM*bk+sw*2+lay(23/72)],   // deep tail base
+    [T(TL*48/72), hipY-13*lM+sw*4+lay(48/72)],
+    [T(TL),     hipY-7*lM+sw*6+lay(1)],         // tail tip
+    [T(TL*70/72), hipY-4*lM+sw*6+lay(70/72)],
+    [T(TL*43/72), hipY-1*lM+sw*4+lay(43/72)],
+    [T(TL*17/72), hipY+4*lM*bk+lay(17/72)],
     [hipX-6, bellyY],                       // belly
     [-8, bellyY-1],
     [withX-7*bk, throatY-2],                // chest and throat
@@ -239,7 +283,23 @@ function drawRex(M, P){
      and a claw sized in units there was simply not drawn. */
   const px = 1 / (st.s * SPECIES.rex.scale);
   const ax = withX + 9, ay = withY + 22*lM;
-  const arm = [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]];
+  /* Crouched, the arm swings down until the hand is on the soil. SGDS.18.T1
+     has both manus pressed into the substrate beside the resting animal, so
+     this is the posture as well as the fix — and it needed fixing, because
+     `curl` lays the head down over the chest and the arm was being drawn into
+     the closing gap between the two. All that came out was a shoulder with two
+     claws under it, which reads as an animal missing its forelimbs rather than
+     as one resting on them.
+
+     The whole chain turns about the shoulder, so the wrist, the hand, the rim
+     and the two claws all follow it — they are derived from these points. −x
+     is forward, so swinging a forward-pointing arm *down* is a negative
+     rotation; positive lifted it into the throat. */
+  const armA = -.68 * fold;
+  const ac = Math.cos(armA), as = Math.sin(armA);
+  const swing = p => [ax + (p[0]-ax)*ac - (p[1]-ay)*as,
+                      ay + (p[0]-ax)*as + (p[1]-ay)*ac];
+  const arm = [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]].map(swing);
   const armW = [10*lM, 7.2*lM, 5.4*lM];
   tube(M.limb, arm, armW);
   const hand = arm[2], handR = armW[2]/2;
@@ -258,9 +318,9 @@ function drawRex(M, P){
      the claws used to be placed by a typed offset from the toe target, which
      on an adult put them a clear seven pixels in front of the foot they grow
      out of. drawFoot knows where the toes are; nothing else does. */
-  blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM],[hipX+5*lM, hipY+18*lM],
-                [hipX-8*lM, hipY+15*lM],[hipX-14*lM, hipY-1*lM],[hipX-9*lM, hipY-13*lM]]);
-  legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT, M.horn);
+  blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM*haunch],[hipX+5*lM, hipY+18*lM*haunch],
+                [hipX-8*lM, hipY+15*lM*haunch],[hipX-14*lM, hipY-1*lM],[hipX-9*lM, hipY-13*lM]]);
+  leg(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT, M.horn);
 
   /* A larger eye set lower and further forward. Both eyes face forward, which
      the dossier promises, and a low, large orbit under a domed braincase is
@@ -276,9 +336,9 @@ function drawRex(M, P){
     [withX - 4, withY + 12*lM, 12*lM],   // withers
     [-4,        hipY - 7*lM,   16*lM],   // ribcage
     [hipX + 4,  hipY - 7*lM,   16*lM],   // hips
-    [T(TL*24/72), hipY - 9*lM,    9*lM],   // tail base
-    [T(TL*48/72), hipY - 7*lM,    5.5*lM],
-    [T(TL),     hipY - 6*lM,    2.0*lM]  // tail tip
+    [T(TL*24/72), hipY - 9*lM + lay(24/72),  9*lM],   // tail base
+    [T(TL*48/72), hipY - 7*lM + lay(48/72),  5.5*lM],
+    [T(TL),     hipY - 6*lM + lay(1),      2.0*lM]  // tail tip
   ];
 
   /* Headgear sits on the skull roof behind the orbit — the flat over the

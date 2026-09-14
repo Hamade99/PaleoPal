@@ -92,6 +92,46 @@ this came from research during development rather than from memory.
 - **Pes**: broad and semi-plantigrade, three large claws on the inner digits,
   with a fleshy heel pad behind them recorded in some trackways.
 
+## How they rested
+
+Researched in session 19, when the sleep pose stopped being a crouch. There is
+no one answer, which is why `fold` and `curl` are per-species knobs rather than
+a pose the table imposes on everybody.
+
+- ***Mei long*** ("sleeping dragon"), a troodontid from the Yixian Formation,
+  is preserved with the **hindlimbs folded beneath the body, the forelimbs
+  tucked in, and the neck curved round so the snout lies beside a forelimb** —
+  the tuck-in posture of a roosting bird. A second specimen (DNHM D2154) has
+  the same pose, and *Sinornithoides youngi* is preserved similarly, so this is
+  the habitual sleeping position of small maniraptorans and not one animal's
+  death throes. It is also cited as support for endothermy, the pose being a
+  heat-conserving one.
+- **SGDS.18.T1**, an Early Jurassic theropod resting trace from the Whitmore
+  Point Member of the Moenave Formation, Utah, preserves a large theropod
+  squatting: **both pedes with long metatarsal ("heel") impressions, both
+  manus palms-medial, a tail drag, and an ischial callosity mark**, with a
+  normal *Eubrontes* track ahead of it from the first step on getting up. This
+  is what a big theropod does, and it is what the rex draws — **not the tuck**.
+  A tyrannosaur skull is too long to lie against its own flank, and drawing it
+  that way would be as much of a lie as a claim in the dossier.
+  Milner et al. (2009), PLoS ONE,
+  [doi:10.1371/journal.pone.0004591](https://doi.org/10.1371/journal.pone.0004591).
+- **Ceratopsians** rest in **sternal recumbency** — down on the brisket with
+  the limbs folded beside the body. The wide, robust pelvis and chest and the
+  gastralia running between the sternal plates and the lower pelvis are what
+  carries it, and it is a posture a heavy animal can stand up from quickly.
+  The frill and brow horns are a metre of bone in front of the shoulder and
+  cannot be tucked anywhere, so the head only lowers.
+- **Sauropods** have no preserved resting pose, and nothing that size could
+  fold up the way *Mei* did and get back out of it. Most large animals are
+  capable of sleeping on their feet, and that is what the sprite draws: the
+  weight settles, the legs stay under it, and the neck comes down out of its
+  habitual angle to hang at about knee height. Living large vertebrates do also
+  lie down for part of the night, so a recumbent sauropod is not ruled out —
+  but it cannot be *drawn* here, because the body is a closed tube resting on
+  its own radius and the folded limbs end up inside the silhouette. The neck's
+  resting posture is a reconstruction choice, like its habitual one.
+
 ## Other animals and the landscape
 
 - **Compsognathid theropods** — small, gracile, fast, and known from the same
@@ -174,8 +214,10 @@ The soft nostril has moved toward the front of the brachiosaur muzzle; a high
 bony nasal opening does not establish a nostril on top of the arch. Its exact
 placement, eyelids, smiles, coats and growth proportions remain stylized.
 Sleep and illness are separate poses and marks, not claims about dinosaur
-facial expressions. No claim of exact reconstruction follows from a passing
-clipping test.
+facial expressions. The sleeping postures are backed by the sources under "How
+they rested" for the theropod and the ceratopsian; the sauropod's standing doze
+is inference from living large animals, not evidence. No claim of exact
+reconstruction follows from a passing clipping test.
 
 ## Pixel art technique
 

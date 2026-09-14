@@ -154,6 +154,37 @@ test('seeded games distinguish active and idle players for every species and age
 /* The age badge is the one number on the glass that only goes up, so the
    awkward moments are worth pinning: the first hour, the day boundary, a clock
    that has gone backwards, and the point where the number needs grouping. */
+/* The nest must never reach a state it cannot be played out of. Collapse is
+   the one that could: it costs thirty coins to leave, and it used to close
+   digging, the minigames and the pen getting dirty all at once — so the only
+   exit was the daily bonus, three real days of opening a game you could not
+   play. The games are open now whatever state the animal is in but asleep. */
+test('a collapsed animal with an empty purse can still earn its own vet fee', () => {
+  const run = harness();
+  const down = `S = freshPet(); S.sp='rex'; S.born=1; S.growth=240; G.pets=[S]; G.active=0;
+    mode='live'; S.health=0; S.vet=true; S.asleep=true; S.mess=[]; S.ills=[];
+    S.needs.energy=4; G.coins=0;`;
+
+  const result = JSON.parse(run(`
+    ${down}
+    startGame('snack', 1);
+    const started = !!game;
+    for (let frame=0; game && frame<1802; frame++){
+      const food = game.items.filter(i => !i.rock && i.y<122).sort((a,b) => b.y-a.y);
+      if (food[0]) gameInput({type:'point', x:food[0].x, y:100});
+      stepGame(1000/60, frame*1000/60);
+    }
+    JSON.stringify({started, coins:G.coins});
+  `));
+  assert.equal(result.started, true, 'a collapsed animal has to be able to start a round');
+  assert.ok(result.coins >= 30, 'one round must cover the 30-coin vet; earned ' + result.coins);
+
+  // and the fee still buys exactly what it did
+  assert.equal(run(`${down} G.coins=30; vetVisit(); S.vet === false && G.coins === 0`), true);
+  // sleeping is still a refusal, because waking it is free and is the player's call
+  assert.equal(run(`${down} S.vet=false; startGame('snack',1); !!game`), false);
+});
+
 test('the age badge reads in hours, then days, and never goes backwards', () => {
   const run=harness();
   const at=hours=>run(`S.born=Date.now()-${hours}*3600e3; ageLabel()`);

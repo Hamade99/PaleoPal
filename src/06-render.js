@@ -132,7 +132,11 @@ function stepBehaviour(dt, now){
 /* The egg, the choosing screen and the minigames are laid out in screen space
    against GROUND and tuned to it, so they always take the closest crop — which
    is the view they were built in, at the scale they were built at. */
-const bgStage = () => mode === 'live' ? stageIdx() : 0;
+/* A game may ask for a wider one. Tug of war does: it is the only mode that
+   puts two full-grown animals on the glass at once, and at the closest crop
+   the pair filled it edge to edge with the habitat pressed up behind them. */
+const bgStage = () => mode === 'live' ? stageIdx()
+                    : mode === 'game' ? (GAMES[game.kind].crop || 0) : 0;
 
 let screenLayout = null;
 function drawScene(now){
@@ -322,8 +326,9 @@ const GAMES = {
     start:() => ({x:PEN.x0 + 20, y:PEN.y1 - 18, tx:PEN.x0 + 20, ty:PEN.y1 - 18, head:0, dist:0,
                   walking:false, raiders:[], eggs:5, ends:0, chain:0, spawn:1.1, ground:'clearing'}),
     update:stepGuard, draw:drawGuard, input:(input) => { if (input.type === 'point') tapGuard(input.x,input.y); }, finish:finishRound },
-  tug:  { name:'Tug of war', blurb:'A rival takes the other end of the vine. Pull when the grip is in the green, and do not slip.', hint:'Pull when the grip is green.', pay:2,
-    start:() => ({pull:0, grip:0, winAt:.5, ends:0, chain:0, ready:0, hit:-999, slip:0, want:false}),
+  tug:  { name:'Tug of war', blurb:'A rival takes the other end of the vine. Your animal braces when your hand reaches the binding — pull then, and do not slip.', hint:'Pull when it braces.', pay:2, crop:2,
+    start:() => ({pull:0, grip:0, winAt:.5, ends:0, chain:0, ready:0, hit:-999, slip:0, want:false,
+                  stand:TUG_STAND}),
     update:stepTug, draw:drawTug,
     /* A tap only asks for a pull; stepTug decides when it happens. The input
        handler has no clock of its own, and reaching for the wall clock here put
@@ -359,9 +364,21 @@ function inputSnack(input){
 function gameInput(input){ if (game) GAMES[game.kind].input(input); }
 function startGame(kind, seed){
   if (!Object.hasOwn(GAMES,kind) || game) return;
-  if (S.asleep) return refuse(S.name + ' is asleep.');
-  if (S.vet) return refuse(S.name + ' is in no state to play.');
-  if (S.needs.energy < 12) return refuse('Too tired to run around.');
+  /* The games are the earner, and nothing may close them but sleep.
+
+     A collapsed animal used to be refused here, and collapse is also what
+     stops it digging and what stops the pen getting dirty — so the one state
+     that costs thirty coins to leave was the one state with no way to earn
+     thirty coins. The only way out was the daily bonus: three real days of
+     opening a game that could not be played. Illness never blocked a round
+     and still does not; collapse no longer does either. A round does not heal
+     anything, so the vet is still the thing that puts the animal right — it
+     is just payable now.
+
+     Sleep still refuses, because waking it is free and is the player's call
+     to make. Collapse is not sleep, even though it sets the same field. */
+  if (S.asleep && !S.vet) return refuse(S.name + ' is asleep.');
+  if (S.needs.energy < 12 && !S.vet) return refuse('Too tired to run around.');
   closeSheet(); hideBubble();
   mode = 'game'; feedFX = null;
   const week = challengeWeek();
@@ -942,6 +959,44 @@ function tapGuard(mx, my){
 const TUG_SWEEP = 1000;            // ms for the grip to travel and come back
 const TUG_COOLDOWN = 120;          // ms between pulls, so mashing cannot beat timing
 const TUG_ROUND = 1.0;             // how far the knot has to travel to win an end
+/* How tall an animal may be drawn here, and how far the knot slides in pixels
+   at a full end. Two adults at their own size took two thirds of the glass
+   each, stood shoulder to bezel, and overlapped the vine they were supposed to
+   be holding; the habitat behind them was at the closest crop as well, so the
+   grass was as big as they were. Capped and pushed apart, with the widest crop
+   behind, the round is two animals across a clearing. */
+/* How big an animal may be drawn here, and how the pair is placed.
+
+   Both a height and a width, because the constraint in this game is
+   horizontal: two animals nose to nose with their tails pointing at the
+   bezels. Capped on height alone an adult tyrannosaur came out seventy-six
+   pixels long, and two of them plus the rope is more than the glass has.
+
+   How far the knot slides at a full end, and how far the animals do, are two
+   different numbers: the rope pays out through the losing animal's teeth,
+   which is the same thing a slip is, and it is what buys a knot swinging
+   eighty pixels across the scratch without dragging a tail off the edge.
+   Where they stand is then whatever keeps the longest tail on the glass at the
+   far end of that slide — measured off the baked frame rather than typed,
+   because it is the tail of whichever species is playing. */
+const TUG_H = 46, TUG_W = 62;
+const TUG_TRAVEL = 40, TUG_LEAN = 14, TUG_STAND = 52;
+/* Where each animal stands. The sign was inverted: `pull` rises as you are
+   being beaten, and both animals were sliding toward your own end when that
+   happened — the picture said you were winning while the score said you were
+   not. Losing drags you toward the rival, which is what a rope does. */
+/* How big the pair is drawn and where it stands. Only the draw may ask: it
+   measures a baked frame, and the simulation harness that plays whole rounds
+   headless has the sim modules loaded and not the sprite engine. Where the
+   animal is standing is published on `game` for the dust a pull throws, which
+   is a thing the step does; the fallback is only ever used on a frame that has
+   not been drawn yet, which is not a frame anyone can have tapped on. */
+function tugFit(){
+  const f = frameOf(S.sp, stageIdx(), 'wary', 0, false, S.skin);
+  const sc = Math.min(1, TUG_H / f.h, TUG_W / f.w);
+  return { f, sc, stand: Math.max(TUG_STAND, Math.ceil((f.w - f.ox) * sc) + TUG_LEAN + 1) };
+}
+const tugMyX = () => (game.stand || TUG_STAND) + Math.round(game.pull * TUG_LEAN);
 
 /* Where the window sits this end, from the round's own seed: a fixed window
    would be learned once and never looked at again. */
@@ -960,96 +1015,235 @@ function stepTug(dt, now){
   game.pull += (0.14 + game.ends * 0.022) * dt / 1000;
   if (game.slip > 0) game.slip -= dt;
 
+  /* An end lands where the animal that lost it is standing, not at a fixed x:
+     both of them have slid a long way by the time one goes over. */
   if (game.pull >= TUG_ROUND){                    // dragged over: the rival takes the end
     SFX.bonk(); game.chain = 0;
-    emit('crumb', 54, GROUND - 10, 6, {col:'#9b7a52', vy:-20, g:120});
+    emit('crumb', tugMyX(), GROUND - 10, 6, {col:'#9b7a52', vy:-20, g:120});
     tugNewEnd();
   } else if (game.pull <= -TUG_ROUND){            // hauled in: the end is yours
     SFX.coin();
     game.chain++;
     game.score += game.chain >= 3 ? 2 : 1;
-    emit('spark', W - 54, GROUND - 10, 7, {col:'#e8d27a'});
+    emit('spark', W - TUG_STAND + Math.round(game.pull * TUG_LEAN), GROUND - 10, 7, {col:'#e8d27a'});
     tugNewEnd();
   }
 }
 
 /* One pull per tap, and never more often than the cooldown, so the game cannot
-   be won by tapping faster than a person reasonably can. */
+   be won by tapping faster than a person reasonably can.
+
+   Both outcomes throw dirt, because a tap that does nothing visible is a tap
+   the player cannot learn from: the timing was the only thing the game ever
+   told you about, and it told you in a bar at the bottom of the screen. A good
+   pull kicks the soil back under the animal's own feet, a slip kicks it
+   forward from under them. */
 function tugPull(now){
   if (now < game.ready) return;
   game.ready = now + TUG_COOLDOWN;
-  const half = tugWindow() / 2;
-  const cursor = tugCursor();
-  const good = Math.abs(cursor - game.winAt) < half;
+  const good = tugReady();
   if (good){
     game.pull -= game.profile.pull;
     game.hit = now;
+    emit('crumb', tugMyX() + 10, GROUND - 2, 4, {col:'#8a7350', vy:-26, g:150, life:520});
     SFX.pop();
   } else {
     /* A mistimed pull is a slip, and it costs. Without that, tapping at random
        is a slow win rather than a loss, and the window may as well not exist. */
     game.pull += game.profile.pull * .42;
     game.slip = 260;
+    emit('crumb', tugMyX() - 8, GROUND - 2, 3, {col:'#9b7a52', vy:-14, vx:18, g:150, life:460});
     SFX.bonk();
   }
 }
+/* Whether a pull would land right now. The draw reads it too: it is what makes
+   the animal brace, which is the whole tell. */
+const tugReady = () => Math.abs(tugCursor() - game.winAt) < tugWindow() / 2;
 /* The cursor travels out and back rather than wrapping, so it is a grip
    tightening and loosening and not a bar that teleports home. */
 const tugCursor = () => game.grip < .5 ? game.grip * 2 : 2 - game.grip * 2;
 const tugWindow = () => .20 + stageIdx() * .03;
 
+/* Drawing the round.
+
+   The timing used to live in a bar along the bottom of the glass: a green
+   window, a cursor sweeping it, and no stated connection to the two animals
+   above it pulling on a rope. It read as a rhythm game with a picture over it,
+   and a player who knew perfectly well to tap on the green still could not say
+   what the green *was*.
+
+   So the track is the vine now. The window is a stretch of it bound with
+   lashings — where you get a grip — and the cursor is your animal's hand
+   sliding up and down the rope looking for it. Tapping when the hand reaches
+   the binding is one sentence about a rope, not two facts that have to be
+   matched up. And because the hand can be hard to follow across a sagging
+   cord, the animal itself braces when the pull would land: `tugReady()` is
+   read here as well as in tugPull, so what the player watches for is an animal
+   digging its feet in, which is legible at a glance and at any size. */
 function drawTug(now){
-  const phase = skyPhase(viewDate());
-  const midX = Math.round(W/2 - game.pull * 30);
-
-  /* Both animals, leaning away from the vine. The rival is the same species at
-     the same age in its second coat: a fair match, and no art of its own. */
-  const st = stageIdx(), sp = S.sp;
+  const sp = S.sp;
+  /* The rival is the same species at the same age in a coat that is not
+     yours: a fair match, and no art of its own. `coats[1]` was not "not
+     yours" — a player wearing the second coat met a rival in the same one,
+     which is the one case where telling the two animals apart matters most. */
   const coats = SKINS[sp] || [];
-  const rivalCoat = (coats[1] || coats[0] || {id:'wild'}).id;
-  const strain = now < game.hit + 180 ? 2 : 0;
-  const mine  = frameOf(sp, st, 'wary', 0, false, S.skin);
-  const yours = frameOf(sp, st, 'wary', 0, false, rivalCoat);
+  const rivalCoat = (coats.find(c => c.id !== S.skin) || coats[0] || {id:'wild'}).id;
 
-  const myX = 46 - Math.round(game.pull * 18) - strain;
-  const rvX = W - 46 - Math.round(game.pull * 18);
+  const ready = tugReady(), lurch = now < game.hit + 180;
+  // frame 0 of wary is the braced crouch, frame 1 the upright: the animal
+  // drops into the crouch exactly when a pull would count
+  const { sc, stand } = tugFit();
+  game.stand = stand;
+  const mine  = frameOf(sp, stageIdx(), 'wary', ready ? 0 : 1, false, S.skin);
+  const yours = frameOf(sp, stageIdx(), 'wary', 0, false, rivalCoat);
+
+  const drag = Math.round(game.pull * TUG_LEAN);
+  /* Leaning back is the other half of the tell. The braced frame on its own
+     was not one: the two `wary` frames differ by half a local unit of body
+     height, which at this size is no pixels at all, so an animal that was
+     about to land a pull looked exactly like one that was not. Three pixels of
+     lean away from the rope is visible, and it is the same three pixels the
+     lurch of a landed pull uses — so the brace reads as the wind-up for it. */
+  const myX = stand + drag - (ready ? 3 : 0) - (lurch ? 3 : 0) + (game.slip > 0 ? 3 : 0);
+  const rvX = W - stand + drag;
+  const midX = Math.round(W/2 + game.pull * TUG_TRAVEL);
+
+  /* The scratched ground between them: the end drawn as a mark in the pen
+     rather than as a meter.
+
+     The two ends of it mean opposite things — drag the knot to the near line
+     and the end is yours, let it reach the far one and the rival takes it —
+     and they were drawn identically, in the same dark red, which told the
+     player there were two ways to lose. The near post is green and the far one
+     red, and the stretch of furrow between the centre notch and the knot lights
+     in whichever colour is currently winning it. That last part is the one that
+     answers "how is this going" without having to be read: it is ground gained,
+     shown as ground. */
+  const gx0 = W/2 - TUG_TRAVEL, gx1 = W/2 + TUG_TRAVEL;
+  ctx.fillStyle = '#5a4526'; ctx.fillRect(gx0, GROUND, gx1 - gx0, 2);
+  ctx.fillStyle = '#8a6f3c'; ctx.fillRect(gx0, GROUND, gx1 - gx0, 1);
+  const gained = midX - W/2;
+  if (gained){
+    const gl = Math.min(W/2, midX), gw = Math.abs(gained);
+    ctx.fillStyle = gained < 0 ? '#4a6634' : '#7a3524'; ctx.fillRect(gl, GROUND, gw, 2);
+    ctx.fillStyle = gained < 0 ? '#8cc46a' : '#c2603c'; ctx.fillRect(gl, GROUND, gw, 1);
+  }
+  ctx.fillStyle = '#e9e1cb'; ctx.fillRect(W/2, GROUND - 3, 1, 6);    // the centre notch
+  /* A post at each end. The body is the bright of the pair and the cap
+     brighter still: the near one is green against grass that is also green,
+     and painted in the dark of its own ramp it disappeared into the sward. */
+  const post = (x, col, cap) => {
+    ctx.fillStyle = '#241c12'; ctx.fillRect(x - 1, GROUND - 8, 3, 10);
+    ctx.fillStyle = col;       ctx.fillRect(x, GROUND - 7, 1, 8);
+    ctx.fillStyle = cap;       ctx.fillRect(x - 1, GROUND - 8, 3, 2);
+  };
+  post(gx0, '#8cc46a', '#d8f0b4');      // pull the knot to here and the end is yours
+  post(gx1, '#c2603c', '#f0a884');      // let it reach here and it is the rival's
+
   // yours faces +x, the rival faces −x: the sprite is drawn facing −x unflipped
   ctx.save(); ctx.translate(myX, GROUND); ctx.scale(-1, 1);
-  ctx.drawImage(mine.cv, -mine.ox, -mine.oy);
+  ctx.drawImage(mine.cv, -mine.ox*sc, -mine.oy*sc, mine.w*sc, mine.h*sc);
   ctx.restore();
-  ctx.drawImage(yours.cv, rvX - yours.ox, GROUND - yours.oy);
+  ctx.drawImage(yours.cv, rvX - yours.ox*sc, GROUND - yours.oy*sc,
+                yours.w*sc, yours.h*sc);
 
-  /* The vine. Held at the height of the animal holding it, so a hatchling has
-     it at its own head rather than over it, and it sags between the two of them
-     and pulls straighter the harder the knot is being dragged — which is the
-     whole state of the game in one line. */
-  const y0 = GROUND - Math.round(mine.h * .52), sag = 7 * (1 - Math.abs(game.pull));
-  ctx.strokeStyle = '#7a6134'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(myX + 6, y0);
-  ctx.quadraticCurveTo(midX, y0 + sag * 2, rvX - 6, y0);
-  ctx.stroke();
-  ctx.fillStyle = game.slip > 0 ? '#c2603c' : '#d8c48a';
-  ctx.fillRect(midX - 3, y0 + Math.round(sag) - 2, 7, 5);
-  ctx.fillStyle = '#6b5430';
-  ctx.fillRect(midX - 3, y0 + Math.round(sag) - 2, 7, 1);
+  /* The vine, in their mouths. Not at a fraction of the sprite's height: each
+     species hands back a `mouth` anchor off the baked frame, the same one the
+     thrown food flies to, so the rope is held rather than crossing the neck at
+     whatever height two thirds of the way up happened to be. It sags between
+     them and pulls straighter the harder the knot is being dragged, which is
+     the state of the end in one line. Sampled per pixel rather than stroked,
+     because everything else on this screen is. */
+  const bite = (f, x, flip) => [
+    flip ? x + (f.ox - f.mouth[0])*sc : x - f.ox*sc + f.mouth[0]*sc,
+    GROUND + (f.mouth[1] - f.oy)*sc
+  ];
+  const [ax, ay] = bite(mine, myX, true), [bx, by] = bite(yours, rvX, false);
+  const sag = 9 * (1 - Math.abs(game.pull));
+  /* Two spans meeting at the knot, rather than one curve with the knot guessed
+     at halfway along it. The knot has to sit exactly on the scratch below it —
+     that pairing is the whole scoreboard — and on a single curve through a
+     control point it sits a quarter of the way there instead. */
+  const K = [midX, (ay + by)/2 + sag];
+  const span = (p0, p1, t) => {
+    const c = [(p0[0] + p1[0])/2, (p0[1] + p1[1])/2 + sag], m = 1 - t;
+    return [m*m*p0[0] + 2*m*t*c[0] + t*t*p1[0], m*m*p0[1] + 2*m*t*c[1] + t*t*p1[1]];
+  };
+  const curve = u => u < .5 ? span([ax, ay], K, u*2) : span(K, [bx, by], (u - .5)*2);
 
-  /* The centre line, so "which way is it going" is a fact and not a feeling. */
-  ctx.fillStyle = 'rgba(233,225,203,.35)';
-  ctx.fillRect(W/2, GROUND - 6, 1, 8);
+  /* Everything on the rope is then placed by arc length along it, not by that
+     parameter. The two spans are different lengths and the difference is the
+     score: parameterised by t, the grip crawled up the long side and shot
+     across the short one, and the window changed width on the glass depending
+     on who was winning. In a game that is nothing but timing, that is the
+     timing moving with the score. Both animals slide the same way, so the
+     rope's total length barely changes and the sweep stays honest. */
+  const PTS = 128, pts = [], cum = [0];
+  for (let i = 0; i <= PTS; i++) pts.push(curve(i/PTS));
+  for (let i = 1; i <= PTS; i++)
+    cum.push(cum[i-1] + Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]));
+  const total = cum[PTS] || 1;
+  const vine = s => {
+    const want = clamp(s, 0, 1) * total;
+    let i = 1; while (i < PTS && cum[i] < want) i++;
+    const seg = cum[i] - cum[i-1] || 1, t = (want - cum[i-1]) / seg;
+    return [lerp(pts[i-1][0], pts[i][0], t), lerp(pts[i-1][1], pts[i][1], t)];
+  };
+  const half = tugWindow() / 2, w0 = game.winAt - half, w1 = game.winAt + half;
+  /* Three pixels, of which the middle one is lit. A two-pixel cord in rope
+     brown vanished where it crossed the araucaria's roots, which in the valley
+     is most of the width of the pen. */
+  for (const [vx, vy] of pts){
+    ctx.fillStyle = '#241c12'; ctx.fillRect(Math.round(vx), Math.round(vy) - 1, 1, 3);
+    ctx.fillStyle = '#9a7c42'; ctx.fillRect(Math.round(vx), Math.round(vy), 1, 1);
+  }
+  /* The binding: the stretch of vine that has been whipped with cord, which is
+     the only part of it there is anything to hold on to. Drawn as wraps
+     crossing the rope rather than as a lighter length of it — a paler stretch
+     of rope is a paler stretch of rope, and next to the knot it read as a
+     second knot. Wraps read as something somebody tied on, which is what says
+     "hold here", and they light when a pull would land. */
+  const bindW = ready ? '#f0dc94' : '#b79a56', bindD = ready ? '#8a6a24' : '#5c4a26';
+  for (let i = 0; i <= 40; i++){
+    const u = w0 + (w1 - w0)*i/40, [vx, vy] = vine(u);
+    const wrap = (Math.round(vx) % 4) < 2;
+    ctx.fillStyle = wrap ? bindW : bindD;
+    ctx.fillRect(Math.round(vx), Math.round(vy) - 1, 1, 4);
+  }
+  for (const u of [w0, w1]){                       // the heavier lashing at each end
+    const [vx, vy] = vine(u);
+    ctx.fillStyle = '#3a2d16'; ctx.fillRect(Math.round(vx) - 1, Math.round(vy) - 2, 2, 6);
+  }
+  /* Your animal's grip, running the rope looking for the binding. A fist on
+     the cord with a bright top and a dark underside, so it reads as a thing
+     sitting on the vine rather than as a tick mark over it. */
+  const [cxp, cyp] = vine(tugCursor());
+  const gxr = Math.round(cxp), gyr = Math.round(cyp);
+  ctx.fillStyle = '#241c12'; ctx.fillRect(gxr - 1, gyr - 2, 3, 5);
+  ctx.fillStyle = ready ? '#f4e6a8' : '#cdbf9a'; ctx.fillRect(gxr - 1, gyr - 1, 3, 3);
+  ctx.fillStyle = ready ? '#ffffff' : '#e9e1cb'; ctx.fillRect(gxr - 1, gyr - 1, 3, 1);
 
-  /* The grip. A track with the window marked on it and the cursor sweeping
-     across, drawn along the bottom where the thumb already is — and starting
-     clear of the score tag, which it was drawing straight through. */
-  const tx = 62, tw = W - 70, ty = H - 15;
-  ctx.fillStyle = 'rgba(16,26,24,.85)'; ctx.fillRect(tx - 2, ty - 2, tw + 4, 11);
-  ctx.fillStyle = '#2b3a3f'; ctx.fillRect(tx, ty, tw, 7);
-  const half = tugWindow() / 2;
-  const wx = Math.round(tx + (game.winAt - half) * tw), ww = Math.max(3, Math.round(half * 2 * tw));
-  ctx.fillStyle = '#3f7a4a'; ctx.fillRect(wx, ty, ww, 7);
-  ctx.fillStyle = '#8cc46a'; ctx.fillRect(wx, ty, ww, 1);
-  const cx = Math.round(tx + tugCursor() * tw);
-  ctx.fillStyle = now < game.hit + 160 ? '#e8d27a' : '#e9e1cb';
-  ctx.fillRect(cx - 1, ty - 2, 3, 11);
+  /* The knot: the rope's centre marker, and the score. A band tied round the
+     cord, four pixels of it against three of rope. It was a solid red square
+     eight across with a tail hanging off it, which on a cord that thin is a
+     thing stuck on rather than tied on.
+
+     It takes the colour of the ground under it — the same green or red the
+     furrow is lit in, rope-coloured at dead even — so the knot and the mark
+     beneath it say one thing instead of two. Fixed red said "bad" even in the
+     moment the player was winning, which is the opposite of what the only
+     moving score on the screen should do. That leaves three hues on this vine
+     and no two of them the same: the grip is what moves, the binding is where
+     to tap, and the knot is how it is going. */
+  const knotLo = !gained ? '#4a3a1e' : gained < 0 ? '#3c5a2a' : '#7a3524';
+  const knotHi = game.slip > 0 ? '#f4c39c'
+               : !gained ? '#d8c48a' : gained < 0 ? '#8cc46a' : '#c2603c';
+  const kxr = Math.round(K[0]), kyr = Math.round(K[1]);
+  ctx.fillStyle = '#241c12'; ctx.fillRect(kxr - 3, kyr - 3, 6, 7);
+  ctx.fillStyle = knotLo;    ctx.fillRect(kxr - 2, kyr - 2, 4, 5);
+  ctx.fillStyle = knotHi;    ctx.fillRect(kxr - 2, kyr - 2, 4, 2);
+  ctx.fillStyle = 'rgba(16,26,24,.5)';
+  ctx.fillRect(kxr - 3, GROUND, 6, 2);
 
   scoreTag('Won ' + game.score + (game.chain >= 3 ? ' x2' : ''));
 }

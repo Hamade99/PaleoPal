@@ -110,6 +110,8 @@ Otherwise:
 | Field notes, coats, likes and dislikes, speed | `src/species/registry.js` |
 | Growth multipliers, pose data, proportions | `src/00-art.js` |
 | Gait, feet, pose generation and frame baking | `src/02-sprite-engine.js` |
+| How a resting animal folds its legs | `legFold` in `src/02-sprite-engine.js` |
+| What a species does when it lies down | `fold` and `curl` in `src/species/<name>.js` |
 | Lighting, palettes, material list | `src/01-colour.js` |
 | Backdrop, weather, props, particles | `src/04-world.js` |
 | A habitat's palette, landmark, treeline or floor | its entry in `BIOMES`, `src/04-world.js` |
@@ -240,7 +242,11 @@ Everything that can be changed without changing behaviour lives in one file,
   did. The pad is published as `canvas.pad`, because headgear hangs itself by
   the canvas's bottom edge and has to take it back off.
 - **`STAGE`** — the growth columns, shared by every species.
-- **`POSE_ART`** — authored eating, greeting, wary and inspection poses.
+- **`POSE_ART`** — authored eating, greeting, wary, inspection and sleeping
+  poses. The sleep rows carry `fold` and `curl`, which every other pose leaves
+  at zero: they are read by each species' own draw function, because how a
+  theropod rests and how a sauropod rests are different claims. See the table
+  in `DEVLOG.md`, session 19.
 - **`HABITAT_ART`** — skyline coordinates, horizons and interaction placement.
 - **`SPECIES_STAGE`** — one row per stage per species, for where a species at
   a given age departs from both the shared growth curve and its own adult

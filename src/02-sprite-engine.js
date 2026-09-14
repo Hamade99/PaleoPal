@@ -95,6 +95,48 @@ function legStep(g, hx, hy, phase, w, cfg, hornG){
   drawFoot(g, hornG, ank, tx, ty, w, cfg.foot || 'bird');
   return [tx, ty];
 }
+
+/* A leg folded under a resting animal.
+
+   It cannot be legStep with a low hip. legStep takes the hip height *as* the
+   leg length, so dropping the body shortens the bones — the animal ends up
+   standing on stumps rather than sitting on folded ones, which is what the old
+   sleep pose did and why it read as a crouch rather than as rest. Here the
+   standing length comes in separately, the bones keep it, and the joint has to
+   go somewhere: the knee swings out and the shank comes back down to the soil.
+
+   `standLen` is what -hy would have been with the animal on its feet.
+
+   The joint is placed, not solved. Handing limbIK an ankle behind the hip and
+   letting `bend` find the knee is the obvious thing and it is wrong: with the
+   hip barely a bone's length off the ground the perpendicular it swings the
+   knee along points *downward*, so the knee came out on the soil under the
+   belly and the whole leg stacked up inside the thigh mass. All that reached
+   the glass was a haunch with two claws under it, which reads as an animal
+   missing its legs rather than one sitting on them.
+
+   What a folded leg actually does is lie flat: the femur runs forward and
+   almost level — it has nowhere else to go when the hip is that low — the
+   shank comes back down to the soil from the knee, and the metatarsus runs
+   forward again from the heel. That last stretch is the one that matters,
+   because it is the only part that clears the body: a sitting bird is a body
+   with its toes out in front of it. `foldBack` turns the Z round for a limb
+   whose joint folds the other way. */
+function legFold(g, hx, hy, standLen, w, cfg, hornG){
+  const mt = standLen * cfg.mt;
+  const bone = (standLen - mt)/2 * 1.02;
+  const ty = -w*.26;                                  // the ankle sits on the sole, not in it
+  const dir = cfg.foldBack ? 1 : -1;                  // −x is forward, and the knee goes forward
+  const drop = (cfg.foldDrop === undefined ? .12 : cfg.foldDrop) * bone;
+  const kx = hx + dir*Math.sqrt(Math.max(1, bone*bone - drop*drop)), ky = hy + drop;
+  const ax = kx - dir*Math.sqrt(Math.max(1, bone*bone - (ty-ky)*(ty-ky)));
+  if (cfg.thigh) oval(g, hx, hy + standLen*.08, w*.92, standLen*.15);
+  tube(g, [[hx,hy],[kx,ky]], [w, w*.64]);
+  tube(g, [[kx,ky],[ax,ty]], [w*.64, w*.44]);
+  const tx = ax - mt - w*.22;                         // toes forward of the heel
+  drawFoot(g, hornG, [ax,ty], tx, 0, w, cfg.foot || 'bird');
+  return [tx, 0];
+}
 /* Feet, and every one of them flat underneath.
 
    They were ovals. An oval has a rounded bottom, so every animal in the game
@@ -344,11 +386,11 @@ const POSES = {
   get inspect(){ return POSE_ART.inspect; },
   /* Asleep is deep and slow and the eyes are shut. Ill is shallow, uneven and
      the eyes are open but hooded. The two used to share a lid and a droop,
-     which is why an ill animal read as a sleeping one. */
-  sleep: poseCycle(2, p => ({
-           body: -2.5 + .40*(1 - Math.cos(TAU*p)),
-           legPhase: 0, droop: 1.5, tail: .1, eye: 1
-         })),
+     which is why an ill animal read as a sleeping one — and then they shared a
+     silhouette too, because asleep was only a crouch. It is a pose now, with
+     `fold` and `curl` in it, so it is authored art like the other four rather
+     than two lines of trigonometry here. */
+  get sleep(){ return POSE_ART.sleep; },
   get cheer(){ return POSE_ART.cheer; },
   sick:  poseCycle(4, p => ({
            body: -1.5 + .55*Math.sin(TAU*p),
@@ -414,7 +456,7 @@ function bakeOnce(spId, stage, pose, eye, skinId){
     g.translate(BAKE_CX, BAKE_G); g.scale(k, k);
     canvases.push(c); M[name] = g;
   }
-  const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
+  const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0, fold:0, curl:0}, pose, {eye});
   const anchors = sp.draw(M, P);
   // Countershading and the coat both ride the body the draw function just laid
   // down, never a path computed alongside it — the same rule the surface

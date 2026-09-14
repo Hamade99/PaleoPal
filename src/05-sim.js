@@ -38,11 +38,18 @@ const REMEDIES = [
   { id:'dust',   name:'Dust bath',    cost:8,  cures:'mites',     note:'Grit works the parasites out of the skin.' },
   { id:'company',name:'Sit together', cost:0,  cures:'blues',     note:'No cure in a bottle. Just time and attention.' }
 ];
+/* Each symptom names what the animal wants, in the same words its remedy is
+   described in — sharp/settle, hot/warm, grit/grit, no shelf/no bottle. The
+   Care screen shows the symptom above the list of four remedies, and it used
+   to describe the illness without pointing at any of them, so picking the
+   right one was a guess the first few times. The length is held to what it
+   was: the screen reserves room for exactly the lines this text wraps to, and
+   two illnesses at once have to fit above five rows. */
 const ILLS = {
-  bellyache:{ name:'Bellyache',  symptom:'Puffed up and turning away from food.',       drain:'hunger' },
-  chill:    { name:'Chill',      symptom:'Shivering, and sneezing every few seconds.',  drain:'energy' },
-  mites:    { name:'Skin mites', symptom:'Scratching constantly. The flies stay close.',drain:'hygiene' },
-  blues:    { name:'The blues',  symptom:'Head low, tail still, no interest in play.',  drain:'joy' }
+  bellyache:{ name:'Bellyache',  symptom:'Puffed up, off its food. Something sharp would settle it.', drain:'hunger' },
+  chill:    { name:'Chill',      symptom:'Shivering and sneezing. It wants something hot in it.',     drain:'energy' },
+  mites:    { name:'Skin mites', symptom:'Scratching nonstop. It needs grit to roll in.',             drain:'hygiene' },
+  blues:    { name:'The blues',  symptom:'Head low, tail still. No shelf sells this cure.',           drain:'joy' }
 };
 const HAT_SHOP = [
   { id:'frond',   name:'Fern sprig',   cost:20,  slot:'head' },
@@ -302,7 +309,11 @@ function observePet(pet = S, event, now = Date.now()){
 }
 function moodOf(){
   if (!hatched()) return { key:'egg', line:'The egg is warm.' };
-  if (S.vet) return { key:'ill', line:'is too weak to stand. Take it to the vet.' };
+  /* "Too weak to stand" was true when a collapsed animal could do nothing at
+     all. It can be roused for a round of a game now — that is the only way it
+     can pay for its own vet — so the line says worn out rather than claiming
+     it cannot move. Every state has to be readable, and it has to be true. */
+  if (S.vet) return { key:'ill', line:'is worn out, and needs a vet.' };
   if (S.asleep) return { key:'sleep', line:'is fast asleep.' };
   const ill = S.ills[0];
   if (ill) return { key:'ill', line:'is unwell. ' + ILLS[ill.id].symptom };

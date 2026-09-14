@@ -2501,6 +2501,21 @@ const POSE_ART = {
   inspect:[
     { body:0, legPhase:0, jaw:0, droop:.45, tail:.1 },
     { body:0, legPhase:0, jaw:0, droop:.7, tail:.1 }
+  ],
+  /* Sleep, and the two knobs only it uses.
+
+     `fold` settles the animal onto the ground: the hips and shoulders come
+     down, the legs fold under rather than shortening, and the tail lays out
+     along the soil. `curl` brings the neck back over the body and the head
+     down onto it. Both are read by each species' own draw function, because
+     what a resting theropod does with its legs and what a resting sauropod
+     does with its neck are not the same thing — see the notes in each file.
+
+     Two frames is one slow breath. `body` is the breath and nothing else now;
+     the settling that used to live in it is `fold`. */
+  sleep:[
+    { body:.3, legPhase:0, jaw:0, droop:1.5, tail:.1, fold:1, curl:1, eye:1 },
+    { body:-.5, legPhase:0, jaw:0, droop:1.42, tail:.03, fold:1, curl:.95, eye:1 }
   ]
 };
 /*</data>*/
@@ -3203,6 +3218,48 @@ function legStep(g, hx, hy, phase, w, cfg, hornG){
   drawFoot(g, hornG, ank, tx, ty, w, cfg.foot || 'bird');
   return [tx, ty];
 }
+
+/* A leg folded under a resting animal.
+
+   It cannot be legStep with a low hip. legStep takes the hip height *as* the
+   leg length, so dropping the body shortens the bones — the animal ends up
+   standing on stumps rather than sitting on folded ones, which is what the old
+   sleep pose did and why it read as a crouch rather than as rest. Here the
+   standing length comes in separately, the bones keep it, and the joint has to
+   go somewhere: the knee swings out and the shank comes back down to the soil.
+
+   `standLen` is what -hy would have been with the animal on its feet.
+
+   The joint is placed, not solved. Handing limbIK an ankle behind the hip and
+   letting `bend` find the knee is the obvious thing and it is wrong: with the
+   hip barely a bone's length off the ground the perpendicular it swings the
+   knee along points *downward*, so the knee came out on the soil under the
+   belly and the whole leg stacked up inside the thigh mass. All that reached
+   the glass was a haunch with two claws under it, which reads as an animal
+   missing its legs rather than one sitting on them.
+
+   What a folded leg actually does is lie flat: the femur runs forward and
+   almost level — it has nowhere else to go when the hip is that low — the
+   shank comes back down to the soil from the knee, and the metatarsus runs
+   forward again from the heel. That last stretch is the one that matters,
+   because it is the only part that clears the body: a sitting bird is a body
+   with its toes out in front of it. `foldBack` turns the Z round for a limb
+   whose joint folds the other way. */
+function legFold(g, hx, hy, standLen, w, cfg, hornG){
+  const mt = standLen * cfg.mt;
+  const bone = (standLen - mt)/2 * 1.02;
+  const ty = -w*.26;                                  // the ankle sits on the sole, not in it
+  const dir = cfg.foldBack ? 1 : -1;                  // −x is forward, and the knee goes forward
+  const drop = (cfg.foldDrop === undefined ? .12 : cfg.foldDrop) * bone;
+  const kx = hx + dir*Math.sqrt(Math.max(1, bone*bone - drop*drop)), ky = hy + drop;
+  const ax = kx - dir*Math.sqrt(Math.max(1, bone*bone - (ty-ky)*(ty-ky)));
+  if (cfg.thigh) oval(g, hx, hy + standLen*.08, w*.92, standLen*.15);
+  tube(g, [[hx,hy],[kx,ky]], [w, w*.64]);
+  tube(g, [[kx,ky],[ax,ty]], [w*.64, w*.44]);
+  const tx = ax - mt - w*.22;                         // toes forward of the heel
+  drawFoot(g, hornG, [ax,ty], tx, 0, w, cfg.foot || 'bird');
+  return [tx, 0];
+}
 /* Feet, and every one of them flat underneath.
 
    They were ovals. An oval has a rounded bottom, so every animal in the game
@@ -3452,11 +3509,11 @@ const POSES = {
   get inspect(){ return POSE_ART.inspect; },
   /* Asleep is deep and slow and the eyes are shut. Ill is shallow, uneven and
      the eyes are open but hooded. The two used to share a lid and a droop,
-     which is why an ill animal read as a sleeping one. */
-  sleep: poseCycle(2, p => ({
-           body: -2.5 + .40*(1 - Math.cos(TAU*p)),
-           legPhase: 0, droop: 1.5, tail: .1, eye: 1
-         })),
+     which is why an ill animal read as a sleeping one — and then they shared a
+     silhouette too, because asleep was only a crouch. It is a pose now, with
+     `fold` and `curl` in it, so it is authored art like the other four rather
+     than two lines of trigonometry here. */
+  get sleep(){ return POSE_ART.sleep; },
   get cheer(){ return POSE_ART.cheer; },
   sick:  poseCycle(4, p => ({
            body: -1.5 + .55*Math.sin(TAU*p),
@@ -3522,7 +3579,7 @@ function bakeOnce(spId, stage, pose, eye, skinId){
     g.translate(BAKE_CX, BAKE_G); g.scale(k, k);
     canvases.push(c); M[name] = g;
   }
-  const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0}, pose, {eye});
+  const P = Object.assign({stage, legPhase:0, body:0, jaw:0, tail:0, droop:0, fold:0, curl:0}, pose, {eye});
   const anchors = sp.draw(M, P);
   // Countershading and the coat both ride the body the draw function just laid
   // down, never a path computed alongside it — the same rule the surface
@@ -3694,17 +3751,46 @@ function drawRex(M, P){
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const bk = st.bulk, tor = st.torso, fz = st.fuzz, bs = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+  const fold = P.fold||0, curl = P.curl||0;
 
   /* Skeleton landmarks. Hip is the acetabulum; everything else hangs off it.
 
      `torso` shortens the trunk in young animals and `bulk` deepens it, which
      between them are most of the difference between a leggy slab-sided
      juvenile and a barrel-chested adult. Before they existed the three older
-     stages were one animal at three sizes. */
-  const hipX = 16,  hipY = -T_.hipH*lM - bob;
+     stages were one animal at three sizes.
+
+     `fold` squats the animal. A resting theropod brings the whole metatarsus
+     down onto the ground and sits back on its haunches, which is the posture
+     preserved in SGDS.18.T1 — an Early Jurassic resting trace that carries
+     both heel impressions, a tail drag and an ischial callosity — and it is
+     the same crouch a bird sits in. The hip comes down to about a third of
+     standing height and the belly with it; `standH` is kept because the folded
+     leg has to hold its bone lengths rather than shrink to the new hip. */
+  const standH = T_.hipH*lM;
+  const hipX = 16,  hipY = -standH*(1 - .50*fold) - bob;
   const backY = hipY - T_.backH*lM, withX = -T_.shoulder*tor, withY = hipY - T_.withersH*lM;
-  const bellyY = hipY + T_.bellyD*lM*bk, throatY = hipY + T_.bellyD/3*lM*bk;
-  const hx = withX - T_.neckLen*nM - 4*hM, hy = withY - T_.neckDrop*nM - 2 + dr*9;
+  const bellyY = hipY + T_.bellyD*lM*bk*(1 + .15*fold), throatY = hipY + T_.bellyD/3*lM*bk;
+  /* `curl` shortens the neck and lays the head down on the soil.
+
+     Not the Mei long tuck, and that is deliberate. The tuck — neck folded
+     round, snout under a forelimb — is known from small maniraptorans, and it
+     needs a head that will fit against its own flank. This skull is forty-odd
+     units long against a thirty-four unit trunk; nothing that shape has ever
+     been drawn tucked, and trying it here just laid a rex's face across its
+     own ribs. What a big theropod is actually known to have done is crouch,
+     which is what `fold` does, and the chin going down is what makes a crouch
+     read as asleep rather than as watchful. */
+  const hx = withX - T_.neckLen*nM*(1 - .30*curl) - 4*hM;
+  const hy = withY - T_.neckDrop*nM - 2 + dr*9 + curl*13*lM;
+  /* The tail lays out along the soil instead of being carried. Most of the
+     drop runs with the square of the distance out the tail, so the far half is
+     what comes to rest — but not all of it: a third is flat, because the tail
+     base has to come down too. SGDS.18.T1 preserves an ischial callosity
+     impression between the two heel marks, which is to say the animal was
+     sitting on the root of its tail, and a tail that only touches at the tip
+     leaves the whole body hovering on two toes. */
+  const lay = t => fold * (-hipY + 4) * (.33 + .67*t*t);
   const sM = st.snout;
   /* Skull depth at the orbit, and at the muzzle. A young tyrannosaur carries a
      shallow snout in front of a large braincase; the deep boxy skull is an
@@ -3715,25 +3801,40 @@ function drawRex(M, P){
   const sn = T_.headLen*hM*sM;
   const T = d => hipX + d*tM;
 
+  /* Standing the legs step; folded they are solved from the standing length
+     instead of from the hip height, or the bones would shorten with the squat
+     and the animal would rest on stumps. */
+  const leg = (g, lx, ly, ph, w, cfg, hg) => fold > 0
+    ? legFold(g, lx, ly, standH, w, cfg, hg)
+    : legStep(g, lx, ly, ph, w, cfg, hg);
+
+  /* The drumstick over the femur. Squatted, the femur is lying forward and
+     almost level, so the muscle on it rides high beside the body instead of
+     hanging to the ground — and it has to, or it covers the folded shank and
+     the foot in front of it. Left at its standing depth the whole leg was
+     inside this one shape and the animal read as legless. */
+  const haunch = 1 - .52*fold;
+
   // far limb first, behind everything
-  blob(M.far, [[hipX+9*lM, hipY-11*lM],[hipX+12*lM, hipY+4*lM],[hipX+2*lM, hipY+15*lM],
-               [hipX-9*lM, hipY+13*lM],[hipX-13*lM, hipY-1*lM],[hipX-8*lM, hipY-11*lM]]);
-  legStep(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 14*lM, REX_GAIT);
+  blob(M.far, [[hipX+9*lM, hipY-11*lM],[hipX+12*lM, hipY+4*lM*haunch],[hipX+2*lM, hipY+15*lM*haunch],
+               [hipX-9*lM, hipY+13*lM*haunch],[hipX-13*lM, hipY-1*lM],[hipX-8*lM, hipY-11*lM]]);
+  leg(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 14*lM, REX_GAIT);
 
   // one continuous mass from nape to tail tip: neck, ribcage, hips and tail
   const TL = T_.tailLen;
-  const topLine = [[hx+11, hy-hh*.35],[withX, withY],[0, backY-1],[hipX+7, backY+1],[T(TL*23/72), hipY-T_.tailBase*lM+sw*2]];
+  const topLine = [[hx+11, hy-hh*.35],[withX, withY],[0, backY-1],[hipX+7, backY+1],
+                   [T(TL*23/72), hipY-T_.tailBase*lM+sw*2+lay(23/72)]];
   blob(M.skin, [
     [hx+11, hy-hh*.35],                     // nape at the skull
     [withX, withY],                         // withers
     [0, backY-1],                           // back
     [hipX+7, backY+1],                      // over the hips
-    [T(TL*23/72), hipY-T_.tailBase*lM*bk+sw*2],   // deep tail base
-    [T(TL*48/72), hipY-13*lM+sw*4],
-    [T(TL),     hipY-7*lM+sw*6],                // tail tip
-    [T(TL*70/72), hipY-4*lM+sw*6],
-    [T(TL*43/72), hipY-1*lM+sw*4],
-    [T(TL*17/72), hipY+4*lM*bk],
+    [T(TL*23/72), hipY-T_.tailBase*lM*bk+sw*2+lay(23/72)],   // deep tail base
+    [T(TL*48/72), hipY-13*lM+sw*4+lay(48/72)],
+    [T(TL),     hipY-7*lM+sw*6+lay(1)],         // tail tip
+    [T(TL*70/72), hipY-4*lM+sw*6+lay(70/72)],
+    [T(TL*43/72), hipY-1*lM+sw*4+lay(43/72)],
+    [T(TL*17/72), hipY+4*lM*bk+lay(17/72)],
     [hipX-6, bellyY],                       // belly
     [-8, bellyY-1],
     [withX-7*bk, throatY-2],                // chest and throat
@@ -3926,7 +4027,23 @@ function drawRex(M, P){
      and a claw sized in units there was simply not drawn. */
   const px = 1 / (st.s * SPECIES.rex.scale);
   const ax = withX + 9, ay = withY + 22*lM;
-  const arm = [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]];
+  /* Crouched, the arm swings down until the hand is on the soil. SGDS.18.T1
+     has both manus pressed into the substrate beside the resting animal, so
+     this is the posture as well as the fix — and it needed fixing, because
+     `curl` lays the head down over the chest and the arm was being drawn into
+     the closing gap between the two. All that came out was a shoulder with two
+     claws under it, which reads as an animal missing its forelimbs rather than
+     as one resting on them.
+
+     The whole chain turns about the shoulder, so the wrist, the hand, the rim
+     and the two claws all follow it — they are derived from these points. −x
+     is forward, so swinging a forward-pointing arm *down* is a negative
+     rotation; positive lifted it into the throat. */
+  const armA = -.68 * fold;
+  const ac = Math.cos(armA), as = Math.sin(armA);
+  const swing = p => [ax + (p[0]-ax)*ac - (p[1]-ay)*as,
+                      ay + (p[0]-ax)*as + (p[1]-ay)*ac];
+  const arm = [[ax,ay],[ax-T_.armLen*lM,ay+T_.armLen*lM],[ax-T_.armLen*20/11*lM,ay+7*lM]].map(swing);
   const armW = [10*lM, 7.2*lM, 5.4*lM];
   tube(M.limb, arm, armW);
   const hand = arm[2], handR = armW[2]/2;
@@ -3945,9 +4062,9 @@ function drawRex(M, P){
      the claws used to be placed by a typed offset from the toe target, which
      on an adult put them a clear seven pixels in front of the foot they grow
      out of. drawFoot knows where the toes are; nothing else does. */
-  blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM],[hipX+5*lM, hipY+18*lM],
-                [hipX-8*lM, hipY+15*lM],[hipX-14*lM, hipY-1*lM],[hipX-9*lM, hipY-13*lM]]);
-  legStep(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT, M.horn);
+  blob(M.limb, [[hipX+14*lM, hipY-12*lM],[hipX+16*lM, hipY+5*lM*haunch],[hipX+5*lM, hipY+18*lM*haunch],
+                [hipX-8*lM, hipY+15*lM*haunch],[hipX-14*lM, hipY-1*lM],[hipX-9*lM, hipY-13*lM]]);
+  leg(M.limb, hipX, hipY, P.legPhase, 15*lM, REX_GAIT, M.horn);
 
   /* A larger eye set lower and further forward. Both eyes face forward, which
      the dossier promises, and a low, large orbit under a domed braincase is
@@ -3963,9 +4080,9 @@ function drawRex(M, P){
     [withX - 4, withY + 12*lM, 12*lM],   // withers
     [-4,        hipY - 7*lM,   16*lM],   // ribcage
     [hipX + 4,  hipY - 7*lM,   16*lM],   // hips
-    [T(TL*24/72), hipY - 9*lM,    9*lM],   // tail base
-    [T(TL*48/72), hipY - 7*lM,    5.5*lM],
-    [T(TL),     hipY - 6*lM,    2.0*lM]  // tail tip
+    [T(TL*24/72), hipY - 9*lM + lay(24/72),  9*lM],   // tail base
+    [T(TL*48/72), hipY - 7*lM + lay(48/72),  5.5*lM],
+    [T(TL),     hipY - 6*lM + lay(1),      2.0*lM]  // tail tip
   ];
 
   /* Headgear sits on the skull roof behind the orbit — the flat over the
@@ -4027,6 +4144,7 @@ function drawTrike(M, P){
   const hF = st.horn, sM = st.snout, fM = st.frill, bend = st.hornBend;
   const bk = st.bulk, tor = st.torso;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+  const fold = P.fold||0, curl = P.curl||0;
   const TL = T_.tailLen;
 
   /* The frame the animal hangs on. Three heights along the top — withers,
@@ -4035,17 +4153,39 @@ function drawTrike(M, P){
      one for the whole belly, which is a loaf with a head on it, and no amount
      of moving the corners fixed that. */
   const hipX  = T_.hipBack*tor, shX = -T_.shoulder*tor;
-  const hipY  = -T_.hipH*lM - bob;
+  /* A resting ceratopsian goes down onto its brisket — sternal recumbency, the
+     way a cow or a rhinoceros lies — with the limbs folded beside the body and
+     the weight on the wide, heavily built belly rather than on the legs. It is
+     the posture the gastralia and the broad pelvis are built for, and it is
+     the one a big animal can get up from in a hurry.
+
+     So the settled hip is not a fraction of standing height: it is whatever
+     puts the belly on the ground. Picked as a fraction it either left the
+     animal hovering or buried the brisket in the soil, and which of the two
+     depended on the growth stage, because `bulk` deepens the belly faster than
+     `limb` lengthens the leg. */
+  const standH = T_.hipH*lM, bellyD = T_.bellyD*lM*bk;
+  const hipY  = lerp(-standH, -bellyD - 1, fold) - bob;
   const shY   = hipY + T_.shoulderDrop*lM;          // glenoid: how far the front leg is shorter
   const withY = shY - T_.withersH*lM;              // shoulder hump: the high point
   const backY = hipY - T_.backH*lM;                // mid back, below the withers
   const rumpY = hipY - T_.rumpH*lM;                // rising again over the hip
-  const bellyY = hipY + T_.bellyD*lM*bk;
+  const bellyY = hipY + bellyD;
   const chestY = hipY + T_.chestD*lM*bk;           // the chest hangs lower than the waist
   const T = d => hipX + d*tM;
+  // the tail comes to rest along the ground; see the note in rex.js
+  const lay = t => fold * (-hipY - 2) * t * t;
 
-  legStep(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND);
-  legStep(M.far, shX-6,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE);
+  /* Folded, the legs are solved from their standing length rather than from
+     the hip height, or the bones shorten with the squat. The front pair is
+     shorter than the back pair by the shoulder drop, and always was. */
+  const leg = (g, lx, ly, ph, w, cfg, hg, stand) => fold > 0
+    ? legFold(g, lx, ly, stand, w, cfg, hg)
+    : legStep(g, lx, ly, ph, w, cfg, hg);
+  const foreH = standH - T_.shoulderDrop*lM;
+
+  leg(M.far, hipX-6, hipY+2, (P.legPhase+.5)%1, 16*lM, TRI_HIND, null, standH);
+  leg(M.far, shX-6,  shY+3,  (P.legPhase+.25)%1, 14.5*lM, TRI_FORE, null, foreH);
 
   /* One closed mass: chest, barrel, hips and tail. The neck is deliberately
      NOT in here — see below. */
@@ -4054,13 +4194,13 @@ function drawTrike(M, P){
     [shX+1,       withY],                          // withers
     [5,           backY],                          // mid back
     [hipX-2,      rumpY],                          // haunch
-    [T(TL*13/62), hipY-T_.tailBase*lM*bk + sw*1.5],// the tail leaves the hips deep
-    [T(TL*30/62), hipY-T_.tailBase*.62*lM + sw*3],
-    [T(TL*46/62), hipY-T_.tailBase*.36*lM + sw*5],
-    [T(TL),       hipY-T_.tailBase*.10*lM + sw*7], // tip
-    [T(TL*58/62), hipY+1*lM + sw*7],
-    [T(TL*38/62), hipY+3.5*lM + sw*4],
-    [T(TL*16/62), hipY+5*lM*bk + sw*1.5],
+    [T(TL*13/62), hipY-T_.tailBase*lM*bk + sw*1.5 + lay(13/62)],// the tail leaves the hips deep
+    [T(TL*30/62), hipY-T_.tailBase*.62*lM + sw*3 + lay(30/62)],
+    [T(TL*46/62), hipY-T_.tailBase*.36*lM + sw*5 + lay(46/62)],
+    [T(TL),       hipY-T_.tailBase*.10*lM + sw*7 + lay(1)], // tip
+    [T(TL*58/62), hipY+1*lM + sw*7 + lay(58/62)],
+    [T(TL*38/62), hipY+3.5*lM + sw*4 + lay(38/62)],
+    [T(TL*16/62), hipY+5*lM*bk + sw*1.5 + lay(16/62)],
     [hipX+2,      hipY+5.75*lM*bk],                // under the haunch, no shelf
     [hipX-6,      bellyY],                         // flank
     [6,           bellyY - T_.waistD*lM],          // waist
@@ -4079,8 +4219,13 @@ function drawTrike(M, P){
   /* The head is carried forward of the shoulder, at about shoulder height.
      `neckLen` is the whole run from the glenoid to the occiput; the neck
      starts a third of the way along it and the skull hangs off the rest. */
+  /* Asleep the head comes down until the beak is close to the soil. It cannot
+     be tucked: the frill and the two brow horns are a metre of bone in front
+     of the shoulder and there is nowhere on this animal to put them, which is
+     the honest difference between a ceratopsian at rest and a theropod. So
+     `curl` lowers rather than folds, and the frill stays up where it is. */
   const nkX = shX - T_.neckLen*nM*.35, nkY = withY + T_.neckDrop*lM;
-  const hx = nkX - T_.neckLen*nM*.65 - 9*hM*sM, hy = nkY + 6*lM + dr*5;
+  const hx = nkX - T_.neckLen*nM*.65 - 9*hM*sM, hy = nkY + 6*lM + dr*5 + curl*9*lM;
   const sn = T_.headLen*hM*sM, hh = T_.headDepth*hM;
 
   /* Frill: a shield standing behind the skull.
@@ -4244,8 +4389,8 @@ function drawTrike(M, P){
 
   // the ventral countershading is painted from the spine by paintBelly
 
-  legStep(M.limb, hipX-1, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn);
-  legStep(M.limb, shX+3,  shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn);
+  leg(M.limb, hipX-1, hipY, P.legPhase, 18*lM, TRI_HIND, M.horn, standH);
+  leg(M.limb, shX+3,  shY+1, (P.legPhase+.75)%1, 16.5*lM, TRI_FORE, M.horn, foreH);
 
   eyeAt(M, ex, ey, 3.4*hM, P.eye);
 
@@ -4256,10 +4401,10 @@ function drawTrike(M, P){
     [shX+5,   hipY-T_.backH*.75*lM, 16*lM],   // shoulder
     [5,       hipY-T_.backH*.70*lM, 17*lM],
     [hipX,    hipY-T_.rumpH*.72*lM, 16*lM],   // hips
-    [T(TL*15/62), hipY-7*lM,   10*lM],   // tail base
-    [T(TL*32/62), hipY-6*lM,    7*lM],
-    [T(TL*48/62), hipY-4*lM,    4.5*lM],
-    [T(TL),     hipY-2*lM,    2.0*lM]  // tail tip
+    [T(TL*15/62), hipY-7*lM + lay(15/62),  10*lM],   // tail base
+    [T(TL*32/62), hipY-6*lM + lay(32/62),   7*lM],
+    [T(TL*48/62), hipY-4*lM + lay(48/62),   4.5*lM],
+    [T(TL),     hipY-2*lM + lay(1),       2.0*lM]  // tail tip
   ];
 
   /* Headgear goes on the skull roof, not on the frill. The crown of the frill
@@ -4289,6 +4434,7 @@ function drawBrachio(M, P){
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const bk = st.bulk, tor = st.torso, cr = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+  const fold = P.fold||0, curl = P.curl||0;
 
   /* The forelimbs run about 1.2 times the hindlimbs — the trait the animal is
      named for, and the reason the back slopes. It is an ADULT trait. Sauropod
@@ -4299,26 +4445,65 @@ function drawBrachio(M, P){
      was the adult at a different size, which was the complaint. */
   const mature = P.stage / (STAGE.length - 1);          // 0 hatchling, 1 adult
   const T_ = A.tune, TL = T_.tailLen;
-  const hindLen = T_.hindH*lM, foreLen = hindLen * (1.00 + (T_.foreRatio-1)*mature);
+  /* This one sleeps on its feet, and it got there the long way round.
+
+     Recumbency does not draw on this animal. Its body is a closed tube from
+     shoulder to tail resting on its own radius, so folded limbs finish up
+     *inside* it and what reaches the glass is a legless sausage. Curling it up
+     like a cat was then tried — both ends turned inward, tail swept over the
+     rump, neck laid back along the body — on the theory that a curled animal
+     is not supposed to show its legs and the shape would say so. It came out
+     an unreadable lump with a hook on it: at this size you could not tell
+     which end was the head, and the tail arc read as a separate object.
+
+     Standing is the honest answer anyway. No sauropod is preserved resting,
+     nothing that size could fold up and get back out of it, and large animals
+     generally can and do sleep on their feet. So `fold` settles the weight
+     rather than putting the animal down — the body drops a tenth onto slightly
+     bent legs and stays there — and `curl` does the work; see the neck below. */
+  const settle = 1 - .10*fold;
+  const hindLen = T_.hindH*lM*settle;
+  const foreLen = T_.hindH*lM * (1.00 + (T_.foreRatio-1)*mature) * settle;
   const shX = -T_.shoulder*tor, shY = -foreLen - bob, hipX = T_.hipBack*tor, hipY = -hindLen - bob;
+  /* A dozing animal lets its tail down. Not a fixed number of units — the tail
+     stations are literal offsets from the hip and do not scale with `limb`, so
+     a drop that looked right on an adult put a hatchling's tip in the soil.
+     This aims the tip at a quarter of the hip's height instead, which holds at
+     every stage: well down from the carried, level tail of an animal that is
+     awake, and still clear of the ground, because a sauropod's tail is
+     stiffened and does not lie on it. */
+  const lay = t => fold * Math.max(0, -hipY*.75 - 10) * t * t;
 
   legStep(M.far, shX-7,  shY+4, (P.legPhase+.25)%1, 14*lM, BRA_FORE);
   legStep(M.far, hipX-7, hipY+3,(P.legPhase+.5)%1,  14*lM, BRA_HIND);
 
   // short tail for a sauropod, carried clear of the ground
-  tube(M.skin, [[hipX,hipY],[hipX+TL*22/86*tM,hipY+1+sw*3],[hipX+TL*44/86*tM,hipY+3+sw*5],
-                [hipX+TL*66/86*tM,hipY+6+sw*7],[hipX+TL*tM,hipY+10+sw*9]],
+  tube(M.skin, [[hipX,hipY],[hipX+TL*22/86*tM,hipY+1+sw*3+lay(22/86)],
+                [hipX+TL*44/86*tM,hipY+3+sw*5+lay(44/86)],
+                [hipX+TL*66/86*tM,hipY+6+sw*7+lay(66/86)],
+                [hipX+TL*tM,hipY+10+sw*9+lay(1)]],
        [31*lM*bk, 22*lM*bk, 14*lM, 7*lM, 2.5*lM]);
   // the back slopes down from the shoulders to the hips
   tube(M.skin, [[shX,shY],[8*tor,shY+8],[hipX,hipY]],
        [T_.bodyD*39/44*lM*bk, T_.bodyD*lM*bk, T_.bodyD*34/44*lM*bk]);
   oval(M.skin, shX + 2, shY - 6*lM, 18*lM*bk, 12*lM*bk);    // shoulder hump
 
-  // neck near sixty degrees, S-curved, drooping slightly at the head end
+  /* Neck near sixty degrees, S-curved, drooping slightly at the head end —
+     and `curl` brings it down to doze. It comes out of its sixty degrees, arcs
+     forward, and the head hangs at about the height of the knees, which is
+     what a standing animal's neck does when it stops holding it up.
+
+     Not down on the ground: that is a sauropod drinking, and this one is
+     asleep. Not back over the body either — see above. Against an idle animal
+     carrying its head three body-depths in the air it is still the largest
+     silhouette change any of the three species makes, which is what has to be
+     true: a lowered neck and a shut eye are all this animal has to say it
+     with. */
   const nl = T_.neckLen*nM;
-   const n1 = [shX - 9 - dr,  shY - nl*.30 + dr*2];
-   const n2 = [shX - 19 - dr*3, shY - nl*.63 + dr*5];
-   const n3 = [shX - 23 - dr*4, shY - nl*.94 + dr*8];
+  const nk = (sx, sy, rx, ry) => [lerp(sx, rx, curl), lerp(sy, ry, curl)];
+  const n1 = nk(shX - 9 - dr,    shY - nl*.30 + dr*2, shX - 11,     shY - nl*.10);
+  const n2 = nk(shX - 19 - dr*3, shY - nl*.63 + dr*5, shX - nl*.42, shY + nl*.20);
+  const n3 = nk(shX - 23 - dr*4, shY - nl*.94 + dr*8, shX - nl*.68, shY + nl*.46);
   /* The whole neck thickens with `bulk`, the head end included. Left at its
      adult width under a hatchling's oversized skull, the neck came out as a
      stick with a head on the end of it. */
@@ -4391,10 +4576,10 @@ function drawBrachio(M, P){
     [shX - 2, shY + 2,  19*lM],          // shoulder hump
     [8*tor,   shY + 8,  22*lM],          // deepest, over the ribs
     [hipX,    hipY,     17*lM],          // hips
-    [hipX + TL*22/86*tM, hipY + 1,  11*lM],    // tail
-    [hipX + TL*44/86*tM, hipY + 3,   7*lM],
-    [hipX + TL*66/86*tM, hipY + 6,   3.5*lM],
-    [hipX + TL*tM,     hipY + 10,  1.5*lM]
+    [hipX + TL*22/86*tM, hipY + 1 + lay(22/86),  11*lM],    // tail
+    [hipX + TL*44/86*tM, hipY + 3 + lay(44/86),   7*lM],
+    [hipX + TL*66/86*tM, hipY + 6 + lay(66/86),   3.5*lM],
+    [hipX + TL*tM,     hipY + 10 + lay(1),      1.5*lM]
   ];
 
   /* Headgear goes over the nasal arch, the only thing on this skull tall enough
@@ -6835,11 +7020,18 @@ const REMEDIES = [
   { id:'dust',   name:'Dust bath',    cost:8,  cures:'mites',     note:'Grit works the parasites out of the skin.' },
   { id:'company',name:'Sit together', cost:0,  cures:'blues',     note:'No cure in a bottle. Just time and attention.' }
 ];
+/* Each symptom names what the animal wants, in the same words its remedy is
+   described in — sharp/settle, hot/warm, grit/grit, no shelf/no bottle. The
+   Care screen shows the symptom above the list of four remedies, and it used
+   to describe the illness without pointing at any of them, so picking the
+   right one was a guess the first few times. The length is held to what it
+   was: the screen reserves room for exactly the lines this text wraps to, and
+   two illnesses at once have to fit above five rows. */
 const ILLS = {
-  bellyache:{ name:'Bellyache',  symptom:'Puffed up and turning away from food.',       drain:'hunger' },
-  chill:    { name:'Chill',      symptom:'Shivering, and sneezing every few seconds.',  drain:'energy' },
-  mites:    { name:'Skin mites', symptom:'Scratching constantly. The flies stay close.',drain:'hygiene' },
-  blues:    { name:'The blues',  symptom:'Head low, tail still, no interest in play.',  drain:'joy' }
+  bellyache:{ name:'Bellyache',  symptom:'Puffed up, off its food. Something sharp would settle it.', drain:'hunger' },
+  chill:    { name:'Chill',      symptom:'Shivering and sneezing. It wants something hot in it.',     drain:'energy' },
+  mites:    { name:'Skin mites', symptom:'Scratching nonstop. It needs grit to roll in.',             drain:'hygiene' },
+  blues:    { name:'The blues',  symptom:'Head low, tail still. No shelf sells this cure.',           drain:'joy' }
 };
 const HAT_SHOP = [
   { id:'frond',   name:'Fern sprig',   cost:20,  slot:'head' },
@@ -7099,7 +7291,11 @@ function observePet(pet = S, event, now = Date.now()){
 }
 function moodOf(){
   if (!hatched()) return { key:'egg', line:'The egg is warm.' };
-  if (S.vet) return { key:'ill', line:'is too weak to stand. Take it to the vet.' };
+  /* "Too weak to stand" was true when a collapsed animal could do nothing at
+     all. It can be roused for a round of a game now — that is the only way it
+     can pay for its own vet — so the line says worn out rather than claiming
+     it cannot move. Every state has to be readable, and it has to be true. */
+  if (S.vet) return { key:'ill', line:'is worn out, and needs a vet.' };
   if (S.asleep) return { key:'sleep', line:'is fast asleep.' };
   const ill = S.ills[0];
   if (ill) return { key:'ill', line:'is unwell. ' + ILLS[ill.id].symptom };
@@ -7803,7 +7999,11 @@ function stepBehaviour(dt, now){
 /* The egg, the choosing screen and the minigames are laid out in screen space
    against GROUND and tuned to it, so they always take the closest crop — which
    is the view they were built in, at the scale they were built at. */
-const bgStage = () => mode === 'live' ? stageIdx() : 0;
+/* A game may ask for a wider one. Tug of war does: it is the only mode that
+   puts two full-grown animals on the glass at once, and at the closest crop
+   the pair filled it edge to edge with the habitat pressed up behind them. */
+const bgStage = () => mode === 'live' ? stageIdx()
+                    : mode === 'game' ? (GAMES[game.kind].crop || 0) : 0;
 
 let screenLayout = null;
 function drawScene(now){
@@ -7993,8 +8193,9 @@ const GAMES = {
     start:() => ({x:PEN.x0 + 20, y:PEN.y1 - 18, tx:PEN.x0 + 20, ty:PEN.y1 - 18, head:0, dist:0,
                   walking:false, raiders:[], eggs:5, ends:0, chain:0, spawn:1.1, ground:'clearing'}),
     update:stepGuard, draw:drawGuard, input:(input) => { if (input.type === 'point') tapGuard(input.x,input.y); }, finish:finishRound },
-  tug:  { name:'Tug of war', blurb:'A rival takes the other end of the vine. Pull when the grip is in the green, and do not slip.', hint:'Pull when the grip is green.', pay:2,
-    start:() => ({pull:0, grip:0, winAt:.5, ends:0, chain:0, ready:0, hit:-999, slip:0, want:false}),
+  tug:  { name:'Tug of war', blurb:'A rival takes the other end of the vine. Your animal braces when your hand reaches the binding — pull then, and do not slip.', hint:'Pull when it braces.', pay:2, crop:2,
+    start:() => ({pull:0, grip:0, winAt:.5, ends:0, chain:0, ready:0, hit:-999, slip:0, want:false,
+                  stand:TUG_STAND}),
     update:stepTug, draw:drawTug,
     /* A tap only asks for a pull; stepTug decides when it happens. The input
        handler has no clock of its own, and reaching for the wall clock here put
@@ -8030,9 +8231,21 @@ function inputSnack(input){
 function gameInput(input){ if (game) GAMES[game.kind].input(input); }
 function startGame(kind, seed){
   if (!Object.hasOwn(GAMES,kind) || game) return;
-  if (S.asleep) return refuse(S.name + ' is asleep.');
-  if (S.vet) return refuse(S.name + ' is in no state to play.');
-  if (S.needs.energy < 12) return refuse('Too tired to run around.');
+  /* The games are the earner, and nothing may close them but sleep.
+
+     A collapsed animal used to be refused here, and collapse is also what
+     stops it digging and what stops the pen getting dirty — so the one state
+     that costs thirty coins to leave was the one state with no way to earn
+     thirty coins. The only way out was the daily bonus: three real days of
+     opening a game that could not be played. Illness never blocked a round
+     and still does not; collapse no longer does either. A round does not heal
+     anything, so the vet is still the thing that puts the animal right — it
+     is just payable now.
+
+     Sleep still refuses, because waking it is free and is the player's call
+     to make. Collapse is not sleep, even though it sets the same field. */
+  if (S.asleep && !S.vet) return refuse(S.name + ' is asleep.');
+  if (S.needs.energy < 12 && !S.vet) return refuse('Too tired to run around.');
   closeSheet(); hideBubble();
   mode = 'game'; feedFX = null;
   const week = challengeWeek();
@@ -8613,6 +8826,44 @@ function tapGuard(mx, my){
 const TUG_SWEEP = 1000;            // ms for the grip to travel and come back
 const TUG_COOLDOWN = 120;          // ms between pulls, so mashing cannot beat timing
 const TUG_ROUND = 1.0;             // how far the knot has to travel to win an end
+/* How tall an animal may be drawn here, and how far the knot slides in pixels
+   at a full end. Two adults at their own size took two thirds of the glass
+   each, stood shoulder to bezel, and overlapped the vine they were supposed to
+   be holding; the habitat behind them was at the closest crop as well, so the
+   grass was as big as they were. Capped and pushed apart, with the widest crop
+   behind, the round is two animals across a clearing. */
+/* How big an animal may be drawn here, and how the pair is placed.
+
+   Both a height and a width, because the constraint in this game is
+   horizontal: two animals nose to nose with their tails pointing at the
+   bezels. Capped on height alone an adult tyrannosaur came out seventy-six
+   pixels long, and two of them plus the rope is more than the glass has.
+
+   How far the knot slides at a full end, and how far the animals do, are two
+   different numbers: the rope pays out through the losing animal's teeth,
+   which is the same thing a slip is, and it is what buys a knot swinging
+   eighty pixels across the scratch without dragging a tail off the edge.
+   Where they stand is then whatever keeps the longest tail on the glass at the
+   far end of that slide — measured off the baked frame rather than typed,
+   because it is the tail of whichever species is playing. */
+const TUG_H = 46, TUG_W = 62;
+const TUG_TRAVEL = 40, TUG_LEAN = 14, TUG_STAND = 52;
+/* Where each animal stands. The sign was inverted: `pull` rises as you are
+   being beaten, and both animals were sliding toward your own end when that
+   happened — the picture said you were winning while the score said you were
+   not. Losing drags you toward the rival, which is what a rope does. */
+/* How big the pair is drawn and where it stands. Only the draw may ask: it
+   measures a baked frame, and the simulation harness that plays whole rounds
+   headless has the sim modules loaded and not the sprite engine. Where the
+   animal is standing is published on `game` for the dust a pull throws, which
+   is a thing the step does; the fallback is only ever used on a frame that has
+   not been drawn yet, which is not a frame anyone can have tapped on. */
+function tugFit(){
+  const f = frameOf(S.sp, stageIdx(), 'wary', 0, false, S.skin);
+  const sc = Math.min(1, TUG_H / f.h, TUG_W / f.w);
+  return { f, sc, stand: Math.max(TUG_STAND, Math.ceil((f.w - f.ox) * sc) + TUG_LEAN + 1) };
+}
+const tugMyX = () => (game.stand || TUG_STAND) + Math.round(game.pull * TUG_LEAN);
 
 /* Where the window sits this end, from the round's own seed: a fixed window
    would be learned once and never looked at again. */
@@ -8631,96 +8882,235 @@ function stepTug(dt, now){
   game.pull += (0.14 + game.ends * 0.022) * dt / 1000;
   if (game.slip > 0) game.slip -= dt;
 
+  /* An end lands where the animal that lost it is standing, not at a fixed x:
+     both of them have slid a long way by the time one goes over. */
   if (game.pull >= TUG_ROUND){                    // dragged over: the rival takes the end
     SFX.bonk(); game.chain = 0;
-    emit('crumb', 54, GROUND - 10, 6, {col:'#9b7a52', vy:-20, g:120});
+    emit('crumb', tugMyX(), GROUND - 10, 6, {col:'#9b7a52', vy:-20, g:120});
     tugNewEnd();
   } else if (game.pull <= -TUG_ROUND){            // hauled in: the end is yours
     SFX.coin();
     game.chain++;
     game.score += game.chain >= 3 ? 2 : 1;
-    emit('spark', W - 54, GROUND - 10, 7, {col:'#e8d27a'});
+    emit('spark', W - TUG_STAND + Math.round(game.pull * TUG_LEAN), GROUND - 10, 7, {col:'#e8d27a'});
     tugNewEnd();
   }
 }
 
 /* One pull per tap, and never more often than the cooldown, so the game cannot
-   be won by tapping faster than a person reasonably can. */
+   be won by tapping faster than a person reasonably can.
+
+   Both outcomes throw dirt, because a tap that does nothing visible is a tap
+   the player cannot learn from: the timing was the only thing the game ever
+   told you about, and it told you in a bar at the bottom of the screen. A good
+   pull kicks the soil back under the animal's own feet, a slip kicks it
+   forward from under them. */
 function tugPull(now){
   if (now < game.ready) return;
   game.ready = now + TUG_COOLDOWN;
-  const half = tugWindow() / 2;
-  const cursor = tugCursor();
-  const good = Math.abs(cursor - game.winAt) < half;
+  const good = tugReady();
   if (good){
     game.pull -= game.profile.pull;
     game.hit = now;
+    emit('crumb', tugMyX() + 10, GROUND - 2, 4, {col:'#8a7350', vy:-26, g:150, life:520});
     SFX.pop();
   } else {
     /* A mistimed pull is a slip, and it costs. Without that, tapping at random
        is a slow win rather than a loss, and the window may as well not exist. */
     game.pull += game.profile.pull * .42;
     game.slip = 260;
+    emit('crumb', tugMyX() - 8, GROUND - 2, 3, {col:'#9b7a52', vy:-14, vx:18, g:150, life:460});
     SFX.bonk();
   }
 }
+/* Whether a pull would land right now. The draw reads it too: it is what makes
+   the animal brace, which is the whole tell. */
+const tugReady = () => Math.abs(tugCursor() - game.winAt) < tugWindow() / 2;
 /* The cursor travels out and back rather than wrapping, so it is a grip
    tightening and loosening and not a bar that teleports home. */
 const tugCursor = () => game.grip < .5 ? game.grip * 2 : 2 - game.grip * 2;
 const tugWindow = () => .20 + stageIdx() * .03;
 
+/* Drawing the round.
+
+   The timing used to live in a bar along the bottom of the glass: a green
+   window, a cursor sweeping it, and no stated connection to the two animals
+   above it pulling on a rope. It read as a rhythm game with a picture over it,
+   and a player who knew perfectly well to tap on the green still could not say
+   what the green *was*.
+
+   So the track is the vine now. The window is a stretch of it bound with
+   lashings — where you get a grip — and the cursor is your animal's hand
+   sliding up and down the rope looking for it. Tapping when the hand reaches
+   the binding is one sentence about a rope, not two facts that have to be
+   matched up. And because the hand can be hard to follow across a sagging
+   cord, the animal itself braces when the pull would land: `tugReady()` is
+   read here as well as in tugPull, so what the player watches for is an animal
+   digging its feet in, which is legible at a glance and at any size. */
 function drawTug(now){
-  const phase = skyPhase(viewDate());
-  const midX = Math.round(W/2 - game.pull * 30);
-
-  /* Both animals, leaning away from the vine. The rival is the same species at
-     the same age in its second coat: a fair match, and no art of its own. */
-  const st = stageIdx(), sp = S.sp;
+  const sp = S.sp;
+  /* The rival is the same species at the same age in a coat that is not
+     yours: a fair match, and no art of its own. `coats[1]` was not "not
+     yours" — a player wearing the second coat met a rival in the same one,
+     which is the one case where telling the two animals apart matters most. */
   const coats = SKINS[sp] || [];
-  const rivalCoat = (coats[1] || coats[0] || {id:'wild'}).id;
-  const strain = now < game.hit + 180 ? 2 : 0;
-  const mine  = frameOf(sp, st, 'wary', 0, false, S.skin);
-  const yours = frameOf(sp, st, 'wary', 0, false, rivalCoat);
+  const rivalCoat = (coats.find(c => c.id !== S.skin) || coats[0] || {id:'wild'}).id;
 
-  const myX = 46 - Math.round(game.pull * 18) - strain;
-  const rvX = W - 46 - Math.round(game.pull * 18);
+  const ready = tugReady(), lurch = now < game.hit + 180;
+  // frame 0 of wary is the braced crouch, frame 1 the upright: the animal
+  // drops into the crouch exactly when a pull would count
+  const { sc, stand } = tugFit();
+  game.stand = stand;
+  const mine  = frameOf(sp, stageIdx(), 'wary', ready ? 0 : 1, false, S.skin);
+  const yours = frameOf(sp, stageIdx(), 'wary', 0, false, rivalCoat);
+
+  const drag = Math.round(game.pull * TUG_LEAN);
+  /* Leaning back is the other half of the tell. The braced frame on its own
+     was not one: the two `wary` frames differ by half a local unit of body
+     height, which at this size is no pixels at all, so an animal that was
+     about to land a pull looked exactly like one that was not. Three pixels of
+     lean away from the rope is visible, and it is the same three pixels the
+     lurch of a landed pull uses — so the brace reads as the wind-up for it. */
+  const myX = stand + drag - (ready ? 3 : 0) - (lurch ? 3 : 0) + (game.slip > 0 ? 3 : 0);
+  const rvX = W - stand + drag;
+  const midX = Math.round(W/2 + game.pull * TUG_TRAVEL);
+
+  /* The scratched ground between them: the end drawn as a mark in the pen
+     rather than as a meter.
+
+     The two ends of it mean opposite things — drag the knot to the near line
+     and the end is yours, let it reach the far one and the rival takes it —
+     and they were drawn identically, in the same dark red, which told the
+     player there were two ways to lose. The near post is green and the far one
+     red, and the stretch of furrow between the centre notch and the knot lights
+     in whichever colour is currently winning it. That last part is the one that
+     answers "how is this going" without having to be read: it is ground gained,
+     shown as ground. */
+  const gx0 = W/2 - TUG_TRAVEL, gx1 = W/2 + TUG_TRAVEL;
+  ctx.fillStyle = '#5a4526'; ctx.fillRect(gx0, GROUND, gx1 - gx0, 2);
+  ctx.fillStyle = '#8a6f3c'; ctx.fillRect(gx0, GROUND, gx1 - gx0, 1);
+  const gained = midX - W/2;
+  if (gained){
+    const gl = Math.min(W/2, midX), gw = Math.abs(gained);
+    ctx.fillStyle = gained < 0 ? '#4a6634' : '#7a3524'; ctx.fillRect(gl, GROUND, gw, 2);
+    ctx.fillStyle = gained < 0 ? '#8cc46a' : '#c2603c'; ctx.fillRect(gl, GROUND, gw, 1);
+  }
+  ctx.fillStyle = '#e9e1cb'; ctx.fillRect(W/2, GROUND - 3, 1, 6);    // the centre notch
+  /* A post at each end. The body is the bright of the pair and the cap
+     brighter still: the near one is green against grass that is also green,
+     and painted in the dark of its own ramp it disappeared into the sward. */
+  const post = (x, col, cap) => {
+    ctx.fillStyle = '#241c12'; ctx.fillRect(x - 1, GROUND - 8, 3, 10);
+    ctx.fillStyle = col;       ctx.fillRect(x, GROUND - 7, 1, 8);
+    ctx.fillStyle = cap;       ctx.fillRect(x - 1, GROUND - 8, 3, 2);
+  };
+  post(gx0, '#8cc46a', '#d8f0b4');      // pull the knot to here and the end is yours
+  post(gx1, '#c2603c', '#f0a884');      // let it reach here and it is the rival's
+
   // yours faces +x, the rival faces −x: the sprite is drawn facing −x unflipped
   ctx.save(); ctx.translate(myX, GROUND); ctx.scale(-1, 1);
-  ctx.drawImage(mine.cv, -mine.ox, -mine.oy);
+  ctx.drawImage(mine.cv, -mine.ox*sc, -mine.oy*sc, mine.w*sc, mine.h*sc);
   ctx.restore();
-  ctx.drawImage(yours.cv, rvX - yours.ox, GROUND - yours.oy);
+  ctx.drawImage(yours.cv, rvX - yours.ox*sc, GROUND - yours.oy*sc,
+                yours.w*sc, yours.h*sc);
 
-  /* The vine. Held at the height of the animal holding it, so a hatchling has
-     it at its own head rather than over it, and it sags between the two of them
-     and pulls straighter the harder the knot is being dragged — which is the
-     whole state of the game in one line. */
-  const y0 = GROUND - Math.round(mine.h * .52), sag = 7 * (1 - Math.abs(game.pull));
-  ctx.strokeStyle = '#7a6134'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(myX + 6, y0);
-  ctx.quadraticCurveTo(midX, y0 + sag * 2, rvX - 6, y0);
-  ctx.stroke();
-  ctx.fillStyle = game.slip > 0 ? '#c2603c' : '#d8c48a';
-  ctx.fillRect(midX - 3, y0 + Math.round(sag) - 2, 7, 5);
-  ctx.fillStyle = '#6b5430';
-  ctx.fillRect(midX - 3, y0 + Math.round(sag) - 2, 7, 1);
+  /* The vine, in their mouths. Not at a fraction of the sprite's height: each
+     species hands back a `mouth` anchor off the baked frame, the same one the
+     thrown food flies to, so the rope is held rather than crossing the neck at
+     whatever height two thirds of the way up happened to be. It sags between
+     them and pulls straighter the harder the knot is being dragged, which is
+     the state of the end in one line. Sampled per pixel rather than stroked,
+     because everything else on this screen is. */
+  const bite = (f, x, flip) => [
+    flip ? x + (f.ox - f.mouth[0])*sc : x - f.ox*sc + f.mouth[0]*sc,
+    GROUND + (f.mouth[1] - f.oy)*sc
+  ];
+  const [ax, ay] = bite(mine, myX, true), [bx, by] = bite(yours, rvX, false);
+  const sag = 9 * (1 - Math.abs(game.pull));
+  /* Two spans meeting at the knot, rather than one curve with the knot guessed
+     at halfway along it. The knot has to sit exactly on the scratch below it —
+     that pairing is the whole scoreboard — and on a single curve through a
+     control point it sits a quarter of the way there instead. */
+  const K = [midX, (ay + by)/2 + sag];
+  const span = (p0, p1, t) => {
+    const c = [(p0[0] + p1[0])/2, (p0[1] + p1[1])/2 + sag], m = 1 - t;
+    return [m*m*p0[0] + 2*m*t*c[0] + t*t*p1[0], m*m*p0[1] + 2*m*t*c[1] + t*t*p1[1]];
+  };
+  const curve = u => u < .5 ? span([ax, ay], K, u*2) : span(K, [bx, by], (u - .5)*2);
 
-  /* The centre line, so "which way is it going" is a fact and not a feeling. */
-  ctx.fillStyle = 'rgba(233,225,203,.35)';
-  ctx.fillRect(W/2, GROUND - 6, 1, 8);
+  /* Everything on the rope is then placed by arc length along it, not by that
+     parameter. The two spans are different lengths and the difference is the
+     score: parameterised by t, the grip crawled up the long side and shot
+     across the short one, and the window changed width on the glass depending
+     on who was winning. In a game that is nothing but timing, that is the
+     timing moving with the score. Both animals slide the same way, so the
+     rope's total length barely changes and the sweep stays honest. */
+  const PTS = 128, pts = [], cum = [0];
+  for (let i = 0; i <= PTS; i++) pts.push(curve(i/PTS));
+  for (let i = 1; i <= PTS; i++)
+    cum.push(cum[i-1] + Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]));
+  const total = cum[PTS] || 1;
+  const vine = s => {
+    const want = clamp(s, 0, 1) * total;
+    let i = 1; while (i < PTS && cum[i] < want) i++;
+    const seg = cum[i] - cum[i-1] || 1, t = (want - cum[i-1]) / seg;
+    return [lerp(pts[i-1][0], pts[i][0], t), lerp(pts[i-1][1], pts[i][1], t)];
+  };
+  const half = tugWindow() / 2, w0 = game.winAt - half, w1 = game.winAt + half;
+  /* Three pixels, of which the middle one is lit. A two-pixel cord in rope
+     brown vanished where it crossed the araucaria's roots, which in the valley
+     is most of the width of the pen. */
+  for (const [vx, vy] of pts){
+    ctx.fillStyle = '#241c12'; ctx.fillRect(Math.round(vx), Math.round(vy) - 1, 1, 3);
+    ctx.fillStyle = '#9a7c42'; ctx.fillRect(Math.round(vx), Math.round(vy), 1, 1);
+  }
+  /* The binding: the stretch of vine that has been whipped with cord, which is
+     the only part of it there is anything to hold on to. Drawn as wraps
+     crossing the rope rather than as a lighter length of it — a paler stretch
+     of rope is a paler stretch of rope, and next to the knot it read as a
+     second knot. Wraps read as something somebody tied on, which is what says
+     "hold here", and they light when a pull would land. */
+  const bindW = ready ? '#f0dc94' : '#b79a56', bindD = ready ? '#8a6a24' : '#5c4a26';
+  for (let i = 0; i <= 40; i++){
+    const u = w0 + (w1 - w0)*i/40, [vx, vy] = vine(u);
+    const wrap = (Math.round(vx) % 4) < 2;
+    ctx.fillStyle = wrap ? bindW : bindD;
+    ctx.fillRect(Math.round(vx), Math.round(vy) - 1, 1, 4);
+  }
+  for (const u of [w0, w1]){                       // the heavier lashing at each end
+    const [vx, vy] = vine(u);
+    ctx.fillStyle = '#3a2d16'; ctx.fillRect(Math.round(vx) - 1, Math.round(vy) - 2, 2, 6);
+  }
+  /* Your animal's grip, running the rope looking for the binding. A fist on
+     the cord with a bright top and a dark underside, so it reads as a thing
+     sitting on the vine rather than as a tick mark over it. */
+  const [cxp, cyp] = vine(tugCursor());
+  const gxr = Math.round(cxp), gyr = Math.round(cyp);
+  ctx.fillStyle = '#241c12'; ctx.fillRect(gxr - 1, gyr - 2, 3, 5);
+  ctx.fillStyle = ready ? '#f4e6a8' : '#cdbf9a'; ctx.fillRect(gxr - 1, gyr - 1, 3, 3);
+  ctx.fillStyle = ready ? '#ffffff' : '#e9e1cb'; ctx.fillRect(gxr - 1, gyr - 1, 3, 1);
 
-  /* The grip. A track with the window marked on it and the cursor sweeping
-     across, drawn along the bottom where the thumb already is — and starting
-     clear of the score tag, which it was drawing straight through. */
-  const tx = 62, tw = W - 70, ty = H - 15;
-  ctx.fillStyle = 'rgba(16,26,24,.85)'; ctx.fillRect(tx - 2, ty - 2, tw + 4, 11);
-  ctx.fillStyle = '#2b3a3f'; ctx.fillRect(tx, ty, tw, 7);
-  const half = tugWindow() / 2;
-  const wx = Math.round(tx + (game.winAt - half) * tw), ww = Math.max(3, Math.round(half * 2 * tw));
-  ctx.fillStyle = '#3f7a4a'; ctx.fillRect(wx, ty, ww, 7);
-  ctx.fillStyle = '#8cc46a'; ctx.fillRect(wx, ty, ww, 1);
-  const cx = Math.round(tx + tugCursor() * tw);
-  ctx.fillStyle = now < game.hit + 160 ? '#e8d27a' : '#e9e1cb';
-  ctx.fillRect(cx - 1, ty - 2, 3, 11);
+  /* The knot: the rope's centre marker, and the score. A band tied round the
+     cord, four pixels of it against three of rope. It was a solid red square
+     eight across with a tail hanging off it, which on a cord that thin is a
+     thing stuck on rather than tied on.
+
+     It takes the colour of the ground under it — the same green or red the
+     furrow is lit in, rope-coloured at dead even — so the knot and the mark
+     beneath it say one thing instead of two. Fixed red said "bad" even in the
+     moment the player was winning, which is the opposite of what the only
+     moving score on the screen should do. That leaves three hues on this vine
+     and no two of them the same: the grip is what moves, the binding is where
+     to tap, and the knot is how it is going. */
+  const knotLo = !gained ? '#4a3a1e' : gained < 0 ? '#3c5a2a' : '#7a3524';
+  const knotHi = game.slip > 0 ? '#f4c39c'
+               : !gained ? '#d8c48a' : gained < 0 ? '#8cc46a' : '#c2603c';
+  const kxr = Math.round(K[0]), kyr = Math.round(K[1]);
+  ctx.fillStyle = '#241c12'; ctx.fillRect(kxr - 3, kyr - 3, 6, 7);
+  ctx.fillStyle = knotLo;    ctx.fillRect(kxr - 2, kyr - 2, 4, 5);
+  ctx.fillStyle = knotHi;    ctx.fillRect(kxr - 2, kyr - 2, 4, 2);
+  ctx.fillStyle = 'rgba(16,26,24,.5)';
+  ctx.fillRect(kxr - 3, GROUND, 6, 2);
 
   scoreTag('Won ' + game.score + (game.chain >= 3 ? ' x2' : ''));
 }
@@ -9336,6 +9726,13 @@ function restRow(){
    there — with the row list starting at a fixed offset instead, the first
    remedy was drawn straight over the sentence saying what was wrong. */
 function careStatus(){
+  /* The collapsed line belongs here and not in the draw. It used to be typed
+     out at the top of `draw` instead, so `layout` measured the *asleep* line —
+     collapse sets `asleep` too — reserved room for that, and the first row was
+     drawn straight through the sentence above it. Exactly the fault this
+     comment was written about, committed again by someone lengthening the
+     sentence. One function, and both of them read it. */
+  if (S.vet) return [S.name + ' is worn out and down. Only a vet puts this right.'];
   if (S.ills.length) return S.ills.map(i => ILLS[i.id].symptom);
   if (S.asleep) return [S.name + ' is asleep, and will not eat, wash or play until it wakes.'];
   return ['Nothing to treat. ' + S.name + ' is well.'];
@@ -9357,10 +9754,14 @@ SCREENS.care = {
     L.close = frame.close;
     let y = BAR_H + 4;
     if (S.vet){
-      textBlock(g, S.name + ' is on the ground and will not get up.', PAD, y, W - PAD*2, SC.rust, 8);
+      careStatus().forEach(t => { y = textBlock(g, t, PAD, y, W - PAD*2, SC.rust, 8); });
       listRow(g, L.rows.box(0), 'Call the vet', '30c', { on: true });
-      caption(g, L.rows.bottom + 3, '', '', null,
-              'Restores health and clears every illness. It costs some trust.');
+      /* With the purse short the note says how to fill it, because that is the
+         only thing the player can act on from here. */
+      caption(g, L.rows.bottom + 3, '', '', null, G.coins >= 30
+              ? 'Restores health and clears every illness. It costs some trust.'
+              : 'Short of coins? It will still rouse for a game. Win the fee and come back.',
+              H - 16);
       L.act = actionBar(g, G.coins >= 30 ? 'CALL' : 'NOT ENOUGH COINS', SC.moss, G.coins < 30);
       return;
     }
@@ -9369,11 +9770,18 @@ SCREENS.care = {
     const col = S.ills.length ? SC.rust : S.asleep ? SC.dim : SC.moss;
     careStatus().forEach(t => { y = textBlock(g, t, PAD, y, W - PAD*2, col, 8); });
 
+    /* Only the remedy that treats something the animal actually has is lit.
+       All four used to be shown the same way, so the screen named the illness
+       and then offered four equal answers to it — the wording hints at the
+       right one now, and this says it without any words at all. */
     const rest = restRow();
-    REMEDIES.forEach((r, i) => listRow(g, L.rows.box(i), r.name,
-      r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
-      { on: i === screenState.pick, dim: !S.ills.length,
-        rightCol: r.cost ? SC.gold : SC.moss }));
+    REMEDIES.forEach((r, i) => {
+      const treats = hasIll(r.cures);
+      listRow(g, L.rows.box(i), r.name,
+        r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
+        { on: i === screenState.pick, dim: !treats,
+          rightCol: !treats ? SC.dim : r.cost ? SC.gold : SC.moss });
+    });
     const ri = REMEDIES.length;
     listRow(g, L.rows.box(ri), rest.label, rest.right,
             { on: screenState.pick === ri, rightCol: rest.col });
@@ -9384,7 +9792,8 @@ SCREENS.care = {
           : S.ills.length ? REMEDIES[screenState.pick].note
           : 'Illness has causes, not luck. Treats upset the stomach, being '
           + 'kept up late brings a chill, a pen left filthy for hours invites '
-          + 'mites, and joy left low turns into the blues.');
+          + 'mites, and joy left low turns into the blues.',
+            H - 16);   // clipped above the action bar; five lines ran under it
     L.act = onRest
       ? actionBar(g, S.asleep ? 'WAKE' : 'SETTLE DOWN', rest.col, !S.asleep && S.needs.energy > 70)
       : actionBar(g, 'TREAT', SC.moss, !S.ills.length);

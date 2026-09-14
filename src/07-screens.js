@@ -369,6 +369,13 @@ function restRow(){
    there — with the row list starting at a fixed offset instead, the first
    remedy was drawn straight over the sentence saying what was wrong. */
 function careStatus(){
+  /* The collapsed line belongs here and not in the draw. It used to be typed
+     out at the top of `draw` instead, so `layout` measured the *asleep* line —
+     collapse sets `asleep` too — reserved room for that, and the first row was
+     drawn straight through the sentence above it. Exactly the fault this
+     comment was written about, committed again by someone lengthening the
+     sentence. One function, and both of them read it. */
+  if (S.vet) return [S.name + ' is worn out and down. Only a vet puts this right.'];
   if (S.ills.length) return S.ills.map(i => ILLS[i.id].symptom);
   if (S.asleep) return [S.name + ' is asleep, and will not eat, wash or play until it wakes.'];
   return ['Nothing to treat. ' + S.name + ' is well.'];
@@ -390,10 +397,14 @@ SCREENS.care = {
     L.close = frame.close;
     let y = BAR_H + 4;
     if (S.vet){
-      textBlock(g, S.name + ' is on the ground and will not get up.', PAD, y, W - PAD*2, SC.rust, 8);
+      careStatus().forEach(t => { y = textBlock(g, t, PAD, y, W - PAD*2, SC.rust, 8); });
       listRow(g, L.rows.box(0), 'Call the vet', '30c', { on: true });
-      caption(g, L.rows.bottom + 3, '', '', null,
-              'Restores health and clears every illness. It costs some trust.');
+      /* With the purse short the note says how to fill it, because that is the
+         only thing the player can act on from here. */
+      caption(g, L.rows.bottom + 3, '', '', null, G.coins >= 30
+              ? 'Restores health and clears every illness. It costs some trust.'
+              : 'Short of coins? It will still rouse for a game. Win the fee and come back.',
+              H - 16);
       L.act = actionBar(g, G.coins >= 30 ? 'CALL' : 'NOT ENOUGH COINS', SC.moss, G.coins < 30);
       return;
     }
@@ -402,11 +413,18 @@ SCREENS.care = {
     const col = S.ills.length ? SC.rust : S.asleep ? SC.dim : SC.moss;
     careStatus().forEach(t => { y = textBlock(g, t, PAD, y, W - PAD*2, col, 8); });
 
+    /* Only the remedy that treats something the animal actually has is lit.
+       All four used to be shown the same way, so the screen named the illness
+       and then offered four equal answers to it — the wording hints at the
+       right one now, and this says it without any words at all. */
     const rest = restRow();
-    REMEDIES.forEach((r, i) => listRow(g, L.rows.box(i), r.name,
-      r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
-      { on: i === screenState.pick, dim: !S.ills.length,
-        rightCol: r.cost ? SC.gold : SC.moss }));
+    REMEDIES.forEach((r, i) => {
+      const treats = hasIll(r.cures);
+      listRow(g, L.rows.box(i), r.name,
+        r.cost ? r.cost + 'c' : (hasIll('blues') ? S.petBank + '/8' : 'free'),
+        { on: i === screenState.pick, dim: !treats,
+          rightCol: !treats ? SC.dim : r.cost ? SC.gold : SC.moss });
+    });
     const ri = REMEDIES.length;
     listRow(g, L.rows.box(ri), rest.label, rest.right,
             { on: screenState.pick === ri, rightCol: rest.col });
@@ -417,7 +435,8 @@ SCREENS.care = {
           : S.ills.length ? REMEDIES[screenState.pick].note
           : 'Illness has causes, not luck. Treats upset the stomach, being '
           + 'kept up late brings a chill, a pen left filthy for hours invites '
-          + 'mites, and joy left low turns into the blues.');
+          + 'mites, and joy left low turns into the blues.',
+            H - 16);   // clipped above the action bar; five lines ran under it
     L.act = onRest
       ? actionBar(g, S.asleep ? 'WAKE' : 'SETTLE DOWN', rest.col, !S.asleep && S.needs.energy > 70)
       : actionBar(g, 'TREAT', SC.moss, !S.ills.length);

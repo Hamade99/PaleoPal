@@ -9,6 +9,7 @@ function drawBrachio(M, P){
   const hM = st.head, nM = st.neck, lM = st.limb, tM = st.tail;
   const bk = st.bulk, tor = st.torso, cr = st.horn;
   const bob = P.body, jaw = P.jaw||0, sw = P.tail||0, dr = P.droop||0;
+  const fold = P.fold||0, curl = P.curl||0;
 
   /* The forelimbs run about 1.2 times the hindlimbs — the trait the animal is
      named for, and the reason the back slopes. It is an ADULT trait. Sauropod
@@ -19,26 +20,65 @@ function drawBrachio(M, P){
      was the adult at a different size, which was the complaint. */
   const mature = P.stage / (STAGE.length - 1);          // 0 hatchling, 1 adult
   const T_ = A.tune, TL = T_.tailLen;
-  const hindLen = T_.hindH*lM, foreLen = hindLen * (1.00 + (T_.foreRatio-1)*mature);
+  /* This one sleeps on its feet, and it got there the long way round.
+
+     Recumbency does not draw on this animal. Its body is a closed tube from
+     shoulder to tail resting on its own radius, so folded limbs finish up
+     *inside* it and what reaches the glass is a legless sausage. Curling it up
+     like a cat was then tried — both ends turned inward, tail swept over the
+     rump, neck laid back along the body — on the theory that a curled animal
+     is not supposed to show its legs and the shape would say so. It came out
+     an unreadable lump with a hook on it: at this size you could not tell
+     which end was the head, and the tail arc read as a separate object.
+
+     Standing is the honest answer anyway. No sauropod is preserved resting,
+     nothing that size could fold up and get back out of it, and large animals
+     generally can and do sleep on their feet. So `fold` settles the weight
+     rather than putting the animal down — the body drops a tenth onto slightly
+     bent legs and stays there — and `curl` does the work; see the neck below. */
+  const settle = 1 - .10*fold;
+  const hindLen = T_.hindH*lM*settle;
+  const foreLen = T_.hindH*lM * (1.00 + (T_.foreRatio-1)*mature) * settle;
   const shX = -T_.shoulder*tor, shY = -foreLen - bob, hipX = T_.hipBack*tor, hipY = -hindLen - bob;
+  /* A dozing animal lets its tail down. Not a fixed number of units — the tail
+     stations are literal offsets from the hip and do not scale with `limb`, so
+     a drop that looked right on an adult put a hatchling's tip in the soil.
+     This aims the tip at a quarter of the hip's height instead, which holds at
+     every stage: well down from the carried, level tail of an animal that is
+     awake, and still clear of the ground, because a sauropod's tail is
+     stiffened and does not lie on it. */
+  const lay = t => fold * Math.max(0, -hipY*.75 - 10) * t * t;
 
   legStep(M.far, shX-7,  shY+4, (P.legPhase+.25)%1, 14*lM, BRA_FORE);
   legStep(M.far, hipX-7, hipY+3,(P.legPhase+.5)%1,  14*lM, BRA_HIND);
 
   // short tail for a sauropod, carried clear of the ground
-  tube(M.skin, [[hipX,hipY],[hipX+TL*22/86*tM,hipY+1+sw*3],[hipX+TL*44/86*tM,hipY+3+sw*5],
-                [hipX+TL*66/86*tM,hipY+6+sw*7],[hipX+TL*tM,hipY+10+sw*9]],
+  tube(M.skin, [[hipX,hipY],[hipX+TL*22/86*tM,hipY+1+sw*3+lay(22/86)],
+                [hipX+TL*44/86*tM,hipY+3+sw*5+lay(44/86)],
+                [hipX+TL*66/86*tM,hipY+6+sw*7+lay(66/86)],
+                [hipX+TL*tM,hipY+10+sw*9+lay(1)]],
        [31*lM*bk, 22*lM*bk, 14*lM, 7*lM, 2.5*lM]);
   // the back slopes down from the shoulders to the hips
   tube(M.skin, [[shX,shY],[8*tor,shY+8],[hipX,hipY]],
        [T_.bodyD*39/44*lM*bk, T_.bodyD*lM*bk, T_.bodyD*34/44*lM*bk]);
   oval(M.skin, shX + 2, shY - 6*lM, 18*lM*bk, 12*lM*bk);    // shoulder hump
 
-  // neck near sixty degrees, S-curved, drooping slightly at the head end
+  /* Neck near sixty degrees, S-curved, drooping slightly at the head end —
+     and `curl` brings it down to doze. It comes out of its sixty degrees, arcs
+     forward, and the head hangs at about the height of the knees, which is
+     what a standing animal's neck does when it stops holding it up.
+
+     Not down on the ground: that is a sauropod drinking, and this one is
+     asleep. Not back over the body either — see above. Against an idle animal
+     carrying its head three body-depths in the air it is still the largest
+     silhouette change any of the three species makes, which is what has to be
+     true: a lowered neck and a shut eye are all this animal has to say it
+     with. */
   const nl = T_.neckLen*nM;
-   const n1 = [shX - 9 - dr,  shY - nl*.30 + dr*2];
-   const n2 = [shX - 19 - dr*3, shY - nl*.63 + dr*5];
-   const n3 = [shX - 23 - dr*4, shY - nl*.94 + dr*8];
+  const nk = (sx, sy, rx, ry) => [lerp(sx, rx, curl), lerp(sy, ry, curl)];
+  const n1 = nk(shX - 9 - dr,    shY - nl*.30 + dr*2, shX - 11,     shY - nl*.10);
+  const n2 = nk(shX - 19 - dr*3, shY - nl*.63 + dr*5, shX - nl*.42, shY + nl*.20);
+  const n3 = nk(shX - 23 - dr*4, shY - nl*.94 + dr*8, shX - nl*.68, shY + nl*.46);
   /* The whole neck thickens with `bulk`, the head end included. Left at its
      adult width under a hatchling's oversized skull, the neck came out as a
      stick with a head on the end of it. */
@@ -111,10 +151,10 @@ function drawBrachio(M, P){
     [shX - 2, shY + 2,  19*lM],          // shoulder hump
     [8*tor,   shY + 8,  22*lM],          // deepest, over the ribs
     [hipX,    hipY,     17*lM],          // hips
-    [hipX + TL*22/86*tM, hipY + 1,  11*lM],    // tail
-    [hipX + TL*44/86*tM, hipY + 3,   7*lM],
-    [hipX + TL*66/86*tM, hipY + 6,   3.5*lM],
-    [hipX + TL*tM,     hipY + 10,  1.5*lM]
+    [hipX + TL*22/86*tM, hipY + 1 + lay(22/86),  11*lM],    // tail
+    [hipX + TL*44/86*tM, hipY + 3 + lay(44/86),   7*lM],
+    [hipX + TL*66/86*tM, hipY + 6 + lay(66/86),   3.5*lM],
+    [hipX + TL*tM,     hipY + 10 + lay(1),      1.5*lM]
   ];
 
   /* Headgear goes over the nasal arch, the only thing on this skull tall enough

@@ -1585,6 +1585,21 @@ const POSE_ART = {
   inspect:[
     { body:0, legPhase:0, jaw:0, droop:.45, tail:.1 },
     { body:0, legPhase:0, jaw:0, droop:.7, tail:.1 }
+  ],
+  /* Sleep, and the two knobs only it uses.
+
+     `fold` settles the animal onto the ground: the hips and shoulders come
+     down, the legs fold under rather than shortening, and the tail lays out
+     along the soil. `curl` brings the neck back over the body and the head
+     down onto it. Both are read by each species' own draw function, because
+     what a resting theropod does with its legs and what a resting sauropod
+     does with its neck are not the same thing — see the notes in each file.
+
+     Two frames is one slow breath. `body` is the breath and nothing else now;
+     the settling that used to live in it is `fold`. */
+  sleep:[
+    { body:.3, legPhase:0, jaw:0, droop:1.5, tail:.1, fold:1, curl:1, eye:1 },
+    { body:-.5, legPhase:0, jaw:0, droop:1.42, tail:.03, fold:1, curl:.95, eye:1 }
   ]
 };
 /*</data>*/

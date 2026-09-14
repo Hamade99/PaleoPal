@@ -68,6 +68,28 @@ rather than writing it again.
   state needs the sprite to differ *and* a mark, or it does not exist.
 - **Cuteness through proportion**, never by dropping a diagnostic feature.
   Bigger skull, bigger eye, shorter snout, rounder body.
+- **How an animal rests is a claim, and every clade makes a different one.**
+  The `sleep` pose in `POSE_ART` sets `fold` (how far the animal settles) and
+  `curl` (neck back, head down) and each species' draw function answers them
+  its own way — a big theropod squats heels-down on the root of its tail with
+  its hands on the soil, a ceratopsian goes onto its brisket, and **the
+  sauropod does not lie down at all**: its body is a closed tube resting on its
+  own radius, so folded limbs finish up inside the silhouette and it comes out
+  a legless sausage. It dozes on its feet with the neck hanging, which is also
+  what the research says. None of them does the bird tuck *Mei long* was buried
+  in, because none has a skull that fits against its own flank. A species that
+  reads neither knob stands there with its eyes shut, which is what asleep
+  looked like for eighteen sessions. Where a species *does* fold, legs come
+  from `legFold()`, not `legStep()`: `legStep` takes the hip height *as* the
+  leg length, so a low body gives short bones and the animal rests on stumps.
+- **A folded limb that is drawn is not a folded limb that is seen.** Three
+  separate things hid the rex's legs, and each one had to be fixed: the joint
+  was *solved* rather than placed, so `bend` put the knee on the soil under the
+  belly; the thigh mass still hung to the ground and covered the shank; and the
+  squat was deep enough that there was no gap between belly and soil to draw a
+  leg in. Check the same three whenever an animal settles — and check what the
+  lowered head now overlaps, because `curl` brought the rex's skull down onto
+  the chest straight over its arm.
 - **Growing up changes what an animal has, not only how big it is.** A scale
   column and a set of ratios gives four sizes of one animal. `muzzle`, `bulk`,
   `torso` and `fuzz` in `STAGE` are for features that arrive or go; use them,
@@ -214,6 +236,27 @@ rather than writing it again.
   as busy. Nothing may reflow to make room: the title bar is always thirteen
   pixels and gives up the title, which is the least useful text on the screen.
   `refuse()` passes `bad`, and a refusal is red on all three surfaces.
+- **A minigame's timing may not change with its score.** Tug of war draws its
+  window on the rope, and the rope is two spans meeting at a knot that moves
+  with the score — so anything placed along it goes by *arc length*, never by
+  the curve's own parameter, or the sweep speeds up on the side that is
+  winning. Whatever a game asks the player to time has to be the same size and
+  the same speed whoever is ahead.
+- **Two animals on the glass is a horizontal problem.** A sprite capped on
+  height alone is as long as its tail says; an adult tyrannosaur is
+  seventy-six pixels of it, and two of those plus a rope is more than 224.
+  `tugFit()` caps both axes and takes where they stand off the baked frame, so
+  nothing is typed that a fourth species would invalidate. It measures a baked
+  frame, so **only the draw may call it**: the node harness that plays whole
+  rounds headless loads the simulation and not the sprite engine, which is why
+  the step reads a position the draw published on `game`.
+- **The nest must never reach a state it cannot be played out of.** Anything
+  priced in coins needs a way to earn those coins that the state itself does
+  not close. Collapse was that state: it costs thirty to leave and it shut off
+  digging, the minigames and the pen getting dirty at once, so the only exit
+  was three real days of daily bonuses. **The minigames are the earner and
+  nothing may gate them but sleep** — not illness, not collapse — and sleep is
+  free to undo. There is a test for it; a new gate on `startGame` will fail it.
 - **The developer tools are a harness, not a cheat menu.** Anything added to
   `DEV` must write the same fields the simulation writes. Two knobs are not
   fields, and both stay off the nest's save: `SIM` (the per-hour rates, the

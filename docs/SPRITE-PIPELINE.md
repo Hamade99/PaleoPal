@@ -104,6 +104,42 @@ frame = floor(dino.dist / cycle × POSES.walk.length)
 so one sprite stride equals one stride of ground and speed changes need no
 animation retuning.
 
+### A folded leg is a second solver, not a shorter one
+
+`legStep` takes the hip height *as* the leg length — that is what makes a
+planted foot always reach the ground whatever the pose does to the body. It is
+also why lowering the body cannot fold a leg: the bones shrink with the hip and
+the animal ends up standing on stumps, which is what the sleep pose was for
+eighteen sessions.
+
+`legFold(g, hx, hy, standLen, w, cfg, hornG)` takes the standing length
+separately and **places the joint rather than solving it**. Handing `limbIK` an
+ankle behind the hip and letting `bend` find the knee does not work here: with
+the hip barely a bone's length off the ground, the perpendicular `bend` swings
+the knee along points downward, so the knee lands on the soil under the belly
+and the whole leg stacks up inside the thigh.
+
+What a folded leg does is lie flat — femur forward and almost level, shank back
+down to the soil, metatarsus forward again from the heel. That last stretch is
+the only part that clears the body, and it is what has to be visible: a sitting
+bird is a body with its toes out in front of it. `cfg.foldBack` turns the Z
+round for a joint that folds the other way; `cfg.foldDrop` is how far off level
+the upper bone lies.
+
+Two things in the species file have to move with it, or the leg is drawn and
+then covered up:
+
+- **the thigh mass rides high** when folded. It hangs to the ground in a
+  standing animal and the femur is lying level in a folded one, so leaving it
+  where it was buries the shank and the foot.
+- **the body needs clearance.** A squat deep enough to put the belly on the
+  soil leaves nowhere for a leg to be drawn. The rex settles to half its
+  standing hip height for exactly this reason.
+
+Species switch between the two on `P.fold`. Only the `sleep` pose sets it, and a
+species is free to ignore it — the sauropod does, because its barrel rests on
+its own radius and no folded limb can escape the silhouette.
+
 ## 5. Growth stages
 
 `STAGE` holds per-stage multipliers: overall scale, head bulk, **snout length**,
