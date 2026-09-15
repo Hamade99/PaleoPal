@@ -158,7 +158,8 @@ test('seeded games distinguish active and idle players for every species and age
    the one that could: it costs thirty coins to leave, and it used to close
    digging, the minigames and the pen getting dirty all at once — so the only
    exit was the daily bonus, three real days of opening a game you could not
-   play. The games are open now whatever state the animal is in but asleep. */
+   play. The games are open now whatever state the animal is in, sleep
+   included. */
 test('a collapsed animal with an empty purse can still earn its own vet fee', () => {
   const run = harness();
   const down = `S = freshPet(); S.sp='rex'; S.born=1; S.growth=240; G.pets=[S]; G.active=0;
@@ -181,8 +182,8 @@ test('a collapsed animal with an empty purse can still earn its own vet fee', ()
 
   // and the fee still buys exactly what it did
   assert.equal(run(`${down} G.coins=30; vetVisit(); S.vet === false && G.coins === 0`), true);
-  // sleeping is still a refusal, because waking it is free and is the player's call
-  assert.equal(run(`${down} S.vet=false; startGame('snack',1); !!game`), false);
+  // sleeping is no longer a refusal: a round plays over a sleeping pet same as an awake one
+  assert.equal(run(`${down} S.vet=false; S.needs.energy=90; startGame('snack',1); !!game`), true);
 });
 
 test('the age badge reads in hours, then days, and never goes backwards', () => {

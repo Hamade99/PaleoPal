@@ -2308,6 +2308,51 @@ collapse sets `asleep` too. Lengthening that sentence drew the first row
 straight through it. The line lives in `careStatus()` now and both read it,
 which is what the comment asked for in the first place.
 
+## Session 21 — sleep stopped gating the minigames, and a list for later
+
+**Owner's call.** Session 20 settled that the minigames are the earner and
+nothing gates them but sleep, and left sleep refusing on the theory that
+waking the animal is the player's call to make. The owner reversed that call:
+*"I want to be able to play the minigames regardless of whether the dino
+sleeps or not."*
+
+The `S.asleep` check in `startGame()` (`06-render.js`) is gone. A round now
+plays out over a sleeping pet the same as an awake one, and does not wake it
+— only `wakeUp()` does that, same as before. The energy-12 "too tired" gate
+is untouched; it was never about sleep. The Care screen's status line
+(`07-screens.js`, `careStatus()`) said a sleeping animal "will not eat, wash
+or play until it wakes" — trimmed to "eat or wash," since play no longer
+applies. The test that asserted sleep refused a round (`simulation.test.cjs`)
+now asserts the opposite. "Nothing gates them but sleep" in `CLAUDE.md`'s
+house rules and in the standing decision below both became "nothing gates
+them," full stop.
+
+### A list for whenever this gets picked back up
+
+A long back-and-forth on what the minigame roster could grow into, benchmarked
+against Neopets — Kass Basher, Symol Hole, Test Your Strength, Turmac Roll,
+Shenkuu Warrior, Snowager's Lair and Petpetsitter among the reference points —
+plus the owner's own ideas: a whack-a-mole with heads that should and should
+not be hit, a sprite memory-match on dino terms, a crowd-counting game against
+a criss-crossing stampede with a multiple-choice answer, a Frogger reskin, a
+freeze-when-it-turns stealth game modeled on *Squid Game*'s red-light-green-
+light, sorting incoming sprites by diet, a stretch idea for an arrow-key
+rhythm game, and a non-minigame idea — sending the active pet out on a
+twelve-hour hunt that returns coins and, rarely, cosmetics. None of it built;
+all of it written down in `docs/GAME-IDEAS.md` so it does not have to be
+re-argued from scratch. The owner also intends to send hand-drawn sketches for
+some of these, to work from as layout and mechanic reference.
+
+Also discussed, not yet decided or built: relaxing "no image assets" for
+*future* tools and features. The existing dino and case art stays procedural
+— that is where growth, coats and countershading actually live — but the
+owner wants the option to bring in real image assets, potentially animated,
+for new work, and is fine with the distributed build no longer being a single
+HTML file as long as one entry file is still what gets opened to run it.
+Nothing in the source changed for this; it is a direction, not a rule change,
+until a concrete use case forces `build.py` and this file's "No image assets,
+still" line to be rewritten together.
+
 ## Standing decisions
 
 - **Web first, wrap later.** No framework, no build step beyond concatenation.
@@ -2317,8 +2362,9 @@ which is what the comment asked for in the first place.
   player did or failed to do.
 - **No permadeath.** Collapse and a paid vet visit instead.
 - **No state the nest cannot be played out of.** Anything priced in coins needs
-  an earner that state does not close. The minigames are that earner, and
-  nothing gates them but sleep — which is free to undo.
+  an earner that state does not close. The minigames are that earner, and as
+  of session 21 nothing gates them at all — not illness, not collapse, not
+  sleep.
 - **Wall-clock time everywhere.** Never frame time for anything that persists.
 - **Cuteness through proportion.** Bigger skull, bigger eye, shorter snout,
   rounder body. Never by removing a diagnostic feature.

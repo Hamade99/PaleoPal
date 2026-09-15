@@ -377,7 +377,7 @@ function careStatus(){
      sentence. One function, and both of them read it. */
   if (S.vet) return [S.name + ' is worn out and down. Only a vet puts this right.'];
   if (S.ills.length) return S.ills.map(i => ILLS[i.id].symptom);
-  if (S.asleep) return [S.name + ' is asleep, and will not eat, wash or play until it wakes.'];
+  if (S.asleep) return [S.name + ' is asleep, and will not eat or wash until it wakes.'];
   return ['Nothing to treat. ' + S.name + ' is well.'];
 }
 

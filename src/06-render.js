@@ -364,7 +364,7 @@ function inputSnack(input){
 function gameInput(input){ if (game) GAMES[game.kind].input(input); }
 function startGame(kind, seed){
   if (!Object.hasOwn(GAMES,kind) || game) return;
-  /* The games are the earner, and nothing may close them but sleep.
+  /* The games are the earner, and nothing may gate them.
 
      A collapsed animal used to be refused here, and collapse is also what
      stops it digging and what stops the pen getting dirty — so the one state
@@ -375,9 +375,10 @@ function startGame(kind, seed){
      anything, so the vet is still the thing that puts the animal right — it
      is just payable now.
 
-     Sleep still refuses, because waking it is free and is the player's call
-     to make. Collapse is not sleep, even though it sets the same field. */
-  if (S.asleep && !S.vet) return refuse(S.name + ' is asleep.');
+     Sleep used to refuse here too, on the theory that waking it was the
+     player's call to make. That was too much friction for what it bought:
+     a round plays out over a sleeping pet same as an awake one, and does
+     not wake it. */
   if (S.needs.energy < 12 && !S.vet) return refuse('Too tired to run around.');
   closeSheet(); hideBubble();
   mode = 'game'; feedFX = null;

@@ -255,8 +255,11 @@ rather than writing it again.
   not close. Collapse was that state: it costs thirty to leave and it shut off
   digging, the minigames and the pen getting dirty at once, so the only exit
   was three real days of daily bonuses. **The minigames are the earner and
-  nothing may gate them but sleep** — not illness, not collapse — and sleep is
-  free to undo. There is a test for it; a new gate on `startGame` will fail it.
+  nothing may gate them** — not illness, not collapse, not sleep. Sleep used
+  to refuse here on the theory that waking the animal was the player's call;
+  that was dropped as too much friction, and a round now plays out over a
+  sleeping pet without waking it. There is a test for it; a new gate on
+  `startGame` will fail it.
 - **The developer tools are a harness, not a cheat menu.** Anything added to
   `DEV` must write the same fields the simulation writes. Two knobs are not
   fields, and both stay off the nest's save: `SIM` (the per-hour rates, the
